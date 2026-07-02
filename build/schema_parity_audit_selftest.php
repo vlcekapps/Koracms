@@ -141,6 +141,17 @@ CREATE TABLE IF NOT EXISTS cms_article_related (
   related_article_id INT,
   sort_order INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_blog_series (
+  id INT,
+  blog_id INT,
+  slug VARCHAR(255),
+  is_active TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_blog_series_items (
+  series_id INT,
+  article_id INT,
+  sort_order INT
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -165,6 +176,12 @@ PHP,
 // cms_article_related
 // idx_article_related_order
 // idx_article_related_target
+// cms_blog_series
+// uq_blog_series_blog_slug
+// idx_blog_series_blog_order
+// cms_blog_series_items
+// idx_blog_series_items_article
+// idx_blog_series_items_order
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

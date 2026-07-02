@@ -20,6 +20,14 @@ if ($id !== null) {
         $fallback->execute([$id]);
         $fallbackId = $fallback->fetchColumn();
 
+        $pdo->prepare(
+            "DELETE si
+             FROM cms_blog_series_items si
+             INNER JOIN cms_blog_series s ON s.id = si.series_id
+             WHERE s.blog_id = ?"
+        )->execute([$id]);
+        $pdo->prepare("DELETE FROM cms_blog_series WHERE blog_id = ?")->execute([$id]);
+
         if ($fallbackId) {
             // Přesunout články, kategorie a tagy do zbývajícího blogu
             $pdo->prepare("UPDATE cms_articles SET blog_id = ? WHERE blog_id = ?")->execute([(int)$fallbackId, $id]);
@@ -33,6 +41,7 @@ if ($id !== null) {
             foreach ($articleIds->fetchAll(PDO::FETCH_COLUMN) as $artId) {
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$artId]);
                 $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$artId, $artId]);
+                $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$artId]);
                 $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$artId]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$artId]);
             }

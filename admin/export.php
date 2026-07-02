@@ -27,6 +27,8 @@ $tables = [
                              status, created_at FROM cms_articles",
     'article_tags' => "SELECT article_id, tag_id FROM cms_article_tags",
     'article_related' => "SELECT article_id, related_article_id, sort_order, created_at FROM cms_article_related",
+    'blog_series' => "SELECT id, blog_id, title, slug, description, is_active, sort_order, created_at, updated_at FROM cms_blog_series",
+    'blog_series_items' => "SELECT series_id, article_id, sort_order, created_at FROM cms_blog_series_items",
     'tags'        => "SELECT id, name, slug, blog_id, created_at FROM cms_tags",
     'pages'       => "SELECT id, title, slug, content, blog_id, blog_nav_order, show_in_nav, nav_order,
                              is_published, status, created_at FROM cms_pages",

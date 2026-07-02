@@ -62,6 +62,46 @@ $showAuthorPanel = !empty($article['author_public_path'])
       </nav>
     <?php endif; ?>
 
+    <?php if (!empty($articleSeries)): ?>
+      <section class="surface surface--accent" aria-labelledby="blog-article-series-heading">
+        <p class="section-kicker">Série článků</p>
+        <h2 id="blog-article-series-heading" class="section-title">Tento článek je součástí série</h2>
+        <?php foreach ($articleSeries as $seriesIndex => $seriesRow): ?>
+          <?php $seriesTitleId = 'blog-article-series-title-' . (int)$seriesRow['id']; ?>
+          <section class="form-stack" aria-labelledby="<?= h($seriesTitleId) ?>">
+            <h3 id="<?= h($seriesTitleId) ?>" class="section-title section-title--compact">
+              <a href="<?= h(blogSeriesPath($blog, $seriesRow)) ?>"><?= h((string)$seriesRow['title']) ?></a>
+            </h3>
+            <?php if (trim((string)($seriesRow['description'] ?? '')) !== ''): ?>
+              <p><?= h((string)$seriesRow['description']) ?></p>
+            <?php endif; ?>
+            <ol class="link-list">
+              <?php foreach (($seriesRow['items'] ?? []) as $seriesItem): ?>
+                <li>
+                  <?php if ((int)$seriesItem['id'] === (int)$article['id']): ?>
+                    <span aria-current="page"><?= h((string)$seriesItem['title']) ?></span>
+                  <?php else: ?>
+                    <a href="<?= h(articlePublicPath($seriesItem)) ?>"><?= h((string)$seriesItem['title']) ?></a>
+                  <?php endif; ?>
+                </li>
+              <?php endforeach; ?>
+            </ol>
+            <?php if (!empty($seriesRow['previous_article']) || !empty($seriesRow['next_article'])): ?>
+              <nav class="button-row button-row--start" aria-labelledby="blog-article-series-neighbours-<?= (int)$seriesIndex ?>">
+                <h4 id="blog-article-series-neighbours-<?= (int)$seriesIndex ?>" class="sr-only">Navigace mezi díly série <?= h((string)$seriesRow['title']) ?></h4>
+                <?php if (!empty($seriesRow['previous_article'])): ?>
+                  <a class="button-secondary" href="<?= h(articlePublicPath($seriesRow['previous_article'])) ?>">Předchozí díl</a>
+                <?php endif; ?>
+                <?php if (!empty($seriesRow['next_article'])): ?>
+                  <a class="button-secondary" href="<?= h(articlePublicPath($seriesRow['next_article'])) ?>">Další díl</a>
+                <?php endif; ?>
+              </nav>
+            <?php endif; ?>
+          </section>
+        <?php endforeach; ?>
+      </section>
+    <?php endif; ?>
+
     <?php if ($showAuthorPanel): ?>
       <section class="surface surface--accent" aria-labelledby="autor-clanku-nadpis">
         <div class="author-panel">

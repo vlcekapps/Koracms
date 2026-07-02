@@ -26,6 +26,7 @@ $createdBlogs = [];
 $createdCategories = [];
 $createdTags = [];
 $createdArticles = [];
+$createdBlogSeriesIds = [];
 $createdNewsIds = [];
 $createdFormIds = [];
 $createdFormSubmissionIds = [];
@@ -1852,6 +1853,15 @@ try {
     $utf8ImportSiteName = 'HTTP Import UTF-8 ' . bin2hex(random_bytes(4)) . ' Žluťoučký kůň';
     $importNewsletterId = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) + 1000 FROM cms_newsletters')->fetchColumn();
     $createdNewsletterIds[] = $importNewsletterId;
+    $importBlogId = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) + 1000 FROM cms_blogs')->fetchColumn();
+    $createdBlogs[] = $importBlogId;
+    $importArticleId = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) + 1000 FROM cms_articles')->fetchColumn();
+    $createdArticles[] = $importArticleId;
+    $importBlogSeriesId = (int)$pdo->query('SELECT COALESCE(MAX(id), 0) + 1000 FROM cms_blog_series')->fetchColumn();
+    $createdBlogSeriesIds[] = $importBlogSeriesId;
+    $importBlogSlug = 'http-import-blog-' . bin2hex(random_bytes(4));
+    $importArticleSlug = 'http-import-series-article-' . bin2hex(random_bytes(4));
+    $importSeriesSlug = 'http-import-serie-' . bin2hex(random_bytes(4));
     $importNewsletterSubject = 'HTTP import newsletter ' . bin2hex(random_bytes(4));
     $importNewsletterBody = "Dobrý den,\n\nImport newsletteru funguje.";
     $validImportPayload = [
@@ -1860,6 +1870,53 @@ try {
             [
                 'key' => 'site_name',
                 'value' => $utf8ImportSiteName,
+            ],
+        ],
+        'blogs' => [
+            [
+                'id' => $importBlogId,
+                'name' => 'HTTP Import Blog',
+                'slug' => $importBlogSlug,
+                'description' => '',
+                'intro_content' => '',
+                'created_by_user_id' => $adminUserId,
+                'created_at' => '2026-01-02 02:00:00',
+                'updated_at' => '2026-01-02 02:00:00',
+            ],
+        ],
+        'articles' => [
+            [
+                'id' => $importArticleId,
+                'title' => 'HTTP Import Článek série',
+                'slug' => $importArticleSlug,
+                'perex' => '',
+                'content' => '<p>Importovaný článek série.</p>',
+                'category_id' => null,
+                'blog_id' => $importBlogId,
+                'comments_enabled' => 1,
+                'status' => 'published',
+                'created_at' => '2026-01-02 02:10:00',
+            ],
+        ],
+        'blog_series' => [
+            [
+                'id' => $importBlogSeriesId,
+                'blog_id' => $importBlogId,
+                'title' => 'HTTP Import Série',
+                'slug' => $importSeriesSlug,
+                'description' => 'Importovaná série článků.',
+                'is_active' => 1,
+                'sort_order' => 1,
+                'created_at' => '2026-01-02 02:20:00',
+                'updated_at' => '2026-01-02 02:20:00',
+            ],
+        ],
+        'blog_series_items' => [
+            [
+                'series_id' => $importBlogSeriesId,
+                'article_id' => $importArticleId,
+                'sort_order' => 1,
+                'created_at' => '2026-01-02 02:21:00',
             ],
         ],
         'newsletters' => [
@@ -1910,6 +1967,21 @@ try {
         || (int)($importedNewsletter['recipient_count'] ?? 0) !== 2
         || (string)($importedNewsletter['sent_at'] ?? '') !== '2026-01-02 03:04:05') {
         $jsonImportIssues[] = 'validní UTF-8 JSON import neobnovil historii newsletteru';
+    }
+    $importedSeriesStmt = $pdo->prepare(
+        "SELECT s.title, s.slug, si.article_id
+         FROM cms_blog_series s
+         INNER JOIN cms_blog_series_items si ON si.series_id = s.id
+         WHERE s.id = ?
+         LIMIT 1"
+    );
+    $importedSeriesStmt->execute([$importBlogSeriesId]);
+    $importedSeries = $importedSeriesStmt->fetch();
+    if (!is_array($importedSeries)
+        || (string)($importedSeries['title'] ?? '') !== 'HTTP Import Série'
+        || (string)($importedSeries['slug'] ?? '') !== $importSeriesSlug
+        || (int)($importedSeries['article_id'] ?? 0) !== $importArticleId) {
+        $jsonImportIssues[] = 'validní UTF-8 JSON import neobnovil blogovou sérii a vazbu na článek';
     }
     httpIntegrationRestoreSettings($originalImportSettings);
 
@@ -3142,6 +3214,189 @@ try {
     }
 
     httpIntegrationPrintResult('blog_related_articles_http', $blogRelatedIssues, $failures);
+
+    $blogSeriesIssues = [];
+    $seriesTitle = 'HTTP Série článků ' . bin2hex(random_bytes(3));
+    $seriesSlug = 'http-serie-clanku-' . bin2hex(random_bytes(4));
+    $seriesAdminPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId,
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($seriesAdminPage) !== 200) {
+        $blogSeriesIssues[] = 'správa sérií článků nevrátila 200';
+    } elseif (!str_contains($seriesAdminPage['body'], 'Přidat sérii článků')
+        || !str_contains($seriesAdminPage['body'], $manualRelatedTitle)) {
+        $blogSeriesIssues[] = 'správa sérií článků nezobrazila formulář a články blogu';
+    }
+
+    $seriesCreateResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$relatedBlogId,
+        'action' => 'save_series',
+        'series_id' => '0',
+        'title' => $seriesTitle,
+        'slug' => $seriesSlug,
+        'description' => 'Integrační série článků.',
+        'is_active' => '1',
+        'article_ids' => [(string)$manualRelatedArticleId, (string)$mainRelatedArticleId],
+        'article_order' => [
+            (string)$manualRelatedArticleId => '1',
+            (string)$mainRelatedArticleId => '2',
+        ],
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($seriesCreateResponse) !== 302) {
+        $blogSeriesIssues[] = 'uložení série článků nevrátilo redirect';
+    }
+    $seriesLookupStmt = $pdo->prepare("SELECT id FROM cms_blog_series WHERE blog_id = ? AND slug = ? LIMIT 1");
+    $seriesLookupStmt->execute([$relatedBlogId, $seriesSlug]);
+    $createdSeriesId = (int)($seriesLookupStmt->fetchColumn() ?: 0);
+    if ($createdSeriesId <= 0) {
+        $blogSeriesIssues[] = 'uložení série článků nevytvořilo záznam série';
+    } else {
+        $createdBlogSeriesIds[] = $createdSeriesId;
+    }
+
+    $seriesArticleForm = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $mainRelatedArticleId,
+        $adminSession['cookie'],
+        0
+    );
+    if (!str_contains($seriesArticleForm['body'], 'Série článků') || !str_contains($seriesArticleForm['body'], 'name="series_ids[]"')) {
+        $blogSeriesIssues[] = 'editor článku nezobrazil výběr série článků';
+    }
+    if (!str_contains($seriesArticleForm['body'], $seriesTitle)) {
+        $blogSeriesIssues[] = 'editor článku nenabídl sérii cílového blogu';
+    }
+
+    if ($createdSeriesId > 0) {
+        $seriesMembershipResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$mainRelatedArticleId,
+            'blog_id' => (string)$relatedBlogId,
+            'title' => 'HTTP Hlavní článek se souvisejícími',
+            'slug' => $mainRelatedSlug,
+            'perex' => '',
+            'content' => '<p>HTTP související články.</p>',
+            'category_id' => '',
+            'category_selection_mode' => 'manual',
+            'tag_selection_mode' => 'manual',
+            'related_article_ids' => [(string)$manualRelatedArticleId],
+            'series_ids' => [(string)$createdSeriesId],
+            'redirect' => BASE_URL . '/admin/blog.php?blog=' . $relatedBlogId,
+            'comments_enabled' => '1',
+            'article_status' => 'published',
+        ], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($seriesMembershipResponse) !== 302) {
+            $blogSeriesIssues[] = 'uložení článku se sérií nevrátilo redirect';
+        }
+        $storedSeriesStmt = $pdo->prepare(
+            "SELECT COUNT(*)
+             FROM cms_blog_series_items
+             WHERE series_id = ? AND article_id = ?"
+        );
+        $storedSeriesStmt->execute([$createdSeriesId, $mainRelatedArticleId]);
+        if ((int)$storedSeriesStmt->fetchColumn() !== 1) {
+            $blogSeriesIssues[] = 'uložení článku nezapsalo členství v sérii';
+        }
+
+        $publicSeriesResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/serie/' . rawurlencode($seriesSlug),
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($publicSeriesResponse) !== 200) {
+            $blogSeriesIssues[] = 'veřejná stránka série nevrátila 200';
+        } elseif (!str_contains($publicSeriesResponse['body'], $seriesTitle)
+            || !str_contains($publicSeriesResponse['body'], 'Články v sérii')
+            || !str_contains($publicSeriesResponse['body'], 'HTTP Hlavní článek se souvisejícími')) {
+            $blogSeriesIssues[] = 'veřejná stránka série nezobrazila očekávaný obsah';
+        }
+
+        $publicSeriesArticleResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/' . rawurlencode($mainRelatedSlug),
+            '',
+            0
+        );
+        if (!str_contains($publicSeriesArticleResponse['body'], 'Tento článek je součástí série')
+            || !str_contains($publicSeriesArticleResponse['body'], $seriesTitle)
+            || !str_contains($publicSeriesArticleResponse['body'], 'aria-current="page"')) {
+            $blogSeriesIssues[] = 'veřejný detail článku nezobrazil přístupnou navigaci série';
+        }
+
+        $blogIndexSeriesResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/',
+            '',
+            0
+        );
+        if (!str_contains($blogIndexSeriesResponse['body'], 'id="blog-series-heading"')
+            || !str_contains($blogIndexSeriesResponse['body'], $seriesTitle)) {
+            $blogSeriesIssues[] = 'veřejný index blogu nezobrazil blok sérií článků';
+        }
+    }
+
+    $foreignSeriesSlug = 'http-foreign-serie-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order)
+         VALUES (?, ?, ?, '', 1, 1)"
+    )->execute([
+        $foreignRelatedBlogId,
+        'HTTP Cizí série',
+        $foreignSeriesSlug,
+    ]);
+    $foreignSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $foreignSeriesId;
+
+    $invalidSeriesResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$mainRelatedArticleId,
+        'blog_id' => (string)$relatedBlogId,
+        'title' => 'HTTP Hlavní článek se souvisejícími',
+        'slug' => $mainRelatedSlug,
+        'perex' => '',
+        'content' => '<p>HTTP související články.</p>',
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'related_article_ids' => [(string)$manualRelatedArticleId],
+        'series_ids' => [(string)$foreignSeriesId],
+        'redirect' => BASE_URL . '/admin/blog.php?blog=' . $relatedBlogId,
+        'comments_enabled' => '1',
+        'article_status' => 'published',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($invalidSeriesResponse) !== 302) {
+        $blogSeriesIssues[] = 'podvržená cizí série nevrátila redirect';
+    }
+    $invalidSeriesLocationHeader = '';
+    foreach (($invalidSeriesResponse['headers'] ?? []) as $headerLine) {
+        if (stripos((string)$headerLine, 'Location:') === 0) {
+            $invalidSeriesLocationHeader = trim(substr((string)$headerLine, 9));
+            break;
+        }
+    }
+    if ($invalidSeriesLocationHeader === ''
+        || !str_contains($invalidSeriesLocationHeader, BASE_URL . '/admin/blog_form.php')
+        || !str_contains($invalidSeriesLocationHeader, 'err=series_target')) {
+        $blogSeriesIssues[] = 'podvržená cizí série nemíří zpět na editor se správnou chybou';
+    }
+    $foreignSeriesStoredStmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM cms_blog_series_items
+         WHERE series_id = ? AND article_id = ?"
+    );
+    $foreignSeriesStoredStmt->execute([$foreignSeriesId, $mainRelatedArticleId]);
+    if ((int)$foreignSeriesStoredStmt->fetchColumn() !== 0) {
+        $blogSeriesIssues[] = 'podvržená cizí série se přesto uložila k článku';
+    }
+
+    $seriesExportResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($seriesExportResponse) !== 200
+        || !str_contains($seriesExportResponse['body'], '"blog_series"')
+        || !str_contains($seriesExportResponse['body'], '"blog_series_items"')) {
+        $blogSeriesIssues[] = 'JSON export neobsahuje série článků a jejich vazby';
+    }
+
+    httpIntegrationPrintResult('blog_article_series_http', $blogSeriesIssues, $failures);
 
     $authorHubIssues = [];
     saveSetting('module_blog', '1');
@@ -5151,8 +5406,13 @@ try {
     foreach ($createdArticles as $articleIdToDelete) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$articleIdToDelete, $articleIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$articleIdToDelete]);
         $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$articleIdToDelete]);
+    }
+    foreach ($createdBlogSeriesIds as $seriesIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_blog_series_items WHERE series_id = ?")->execute([$seriesIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_blog_series WHERE id = ?")->execute([$seriesIdToDelete]);
     }
     foreach ($createdNewsIds as $newsIdToDelete) {
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'news' AND entity_id = ?")->execute([$newsIdToDelete]);

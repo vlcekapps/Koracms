@@ -240,7 +240,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie, štítky, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
@@ -285,6 +285,8 @@ Blogy nově podporují i volitelný alternativní text loga. Pokud ho správce v
 Veřejný index blogu zobrazuje doporučený článek v přirozenějším pořadí: nejdřív nadpis bloku, potom název článku jako hlavní odkaz a až pod ním datum, přibližnou dobu čtení, počet přečtení a autora.
 
 Editor článku umožňuje ručně vybrat související články ze stejného blogu. Veřejný detail článku zobrazí ruční výběr jako první a pokud je položek méně, doplní zbytek automaticky podle kategorie, štítků a novosti. Při změně blogu se ruční výběr validuje proti cílovému blogu, takže se do detailu nepropíše odkaz na článek z cizího blogu.
+
+Blogy mají také tematické série článků. Správa série patří ke konkrétnímu blogu, umožňuje název, slug, popis, aktivní stav a ruční pořadí článků. Editor článku pak nabídne zařazení jen do sérií cílového blogu. Čtenář na detailu článku uvidí blok `Tento článek je součástí série`, aktuální díl je označený pro asistivní technologie a veřejná stránka série má URL `/{blog-slug}/serie/{series-slug}`.
 
 Přehled blogů v administraci nově nabízí přímé odkazy na články, kategorie, štítky a stránky konkrétního blogu. Převodové akce `Článek → Stránka` a `Stránka → Článek` zároveň ponechávají šipku jen jako vizuální pomůcku; čtečky obrazovky teď hlásí jen samotný název akce bez dekorativní šipky.
 
@@ -617,7 +619,7 @@ composer ci:basic
 - whitespace audit přes `build/whitespace_audit.php` a jeho self-test `build/whitespace_audit_selftest.php`, které nad verzovanými textovými zdroji hlídají koncové mezery a chybějící finální nový řádek
 - úzký PSR-12 smoke check přes `composer format:check` a navazující build/test dávky nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně release smoke testů, HTTP test helperů, unit test harnessu a stabilních sdílených knihoven
 - PHPStan na levelu 6 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů. Self-test `build/phpstan_bootstrap_selftest.php` hlídá, že bootstrap nenačítá databázi, autentizaci, session ani runtime konfiguraci a že zachovává už definované bezpečné konstanty. PHPStan zároveň hlídá i release/testovací build nástroje proti návratu PHP 8.1+ typů do PHP 8.0 platformy
-- samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 219 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu, redirect guardrailů a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
+- samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 221 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu, redirect guardrailů a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
 - validaci `composer.json` a `composer.lock` přes `composer validate --strict`, takže lokální `ci:basic` hlídá stejný Composer kontrakt jako GitHub Actions
 - statický release package audit včetně self-testu `build/release_package_audit_selftest.php`, který hlídá, že instalační balíček a source archivy zůstávají bez vývojových nástrojů, lokálních metadat, citlivých konfigurací a uživatelských uploadů
 - theme view audit pro default šablonu včetně self-testu, který hlídá oddělení prezentační vrstvy od requestu, session/server stavu, runtime času, databáze a souborových side effectů i statická duplicitní `id`, neexistující cíle `aria-labelledby` / `aria-describedby` / `aria-controls`, neplatné statické `label for`, veřejné `<section>`, `<nav>`, `<aside>`, `role="search"`, všechny veřejné `<article>` prvky bez `aria-labelledby` a `<figure>` bloky bez `aria-labelledby` nebo `figcaption`, formulářová pole bez labelu nebo ARIA názvu, `<fieldset>` bez `<legend>`, obrázky bez `alt`, iframe bez `title`, tlačítka bez explicitního `type`, veřejné tabulky bez `<caption>` nebo `aria-labelledby` a `target="_blank"` odkazy bez `rel="noopener noreferrer"` nebo bez oznámení nového okna v přístupném názvu
@@ -717,6 +719,9 @@ server {
     # Multi-blog catch-all (musí být poslední)
     location ~ ^/([a-z0-9\-]+)/stranka/([a-z0-9\-]+)/?$ {
         try_files $uri $uri/ /blog_router.php?blog_slug=$1&page_slug=$2&$args;
+    }
+    location ~ ^/([a-z0-9\-]+)/serie/([a-z0-9\-]+)/?$ {
+        try_files $uri $uri/ /blog_router.php?blog_slug=$1&series_slug=$2&$args;
     }
     location ~ ^/([a-z0-9\-]+)/([a-z0-9\-]+)/?$ {
         try_files $uri $uri/ /blog_router.php?blog_slug=$1&slug=$2&$args;

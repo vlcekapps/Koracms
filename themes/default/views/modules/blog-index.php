@@ -47,6 +47,7 @@ $filterLink = static function (array $params = []) use ($blog, $activeAuthor, $s
 };
 $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || $searchQuery !== '' || $archiveFilter !== '';
 $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
+$blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="blog-title">
@@ -92,6 +93,22 @@ $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
           <?php endforeach; ?>
         </ul>
       </nav>
+    <?php endif; ?>
+
+    <?php if ($blogSeries !== []): ?>
+      <section class="form-stack blog-series-links" aria-labelledby="blog-series-heading">
+        <h2 id="blog-series-heading" class="section-title section-title--compact">Série článků</h2>
+        <ul class="chip-list">
+          <?php foreach ($blogSeries as $seriesRow): ?>
+            <li>
+              <a class="chip-link" href="<?= h(blogSeriesPath($blog, $seriesRow)) ?>">
+                <?= h((string)$seriesRow['title']) ?>
+                <span aria-hidden="true">(<?= (int)$seriesRow['article_count'] ?>)</span>
+              </a>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      </section>
     <?php endif; ?>
 
     <?php if (!empty($featuredArticle)): ?>

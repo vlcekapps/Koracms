@@ -268,6 +268,7 @@ adminHeader('Správa blogů');
                   data-blog-logo-alt="<?= h((string)($blog['logo_alt_text'] ?? '')) ?>"
                   data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit<span class="sr-only"> blog <?= h((string)$blog['name']) ?></span></button>
           <a href="blog.php?blog=<?= (int)$blog['id'] ?>" class="btn">Články blogu</a>
+          <a href="blog_series.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Série článků</a>
           <a href="blog_cats.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Kategorie blogu</a>
           <a href="blog_tags.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Štítky blogu</a>
           <a href="blog_pages.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Stránky a odkazy blogu</a>

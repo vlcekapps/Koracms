@@ -219,6 +219,7 @@ try {
 
 $captchaExpr = captchaGenerate();
 
+$articleSeries = ($previewToken === '') ? articleSeriesNavigation($pdo, $article) : [];
 $related = ($previewToken === '') ? relatedArticles($pdo, $article, 3) : [];
 $articleBlog = $GLOBALS['current_blog'] ?? getBlogById((int)($article['blog_id'] ?? 1));
 $articleSeoTitle = trim((string)(!empty($article['meta_title']) ? $article['meta_title'] : $article['title']));
@@ -256,6 +257,7 @@ renderPublicPage([
         'article' => $article,
         'blog' => $articleBlog,
         'tags' => $tags,
+        'articleSeries' => $articleSeries,
         'comments' => $comments,
         'commentErrors' => $commentErrors,
         'commentResult' => $commentResult,

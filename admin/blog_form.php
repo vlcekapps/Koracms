@@ -96,6 +96,8 @@ $allTags = [];
 $articleTagIds = [];
 $relatedArticleIds = $id !== null ? loadArticleRelatedIds($pdo, $id) : [];
 $relatedArticleOptions = relatedArticleOptions($pdo, $currentBlogId, $id ?? 0);
+$articleSeriesIds = $id !== null ? loadArticleSeriesIds($pdo, $id) : [];
+$blogSeriesOptions = blogSeriesOptions($pdo, $currentBlogId);
 $sourceCategoryName = '';
 $sourceTagDetails = [];
 $noCategoryLabel = '– bez kategorie –';
@@ -132,6 +134,7 @@ if (isMultiBlog()) {
             'categories' => [],
             'tags' => [],
             'related_articles' => [],
+            'series' => [],
             'comments_default' => (int)($blogEntry['comments_default'] ?? 1),
             'can_manage_taxonomies' => canCurrentUserManageBlogTaxonomies((int)($blogEntry['id'] ?? 0)),
         ];
@@ -175,6 +178,36 @@ if (isMultiBlog()) {
     } catch (\PDOException $e) {
         koraLog('warning', 'admin article form taxonomy query failed', [
             'section' => 'all_tags',
+            'article_id' => $id,
+            'blog_id' => $currentBlogId,
+            'exception' => $e,
+        ]);
+    }
+
+    try {
+        $allSeriesStmt = $pdo->query(
+            "SELECT s.id, s.blog_id, s.title, s.slug, s.is_active, COUNT(si.article_id) AS article_count
+             FROM cms_blog_series s
+             LEFT JOIN cms_blog_series_items si ON si.series_id = s.id
+             GROUP BY s.id, s.blog_id, s.title, s.slug, s.is_active, s.sort_order
+             ORDER BY s.blog_id ASC, s.sort_order ASC, s.title ASC, s.id ASC"
+        );
+        foreach ($allSeriesStmt->fetchAll() as $seriesRow) {
+            $blogId = (int)($seriesRow['blog_id'] ?? 0);
+            if (!isset($blogFormOptions[$blogId])) {
+                continue;
+            }
+            $blogFormOptions[$blogId]['series'][] = [
+                'id' => (int)$seriesRow['id'],
+                'title' => (string)$seriesRow['title'],
+                'slug' => (string)($seriesRow['slug'] ?? ''),
+                'is_active' => (int)($seriesRow['is_active'] ?? 1),
+                'article_count' => (int)($seriesRow['article_count'] ?? 0),
+            ];
+        }
+    } catch (\PDOException $e) {
+        koraLog('warning', 'admin article form taxonomy query failed', [
+            'section' => 'series',
             'article_id' => $id,
             'blog_id' => $currentBlogId,
             'exception' => $e,
@@ -273,6 +306,7 @@ $fieldErrorMap = [
     'category_target' => ['category_id'],
     'tags_target' => ['tags'],
     'related_articles_target' => ['related_article_ids'],
+    'series_target' => ['series_ids'],
     'missing_category_action' => ['missing_category_action'],
     'missing_tags_action' => ['missing_tags_action'],
     'image_upload' => ['image'],
@@ -287,6 +321,7 @@ $fieldErrorMessages = [
     'category_target' => 'Vybraná kategorie nepatří do cílového blogu.',
     'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
     'related_articles_target' => 'Vybrané související články nepatří do cílového blogu.',
+    'series_target' => 'Vybraná série článků nepatří do cílového blogu.',
     'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'image_upload' => 'Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.',
@@ -317,6 +352,9 @@ adminHeader($pageTitle);
   <?php if (isMultiBlog() && $currentBlog && canCurrentUserManageBlogTaxonomies($currentBlogId)): ?>
     <a id="blog-link-categories" href="<?= h($blogCategoriesUrl) ?>">Kategorie blogu</a>
     <a id="blog-link-tags" href="<?= h($blogTagsUrl) ?>">Štítky blogu</a>
+  <?php endif; ?>
+  <?php if ($currentBlog): ?>
+    <a id="blog-link-series" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $currentBlogId ?>">Série článků</a>
   <?php endif; ?>
   <?php if (isMultiBlog() && $currentBlog): ?>
     <a id="blog-link-public" href="<?= h($blogPublicUrl) ?>" target="_blank" rel="noopener noreferrer">Zobrazit blog na webu<?= newWindowLinkSrOnlySuffix() ?></a>
@@ -368,6 +406,8 @@ adminHeader($pageTitle);
   <p role="alert" class="error" id="form-error">Vybrané štítky nepatří do cílového blogu.</p>
 <?php elseif ($err === 'related_articles_target'): ?>
   <p role="alert" class="error" id="form-error">Vybrané související články nepatří do cílového blogu.</p>
+<?php elseif ($err === 'series_target'): ?>
+  <p role="alert" class="error" id="form-error">Vybraná série článků nepatří do cílového blogu.</p>
 <?php elseif ($err === 'missing_category_action'): ?>
   <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php elseif ($err === 'missing_tags_action'): ?>
@@ -520,6 +560,29 @@ adminHeader($pageTitle);
         <?php adminRenderFieldError('missing_tags_action', $err, $fieldErrorMap, $fieldErrorMessages['missing_tags_action']); ?>
       </div>
     <?php endif; ?>
+  </fieldset>
+
+  <fieldset id="article-series-fieldset" class="blog-form-fieldset" aria-describedby="blog-series-help blog-series-empty<?= $err === 'series_target' ? ' blog-series-error' : '' ?>">
+    <legend>Série článků</legend>
+    <label for="series_ids">Zařazení do série</label>
+    <select id="series_ids" name="series_ids[]" multiple size="<?= min(8, max(3, count($blogSeriesOptions))) ?>"
+            <?= $blogSeriesOptions === [] ? 'disabled ' : '' ?>
+            <?= adminFieldAttributes('series_ids', $err, $fieldErrorMap, ['blog-series-help', 'blog-series-empty'], 'blog-series-error') ?>>
+      <?php foreach ($blogSeriesOptions as $seriesOption): ?>
+        <?php
+          $seriesLabel = (string)$seriesOption['title'];
+          if ((int)$seriesOption['is_active'] !== 1) {
+              $seriesLabel .= ' - skrytá';
+          }
+          ?>
+        <option value="<?= (int)$seriesOption['id'] ?>"<?= in_array((int)$seriesOption['id'], $articleSeriesIds, true) ? ' selected' : '' ?>>
+          <?= h($seriesLabel) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    <small id="blog-series-help" class="field-help">Vyberte série stejného blogu, do kterých článek patří. Pořadí článků v sérii upravíte na stránce <a id="blog-series-manage-link" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $currentBlogId ?>">Série článků</a>.</small>
+    <small id="blog-series-empty" class="field-help"<?= $blogSeriesOptions === [] ? '' : ' hidden' ?>>V tomto blogu zatím nejsou vytvořené žádné série článků.</small>
+    <?php adminRenderFieldError('series_ids', $err, $fieldErrorMap, $fieldErrorMessages['series_target'], 'blog-series-error'); ?>
   </fieldset>
 
   <fieldset id="article-related-fieldset" class="blog-form-fieldset" aria-describedby="blog-related-help blog-related-empty<?= $err === 'related_articles_target' ? ' blog-related-error' : '' ?>">
@@ -683,6 +746,8 @@ adminHeader($pageTitle);
     const targetContextName = document.getElementById('blog-target-context-name');
     const categoryLink = document.getElementById('blog-link-categories');
     const tagLink = document.getElementById('blog-link-tags');
+    const seriesLink = document.getElementById('blog-link-series');
+    const seriesManageLink = document.getElementById('blog-series-manage-link');
     const publicLink = document.getElementById('blog-link-public');
     const feedLink = document.getElementById('blog-link-feed');
     const categorySelect = document.getElementById('category_id');
@@ -698,6 +763,8 @@ adminHeader($pageTitle);
     const missingTagsActionInputs = Array.from(document.querySelectorAll('input[name="missing_tags_action"]'));
     const categorySelectionModeInput = document.getElementById('category-selection-mode');
     const tagSelectionModeInput = document.getElementById('tag-selection-mode');
+    const seriesSelect = document.getElementById('series_ids');
+    const seriesEmpty = document.getElementById('blog-series-empty');
     const relatedSelect = document.getElementById('related_article_ids');
     const relatedEmpty = document.getElementById('blog-related-empty');
     const commentsCheckbox = document.getElementById('comments_enabled');
@@ -734,6 +801,7 @@ adminHeader($pageTitle);
             tags: <?= json_encode(array_map('intval', $articleTagIds)) ?>,
             categoryMode: 'manual',
             tagsMode: 'manual',
+            series: <?= json_encode(array_map('intval', $articleSeriesIds)) ?>,
             relatedArticles: <?= json_encode(array_map('intval', $relatedArticleIds)) ?>,
             missingCategoryAction: 'drop',
             missingTagsAction: 'drop',
@@ -758,6 +826,7 @@ adminHeader($pageTitle);
             tags: [],
             categoryMode: 'auto',
             tagsMode: 'auto',
+            series: [],
             relatedArticles: [],
             missingCategoryAction: 'drop',
             missingTagsAction: 'drop',
@@ -814,6 +883,11 @@ adminHeader($pageTitle);
         }
 
         return title + ' - ' + date.toLocaleDateString('cs-CZ');
+    };
+
+    const seriesLabel = (series) => {
+        const title = String(series.title || '');
+        return Number(series.is_active || 0) === 1 ? title : title + ' - skrytá';
     };
 
     const setRadioValue = (inputs, value, fallbackValue = 'drop') => {
@@ -910,6 +984,9 @@ adminHeader($pageTitle);
             tags: Array.from(tagsContainer.querySelectorAll('input[name="tags[]"]:checked')).map((input) => Number(input.value)),
             categoryMode: categorySelectionModeInput ? categorySelectionModeInput.value : 'manual',
             tagsMode: tagSelectionModeInput ? tagSelectionModeInput.value : 'manual',
+            series: seriesSelect
+                ? Array.from(seriesSelect.selectedOptions).map((option) => Number(option.value))
+                : [],
             relatedArticles: relatedSelect
                 ? Array.from(relatedSelect.selectedOptions).map((option) => Number(option.value))
                 : [],
@@ -925,6 +1002,7 @@ adminHeader($pageTitle);
 
         const state = rememberedSelections[blogId] || resolveAutoSelections(blogId);
         const selectedTags = new Set((state.tags || []).map((value) => Number(value)));
+        const selectedSeries = new Set((state.series || []).map((value) => Number(value)));
         const selectedRelatedArticles = new Set((state.relatedArticles || []).map((value) => Number(value)));
         const categoryMarkup = [];
         categoryMarkup.push('<option value="">' + noCategoryLabel + '</option>');
@@ -969,6 +1047,12 @@ adminHeader($pageTitle);
         if (tagLink) {
             tagLink.href = '<?= h(BASE_URL . '/admin/blog_tags.php?blog_id=') ?>' + encodeURIComponent(String(blogId));
         }
+        if (seriesLink) {
+            seriesLink.href = '<?= h(BASE_URL . '/admin/blog_series.php?blog_id=') ?>' + encodeURIComponent(String(blogId));
+        }
+        if (seriesManageLink) {
+            seriesManageLink.href = '<?= h(BASE_URL . '/admin/blog_series.php?blog_id=') ?>' + encodeURIComponent(String(blogId));
+        }
         if (publicLink && selectedBlog) {
             publicLink.href = selectedBlog.publicUrl;
         }
@@ -977,6 +1061,21 @@ adminHeader($pageTitle);
         }
         if (isNewArticle && commentsCheckbox && !commentsTouched) {
             commentsCheckbox.checked = (blogOptions[blogId].comments_default || 0) === 1;
+        }
+
+        if (seriesSelect) {
+            const seriesRows = blogOptions[blogId].series || [];
+            seriesSelect.disabled = seriesRows.length === 0;
+            seriesSelect.size = String(Math.min(8, Math.max(3, seriesRows.length)));
+            seriesSelect.innerHTML = seriesRows.map((series) => {
+                const selected = selectedSeries.has(Number(series.id)) ? ' selected' : '';
+                return '<option value="' + String(series.id) + '"' + selected + '>'
+                    + escapeHtml(seriesLabel(series))
+                    + '</option>';
+            }).join('');
+            if (seriesEmpty) {
+                seriesEmpty.hidden = seriesRows.length > 0;
+            }
         }
 
         if (relatedSelect) {
@@ -1059,6 +1158,7 @@ adminHeader($pageTitle);
         input.addEventListener('change', rememberCurrentSelections);
     });
     relatedSelect?.addEventListener('change', rememberCurrentSelections);
+    seriesSelect?.addEventListener('change', rememberCurrentSelections);
 })();
 </script>
 

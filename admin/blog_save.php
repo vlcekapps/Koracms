@@ -14,6 +14,7 @@ $content = trim($_POST['content'] ?? '');
 $categoryId = inputInt('post', 'category_id');
 $tagIds = array_map('intval', (array)($_POST['tags'] ?? []));
 $relatedArticleIds = normalizeRelatedArticleIds((array)($_POST['related_article_ids'] ?? []), $id ?? 0);
+$seriesIds = normalizeBlogSeriesIds((array)($_POST['series_ids'] ?? []));
 $categorySelectionMode = trim((string)($_POST['category_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
 $tagSelectionMode = trim((string)($_POST['tag_selection_mode'] ?? ($id !== null ? 'auto' : 'manual')));
 $missingCategoryAction = trim((string)($_POST['missing_category_action'] ?? 'drop'));
@@ -197,6 +198,17 @@ if ($relatedArticleIds !== []) {
     sort($requestedRelatedArticleIds);
     if ($validRelatedArticleIds !== $requestedRelatedArticleIds) {
         $redirectToForm($id, $blogId, 'related_articles_target');
+    }
+}
+
+if ($seriesIds !== []) {
+    $validSeriesIds = validateBlogSeriesIds($pdo, $blogId, $seriesIds);
+    $sortedValidSeriesIds = $validSeriesIds;
+    $sortedRequestedSeriesIds = $seriesIds;
+    sort($sortedValidSeriesIds);
+    sort($sortedRequestedSeriesIds);
+    if ($sortedValidSeriesIds !== $sortedRequestedSeriesIds) {
+        $redirectToForm($id, $blogId, 'series_target');
     }
 }
 
@@ -428,6 +440,7 @@ try {
     }
 
     saveArticleRelatedArticles($pdo, $id, $relatedArticleIds);
+    saveArticleSeriesMemberships($pdo, $id, $blogId, $seriesIds);
 
     $pdo->commit();
 } catch (\Throwable $e) {

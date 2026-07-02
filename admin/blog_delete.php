@@ -17,6 +17,7 @@ if ($id !== null) {
         $pdo->prepare("UPDATE cms_articles SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")
             ->execute([$id]);
     }
+    $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$id]);
     logAction('article_delete', "id={$id} soft=true");
 }
 

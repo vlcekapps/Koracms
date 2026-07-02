@@ -11347,6 +11347,7 @@ $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bl
 $blogTransferSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
 $blogPagesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');
+$blogSeriesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_series.php');
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
 $usersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
@@ -11356,9 +11357,13 @@ $blogWpImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/wp_im
 $blogEstrankyImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/estranky_import.php');
 $blogIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/index.php');
 $blogArticleControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/article.php');
+$blogSeriesControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/series.php');
 $blogIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php');
+$blogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
+$blogSeriesViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-series.php');
 $blogFeedSource = (string)file_get_contents(dirname(__DIR__) . '/feed.php');
 $blogRouterSource = (string)file_get_contents(dirname(__DIR__) . '/blog_router.php');
+$blogHtaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 $blogWidgetAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
 $blogWidgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
 $blogWidgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
@@ -11448,6 +11453,9 @@ if (!str_contains($blogFormSource, 'name="is_featured_in_blog"')) {
 if (!str_contains($blogInstallSource, 'cms_article_related') || !str_contains($blogMigrateSource, 'cms_article_related')) {
     $blogAdminIssues[] = 'blog schema is missing manual related article table in install or migrate';
 }
+if (!str_contains($blogInstallSource, 'cms_blog_series') || !str_contains($blogMigrateSource, 'cms_blog_series')) {
+    $blogAdminIssues[] = 'blog schema is missing article series tables in install or migrate';
+}
 if (!str_contains($blogFormSource, 'name="related_article_ids[]"') || !str_contains($blogFormSource, 'blog-related-help') || !str_contains($blogFormSource, 'related_articles')) {
     $blogAdminIssues[] = 'article form is missing manual related article controls';
 }
@@ -11465,6 +11473,45 @@ if (!str_contains($blogBulkSource, 'DELETE FROM cms_article_related')
 }
 if (!str_contains($blogExportSource, 'article_related') || !str_contains($blogImportSource, 'article_related')) {
     $blogAdminIssues[] = 'JSON export/import is missing manual related article links';
+}
+if (!str_contains($blogFormSource, 'name="series_ids[]"')
+    || !str_contains($blogFormSource, 'blog-series-help')
+    || !str_contains($blogFormSource, 'blog-link-series')
+    || !str_contains($blogFormSource, 'series_target')) {
+    $blogAdminIssues[] = 'article form is missing article series controls or validation feedback';
+}
+if (!str_contains($blogSaveSource, 'validateBlogSeriesIds') || !str_contains($blogSaveSource, 'saveArticleSeriesMemberships')) {
+    $blogAdminIssues[] = 'article save is missing blog-scoped series validation or persistence';
+}
+if (!str_contains($blogSeriesAdminSource, 'canCurrentUserWriteToBlog($blogId)')
+    || !str_contains($blogSeriesAdminSource, 'uniqueBlogSeriesSlug')
+    || !str_contains($blogSeriesAdminSource, 'adminBlogSeriesValidArticleIds')
+    || !str_contains($blogSeriesAdminSource, 'DELETE FROM cms_blog_series_items')) {
+    $blogAdminIssues[] = 'blog series admin is missing permission, slug, article ownership or cleanup safeguards';
+}
+if (!str_contains($blogsAdminSource, 'blog_series.php?blog_id=') || !str_contains($blogsAdminSource, 'Série článků')) {
+    $blogAdminIssues[] = 'blog overview is missing per-blog article series action link';
+}
+if (!str_contains($blogListSource, 'blog_series.php?blog_id=') || !str_contains($blogListSource, 'Série článků')) {
+    $blogAdminIssues[] = 'blog article overview is missing article series management link';
+}
+if (!str_contains($blogPresentationSource, 'function blogSeriesSlug')
+    || !str_contains($blogPresentationSource, 'function publicBlogSeries')
+    || !str_contains($blogPresentationSource, 'function publicBlogSeriesDetail')
+    || !str_contains($blogPresentationSource, 'function articleSeriesNavigation')) {
+    $blogAdminIssues[] = 'blog helpers are missing shared article series public/admin helpers';
+}
+if (!str_contains($blogBulkSource, 'DELETE FROM cms_blog_series_items')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'DELETE FROM cms_blog_series_items')
+    || !str_contains($blogDeleteSource, 'DELETE FROM cms_blog_series')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_blog_series_items')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'DELETE FROM cms_blog_series_items')) {
+    $blogAdminIssues[] = 'article series links are missing cleanup on destructive article or blog workflows';
+}
+if (!str_contains($blogExportSource, 'blog_series') || !str_contains($blogExportSource, 'blog_series_items')
+    || !str_contains($blogImportSource, 'cms_blog_series')
+    || !str_contains($blogImportSource, 'cms_blog_series_items')) {
+    $blogAdminIssues[] = 'JSON export/import is missing blog article series';
 }
 if (!str_contains($blogFormSource, 'canCurrentUserManageBlogTaxonomies($currentBlogId)')) {
     $blogAdminIssues[] = 'article form is missing taxonomy management guard for multiblog links';
@@ -11818,6 +11865,9 @@ if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['archiv'] ??
 if (!str_contains($blogIndexControllerSource, 'is_featured_in_blog = 1')) {
     $blogAdminIssues[] = 'public blog index is missing featured article selection';
 }
+if (!str_contains($blogIndexControllerSource, 'publicBlogSeries($pdo, $blogId')) {
+    $blogAdminIssues[] = 'public blog index is missing article series teaser loading';
+}
 if (!str_contains($blogIndexControllerSource, 'extra_head_html')) {
     $blogAdminIssues[] = 'public blog index is missing RSS discovery link injection';
 }
@@ -11826,6 +11876,11 @@ if (!str_contains($blogIndexViewSource, 'blog-search-q')) {
 }
 if (!str_contains($blogIndexViewSource, 'Archiv blogu')) {
     $blogAdminIssues[] = 'blog index view is missing archive navigation';
+}
+if (!str_contains($blogIndexViewSource, 'id="blog-series-heading"')
+    || !str_contains($blogIndexViewSource, 'aria-labelledby="blog-series-heading"')
+    || !str_contains($blogIndexViewSource, 'blogSeriesPath($blog, $seriesRow)')) {
+    $blogAdminIssues[] = 'blog index view is missing accessible article series block';
 }
 foreach ([
     'blog-blogs-heading' => 'Další blogy webu',
@@ -11846,6 +11901,20 @@ foreach ([
 }
 if (!str_contains($blogIndexViewSource, 'Doporučený článek')) {
     $blogAdminIssues[] = 'blog index view is missing featured article hero';
+}
+if (!str_contains($blogArticleControllerSource, 'articleSeriesNavigation($pdo, $article)')
+    || !str_contains($blogArticleViewSource, 'Tento článek je součástí série')
+    || !str_contains($blogArticleViewSource, 'aria-current="page"')
+    || !str_contains($blogArticleViewSource, 'Předchozí díl')
+    || !str_contains($blogArticleViewSource, 'Další díl')) {
+    $blogAdminIssues[] = 'blog article detail is missing accessible article series navigation';
+}
+if (!str_contains($blogSeriesControllerSource, 'publicBlogSeriesDetail($pdo, $blogId, $seriesSlug)')
+    || !str_contains($blogSeriesControllerSource, 'renderPublicNotFoundPage')
+    || !str_contains($blogSeriesViewSource, 'id="blog-series-title"')
+    || !str_contains($blogSeriesViewSource, 'aria-labelledby="blog-series-title"')
+    || !str_contains($blogSeriesViewSource, 'Články v sérii')) {
+    $blogAdminIssues[] = 'public blog series page is missing scoped loading, 404 handling or accessible headings';
 }
 if (!str_contains($blogIndexViewSource, 'aria-labelledby="featured-article-heading featured-article-title"')) {
     $blogAdminIssues[] = 'blog index featured article is not labelled by both the section heading and article title';
@@ -11891,6 +11960,12 @@ if (!str_contains($blogFeedSource, 'rss_subtitle')) {
 }
 if (!str_contains($blogRouterSource, 'getBlogByLegacySlug($blogSlug)')) {
     $blogAdminIssues[] = 'blog router is missing legacy slug redirect lookup';
+}
+if (!str_contains($blogRouterSource, "\$_GET['series_slug']")
+    || !str_contains($blogRouterSource, "require __DIR__ . '/blog/series.php'")
+    || !str_contains($blogHtaccessSource, '/serie/([a-z0-9\\-]+)')
+    || strpos($blogHtaccessSource, 'serie/([a-z0-9\\-]+)') > strpos($blogHtaccessSource, 'blog_router.php?blog_slug=$1&slug=$2')) {
+    $blogAdminIssues[] = 'blog router or rewrite rules are missing article series route before article catch-all';
 }
 if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
     $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';

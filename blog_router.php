@@ -17,6 +17,7 @@ if (!isModuleEnabled('blog')) {
 $blogSlug = slugify(trim((string)($_GET['blog_slug'] ?? '')));
 $articleSlug = articleSlug(trim((string)($_GET['slug'] ?? '')));
 $pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
+$seriesSlug = blogSeriesSlug(trim((string)($_GET['series_slug'] ?? '')));
 
 if ($blogSlug === '') {
     renderPublicNotFoundPage([
@@ -49,6 +50,28 @@ if (!$blog) {
             }
         }
 
+        if ($seriesSlug !== '') {
+            try {
+                $seriesStmt = $pdo->prepare(
+                    "SELECT s.id, s.slug, s.blog_id, b.slug AS blog_slug
+                     FROM cms_blog_series s
+                     INNER JOIN cms_blogs b ON b.id = s.blog_id
+                     WHERE s.blog_id = ?
+                       AND s.slug = ?
+                       AND s.is_active = 1
+                     LIMIT 1"
+                );
+                $seriesStmt->execute([(int)$legacyBlog['id'], $seriesSlug]);
+                $legacySeries = $seriesStmt->fetch() ?: null;
+                if ($legacySeries) {
+                    header('Location: ' . blogSeriesPath($legacyBlog, $legacySeries), true, 301);
+                    exit;
+                }
+            } catch (\PDOException $e) {
+                // Při postupném nasazení může být kód novější než DB migrace.
+            }
+        }
+
         if ($articleSlug !== '') {
             $articleStmt = $pdo->prepare(
                 "SELECT a.id, a.slug, a.blog_id, b.slug AS blog_slug
@@ -77,7 +100,10 @@ if (!$blog) {
 $GLOBALS['current_blog'] = $blog;
 $_GET['blog_id'] = (int)$blog['id'];
 
-if ($pageSlug !== '') {
+if ($seriesSlug !== '') {
+    $_GET['series_slug'] = $seriesSlug;
+    require __DIR__ . '/blog/series.php';
+} elseif ($pageSlug !== '') {
     $_GET['page_slug'] = $pageSlug;
     require __DIR__ . '/blog/page.php';
 } elseif ($articleSlug !== '') {

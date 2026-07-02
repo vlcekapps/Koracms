@@ -98,6 +98,36 @@ if (isModuleEnabled('blog')) {
     } catch (\PDOException $e) {
         sitemapLogSectionError('blog', $e);
     }
+
+    try {
+        $seriesList = $pdo->query(
+            "SELECT s.id, s.slug, s.blog_id, COALESCE(s.updated_at, s.created_at) AS sitemap_lastmod,
+                    b.slug AS blog_slug
+             FROM cms_blog_series s
+             INNER JOIN cms_blogs b ON b.id = s.blog_id
+             WHERE s.is_active = 1
+               AND EXISTS (
+                   SELECT 1
+                   FROM cms_blog_series_items si
+                   INNER JOIN cms_articles a ON a.id = si.article_id
+                   WHERE si.series_id = s.id
+                     AND a.deleted_at IS NULL
+                     AND a.status = 'published'
+                     AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               )
+             ORDER BY b.sort_order ASC, s.sort_order ASC, s.title ASC"
+        )->fetchAll();
+        foreach ($seriesList as $series) {
+            sitemapWriteUrl(
+                blogSeriesUrl(['slug' => (string)$series['blog_slug']], $series),
+                'weekly',
+                '0.6',
+                sitemapLastmod((string)($series['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('blog_series', $e);
+    }
 }
 
 if (isModuleEnabled('news')) {

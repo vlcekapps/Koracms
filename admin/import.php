@@ -227,6 +227,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Ručně související články importovány.';
                 }
 
+                if (!empty($data['blog_series']) && is_array($data['blog_series'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_blog_series
+                         (id, blog_id, title, slug, description, is_active, sort_order, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    );
+                    foreach ($data['blog_series'] as $row) {
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            continue;
+                        }
+                        $importBlogId = max(1, (int)($row['blog_id'] ?? 1));
+                        if (!getBlogById($importBlogId)) {
+                            continue;
+                        }
+                        $slug = blogSeriesSlug((string)($row['slug'] ?? $title));
+                        if ($slug === '') {
+                            $slug = blogSeriesSlug($title);
+                        }
+                        $slug = uniqueBlogSeriesSlug($pdo, $slug, $importBlogId, (int)($row['id'] ?? 0));
+                        $ins->execute([
+                            (int)$row['id'],
+                            $importBlogId,
+                            $title,
+                            $slug,
+                            (string)($row['description'] ?? ''),
+                            (int)($row['is_active'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                    }
+                    $summary[] = 'Série článků importovány.';
+                }
+
+                if (!empty($data['blog_series_items']) && is_array($data['blog_series_items'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_blog_series_items (series_id, article_id, sort_order, created_at)
+                         VALUES (?, ?, ?, ?)"
+                    );
+                    foreach ($data['blog_series_items'] as $row) {
+                        $seriesId = (int)($row['series_id'] ?? 0);
+                        $articleId = (int)($row['article_id'] ?? 0);
+                        if ($seriesId <= 0 || $articleId <= 0) {
+                            continue;
+                        }
+                        $ins->execute([
+                            $seriesId,
+                            $articleId,
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Vazby článků do sérií importovány.';
+                }
+
                 // Statické stránky
                 if (!empty($data['pages']) && is_array($data['pages'])) {
                     $ins = $pdo->prepare(

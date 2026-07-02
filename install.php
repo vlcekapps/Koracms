@@ -275,6 +275,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_article_related_target (related_article_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_blog_series (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            blog_id     INT          NOT NULL,
+            title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
+            description TEXT,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_blog_series_blog_slug (blog_id, slug),
+            INDEX idx_blog_series_blog_order (blog_id, sort_order),
+            INDEX idx_blog_series_active (blog_id, is_active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_blog_series_items (
+            series_id  INT      NOT NULL,
+            article_id INT      NOT NULL,
+            sort_order INT      NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (series_id, article_id),
+            INDEX idx_blog_series_items_article (article_id),
+            INDEX idx_blog_series_items_order (series_id, sort_order)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_rate_limit (
             id           VARCHAR(64) NOT NULL PRIMARY KEY,
             attempts     INT         NOT NULL DEFAULT 1,

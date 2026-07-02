@@ -692,6 +692,36 @@ function blogFeedUrl(array $blog): string
     return siteUrl('/feed.php?blog=' . rawurlencode($slug));
 }
 
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $series
+ */
+function blogSeriesPath(array $blog, array $series): string
+{
+    $blogSlug = (string)($blog['slug'] ?? ($series['blog_slug'] ?? 'blog'));
+    $seriesSlug = blogSeriesSlug((string)($series['slug'] ?? ''));
+    if ($blogSlug === 'blog') {
+        return BASE_URL . '/blog/series.php?slug=' . rawurlencode($seriesSlug);
+    }
+
+    return BASE_URL . '/' . rawurlencode($blogSlug) . '/serie/' . rawurlencode($seriesSlug);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $series
+ */
+function blogSeriesUrl(array $blog, array $series): string
+{
+    $blogSlug = (string)($blog['slug'] ?? ($series['blog_slug'] ?? 'blog'));
+    $seriesSlug = blogSeriesSlug((string)($series['slug'] ?? ''));
+    if ($blogSlug === 'blog') {
+        return siteUrl('/blog/series.php?slug=' . rawurlencode($seriesSlug));
+    }
+
+    return siteUrl('/' . rawurlencode($blogSlug) . '/serie/' . rawurlencode($seriesSlug));
+}
+
 function saveBlogSlugRedirect(PDO $pdo, int $blogId, string $oldSlug): void
 {
     $oldSlug = slugify(trim($oldSlug));
@@ -7214,6 +7244,338 @@ function formResolveSuccessActions(array $form): array
 function formPublicUrl(array $form, array $query = []): string
 {
     return siteUrl(appendUrlQuery(formPublicRequestPath($form), $query));
+}
+
+// ──────────────────────── Série článků blogu ─────────────────────────────
+
+function blogSeriesSlug(string $value): string
+{
+    return articleSlug($value);
+}
+
+function uniqueBlogSeriesSlug(PDO $pdo, string $slug, int $blogId, ?int $excludeId = null): string
+{
+    $base = blogSeriesSlug($slug);
+    if ($base === '') {
+        $base = 'serie';
+    }
+
+    $candidate = $base;
+    $suffix = 2;
+    while (true) {
+        $params = [$blogId, $candidate];
+        $sql = "SELECT id FROM cms_blog_series WHERE blog_id = ? AND slug = ?";
+        if ($excludeId !== null) {
+            $sql .= " AND id <> ?";
+            $params[] = $excludeId;
+        }
+        $sql .= " LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) {
+            return $candidate;
+        }
+
+        $candidate = $base . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+/**
+ * @param array<int, mixed> $ids
+ * @return list<int>
+ */
+function normalizeBlogSeriesIds(array $ids): array
+{
+    $normalized = [];
+    foreach ($ids as $rawId) {
+        $seriesId = (int)$rawId;
+        if ($seriesId <= 0 || in_array($seriesId, $normalized, true)) {
+            continue;
+        }
+        $normalized[] = $seriesId;
+    }
+
+    return $normalized;
+}
+
+/**
+ * @return list<int>
+ */
+function loadArticleSeriesIds(PDO $pdo, int $articleId): array
+{
+    if ($articleId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT series_id
+             FROM cms_blog_series_items
+             WHERE article_id = ?
+             ORDER BY series_id ASC"
+        );
+        $stmt->execute([$articleId]);
+        return normalizeBlogSeriesIds($stmt->fetchAll(PDO::FETCH_COLUMN));
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @return list<array{id:int,title:string,slug:string,is_active:int,article_count:int}>
+ */
+function blogSeriesOptions(PDO $pdo, int $blogId): array
+{
+    if ($blogId <= 0) {
+        return [];
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT s.id, s.title, s.slug, s.is_active,
+                    COUNT(si.article_id) AS article_count
+             FROM cms_blog_series s
+             LEFT JOIN cms_blog_series_items si ON si.series_id = s.id
+             WHERE s.blog_id = ?
+             GROUP BY s.id, s.title, s.slug, s.is_active, s.sort_order
+             ORDER BY s.sort_order ASC, s.title ASC, s.id ASC"
+        );
+        $stmt->execute([$blogId]);
+        $rows = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $rows[] = [
+                'id' => (int)$row['id'],
+                'title' => (string)$row['title'],
+                'slug' => (string)$row['slug'],
+                'is_active' => (int)($row['is_active'] ?? 1),
+                'article_count' => (int)($row['article_count'] ?? 0),
+            ];
+        }
+        return $rows;
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @param list<int> $seriesIds
+ * @return list<int>
+ */
+function validateBlogSeriesIds(PDO $pdo, int $blogId, array $seriesIds): array
+{
+    $seriesIds = normalizeBlogSeriesIds($seriesIds);
+    if ($blogId <= 0 || $seriesIds === []) {
+        return [];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
+    $stmt = $pdo->prepare(
+        "SELECT id
+         FROM cms_blog_series
+         WHERE blog_id = ? AND id IN ({$placeholders})"
+    );
+    $stmt->execute(array_merge([$blogId], $seriesIds));
+    $validIds = array_values(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []));
+
+    return array_values(array_filter(
+        $seriesIds,
+        static fn (int $seriesId): bool => in_array($seriesId, $validIds, true)
+    ));
+}
+
+/**
+ * @param list<int> $seriesIds
+ */
+function saveArticleSeriesMemberships(PDO $pdo, int $articleId, int $blogId, array $seriesIds): void
+{
+    $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$articleId]);
+    $validSeriesIds = validateBlogSeriesIds($pdo, $blogId, $seriesIds);
+    if ($validSeriesIds === []) {
+        return;
+    }
+
+    $maxOrderStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) FROM cms_blog_series_items WHERE series_id = ?");
+    $insert = $pdo->prepare(
+        "INSERT IGNORE INTO cms_blog_series_items (series_id, article_id, sort_order)
+         VALUES (?, ?, ?)"
+    );
+    foreach ($validSeriesIds as $seriesId) {
+        $maxOrderStmt->execute([$seriesId]);
+        $nextOrder = (int)$maxOrderStmt->fetchColumn() + 1;
+        $insert->execute([$seriesId, $articleId, $nextOrder]);
+    }
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function publicBlogSeries(PDO $pdo, int $blogId, int $limit = 0): array
+{
+    if ($blogId <= 0) {
+        return [];
+    }
+
+    $limit = max(0, $limit);
+    $limitSql = $limit > 0 ? ' LIMIT ' . $limit : '';
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT s.id, s.blog_id, s.title, s.slug, s.description, s.sort_order,
+                    b.slug AS blog_slug,
+                    COUNT(a.id) AS article_count
+             FROM cms_blog_series s
+             INNER JOIN cms_blogs b ON b.id = s.blog_id
+             INNER JOIN cms_blog_series_items si ON si.series_id = s.id
+             INNER JOIN cms_articles a ON a.id = si.article_id
+             WHERE s.blog_id = ?
+               AND s.is_active = 1
+               AND a.blog_id = s.blog_id
+               AND a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             GROUP BY s.id, s.blog_id, s.title, s.slug, s.description, s.sort_order, b.slug
+             ORDER BY s.sort_order ASC, s.title ASC, s.id ASC{$limitSql}"
+        );
+        $stmt->execute([$blogId]);
+        return $stmt->fetchAll() ?: [];
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @return array{series:array<string,mixed>,articles:list<array<string,mixed>>}|null
+ */
+function publicBlogSeriesDetail(PDO $pdo, int $blogId, string $seriesSlug): ?array
+{
+    $seriesSlug = blogSeriesSlug($seriesSlug);
+    if ($blogId <= 0 || $seriesSlug === '') {
+        return null;
+    }
+
+    try {
+        $seriesStmt = $pdo->prepare(
+            "SELECT s.*, b.slug AS blog_slug
+             FROM cms_blog_series s
+             INNER JOIN cms_blogs b ON b.id = s.blog_id
+             WHERE s.blog_id = ?
+               AND s.slug = ?
+               AND s.is_active = 1
+             LIMIT 1"
+        );
+        $seriesStmt->execute([$blogId, $seriesSlug]);
+        $series = $seriesStmt->fetch() ?: null;
+        if (!$series) {
+            return null;
+        }
+
+        $articlesStmt = $pdo->prepare(
+            "SELECT a.id, a.title, a.slug, a.perex, a.content, a.image_file, a.blog_id,
+                    a.created_at, a.publish_at, a.view_count,
+                    b.slug AS blog_slug,
+                    COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),'')) AS author_name,
+                    u.author_public_enabled, u.author_slug, u.role AS author_role
+             FROM cms_blog_series_items si
+             INNER JOIN cms_articles a ON a.id = si.article_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             LEFT JOIN cms_users u ON u.id = a.author_id
+             WHERE si.series_id = ?
+               AND a.blog_id = ?
+               AND a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             ORDER BY si.sort_order ASC, a.created_at ASC, a.id ASC"
+        );
+        $articlesStmt->execute([(int)$series['id'], $blogId]);
+        $articles = array_map(
+            static fn (array $article): array => hydrateAuthorPresentation($article),
+            $articlesStmt->fetchAll() ?: []
+        );
+        if ($articles === []) {
+            return null;
+        }
+
+        return [
+            'series' => $series,
+            'articles' => $articles,
+        ];
+    } catch (\PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * @param array<string, mixed> $article
+ * @return list<array<string, mixed>>
+ */
+function articleSeriesNavigation(PDO $pdo, array $article): array
+{
+    $articleId = (int)($article['id'] ?? 0);
+    $blogId = (int)($article['blog_id'] ?? 0);
+    if ($articleId <= 0 || $blogId <= 0) {
+        return [];
+    }
+
+    try {
+        $seriesStmt = $pdo->prepare(
+            "SELECT s.id, s.blog_id, s.title, s.slug, s.description, b.slug AS blog_slug
+             FROM cms_blog_series_items current_item
+             INNER JOIN cms_blog_series s ON s.id = current_item.series_id
+             INNER JOIN cms_blogs b ON b.id = s.blog_id
+             WHERE current_item.article_id = ?
+               AND s.blog_id = ?
+               AND s.is_active = 1
+             ORDER BY s.sort_order ASC, s.title ASC, s.id ASC"
+        );
+        $seriesStmt->execute([$articleId, $blogId]);
+        $seriesRows = $seriesStmt->fetchAll() ?: [];
+        if ($seriesRows === []) {
+            return [];
+        }
+
+        $itemsStmt = $pdo->prepare(
+            "SELECT a.id, a.title, a.slug, a.blog_id, b.slug AS blog_slug, si.sort_order
+             FROM cms_blog_series_items si
+             INNER JOIN cms_articles a ON a.id = si.article_id
+             LEFT JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE si.series_id = ?
+               AND a.blog_id = ?
+               AND a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             ORDER BY si.sort_order ASC, a.created_at ASC, a.id ASC"
+        );
+
+        $result = [];
+        foreach ($seriesRows as $seriesRow) {
+            $itemsStmt->execute([(int)$seriesRow['id'], $blogId]);
+            $items = $itemsStmt->fetchAll() ?: [];
+            if ($items === []) {
+                continue;
+            }
+
+            $currentIndex = null;
+            foreach ($items as $index => $item) {
+                if ((int)$item['id'] === $articleId) {
+                    $currentIndex = $index;
+                    break;
+                }
+            }
+            if ($currentIndex === null) {
+                continue;
+            }
+
+            $seriesRow['items'] = $items;
+            $seriesRow['current_index'] = $currentIndex;
+            $seriesRow['previous_article'] = $items[$currentIndex - 1] ?? null;
+            $seriesRow['next_article'] = $items[$currentIndex + 1] ?? null;
+            $result[] = $seriesRow;
+        }
+
+        return $result;
+    } catch (\PDOException $e) {
+        return [];
+    }
 }
 
 // ──────────────────────── Související články ─────────────────────────────

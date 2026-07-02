@@ -109,6 +109,12 @@ $criticalInstallColumns = [
     'cms_article_related.article_id' => ['cms_article_related', 'article_id'],
     'cms_article_related.related_article_id' => ['cms_article_related', 'related_article_id'],
     'cms_article_related.sort_order' => ['cms_article_related', 'sort_order'],
+    'cms_blog_series.blog_id' => ['cms_blog_series', 'blog_id'],
+    'cms_blog_series.slug' => ['cms_blog_series', 'slug'],
+    'cms_blog_series.is_active' => ['cms_blog_series', 'is_active'],
+    'cms_blog_series_items.series_id' => ['cms_blog_series_items', 'series_id'],
+    'cms_blog_series_items.article_id' => ['cms_blog_series_items', 'article_id'],
+    'cms_blog_series_items.sort_order' => ['cms_blog_series_items', 'sort_order'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -141,6 +147,12 @@ $criticalMigrationSnippets = [
     'cms_article_related',
     'idx_article_related_order',
     'idx_article_related_target',
+    'cms_blog_series',
+    'uq_blog_series_blog_slug',
+    'idx_blog_series_blog_order',
+    'cms_blog_series_items',
+    'idx_blog_series_items_article',
+    'idx_blog_series_items_order',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

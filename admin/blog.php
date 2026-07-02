@@ -138,6 +138,7 @@ adminHeader($blogCaptionTitle);
     <?php endif; ?>
   <?php endif; ?>
   <?php if ($activeBlog): ?>
+    <a href="blog_series.php?blog_id=<?= (int)$activeBlog['id'] ?>">Série článků</a>
     <a href="<?= h(blogIndexPath($activeBlog)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit blog na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <a href="<?= h(blogFeedPath($activeBlog)) ?>" target="_blank" rel="noopener noreferrer">RSS feed blogu<?= newWindowLinkSrOnlySuffix() ?></a>
   <?php endif; ?>

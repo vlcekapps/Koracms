@@ -82,6 +82,7 @@ if ($action === 'delete' && $ids !== []) {
     foreach ($deleteIds as $deleteId) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$deleteId]);
         $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$deleteId, $deleteId]);
+        $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$deleteId]);
         if (canManageOwnBlogOnly()) {
             $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND author_id = ?")->execute([$deleteId, currentUserId()]);
         } else {

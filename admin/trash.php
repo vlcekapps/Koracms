@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($module === 'articles') {
                 $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
+                $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'polls') {

@@ -21,6 +21,7 @@ if (!$blog) {
 $blogId = (int)$blog['id'];
 $blogName = (string)$blog['name'];
 $blogPages = [];
+$blogSeries = [];
 
 try {
     $blogPageStmt = $pdo->prepare(
@@ -57,6 +58,8 @@ try {
 } catch (\PDOException $e) {
     koraLog('warning', 'blog index pages query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
+
+$blogSeries = publicBlogSeries($pdo, $blogId, 6);
 
 $katId = inputInt('get', 'kat');
 $tagSlug = trim((string)($_GET['tag'] ?? ''));
@@ -333,6 +336,7 @@ renderPublicPage([
         'archiveFilter' => $archiveFilter,
         'blogArchives' => $blogArchives,
         'blogPages' => $blogPages,
+        'blogSeries' => $blogSeries,
     ],
     'current_nav' => 'blog:' . $blog['slug'],
     'body_class' => 'page-blog-index',

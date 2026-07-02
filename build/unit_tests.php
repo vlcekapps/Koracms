@@ -217,6 +217,7 @@ assert_false(knownModuleKey('unknown_module'), 'known module key rejects unknown
 assert_equals('Blog', moduleDefinition('blog')['label'] ?? null, 'module definition returns blog metadata');
 assert_equals(null, moduleDefinition('unknown_module'), 'module definition returns null for unknown module');
 assert_true(in_array('/blog/article.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog article route is declared as a public module entrypoint');
+assert_true(in_array('/blog/series.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog series route is declared as a public module entrypoint');
 assert_true(in_array('/podcast/audio.php', $modulePublicEntryPoints['podcast'] ?? [], true), 'podcast audio endpoint is declared as a public module entrypoint');
 assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ?? [], true), 'newsletter subscribe route is declared as a public module entrypoint');
 assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
@@ -229,6 +230,7 @@ test_section('module admin entrypoints');
 $moduleAdminEntryPoints = moduleAdminEntryPoints();
 $moduleAdminPathMap = moduleAdminPathModuleMap();
 assert_true(in_array('/admin/blogs.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog overview is declared as an admin module entrypoint');
+assert_true(in_array('/admin/blog_series.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog series admin is declared as an admin module entrypoint');
 assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
@@ -591,6 +593,8 @@ assert_equals('novinky', normalizeAuthorContentType('novinky'), 'author content 
 assert_equals('vse', normalizeAuthorContentType('externi'), 'invalid author content filter falls back to all');
 assert_equals([12, 9, 7], normalizeRelatedArticleIds(['12', 9, 9, 0, -1, '7'], 0), 'related article IDs are positive and deduplicated');
 assert_equals([5, 8], normalizeRelatedArticleIds([5, 10, '8', 10], 10), 'related article IDs exclude the current article');
+assert_equals('serie-o-zpivajicich-hodinach', blogSeriesSlug('Série o zpívajících hodinách'), 'blog series slug normalizes Czech titles');
+assert_equals([12, 9, 7], normalizeBlogSeriesIds(['12', 9, 9, 0, -1, '7']), 'blog series IDs are positive and deduplicated');
 assert_equals(
     '3 články, 2 novinky',
     authorContentSummaryLabel([

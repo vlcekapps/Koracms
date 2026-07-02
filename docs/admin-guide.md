@@ -273,7 +273,7 @@ Správa týmů je teď viditelná i z více míst:
 - **Tým blogu** ukazuje u každého uživatele i jeho další blogová přiřazení, takže je hned jasné, kdo píše do více blogů
 - **Uživatelé a role** nově obsahují sloupec `Blogy`, kde je vidět přiřazení každého interního účtu
 - **Správa blogů** zobrazuje i počet členů týmu u každého blogu
-- **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Kategorie blogu`, `Štítky blogu` a `Stránky a odkazy blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
+- **Správa blogů** zároveň nově nabízí rychlé odkazy `Články blogu`, `Série článků`, `Kategorie blogu`, `Štítky blogu` a `Stránky a odkazy blogu`, takže lze z jednoho přehledu přejít rovnou na správu konkrétního blogu
 - **Správa blogů** používá pro formulář vytvoření blogu, dialog úprav a náhled loga sdílené admin CSS třídy bez lokálního `<style>` bloku a bez lokálních `style` atributů, takže méně zatěžuje CSP reporty a drží konzistentní modální chování
 
 To je užitečné hlavně ve chvíli, kdy jeden autor spravuje více blogů nebo když chcete rychle zkontrolovat, zda má nový redaktor přístup opravdu jen tam, kam patří.
@@ -286,11 +286,20 @@ Editor článku respektuje vybraný blog:
 - horní odkazy vedou na správný veřejný blog, jeho RSS feed a správu taxonomií
 - nové články mohou převzít výchozí komentáře z blogu
 - jeden článek v blogu lze označit jako `Doporučený článek blogu`
+- článek lze zařadit do jedné nebo více sérií článků stejného blogu
 - u článku lze ručně vybrat související články ze stejného blogu; na veřejném detailu se ruční výběr zobrazí před automaticky doplněnými články
 - náhledový obrázek používá sdílenou upload validaci a při výměně nebo odebrání uklízí i staré miniatury, WebP a responsive varianty
 - při hromadném mazání se případné selhání odstranění náhledového obrázku nebo miniatury zapíše do strukturovaného logu bez plné cesty k souboru
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
+
+### Série článků
+
+Každý blog má vlastní správu sérií v odkazu **Série článků**. Série má název, slug, volitelný popis, aktivní stav a ručně seřazené články daného blogu. Článek lze v první verzi zařadit do více sérií, ale vždy jen do sérií blogu, do kterého článek patří.
+
+Veřejně se série zobrazí jen tehdy, když je aktivní a obsahuje alespoň jeden publikovaný, nesmazaný a nebudoucí článek. Index blogu zobrazí blok `Série článků` nad výpisem článků, detail článku zobrazí blok `Tento článek je součástí série` s aktuálním dílem označeným přes `aria-current="page"` a samostatná stránka série má tvar `/{blog-slug}/serie/{series-slug}`.
+
+Server při ukládání článku znovu ověřuje, že vybraná série patří do cílového blogu. Podvržené ID série z jiného blogu uložením neprojde a článek se nepřesune do cizí série.
 
 Ručně vybrané související články se validují proti právě vybranému blogu. Editor nabídne jen publikované články stejného blogu a server při uložení znovu ověří, že podstrčené ID nepatří do jiného blogu. Pokud autor nic nevybere, veřejný detail článku dál použije automatické související články podle kategorie, štítků a novosti.
 
@@ -352,6 +361,8 @@ Každý blog může mít na svém indexu:
 Pokud je nastavený doporučený článek blogu a návštěvník nemá aktivní filtr, default šablona ho zobrazí nad výpisem článků jako samostatný blok. Nejprve je vidět nadpis `Doporučený článek`, pod ním název článku jako hlavní odkaz a až potom metadata článku: datum, přibližná doba čtení, počet přečtení a autor.
 
 Na detailu článku může být blok `Související články`. Pokud autor v editoru vybral konkrétní související články, zobrazí se jako první; pokud jich je méně než limit bloku, Kora CMS doplní další položky automaticky. Díky tomu lze u důležitých článků vést čtenáře přesněji, ale běžné články dál fungují bez ruční práce.
+
+Pokud má blog aktivní série s publikovanými články, veřejný index nad výpisem článků nabídne blok `Série článků`. Detail článku potom vedle souvisejících článků ukáže i kontext série, pořadí dílů a odkazy na předchozí nebo další díl.
 
 ### Veřejní autoři
 
@@ -812,7 +823,7 @@ Vývojové kontroly:
 - GitHub Actions drží dva oddělené workflow: `.github/workflows/ci.yml` pro běžné `push`/`pull_request` s `composer ci:basic` a `.github/workflows/full-ci.yml` pro ruční a noční běh plného `composer ci:full`; plný workflow si připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS, takže runtime audit a HTTP integrace mají vzdálený guardrail bez zpomalení každého commitu
 - Oba GitHub Actions workflow používají minimální `contents: read` oprávnění, řízení souběhu a job timeouty, aby se kvalita hlídala s menším oprávněním a bez visících běhů
 - `composer format:fix` umí stejnou úzkou sadu helperů lokálně dorovnat do PSR-12 bez zásahu do širšího historického kódu; momentálně pokrývá lint/bootstrap helpery a první stabilní várku sdílených knihoven (`backup`, `comments`, `content`, `definitions`, `filedownloads`, `gallery`, `github`, `mail`, `media_library`, `messages`, `pagination`, `presentation`, `revisions`, `stats`, `theme`, `totp`, `ui`, `uploads`, `webhooks`, `widgets`)
-- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 219 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
+- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 221 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
 - Veřejné i administrační požadavky dostávají `X-Request-ID`; globální neošetřené chyby a vybrané technické chyby se zapisují jako JSON záznamy se stejným `request_id`, metodou a cestou. Při dohledávání produkční chyby tak stačí porovnat ID z odpovědi nebo monitoringu s PHP logem; u neošetřené chyby se stejný kód zobrazí i na chybové stránce. Strukturovaný zápis se používá i pro dílčí obnovitelné chyby veřejného blogu, detailu článku, vyhledávání, sitemapy, veřejných formulářů, chatu, kontaktu, stažení souboru a newsletterových potvrzovacích akcí, kde má stránka pokračovat ve vykreslení, ale log musí ukázat selhaný zdroj nebo sekci. Stejný bezpečný zápis používají i vybrané administrační přehledy, například media picker/content reference search, formuláře a statistiky, bez ukládání hledaných výrazů, obsahu zpráv nebo tokenů do kontextu logu. Sdílené helpery pro zámky obsahu, revize, widgety, použití médií, formulářové webhooky, e-mailové notifikace, souborové operace a cron cleanup logují jen technický kontext typu operace, entity, zóny, interní tabulky, webhook eventu, hostu endpointu, HTTP stavu, domény příjemce, SMTP fáze, hashe cesty nebo přípony souboru; celé webhook URL, tělo odpovědi protistrany, celé e-mailové adresy, surové SMTP odpovědi ani fyzické cesty k souborům se do logu neukládají.
 - `health.php` kromě databáze, privátního úložiště a orientačního stavu záloh uvádí i čas poslední nalezené SQL zálohy a čerstvost posledního běhu cronu. Podporuje jen `GET` a `HEAD`; ostatní metody vrací sdílenou JSON `405` odpověď s `Allow: GET, HEAD`, bezpečnostními/no-store hlavičkami a `request_id`. Cron při každém běhu uloží `cron_last_run_at`; health check ho hlásí jako `ok`, `stale` nebo `unknown`, aniž by čerstvá instalace bez prvního cronu hned spadla do chyby. Monitoring odpověď dostává s `Cache-Control: no-store`, aby se nevyhodnocoval starý stav z cache.
 - CSP se na veřejných odpovědích posílá i v režimu `Content-Security-Policy-Report-Only`. Prohlížeče tak mohou hlásit podezřelé nebo chybějící zdroje na `csp-report.php`, aniž by se návštěvníkovi rozbil legitimní obsah; běžné inline styly jsou v politice výslovně povolené přes `style-src-elem` a `style-src-attr` a starší inline-style reporty endpoint přijme bez zápisu do JSONL, aby log neplnil očekávaný šum z historických admin šablon. Endpoint přijímá jen `POST`, nepovolené metody odmítá sdílenou JSON `405` odpovědí s `Allow: POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah, ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`, má vlastní rate limit proti zahlcení logů a cron čistí report soubory starší než 30 dní.
