@@ -2,10 +2,32 @@
 require_once __DIR__ . '/layout.php';
 require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu událostí nemáte potřebné oprávnění.');
+requireModuleEnabled('events');
 
 $pdo = db_connect();
 $id = inputInt('get', 'id');
 $event = null;
+$eventTypes = loadEventTypes($pdo, false);
+$eventTypeByLegacy = [];
+foreach ($eventTypes as $eventType) {
+    $legacyKey = trim((string)($eventType['legacy_key'] ?? ''));
+    if ($legacyKey !== '') {
+        $eventTypeByLegacy[$legacyKey] = $eventType;
+    }
+}
+$placeOptions = [];
+if (isModuleEnabled('places')) {
+    try {
+        $placeOptions = $pdo->query(
+            "SELECT id, name, slug, address, locality, status, is_published
+             FROM cms_places
+             WHERE deleted_at IS NULL
+             ORDER BY name, id"
+        )->fetchAll();
+    } catch (PDOException) {
+        $placeOptions = [];
+    }
+}
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ?");
@@ -27,6 +49,9 @@ $event = array_merge([
     'title' => '',
     'slug' => '',
     'event_kind' => 'general',
+    'event_type_id' => null,
+    'place_id' => null,
+    'recurrence_group_id' => '',
     'excerpt' => '',
     'description' => '',
     'program_note' => '',
@@ -49,9 +74,13 @@ $event = hydrateEventPresentation($event);
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $currentEventKind = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
-$eventKindHelpMap = [];
-foreach (eventKindDefinitions() as $typeKey => $typeMeta) {
-    $eventKindHelpMap[$typeKey] = (string)$typeMeta['help'];
+$currentEventTypeId = (int)($event['event_type_id'] ?? 0);
+if ($currentEventTypeId === 0 && isset($eventTypeByLegacy[$currentEventKind])) {
+    $currentEventTypeId = (int)$eventTypeByLegacy[$currentEventKind]['id'];
+}
+$eventTypeHelpMap = [];
+foreach ($eventTypes as $eventType) {
+    $eventTypeHelpMap[(string)(int)$eventType['id']] = trim((string)($eventType['description'] ?? ''));
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
@@ -64,6 +93,9 @@ $formError = match ($err) {
     'image' => 'Obrázek události se nepodařilo uložit.',
     'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
     'publish_at' => 'Plánované publikování nemá platný formát data a času.',
+    'event_type' => 'Vyberte platný typ akce.',
+    'place' => 'Vybrané místo neexistuje nebo není dostupné.',
+    'recurrence' => 'Opakování musí mít platný typ, interval a počet termínů od 2 do 52.',
     default => '',
 };
 $fieldErrorMap = [
@@ -75,6 +107,9 @@ $fieldErrorMap = [
     'image' => ['event_image'],
     'unpublish_at' => ['unpublish_at'],
     'publish_at' => ['publish_at'],
+    'event_type' => ['event_type_id'],
+    'place' => ['place_id'],
+    'recurrence' => ['recurrence_frequency', 'recurrence_interval', 'recurrence_count'],
 ];
 $fieldErrorMessages = [
     'title' => 'Událost musí mít název.',
@@ -86,6 +121,9 @@ $fieldErrorMessages = [
     'image' => 'Obrázek události se nepodařilo uložit.',
     'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
     'publish_at' => 'Plánované publikování nemá platný formát data a času.',
+    'event_type' => 'Vyberte platný typ akce.',
+    'place' => 'Vybrané místo neexistuje nebo není dostupné.',
+    'recurrence' => 'Zkontrolujte typ opakování, interval a počet termínů.',
 ];
 
 adminHeader($id ? 'Upravit událost' : 'Nová událost');
@@ -136,23 +174,50 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <small id="event-slug-help" class="field-help">Adresa se vyplní automaticky, dokud ji neupravíte ručně. Použijte malá písmena, číslice a pomlčky.</small>
     <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
-    <label for="event_kind">Typ akce</label>
-    <select id="event_kind" name="event_kind" aria-describedby="event-kind-help">
-      <?php foreach (eventKindDefinitions() as $typeKey => $typeMeta): ?>
-        <option value="<?= h($typeKey) ?>"<?= $currentEventKind === $typeKey ? ' selected' : '' ?>>
-          <?= h((string)$typeMeta['label']) ?>
+    <label for="event_type_id">Typ akce</label>
+    <select id="event_type_id" name="event_type_id"<?= adminFieldAttributes('event_type_id', $err, $fieldErrorMap, ['event-kind-help']) ?>>
+      <?php foreach ($eventTypes as $eventType): ?>
+        <option value="<?= (int)$eventType['id'] ?>"<?= $currentEventTypeId === (int)$eventType['id'] ? ' selected' : '' ?>>
+          <?= h((string)$eventType['title']) ?><?= (int)$eventType['is_active'] === 0 ? ' (vypnuto)' : '' ?>
         </option>
       <?php endforeach; ?>
     </select>
-    <small id="event-kind-help" class="field-help"><?= h($eventKindHelpMap[$currentEventKind] ?? '') ?></small>
+    <small id="event-kind-help" class="field-help">
+      <?= h($eventTypeHelpMap[(string)$currentEventTypeId] ?? 'Typy akcí spravujete v samostatné obrazovce. Každý aktivní typ má vlastní veřejnou stránku.') ?>
+      <a href="event_types.php">Spravovat typy akcí</a>.
+    </small>
+    <?php adminRenderFieldError('event_type_id', $err, $fieldErrorMap, $fieldErrorMessages['event_type']); ?>
 
     <label for="excerpt">Krátké shrnutí</label>
     <textarea id="excerpt" name="excerpt" rows="3" aria-describedby="event-excerpt-help"><?= h((string)$event['excerpt']) ?></textarea>
     <small id="event-excerpt-help" class="field-help">Volitelné. Hodí se pro přehled akcí, sdílení a vyhledávání. Když ho nevyplníte, použije se začátek popisu.</small>
 
-    <label for="location">Místo konání</label>
+    <label for="place_id">Spravované místo konání</label>
+    <select id="place_id" name="place_id"<?= adminFieldAttributes('place_id', $err, $fieldErrorMap, ['event-place-help']) ?>>
+      <option value="">Bez vazby na spravované místo</option>
+      <?php foreach ($placeOptions as $placeOption): ?>
+        <?php
+        $placeLabel = trim(implode(', ', array_filter([
+            (string)($placeOption['name'] ?? ''),
+            (string)($placeOption['locality'] ?? ''),
+        ], static fn (string $value): bool => $value !== '')));
+          ?>
+        <option value="<?= (int)$placeOption['id'] ?>"<?= (int)($event['place_id'] ?? 0) === (int)$placeOption['id'] ? ' selected' : '' ?>>
+          <?= h($placeLabel) ?><?= ((string)($placeOption['status'] ?? 'published') !== 'published' || (int)($placeOption['is_published'] ?? 1) !== 1) ? ' (není veřejné)' : '' ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    <small id="event-place-help" class="field-help">
+      Volitelné. Pokud modul Místa není aktivní nebo místo není veřejné, událost dál použije ručně vyplněné místo.
+      <?php if (isModuleEnabled('places')): ?><a href="place_form.php?redirect=<?= h(rawurlencode(BASE_URL . '/admin/event_form.php' . ($id !== null ? '?id=' . (int)$id : ''))) ?>">Přidat místo</a>.<?php endif; ?>
+    </small>
+    <?php adminRenderFieldError('place_id', $err, $fieldErrorMap, $fieldErrorMessages['place']); ?>
+
+    <label for="location">Ručně psané místo nebo upřesnění</label>
     <input type="text" id="location" name="location" maxlength="255"
+           aria-describedby="event-location-help"
            value="<?= h((string)$event['location']) ?>">
+    <small id="event-location-help" class="field-help">Může zůstat prázdné, pokud stačí vybrané spravované místo. Hodí se třeba pro sál, patro nebo online odkaz.</small>
   </fieldset>
 
   <fieldset class="admin-fieldset-card admin-action-row">
@@ -192,6 +257,39 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     </div>
     <small id="event-end-help" class="field-help">Vyplňte, pokud má akce jasný konec nebo trvá více dní. Probíhající akce se pak správně zobrazí i na veřejném webu.</small>
   </fieldset>
+
+  <?php if ($id === null): ?>
+    <fieldset class="admin-fieldset-card admin-action-row">
+      <legend>Opakované termíny</legend>
+      <p id="event-recurrence-help" class="field-help field-help--flush">Opakování vytvoří skutečné samostatné události. Pozdější úprava jednoho termínu se automaticky nepropíše do celé série.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="recurrence_frequency">Opakování</label>
+          <select id="recurrence_frequency" name="recurrence_frequency"<?= adminFieldAttributes('recurrence_frequency', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
+            <option value="none">Žádné</option>
+            <option value="daily">Denně</option>
+            <option value="weekly">Týdně</option>
+            <option value="monthly">Měsíčně</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="recurrence_interval">Interval</label>
+          <input type="number" id="recurrence_interval" name="recurrence_interval" min="1" max="12" value="1"<?= adminFieldAttributes('recurrence_interval', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
+        </div>
+        <div class="form-group">
+          <label for="recurrence_count">Počet termínů</label>
+          <input type="number" id="recurrence_count" name="recurrence_count" min="2" max="52" value="2"<?= adminFieldAttributes('recurrence_count', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
+        </div>
+      </div>
+      <?php if (adminFieldHasError('recurrence_frequency', $err, $fieldErrorMap)): ?>
+        <small id="event-recurrence-error" class="field-help field-error"><?= h($fieldErrorMessages['recurrence']) ?></small>
+      <?php endif; ?>
+    </fieldset>
+  <?php elseif ((string)($event['recurrence_group_id'] ?? '') !== ''): ?>
+    <p class="admin-description admin-description--muted">
+      Tato událost je součástí opakované série. Úpravy se týkají jen tohoto konkrétního termínu.
+    </p>
+  <?php endif; ?>
 
   <fieldset>
     <legend>Obsah události</legend>
@@ -326,9 +424,9 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
-    const eventKindInput = document.getElementById('event_kind');
+    const eventKindInput = document.getElementById('event_type_id');
     const eventKindHelp = document.getElementById('event-kind-help');
-    const eventKindHelpMap = <?= json_encode($eventKindHelpMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const eventKindHelpMap = <?= json_encode($eventTypeHelpMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     let slugManual = <?= $id !== null && !empty($event['slug']) ? 'true' : 'false' ?>;
 
     const slugify = (value) => value

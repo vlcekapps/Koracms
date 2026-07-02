@@ -168,7 +168,10 @@ function coreModuleDefinitions(): array
             'admin_label' => 'Události',
             'content_reference_types' => ['event' => 'Události'],
             'search_result_types' => ['event' => 'Akce'],
-            'sitemap_sections' => ['events' => 'Události'],
+            'sitemap_sections' => [
+                'events' => 'Události',
+                'event_types' => 'Typy akcí',
+            ],
             'settings_default' => '1',
             'public_nav_path' => '/events/index.php',
             'public_paths' => [
@@ -182,6 +185,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/events.php',
+                '/admin/event_types.php',
             ],
         ],
         'podcast' => [
@@ -907,6 +911,27 @@ function eventKindDefinitions(): array
             'help' => 'Použijte, když žádný z nabízených typů přesně nesedí, ale chcete typ akce přesto odlišit.',
         ],
     ];
+}
+
+/**
+ * @return array<int, array{legacy_key:string,title:string,slug:string,description:string,sort_order:int}>
+ */
+function defaultEventTypeRows(): array
+{
+    $rows = [];
+    $sortOrder = 10;
+    foreach (eventKindDefinitions() as $legacyKey => $definition) {
+        $rows[] = [
+            'legacy_key' => $legacyKey,
+            'title' => (string)$definition['label'],
+            'slug' => $legacyKey,
+            'description' => (string)$definition['help'],
+            'sort_order' => $sortOrder,
+        ];
+        $sortOrder += 10;
+    }
+
+    return $rows;
 }
 
 function normalizeBoardType(string $type): string

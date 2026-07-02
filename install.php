@@ -351,11 +351,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_log_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_event_types (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            legacy_key  VARCHAR(50)  NULL DEFAULT NULL,
+            title       VARCHAR(255) NOT NULL,
+            slug        VARCHAR(255) NOT NULL,
+            description TEXT,
+            meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_event_types_slug (slug),
+            UNIQUE KEY uq_cms_event_types_legacy (legacy_key),
+            INDEX idx_cms_event_types_active_order (is_active, sort_order, title)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        seedDefaultEventTypes($pdo);
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_events (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title       VARCHAR(255) NOT NULL,
             slug        VARCHAR(255) NOT NULL,
             event_kind  VARCHAR(50)  NOT NULL DEFAULT 'general',
+            event_type_id INT        NULL DEFAULT NULL,
+            place_id    INT          NULL DEFAULT NULL,
+            recurrence_group_id VARCHAR(64) NOT NULL DEFAULT '',
             excerpt     TEXT,
             description TEXT,
             program_note TEXT,
@@ -378,6 +399,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_cms_events_slug (slug),
+            INDEX idx_cms_events_type (event_type_id),
+            INDEX idx_cms_events_place (place_id),
+            INDEX idx_cms_events_recurrence (recurrence_group_id, event_date),
             FULLTEXT INDEX ft_events_search (title, excerpt, description, program_note, location, organizer_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 

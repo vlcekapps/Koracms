@@ -322,6 +322,32 @@ assert_equals(
     'contact topic recipient falls back to global contact email'
 );
 assert_equals('', contactNotificationRecipient('neplatny-email', ['recipient_email' => '']), 'invalid contact email fallback stays empty');
+assert_equals('prednasky-a-workshopy', eventTypeSlug('Přednášky a workshopy'), 'event type slug normalizes Czech diacritics');
+assert_equals(
+    '/events/typ/prednasky',
+    str_replace(BASE_URL, '', eventTypePath(['id' => 3, 'title' => 'Přednášky', 'slug' => 'prednasky'])),
+    'event type canonical path uses clean URL'
+);
+assert_equals(
+    'daily',
+    normalizeEventRecurrenceFrequency('daily'),
+    'event recurrence accepts daily frequency'
+);
+assert_equals(
+    'none',
+    normalizeEventRecurrenceFrequency('yearly'),
+    'event recurrence rejects unsupported frequency'
+);
+assert_equals(
+    '2026-04-15 18:00',
+    eventRecurrenceShift(new DateTimeImmutable('2026-04-01 18:00'), 'weekly', 2)->format('Y-m-d H:i'),
+    'event recurrence shifts weekly dates'
+);
+assert_equals(
+    '2026-06-01 09:30',
+    eventRecurrenceShift(new DateTimeImmutable('2026-04-01 09:30'), 'monthly', 2)->format('Y-m-d H:i'),
+    'event recurrence shifts monthly dates'
+);
 assert_equals(
     'linuxovy-koutek-3',
     nextBlogTaxonomySlug('Linuxový koutek', ['linuxovy-koutek', 'linuxovy-koutek-2'], 'kategorie'),

@@ -1138,6 +1138,11 @@ function eventSlug(string $value): string
     return slugify(trim($value));
 }
 
+function eventTypeSlug(string $value): string
+{
+    return slugify(trim($value));
+}
+
 function placeSlug(string $value): string
 {
     return slugify(trim($value));
@@ -4581,6 +4586,72 @@ function eventPublicRequestPath(array $event): string
 }
 
 /**
+ * @param array<string, mixed> $eventType
+ */
+function eventTypeRequestPath(array $eventType): string
+{
+    $slug = eventTypeSlug((string)($eventType['slug'] ?? ''));
+    if ($slug !== '') {
+        return '/events/typ/' . rawurlencode($slug);
+    }
+
+    return '/events/index.php';
+}
+
+/**
+ * @param array<string, mixed> $eventType
+ * @param array<string, mixed> $query
+ */
+function eventTypePath(array $eventType, array $query = []): string
+{
+    return BASE_URL . appendUrlQuery(eventTypeRequestPath($eventType), $query);
+}
+
+/**
+ * @param array<string, mixed> $eventType
+ * @param array<string, mixed> $query
+ */
+function eventTypeUrl(array $eventType, array $query = []): string
+{
+    return siteUrl(appendUrlQuery(eventTypeRequestPath($eventType), $query));
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function loadEventTypes(PDO $pdo, bool $activeOnly = false): array
+{
+    try {
+        $where = $activeOnly ? 'WHERE is_active = 1' : '';
+        $rows = $pdo->query(
+            "SELECT id, legacy_key, title, slug, description, meta_title, meta_description,
+                    is_active, sort_order, created_at, updated_at
+             FROM cms_event_types
+             {$where}
+             ORDER BY sort_order, title, id"
+        )->fetchAll();
+    } catch (\PDOException) {
+        return [];
+    }
+
+    return array_values(array_map(static function (array $row): array {
+        $row['id'] = (int)($row['id'] ?? 0);
+        $row['legacy_key'] = trim((string)($row['legacy_key'] ?? ''));
+        $row['title'] = trim((string)($row['title'] ?? ''));
+        $row['slug'] = eventTypeSlug((string)($row['slug'] ?? ''));
+        $row['description'] = trim((string)($row['description'] ?? ''));
+        $row['meta_title'] = trim((string)($row['meta_title'] ?? ''));
+        $row['meta_description'] = trim((string)($row['meta_description'] ?? ''));
+        $row['is_active'] = (int)($row['is_active'] ?? 0);
+        $row['sort_order'] = (int)($row['sort_order'] ?? 0);
+        $row['public_path'] = eventTypePath($row);
+        $row['public_url'] = eventTypeUrl($row);
+
+        return $row;
+    }, $rows ?: []));
+}
+
+/**
  * @param array<string, mixed> $place
  */
 function placePublicRequestPath(array $place): string
@@ -4670,6 +4741,8 @@ function eventRevisionSnapshot(array $event): array
         'title' => trim((string)($event['title'] ?? '')),
         'slug' => eventSlug((string)($event['slug'] ?? '')),
         'event_kind' => normalizeEventKind((string)($event['event_kind'] ?? 'general')),
+        'event_type_id' => (string)((int)($event['event_type_id'] ?? 0)),
+        'place_id' => (string)((int)($event['place_id'] ?? 0)),
         'excerpt' => trim((string)($event['excerpt'] ?? '')),
         'description' => trim((string)($event['description'] ?? '')),
         'program_note' => trim((string)($event['program_note'] ?? '')),
@@ -4694,12 +4767,63 @@ function eventRevisionSnapshot(array $event): array
 function hydrateEventPresentation(array $event): array
 {
     $event['slug'] = eventSlug((string)($event['slug'] ?? ''));
-    $event['event_kind'] = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
-    $event['event_kind_label'] = (string)(eventKindDefinitions()[$event['event_kind']]['label'] ?? 'Akce');
-    $event['event_kind_help'] = eventKindHelp((string)$event['event_kind']);
+    $legacyEventKind = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
+    $event['event_kind'] = $legacyEventKind;
+
+    $eventTypeTitle = trim((string)($event['event_type_title'] ?? ''));
+    $eventTypeSlug = eventTypeSlug((string)($event['event_type_slug'] ?? ''));
+    $eventTypeId = (int)($event['event_type_id'] ?? 0);
+    $event['event_type'] = null;
+    $event['event_type_path'] = '';
+    if ($eventTypeId > 0 && $eventTypeTitle !== '') {
+        $eventType = [
+            'id' => $eventTypeId,
+            'legacy_key' => trim((string)($event['event_type_legacy_key'] ?? '')),
+            'title' => $eventTypeTitle,
+            'slug' => $eventTypeSlug,
+            'description' => trim((string)($event['event_type_description'] ?? '')),
+            'meta_title' => trim((string)($event['event_type_meta_title'] ?? '')),
+            'meta_description' => trim((string)($event['event_type_meta_description'] ?? '')),
+            'is_active' => (int)($event['event_type_is_active'] ?? 0),
+        ];
+        $event['event_type'] = $eventType;
+        $event['event_type_path'] = $eventTypeSlug !== '' ? eventTypePath($eventType) : '';
+        $event['event_kind_label'] = $eventTypeTitle;
+        $event['event_kind_help'] = (string)$eventType['description'];
+    } else {
+        $event['event_kind_label'] = (string)(eventKindDefinitions()[$legacyEventKind]['label'] ?? 'Akce');
+        $event['event_kind_help'] = eventKindHelp($legacyEventKind);
+    }
+
     $event['excerpt_plain'] = eventExcerpt($event);
     $event['image_url'] = eventImageUrl($event);
     $event['location'] = trim((string)($event['location'] ?? ''));
+    $event['place'] = null;
+    $event['place_path'] = '';
+    $event['place_map_url'] = '';
+    $placeName = trim((string)($event['place_name'] ?? ''));
+    if ((int)($event['place_id'] ?? 0) > 0 && $placeName !== '') {
+        $place = hydratePlacePresentation([
+            'id' => (int)$event['place_id'],
+            'name' => $placeName,
+            'slug' => (string)($event['place_slug'] ?? ''),
+            'address' => (string)($event['place_address'] ?? ''),
+            'locality' => (string)($event['place_locality'] ?? ''),
+            'latitude' => $event['place_latitude'] ?? '',
+            'longitude' => $event['place_longitude'] ?? '',
+            'status' => (string)($event['place_status'] ?? 'published'),
+            'is_published' => (int)($event['place_is_published'] ?? 1),
+        ]);
+        if (!function_exists('isModuleEnabled') || (isModuleEnabled('places') && !empty($place['is_publicly_visible']))) {
+            $event['place'] = $place;
+            $event['place_path'] = (string)$place['public_path'];
+            $event['place_map_url'] = (string)$place['map_url'];
+        }
+    }
+    $event['location_display'] = trim(implode(', ', array_filter([
+        is_array($event['place']) ? (string)($event['place']['name'] ?? '') : '',
+        $event['location'],
+    ], static fn (string $value): bool => $value !== '')));
     $event['organizer_name'] = trim((string)($event['organizer_name'] ?? ''));
     $event['organizer_email'] = trim((string)($event['organizer_email'] ?? ''));
     $event['registration_url'] = normalizeDownloadExternalUrl((string)($event['registration_url'] ?? ''));
@@ -4711,6 +4835,7 @@ function hydrateEventPresentation(array $event): array
     $event['has_accessibility_note'] = $event['accessibility_note'] !== '';
     $event['has_program_note'] = $event['program_note'] !== '';
     $event['has_price_note'] = $event['price_note'] !== '';
+    $event['recurrence_group_id'] = trim((string)($event['recurrence_group_id'] ?? ''));
     $event['event_status_key'] = eventCurrentStatus($event);
     $event['event_status_label'] = match ($event['event_status_key']) {
         'ongoing' => 'Právě probíhá',
@@ -4790,6 +4915,26 @@ function eventScopeVisibilitySql(string $scope, string $alias = ''): string
     };
 }
 
+function normalizeEventRecurrenceFrequency(string $frequency): string
+{
+    return in_array($frequency, ['none', 'daily', 'weekly', 'monthly'], true) ? $frequency : 'none';
+}
+
+function eventRecurrenceShift(DateTimeImmutable $date, string $frequency, int $offset): DateTimeImmutable
+{
+    return match (normalizeEventRecurrenceFrequency($frequency)) {
+        'daily' => $date->modify('+' . $offset . ' day'),
+        'weekly' => $date->modify('+' . $offset . ' week'),
+        'monthly' => $date->modify('+' . $offset . ' month'),
+        default => $date,
+    };
+}
+
+function eventRecurrenceGroupId(): string
+{
+    return bin2hex(random_bytes(16));
+}
+
 /**
  * @param array<string, mixed> $event
  */
@@ -4834,12 +4979,31 @@ function eventStructuredData(array $event): string
         $data['image'] = [siteUrl(str_replace(BASE_URL, '', $imageUrl))];
     }
 
-    $location = trim((string)($event['location'] ?? ''));
-    if ($location !== '') {
-        $data['location'] = [
+    $place = is_array($event['place'] ?? null) ? $event['place'] : null;
+    if ($place !== null) {
+        $data['location'] = array_filter([
             '@type' => 'Place',
-            'name' => $location,
-        ];
+            'name' => trim((string)($place['name'] ?? '')),
+            'url' => trim((string)($place['public_url'] ?? '')),
+            'address' => !empty($place['full_address']) ? array_filter([
+                '@type' => 'PostalAddress',
+                'streetAddress' => trim((string)($place['address'] ?? '')),
+                'addressLocality' => trim((string)($place['locality'] ?? '')),
+            ], static fn ($value): bool => $value !== '') : null,
+            'geo' => !empty($place['has_coordinates']) ? [
+                '@type' => 'GeoCoordinates',
+                'latitude' => (string)($place['latitude'] ?? ''),
+                'longitude' => (string)($place['longitude'] ?? ''),
+            ] : null,
+        ], static fn ($value): bool => $value !== '' && $value !== null);
+    } else {
+        $location = trim((string)($event['location'] ?? ''));
+        if ($location !== '') {
+            $data['location'] = [
+                '@type' => 'Place',
+                'name' => $location,
+            ];
+        }
     }
 
     $organizerName = trim((string)($event['organizer_name'] ?? ''));
@@ -4960,7 +5124,7 @@ function eventIcsContent(array $event): string
         $lines[] = 'DTEND:' . $toUtc($endRaw);
     }
 
-    $location = trim((string)($event['location'] ?? ''));
+    $location = trim((string)($event['location_display'] ?? $event['location'] ?? ''));
     if ($location !== '') {
         $lines[] = 'LOCATION:' . $escape($location);
     }
@@ -5337,6 +5501,46 @@ function uniqueEventSlug(PDO $pdo, string $candidate, ?int $excludeId = null): s
         }
         $slug = $baseSlug . '-' . $suffix;
         $suffix++;
+    }
+}
+
+function uniqueEventTypeSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = eventTypeSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'typ-akce';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_event_types WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+function seedDefaultEventTypes(PDO $pdo): void
+{
+    $stmt = $pdo->prepare(
+        "INSERT IGNORE INTO cms_event_types
+         (legacy_key, title, slug, description, is_active, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, NOW(), NOW())"
+    );
+
+    foreach (defaultEventTypeRows() as $row) {
+        $stmt->execute([
+            $row['legacy_key'],
+            $row['title'],
+            $row['slug'],
+            $row['description'],
+            $row['sort_order'],
+        ]);
     }
 }
 

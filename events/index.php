@@ -27,8 +27,28 @@ $perPage = max(1, (int)getSetting('events_per_page', '10'));
 $q = trim((string)($_GET['q'] ?? ''));
 $locationFilter = trim((string)($_GET['misto'] ?? ''));
 $typeFilter = trim((string)($_GET['typ'] ?? 'all'));
+$typeSlugFilter = eventTypeSlug(trim((string)($_GET['type_slug'] ?? '')));
 $periodFilter = trim((string)($_GET['period'] ?? 'all'));
 $scope = trim((string)($_GET['scope'] ?? 'upcoming'));
+$eventTypes = loadEventTypes($pdo, true);
+$eventTypeBySlug = [];
+foreach ($eventTypes as $eventType) {
+    $eventTypeBySlug[(string)$eventType['slug']] = $eventType;
+}
+$activeEventType = null;
+if ($typeSlugFilter !== '') {
+    $activeEventType = $eventTypeBySlug[$typeSlugFilter] ?? null;
+    if ($activeEventType === null) {
+        renderPublicNotFoundPage([
+            'title' => 'Typ akce nenalezen',
+            'meta' => [
+                'url' => BASE_URL . '/events/typ/' . rawurlencode($typeSlugFilter),
+            ],
+            'body_class' => 'page-event-type-not-found',
+        ]);
+    }
+    $typeFilter = (string)$activeEventType['slug'];
+}
 
 $allowedScopes = ['upcoming', 'ongoing', 'past', 'all'];
 if (!in_array($scope, $allowedScopes, true)) {
@@ -46,7 +66,7 @@ $periodOptions = [
 if (!isset($periodOptions[$periodFilter])) {
     $periodFilter = 'all';
 }
-if ($typeFilter !== 'all' && !isset(eventKindDefinitions()[$typeFilter])) {
+if ($typeFilter !== 'all' && !isset($eventTypeBySlug[$typeFilter]) && !isset(eventKindDefinitions()[$typeFilter])) {
     $typeFilter = 'all';
 }
 
@@ -78,8 +98,15 @@ if ($locationFilter !== '') {
 }
 
 if ($typeFilter !== 'all') {
-    $whereParts[] = 'e.event_kind = ?';
-    $params[] = $typeFilter;
+    if (isset($eventTypeBySlug[$typeFilter])) {
+        $selectedType = $eventTypeBySlug[$typeFilter];
+        $whereParts[] = '(e.event_type_id = ? OR (e.event_type_id IS NULL AND e.event_kind = ?))';
+        $params[] = (int)$selectedType['id'];
+        $params[] = (string)($selectedType['legacy_key'] ?: $selectedType['slug']);
+    } else {
+        $whereParts[] = 'e.event_kind = ?';
+        $params[] = $typeFilter;
+    }
 }
 
 if ($periodFilter === 'today') {
@@ -143,8 +170,16 @@ $orderSql = match ($scope) {
 };
 
 $stmt = $pdo->prepare(
-    "SELECT e.*
+    "SELECT e.*,
+            t.title AS event_type_title, t.slug AS event_type_slug, t.legacy_key AS event_type_legacy_key,
+            t.description AS event_type_description, t.meta_title AS event_type_meta_title,
+            t.meta_description AS event_type_meta_description, t.is_active AS event_type_is_active,
+            p.name AS place_name, p.slug AS place_slug, p.address AS place_address, p.locality AS place_locality,
+            p.latitude AS place_latitude, p.longitude AS place_longitude, p.status AS place_status,
+            p.is_published AS place_is_published
      FROM cms_events e
+     LEFT JOIN cms_event_types t ON t.id = e.event_type_id
+     LEFT JOIN cms_places p ON p.id = e.place_id
      {$whereSql}
      ORDER BY {$orderSql}
      LIMIT ? OFFSET ?"
@@ -155,7 +190,7 @@ $items = array_map(
     $stmt->fetchAll()
 );
 
-$buildEventsIndexUrl = static function (array $overrides = []) use ($q, $locationFilter, $typeFilter, $periodFilter, $scope): string {
+$buildEventsIndexUrl = static function (array $overrides = []) use ($q, $locationFilter, $typeFilter, $periodFilter, $scope, $activeEventType): string {
     $query = [];
     $merged = array_merge([
         'q' => $q,
@@ -172,7 +207,12 @@ $buildEventsIndexUrl = static function (array $overrides = []) use ($q, $locatio
         $query[$key] = $value;
     }
 
-    return BASE_URL . '/events/index.php' . ($query !== [] ? '?' . http_build_query($query) : '');
+    $baseUrl = is_array($activeEventType) ? eventTypePath($activeEventType) : BASE_URL . '/events/index.php';
+    if (is_array($activeEventType)) {
+        unset($query['typ']);
+    }
+
+    return $baseUrl . ($query !== [] ? '?' . http_build_query($query) : '');
 };
 
 $scopeLinks = [
@@ -213,8 +253,8 @@ if ($q !== '') {
 if ($locationFilter !== '') {
     $filterSummary[] = 'místo: ' . $locationFilter;
 }
-if ($typeFilter !== 'all') {
-    $filterSummary[] = 'typ: ' . (string)(eventKindDefinitions()[$typeFilter]['label'] ?? $typeFilter);
+if ($typeFilter !== 'all' && $activeEventType === null) {
+    $filterSummary[] = 'typ: ' . (string)($eventTypeBySlug[$typeFilter]['title'] ?? eventKindDefinitions()[$typeFilter]['label'] ?? $typeFilter);
 }
 if ($periodFilter !== 'all') {
     $filterSummary[] = 'období: ' . (string)$periodOptions[$periodFilter];
@@ -226,10 +266,23 @@ $pageHeading = match ($scope) {
     'all' => 'Všechny akce',
     default => 'Připravované akce',
 };
+if ($activeEventType !== null) {
+    $pageHeading = (string)$activeEventType['title'];
+}
 
 $metaTitle = $pageHeading . ' - ' . $siteName;
 if ($filterSummary !== []) {
     $metaTitle = $pageHeading . ' - ' . implode(', ', $filterSummary) . ' - ' . $siteName;
+}
+if ($activeEventType !== null && trim((string)($activeEventType['meta_title'] ?? '')) !== '' && $filterSummary === []) {
+    $metaTitle = trim((string)$activeEventType['meta_title']) . ' - ' . $siteName;
+}
+$metaDescription = '';
+if ($activeEventType !== null) {
+    $metaDescription = trim((string)($activeEventType['meta_description'] ?? ''));
+    if ($metaDescription === '') {
+        $metaDescription = normalizePlainText((string)($activeEventType['description'] ?? ''));
+    }
 }
 
 $pagerBase = $buildEventsIndexUrl(['strana' => null]);
@@ -254,6 +307,7 @@ renderPublicPage([
     'title' => $metaTitle,
     'meta' => [
         'title' => $metaTitle,
+        'description' => $metaDescription,
         'url' => siteUrl(str_replace(BASE_URL, '', $buildEventsIndexUrl(['strana' => null]))),
     ],
     'view' => 'modules/events-index',
@@ -263,6 +317,8 @@ renderPublicPage([
         'scopeLinks' => $scopeLinks,
         'searchQuery' => $q,
         'locationOptions' => $locationOptions,
+        'eventTypes' => $eventTypes,
+        'activeEventType' => $activeEventType,
         'selectedLocation' => $locationFilter,
         'selectedType' => $typeFilter,
         'selectedPeriod' => $periodFilter,
@@ -271,7 +327,7 @@ renderPublicPage([
         'resultCountLabel' => eventsCountLabel($totalItems),
         'pagerHtml' => renderPager($page, $pages, $pagerBase, 'Stránkování akcí', 'Předchozí stránka', 'Další stránka'),
         'hasActiveFilters' => $q !== '' || $locationFilter !== '' || $typeFilter !== 'all' || $periodFilter !== 'all' || $scope !== 'upcoming',
-        'clearUrl' => BASE_URL . '/events/index.php',
+        'clearUrl' => $activeEventType !== null ? eventTypePath($activeEventType) : BASE_URL . '/events/index.php',
         'pageHeading' => $pageHeading,
         'listingQuery' => $listingQuery,
     ],

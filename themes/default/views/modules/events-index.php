@@ -3,6 +3,8 @@ $items = $items ?? [];
 $scopeLinks = $scopeLinks ?? [];
 $searchQuery = (string)($searchQuery ?? '');
 $locationOptions = $locationOptions ?? [];
+$eventTypes = is_array($eventTypes ?? null) ? $eventTypes : [];
+$activeEventType = is_array($activeEventType ?? null) ? $activeEventType : null;
 $selectedLocation = (string)($selectedLocation ?? '');
 $selectedType = (string)($selectedType ?? 'all');
 $selectedPeriod = (string)($selectedPeriod ?? 'all');
@@ -39,6 +41,15 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
       </nav>
     <?php endif; ?>
 
+    <?php if ($activeEventType !== null && trim((string)($activeEventType['description'] ?? '')) !== ''): ?>
+      <section class="surface surface--subsection" aria-labelledby="events-type-description-title">
+        <h2 id="events-type-description-title" class="section-title section-title--compact"><?= h((string)$activeEventType['title']) ?></h2>
+        <div class="prose">
+          <?= renderContent((string)$activeEventType['description']) ?>
+        </div>
+      </section>
+    <?php endif; ?>
+
     <form class="filter-bar filter-bar--stack" action="<?= BASE_URL ?>/events/index.php" method="get">
       <fieldset class="filter-bar__fieldset">
         <legend class="filter-bar__legend">Filtrovat akce</legend>
@@ -72,9 +83,9 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
             <label for="events-filter-type">Typ akce</label>
             <select id="events-filter-type" class="form-control" name="typ">
               <option value="all">Všechny typy</option>
-              <?php foreach (eventKindDefinitions() as $typeKey => $typeMeta): ?>
-                <option value="<?= h($typeKey) ?>" <?= $selectedType === $typeKey ? 'selected' : '' ?>>
-                  <?= h((string)($typeMeta['label'] ?? $typeKey)) ?>
+              <?php foreach ($eventTypes as $typeMeta): ?>
+                <option value="<?= h((string)$typeMeta['slug']) ?>" <?= $selectedType === (string)$typeMeta['slug'] ? 'selected' : '' ?>>
+                  <?= h((string)($typeMeta['title'] ?? $typeMeta['slug'])) ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -132,7 +143,13 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
             <?php endif; ?>
 
             <div class="card__body">
-              <p class="card__eyebrow"><?= h((string)($event['event_kind_label'] ?? 'Akce')) ?></p>
+              <p class="card__eyebrow">
+                <?php if ((string)($event['event_type_path'] ?? '') !== ''): ?>
+                  <a href="<?= h((string)$event['event_type_path']) ?>"><?= h((string)($event['event_kind_label'] ?? 'Akce')) ?></a>
+                <?php else: ?>
+                  <?= h((string)($event['event_kind_label'] ?? 'Akce')) ?>
+                <?php endif; ?>
+              </p>
               <h2 id="<?= h($eventTitleId) ?>" class="card__title">
                 <a href="<?= h(eventPublicPath($event, $listingQuery)) ?>"><?= h((string)($event['title'] ?? '')) ?></a>
               </h2>
@@ -145,8 +162,8 @@ $listingQuery = is_array($listingQuery ?? null) ? $listingQuery : [];
                 <?php if (!empty($event['event_end'])): ?>
                   <span>do <?= h(formatCzechDate((string)$event['event_end'])) ?></span>
                 <?php endif; ?>
-                <?php if ((string)($event['location'] ?? '') !== ''): ?>
-                  <span><?= h((string)$event['location']) ?></span>
+                <?php if ((string)($event['location_display'] ?? '') !== ''): ?>
+                  <span><?= h((string)$event['location_display']) ?></span>
                 <?php endif; ?>
               </p>
 

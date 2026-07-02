@@ -9,7 +9,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 6,
+    'version'     => 7,
 ];
 
 $tables = [
@@ -45,9 +45,13 @@ $tables = [
                         FROM cms_chat_history",
     'contact_topics' => "SELECT id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at
                          FROM cms_contact_topics",
-    'events'        => "SELECT id, title, slug, event_kind, excerpt, description, program_note, location,
+    'event_types'   => "SELECT id, legacy_key, title, slug, description, meta_title, meta_description,
+                               is_active, sort_order, created_at, updated_at
+                        FROM cms_event_types",
+    'events'        => "SELECT id, title, slug, event_kind, event_type_id, place_id, recurrence_group_id,
+                               excerpt, description, program_note, location,
                                organizer_name, organizer_email, registration_url, price_note, accessibility_note,
-                               image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,
+                               image_file, event_date, event_end, is_published, status, publish_at, unpublish_at, admin_note,
                                created_at, updated_at FROM cms_events",
     'places'        => "SELECT id, name, slug, place_kind, excerpt, description, url, image_file, category,
                                address, locality, latitude, longitude, contact_phone, contact_email,

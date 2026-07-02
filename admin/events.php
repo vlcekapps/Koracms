@@ -8,12 +8,17 @@ $q = trim((string)($_GET['q'] ?? ''));
 $statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $typeFilter = trim((string)($_GET['typ'] ?? 'all'));
 $scopeFilter = trim((string)($_GET['scope'] ?? 'all'));
+$eventTypes = loadEventTypes($pdo, false);
+$eventTypeBySlug = [];
+foreach ($eventTypes as $eventType) {
+    $eventTypeBySlug[(string)$eventType['slug']] = $eventType;
+}
 
 $allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
-if ($typeFilter !== 'all' && !isset(eventKindDefinitions()[$typeFilter])) {
+if ($typeFilter !== 'all' && !isset($eventTypeBySlug[$typeFilter]) && !isset(eventKindDefinitions()[$typeFilter])) {
     $typeFilter = 'all';
 }
 if (!in_array($scopeFilter, ['all', 'upcoming', 'ongoing', 'past'], true)) {
@@ -39,8 +44,14 @@ if ($statusFilter === 'pending') {
 }
 
 if ($typeFilter !== 'all') {
-    $whereParts[] = 'e.event_kind = ?';
-    $params[] = $typeFilter;
+    if (isset($eventTypeBySlug[$typeFilter])) {
+        $whereParts[] = '(t.slug = ? OR (e.event_type_id IS NULL AND e.event_kind = ?))';
+        $params[] = $typeFilter;
+        $params[] = (string)($eventTypeBySlug[$typeFilter]['legacy_key'] ?: $typeFilter);
+    } else {
+        $whereParts[] = 'e.event_kind = ?';
+        $params[] = $typeFilter;
+    }
 }
 
 if ($scopeFilter !== 'all') {
@@ -51,8 +62,16 @@ $whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $effectiveEndSql = eventEffectiveEndSql('e');
 
 $stmt = $pdo->prepare(
-    "SELECT e.*
+    "SELECT e.*,
+            t.title AS event_type_title, t.slug AS event_type_slug, t.legacy_key AS event_type_legacy_key,
+            t.description AS event_type_description, t.meta_title AS event_type_meta_title,
+            t.meta_description AS event_type_meta_description, t.is_active AS event_type_is_active,
+            p.name AS place_name, p.slug AS place_slug, p.address AS place_address, p.locality AS place_locality,
+            p.latitude AS place_latitude, p.longitude AS place_longitude, p.status AS place_status,
+            p.is_published AS place_is_published
      FROM cms_events e
+     LEFT JOIN cms_event_types t ON t.id = e.event_type_id
+     LEFT JOIN cms_places p ON p.id = e.place_id
      {$whereSql}
      ORDER BY
         CASE
@@ -77,7 +96,10 @@ $events = array_map(
 
 adminHeader('Události');
 ?>
-<p><a href="event_form.php" class="btn">+ Přidat událost</a></p>
+<p class="button-row button-row--start">
+  <a href="event_form.php" class="btn">+ Přidat událost</a>
+  <a href="event_types.php" class="btn">Typy akcí</a>
+</p>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
@@ -89,9 +111,9 @@ adminHeader('Události');
     <label for="typ">Typ akce</label>
     <select id="typ" name="typ">
       <option value="all"<?= $typeFilter === 'all' ? ' selected' : '' ?>>Všechny typy</option>
-      <?php foreach (eventKindDefinitions() as $typeKey => $typeMeta): ?>
-        <option value="<?= h($typeKey) ?>"<?= $typeFilter === $typeKey ? ' selected' : '' ?>>
-          <?= h((string)$typeMeta['label']) ?>
+      <?php foreach ($eventTypes as $eventType): ?>
+        <option value="<?= h((string)$eventType['slug']) ?>"<?= $typeFilter === (string)$eventType['slug'] ? ' selected' : '' ?>>
+          <?= h((string)$eventType['title']) ?>
         </option>
       <?php endforeach; ?>
     </select>
@@ -158,7 +180,7 @@ adminHeader('Události');
           <?php endif; ?>
           <br><small class="table-meta"><?= h((string)($event['event_status_label'] ?? 'Připravujeme')) ?></small>
         </td>
-        <td><?= h((string)($event['location'] !== '' ? $event['location'] : '–')) ?></td>
+        <td><?= h((string)($event['location_display'] !== '' ? $event['location_display'] : '–')) ?></td>
         <td>
           <?php if (($event['status'] ?? 'published') === 'pending'): ?>
             <strong class="status-badge status-badge--pending"><span aria-hidden="true">⏳</span> Čeká na schválení</strong>

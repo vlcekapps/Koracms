@@ -125,8 +125,21 @@ CREATE TABLE IF NOT EXISTS cms_gallery_photos (
   is_published TINYINT(1),
   deleted_at DATETIME NULL
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_event_types (
+  id INT,
+  legacy_key VARCHAR(80),
+  slug VARCHAR(150),
+  description TEXT,
+  meta_title VARCHAR(160),
+  meta_description TEXT,
+  is_active TINYINT(1),
+  sort_order INT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_events (
   id INT,
+  event_type_id INT,
+  place_id INT,
+  recurrence_group_id VARCHAR(64),
   excerpt TEXT
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
@@ -248,6 +261,16 @@ PHP,
 // cms_gallery_photos.status
 // cms_gallery_photos.is_published
 // cms_gallery_photos.deleted_at
+// cms_event_types
+// uq_cms_event_types_slug
+// uq_cms_event_types_legacy
+// idx_cms_event_types_active_order
+// cms_events.event_type_id
+// cms_events.place_id
+// cms_events.recurrence_group_id
+// idx_cms_events_type
+// idx_cms_events_place
+// idx_cms_events_recurrence
 // cms_events.excerpt
 // cms_admin_shortcuts
 // uq_admin_shortcut_user_item

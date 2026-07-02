@@ -267,6 +267,7 @@ try {
         'authors/index.php' => 'authors',
         'author.php' => 'author',
         'blog/article.php' => 'blog-article',
+        'events/index.php' => 'events-index',
         'events/ics.php' => 'event-ics',
         'forms/index.php' => 'form',
         'podcast/episode.php' => 'podcast-episode',
@@ -335,6 +336,11 @@ try {
     $eventIcsRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/events/setkani.ics');
     httpServerRouterSelfTestAssertRoute($eventIcsRoute, 'event-ics', '/events/ics.php');
     httpServerRouterSelfTestAssert(($eventIcsRoute['get']['slug'] ?? '') === 'setkani', 'Event ICS slug was not routed.');
+
+    $eventTypeRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/events/typ/prednasky?scope=all');
+    httpServerRouterSelfTestAssertRoute($eventTypeRoute, 'events-index', '/events/index.php');
+    httpServerRouterSelfTestAssert(($eventTypeRoute['get']['type_slug'] ?? '') === 'prednasky', 'Event type slug was not routed.');
+    httpServerRouterSelfTestAssert(($eventTypeRoute['get']['scope'] ?? '') === 'all', 'Event type query string was not preserved.');
 
     $podcastEpisodeRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/podcast/porad/epizoda');
     httpServerRouterSelfTestAssertRoute($podcastEpisodeRoute, 'podcast-episode', '/podcast/episode.php');

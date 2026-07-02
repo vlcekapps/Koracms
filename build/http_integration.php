@@ -36,6 +36,9 @@ $createdMediaIds = [];
 $createdBoardIds = [];
 $createdBoardCategoryIds = [];
 $createdBoardSubscriberIds = [];
+$createdEventIds = [];
+$createdEventTypeIds = [];
+$createdPlaceIds = [];
 $createdDownloadIds = [];
 $createdDownloadCategoryIds = [];
 $createdDownloadSeriesIds = [];
@@ -2539,6 +2542,7 @@ try {
     saveSetting('module_contact', '1');
     saveSetting('contact_email', 'contact-http@example.test');
     clearSettingsCache();
+    httpIntegrationClearLocalRateLimits($pdo, ['contact']);
 
     $contactTopicSlug = 'http-kontakt-' . bin2hex(random_bytes(4));
     $contactTopicName = 'HTTP téma kontaktu ' . bin2hex(random_bytes(3));
@@ -4323,11 +4327,7 @@ try {
             $boardIssues[] = 'sitemap neobsahuje veřejnou kategorii vývěsky s publikovanou položkou';
         }
 
-        $pdo->prepare('DELETE FROM cms_rate_limit WHERE id IN (?, ?)')
-            ->execute([
-                rateLimitKey('board_subscribe', '127.0.0.1'),
-                rateLimitKey('board_subscribe_subject', 'subject:http-board-test@example.test'),
-            ]);
+        httpIntegrationClearLocalRateLimits($pdo, ['board_subscribe']);
 
         $invalidBoardSubscribeEmail = 'http-board-invalid-captcha-' . bin2hex(random_bytes(4)) . '@example.test';
         $invalidBoardSubscribeSession = koraPrimeTestSession([], 'kora-http-board-invalid-captcha');
@@ -4411,6 +4411,270 @@ try {
     }
 
     httpIntegrationPrintResult('board_save_http', $boardIssues, $failures);
+
+    $eventIssues = [];
+    $eventTypeSlug = 'http-event-type-' . bin2hex(random_bytes(4));
+    $eventSlug = 'http-event-recurrence-' . bin2hex(random_bytes(4));
+    $invalidPlaceEventSlug = 'http-event-invalid-place-' . bin2hex(random_bytes(4));
+    $invalidRecurrenceEventSlug = 'http-event-invalid-recurrence-' . bin2hex(random_bytes(4));
+    $placeSlug = uniquePlaceSlug($pdo, 'http-event-place-' . bin2hex(random_bytes(4)), null);
+
+    saveSetting('module_events', '1');
+    saveSetting('module_places', '1');
+    clearSettingsCache();
+
+    $eventTypePage = fetchUrl($baseUrl . BASE_URL . '/admin/event_types.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($eventTypePage) !== 200
+        || !str_contains($eventTypePage['body'], 'Správa typů akcí')
+        || (!str_contains($eventTypePage['body'], 'Meta titulek') && !str_contains($eventTypePage['body'], 'Meta title'))) {
+        $eventIssues[] = 'správa typů akcí se neotevřela nebo neobsahuje SEO pole';
+    }
+
+    $eventTypeResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/event_types.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'title' => 'HTTP typ akce',
+            'slug' => $eventTypeSlug,
+            'description' => '<p>Popis veřejného typu akce.</p>',
+            'meta_title' => 'SEO typ akce',
+            'meta_description' => 'Meta popis veřejného typu akce.',
+            'sort_order' => '5',
+            'is_active' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($eventTypeResponse) !== 302) {
+        $eventIssues[] = 'uložení typu akce nevrátilo redirect';
+    }
+    $eventTypeStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE slug = ?");
+    $eventTypeStmt->execute([$eventTypeSlug]);
+    $eventType = $eventTypeStmt->fetch() ?: null;
+    $eventTypeId = $eventType ? (int)$eventType['id'] : 0;
+    if ($eventTypeId <= 0) {
+        $eventIssues[] = 'typ akce se neuložil do databáze';
+    } else {
+        $createdEventTypeIds[] = $eventTypeId;
+    }
+
+    if ($eventTypeId > 0) {
+        $duplicateEventTypeResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_types.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'title' => 'Duplicitní typ akce',
+                'slug' => $eventTypeSlug,
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '6',
+                'is_active' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($duplicateEventTypeResponse) !== 200
+            || !str_contains($duplicateEventTypeResponse['body'], 'Tento slug už používá jiný typ akce.')) {
+            $eventIssues[] = 'duplicitní slug typu akce nebyl odmítnut';
+        }
+
+        $pdo->prepare(
+            "INSERT INTO cms_places
+             (name, slug, place_kind, excerpt, description, url, category, address, locality, latitude, longitude,
+              meta_title, meta_description, is_published, status, sort_order, created_at, updated_at)
+             VALUES (?, ?, 'venue', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'published', 10, NOW(), NOW())"
+        )->execute([
+            'HTTP místo konání',
+            $placeSlug,
+            'Místo vytvořené pro HTTP test událostí.',
+            '<p>Detail místa pro test propojení s událostí.</p>',
+            'https://example.test/misto',
+            'Testovací místa',
+            'Testovací 1',
+            'Praha',
+            '50.0874654',
+            '14.4212535',
+            'SEO místo konání',
+            'Meta popis místa konání.',
+        ]);
+        $placeId = (int)$pdo->lastInsertId();
+        $createdPlaceIds[] = $placeId;
+
+        $eventFormPage = fetchUrl($baseUrl . BASE_URL . '/admin/event_form.php', $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($eventFormPage) !== 200
+            || !str_contains($eventFormPage['body'], 'name="event_type_id"')
+            || !str_contains($eventFormPage['body'], 'name="place_id"')
+            || !str_contains($eventFormPage['body'], 'name="recurrence_frequency"')) {
+            $eventIssues[] = 'formulář události neobsahuje typ akce, místo a opakování';
+        }
+
+        $eventDate = (new DateTimeImmutable('+45 days'))->format('Y-m-d');
+        $eventResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_save.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'title' => 'HTTP opakovaná událost',
+                'slug' => $eventSlug,
+                'event_type_id' => (string)$eventTypeId,
+                'place_id' => (string)$placeId,
+                'excerpt' => 'Krátký popis opakované události.',
+                'description' => '<p>Detail opakované události s místem konání.</p>',
+                'program_note' => '',
+                'location' => 'Sál 1',
+                'organizer_name' => '',
+                'organizer_email' => '',
+                'registration_url' => '',
+                'price_note' => '',
+                'accessibility_note' => '',
+                'event_date' => $eventDate,
+                'event_time' => '18:00',
+                'event_end_date' => $eventDate,
+                'event_end_time' => '20:00',
+                'publish_at' => '',
+                'unpublish_at' => '',
+                'admin_note' => '',
+                'article_status' => 'published',
+                'is_published' => '1',
+                'recurrence_frequency' => 'weekly',
+                'recurrence_interval' => '1',
+                'recurrence_count' => '3',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($eventResponse) !== 302) {
+            $eventIssues[] = 'uložení opakované události nevrátilo redirect';
+        }
+
+        $eventStmt = $pdo->prepare("SELECT * FROM cms_events WHERE slug = ?");
+        $eventStmt->execute([$eventSlug]);
+        $event = $eventStmt->fetch() ?: null;
+        $eventId = $event ? (int)$event['id'] : 0;
+        $recurrenceGroupId = $event ? (string)($event['recurrence_group_id'] ?? '') : '';
+        if ($eventId <= 0 || $recurrenceGroupId === '') {
+            $eventIssues[] = 'opakovaná událost se neuložila nebo nemá recurrence_group_id';
+        } else {
+            $recurrenceStmt = $pdo->prepare("SELECT id FROM cms_events WHERE recurrence_group_id = ? ORDER BY event_date, id");
+            $recurrenceStmt->execute([$recurrenceGroupId]);
+            $recurrenceIds = array_map('intval', $recurrenceStmt->fetchAll(PDO::FETCH_COLUMN));
+            $createdEventIds = array_values(array_unique(array_merge($createdEventIds, $recurrenceIds)));
+            if (count($recurrenceIds) !== 3) {
+                $eventIssues[] = 'opakování události nevytvořilo tři samostatné termíny';
+            }
+        }
+
+        $eventTypeLandingResponse = fetchUrl($baseUrl . eventTypePath($eventType), '', 0);
+        if (httpIntegrationStatusCode($eventTypeLandingResponse) !== 200
+            || !str_contains($eventTypeLandingResponse['body'], 'HTTP typ akce')
+            || !str_contains($eventTypeLandingResponse['body'], 'Popis veřejného typu akce.')
+            || !str_contains($eventTypeLandingResponse['body'], 'HTTP opakovaná událost')) {
+            $eventIssues[] = 'veřejná landing stránka typu akce nezobrazuje očekávaný obsah';
+        }
+
+        if ($event) {
+            $eventDetailResponse = fetchUrl($baseUrl . eventPublicPath($event), '', 0);
+            if (httpIntegrationStatusCode($eventDetailResponse) !== 200
+                || !str_contains($eventDetailResponse['body'], 'Místo konání')
+                || !str_contains($eventDetailResponse['body'], 'HTTP místo konání')
+                || !str_contains($eventDetailResponse['body'], 'Další termíny této akce')
+                || !str_contains($eventDetailResponse['body'], 'aria-current="page"')) {
+                $eventIssues[] = 'detail události nezobrazuje místo a další termíny opakování';
+            }
+        }
+
+        $missingEventTypeResponse = fetchUrl($baseUrl . BASE_URL . '/events/typ/neexistujici-typ-http', '', 0);
+        if (httpIntegrationStatusCode($missingEventTypeResponse) !== 404) {
+            $eventIssues[] = 'neexistující čistý slug typu akce nevrací 404';
+        }
+
+        $invalidPlaceResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_save.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'title' => 'HTTP událost s neplatným místem',
+                'slug' => $invalidPlaceEventSlug,
+                'event_type_id' => (string)$eventTypeId,
+                'place_id' => '99999999',
+                'excerpt' => '',
+                'description' => '',
+                'program_note' => '',
+                'location' => '',
+                'organizer_name' => '',
+                'organizer_email' => '',
+                'registration_url' => '',
+                'price_note' => '',
+                'accessibility_note' => '',
+                'event_date' => $eventDate,
+                'event_time' => '18:00',
+                'event_end_date' => '',
+                'event_end_time' => '',
+                'publish_at' => '',
+                'unpublish_at' => '',
+                'admin_note' => '',
+                'article_status' => 'published',
+                'is_published' => '1',
+                'recurrence_frequency' => 'none',
+                'recurrence_interval' => '1',
+                'recurrence_count' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $invalidPlaceCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_events WHERE slug = ?");
+        $invalidPlaceCountStmt->execute([$invalidPlaceEventSlug]);
+        if (!str_contains(implode("\n", $invalidPlaceResponse['headers']), 'err=place')
+            || (int)$invalidPlaceCountStmt->fetchColumn() !== 0) {
+            $eventIssues[] = 'podvržené neexistující místo nebylo odmítnuto bez uložení události';
+        }
+
+        $invalidRecurrenceResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_save.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'title' => 'HTTP událost s neplatným opakováním',
+                'slug' => $invalidRecurrenceEventSlug,
+                'event_type_id' => (string)$eventTypeId,
+                'place_id' => '',
+                'excerpt' => '',
+                'description' => '',
+                'program_note' => '',
+                'location' => '',
+                'organizer_name' => '',
+                'organizer_email' => '',
+                'registration_url' => '',
+                'price_note' => '',
+                'accessibility_note' => '',
+                'event_date' => $eventDate,
+                'event_time' => '18:00',
+                'event_end_date' => '',
+                'event_end_time' => '',
+                'publish_at' => '',
+                'unpublish_at' => '',
+                'admin_note' => '',
+                'article_status' => 'published',
+                'is_published' => '1',
+                'recurrence_frequency' => 'weekly',
+                'recurrence_interval' => '1',
+                'recurrence_count' => '53',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $invalidRecurrenceCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_events WHERE slug = ?");
+        $invalidRecurrenceCountStmt->execute([$invalidRecurrenceEventSlug]);
+        if (!str_contains(implode("\n", $invalidRecurrenceResponse['headers']), 'err=recurrence')
+            || (int)$invalidRecurrenceCountStmt->fetchColumn() !== 0) {
+            $eventIssues[] = 'počet opakování mimo limit nebyl odmítnut bez uložení události';
+        }
+
+        $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+        if (!str_contains($sitemapResponse['body'], h(eventTypeUrl($eventType)))) {
+            $eventIssues[] = 'sitemap neobsahuje veřejný typ akce s publikovanou událostí';
+        }
+    }
+
+    httpIntegrationPrintResult('events_types_places_recurrence_http', $eventIssues, $failures);
 
     $downloadIssues = [];
     $downloadCategorySlug = 'http-download-kategorie-' . bin2hex(random_bytes(4));
@@ -6499,6 +6763,18 @@ try {
         $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
         $pdo->prepare("UPDATE cms_board SET category_id = NULL WHERE category_id = ?")->execute([$boardCategoryIdToDelete]);
         $pdo->prepare("DELETE FROM cms_board_categories WHERE id = ?")->execute([$boardCategoryIdToDelete]);
+    }
+    foreach ($createdEventIds as $eventIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'event' AND entity_id = ?")->execute([$eventIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_events WHERE id = ?")->execute([$eventIdToDelete]);
+    }
+    foreach ($createdEventTypeIds as $eventTypeIdToDelete) {
+        $pdo->prepare("UPDATE cms_events SET event_type_id = NULL WHERE event_type_id = ?")->execute([$eventTypeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_event_types WHERE id = ?")->execute([$eventTypeIdToDelete]);
+    }
+    foreach ($createdPlaceIds as $placeIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?")->execute([$placeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_places WHERE id = ?")->execute([$placeIdToDelete]);
     }
     foreach ($createdDownloadIds as $downloadIdToDelete) {
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$downloadIdToDelete]);

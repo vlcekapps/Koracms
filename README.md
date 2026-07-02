@@ -242,7 +242,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 |---|---|
 | **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
-| **Události** | Přehled akcí s datem, místem, detailem a ICS exportem do kalendáře |
+| **Události** | Přehled akcí s typy, místy konání, opakovanými termíny, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi a bezpečným media endpointem |
 | **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
@@ -261,6 +261,8 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
 Modul **Ke stažení** pokrývá praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, sledování počtu stažení, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje. Položka může být lokální soubor, externí odkaz například na GitHub Releases, nebo obojí zároveň, takže vlastní software není nutné duplikovat do CMS. Kategorie mají čisté landing URL `/downloads/kategorie/{slug}`, volitelný popis a SEO metadata. Sériová vydání se spravují přes samostatné série/verze s URL `/downloads/serie/{slug}`; detail starší položky umí upozornit na aktuální verzi a starý `series_key` zůstává kompatibilní pro importy i starší data.
+
+Modul **Události** podporuje spravované typy akcí s veřejnou adresou `/events/typ/{slug}`, popisem a SEO poli. Událost lze volitelně navázat na veřejné místo z modulu **Zajímavá místa** a detail pak zobrazí kartu místa, odkaz na detail i mapu, pokud jsou dostupné. Při vytváření nové události lze jednorázově vygenerovat opakované denní, týdenní nebo měsíční termíny; CMS z nich vytvoří samostatné události se společnou skupinou opakování, takže pozdější úprava jednoho termínu se automaticky nepropíše do ostatních.
 
 Modul **Znalostní báze** nově umí veřejné hledání, filtrování podle kategorie, stránkování, přepínání `karty / rozbalené odpovědi`, per-FAQ SEO metadata, redirecty při změně slugu a `FAQPage` strukturovaná data pro vyhledávače.
 
@@ -713,6 +715,7 @@ server {
     location ~ ^/downloads/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/kategorie/(.+?)/?$ /downloads/index.php?category_slug=$1 last; }
     location ~ ^/downloads/serie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/serie/(.+?)/?$ /downloads/series.php?slug=$1 last; }
     location ~ ^/downloads/([a-z0-9\-]+)/?$ { rewrite ^/downloads/(.+?)/?$ /downloads/item.php?slug=$1 last; }
+    location ~ ^/events/typ/([a-z0-9\-]+)/?$ { rewrite ^/events/typ/(.+?)/?$ /events/index.php?type_slug=$1 last; }
     location ~ ^/events/([a-z0-9\-]+)/?$ { rewrite ^/events/(.+?)/?$ /events/event.php?slug=$1 last; }
     location ~ ^/faq/([a-z0-9\-]+)/?$ { rewrite ^/faq/(.+?)/?$ /faq/item.php?slug=$1 last; }
     location ~ ^/forms/([a-z0-9\-]+)/?$ { rewrite ^/forms/(.+?)/?$ /forms/index.php?slug=$1 last; }

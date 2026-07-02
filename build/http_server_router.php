@@ -118,6 +118,7 @@ if ($routePath === '') {
         '#^downloads/serie/([a-z0-9-]+)/?$#i' => ['downloads/series.php', ['slug']],
         '#^downloads/([a-z0-9-]+)/?$#i' => ['downloads/item.php', ['slug']],
         '#^events/([a-z0-9-]+)\.ics$#i' => ['events/ics.php', ['slug']],
+        '#^events/typ/([a-z0-9-]+)/?$#i' => ['events/index.php', ['type_slug']],
         '#^events/([a-z0-9-]+)/?$#i' => ['events/event.php', ['slug']],
         '#^faq/([a-z0-9-]+)/?$#i' => ['faq/item.php', ['slug']],
         '#^forms/([a-z0-9-]+)/?$#i' => ['forms/index.php', ['slug']],

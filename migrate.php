@@ -360,11 +360,31 @@ $tables = [
         INDEX idx_nav_links_active (blog_id, is_active)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_event_types' => "CREATE TABLE IF NOT EXISTS cms_event_types (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        legacy_key  VARCHAR(50)  NULL DEFAULT NULL,
+        title       VARCHAR(255) NOT NULL,
+        slug        VARCHAR(255) NOT NULL,
+        description TEXT,
+        meta_title  VARCHAR(160) NOT NULL DEFAULT '',
+        meta_description TEXT,
+        is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_event_types_slug (slug),
+        UNIQUE KEY uq_cms_event_types_legacy (legacy_key),
+        INDEX idx_cms_event_types_active_order (is_active, sort_order, title)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_events' => "CREATE TABLE IF NOT EXISTS cms_events (
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title        VARCHAR(255) NOT NULL,
         slug         VARCHAR(255) NOT NULL,
         event_kind   VARCHAR(50)  NOT NULL DEFAULT 'general',
+        event_type_id INT         NULL DEFAULT NULL,
+        place_id     INT          NULL DEFAULT NULL,
+        recurrence_group_id VARCHAR(64) NOT NULL DEFAULT '',
         excerpt      TEXT,
         description  TEXT,
         program_note TEXT,
@@ -386,7 +406,10 @@ $tables = [
         deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_cms_events_slug (slug)
+        UNIQUE KEY uq_cms_events_slug (slug),
+        INDEX idx_cms_events_type (event_type_id),
+        INDEX idx_cms_events_place (place_id),
+        INDEX idx_cms_events_recurrence (recurrence_group_id, event_date)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_subscribers' => "CREATE TABLE IF NOT EXISTS cms_subscribers (
@@ -1306,6 +1329,9 @@ $addColumns = [
     'cms_pages.blog_nav_order'       => "ALTER TABLE cms_pages ADD COLUMN blog_nav_order INT NOT NULL DEFAULT 0 AFTER blog_id",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.event_kind'          => "ALTER TABLE cms_events ADD COLUMN event_kind VARCHAR(50) NOT NULL DEFAULT 'general'",
+    'cms_events.event_type_id'       => "ALTER TABLE cms_events ADD COLUMN event_type_id INT NULL DEFAULT NULL",
+    'cms_events.place_id'            => "ALTER TABLE cms_events ADD COLUMN place_id INT NULL DEFAULT NULL",
+    'cms_events.recurrence_group_id' => "ALTER TABLE cms_events ADD COLUMN recurrence_group_id VARCHAR(64) NOT NULL DEFAULT ''",
     'cms_events.excerpt'             => "ALTER TABLE cms_events ADD COLUMN excerpt TEXT",
     'cms_events.program_note'        => "ALTER TABLE cms_events ADD COLUMN program_note TEXT",
     'cms_events.organizer_name'      => "ALTER TABLE cms_events ADD COLUMN organizer_name VARCHAR(255) NOT NULL DEFAULT ''",
@@ -1913,6 +1939,40 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Slugy událostí – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    $eventTypesTableCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_event_types'"
+    );
+    $eventTypesTableCheck->execute();
+
+    if ((int)$eventTypesTableCheck->fetchColumn() > 0) {
+        seedDefaultEventTypes($pdo);
+
+        $eventTypeColumnCheck = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_events' AND COLUMN_NAME = 'event_type_id'"
+        );
+        $eventTypeColumnCheck->execute();
+
+        if ((int)$eventTypeColumnCheck->fetchColumn() > 0) {
+            $pdo->exec(
+                "UPDATE cms_events e
+                 JOIN cms_event_types t ON t.legacy_key = e.event_kind
+                 SET e.event_type_id = t.id
+                 WHERE e.event_type_id IS NULL"
+            );
+            $log[] = "✓ Výchozí typy akcí a vazby <code>cms_events.event_type_id</code> – OK";
+        } else {
+            $log[] = "· Vazby typů akcí – sloupec <code>cms_events.event_type_id</code> neexistuje, přeskočeno";
+        }
+    } else {
+        $log[] = "· Výchozí typy akcí – tabulka <code>cms_event_types</code> neexistuje, přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Výchozí typy akcí – CHYBA: " . h($e->getMessage());
 }
 
 try {
@@ -3297,6 +3357,32 @@ foreach ($visibilityIndexes as $tableName => $indexDef) {
             $log[] = "· Index <code>{$indexName}</code> na <code>{$tableName}</code> – již existuje";
         } else {
             $log[] = "✗ Index <code>{$indexName}</code> – CHYBA: " . h($e->getMessage());
+        }
+    }
+}
+
+$eventModuleIndexes = [
+    'cms_events' => [
+        'idx_cms_events_type' => 'event_type_id',
+        'idx_cms_events_place' => 'place_id',
+        'idx_cms_events_recurrence' => 'recurrence_group_id, event_date',
+    ],
+    'cms_event_types' => [
+        'idx_cms_event_types_active_order' => 'is_active, sort_order, title',
+    ],
+];
+
+foreach ($eventModuleIndexes as $tableName => $indexes) {
+    foreach ($indexes as $indexName => $indexColumns) {
+        try {
+            $pdo->exec("ALTER TABLE {$tableName} ADD INDEX {$indexName} ({$indexColumns})");
+            $log[] = "✓ Index <code>{$indexName}</code> na <code>{$tableName}</code> – OK";
+        } catch (\PDOException $e) {
+            if (str_contains($e->getMessage(), 'Duplicate key name')) {
+                $log[] = "· Index <code>{$indexName}</code> na <code>{$tableName}</code> – již existuje";
+            } else {
+                $log[] = "✗ Index <code>{$indexName}</code> – CHYBA: " . h($e->getMessage());
+            }
         }
     }
 }

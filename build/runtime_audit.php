@@ -4424,7 +4424,8 @@ foreach ($pages as $page) {
     if ($page['label'] === 'admin_event_form') {
         foreach ([
             'name="slug"',
-            'name="event_kind"',
+            'name="event_type_id"',
+            'name="place_id"',
             'name="excerpt"',
             'name="program_note"',
             'name="organizer_name"',
@@ -8536,7 +8537,7 @@ $foundationChecks = [
         && str_contains($composerSource, '"format:fix:admin-taxonomy"')
         && str_contains($composerSource, '@format:check:admin-taxonomy')
         && str_contains($composerSource, 'admin/blog_cats.php admin/blog_tags.php admin/blog_members.php admin/blog_pages.php')
-        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/dl_cats.php admin/download_series.php admin/faq_cats.php')
+        && str_contains($composerSource, 'admin/board_cats.php admin/board_cat_delete.php admin/dl_cats.php admin/download_series.php admin/event_types.php admin/faq_cats.php')
         && str_contains($composerSource, 'admin/res_categories.php admin/res_locations.php')
         && str_contains($composerSource, 'admin/page_reorder.php admin/gallery_photo_reorder.php admin/gallery_album_delete.php admin/gallery_photo_delete.php'),
     'php cs fixer admin overview smoke check exists' => str_contains($composerSource, '"format:check:admin-overview"')
@@ -9507,7 +9508,15 @@ $installSchemaChecks = [
     'cms_pages contains unpublish_at' => $installTableContains('cms_pages', 'unpublish_at'),
     'cms_pages contains admin_note' => $installTableContains('cms_pages', 'admin_note'),
     'cms_pages contains deleted_at' => $installTableContains('cms_pages', 'deleted_at'),
+    'cms_event_types contains slug' => $installTableContains('cms_event_types', 'slug'),
+    'cms_event_types contains legacy_key' => $installTableContains('cms_event_types', 'legacy_key'),
+    'cms_event_types contains meta_title' => $installTableContains('cms_event_types', 'meta_title'),
+    'cms_event_types contains meta_description' => $installTableContains('cms_event_types', 'meta_description'),
+    'cms_event_types contains is_active' => $installTableContains('cms_event_types', 'is_active'),
     'cms_events contains event_kind' => $installTableContains('cms_events', 'event_kind'),
+    'cms_events contains event_type_id' => $installTableContains('cms_events', 'event_type_id'),
+    'cms_events contains place_id' => $installTableContains('cms_events', 'place_id'),
+    'cms_events contains recurrence_group_id' => $installTableContains('cms_events', 'recurrence_group_id'),
     'cms_events contains excerpt' => $installTableContains('cms_events', 'excerpt'),
     'cms_events contains program_note' => $installTableContains('cms_events', 'program_note'),
     'cms_events contains organizer_name' => $installTableContains('cms_events', 'organizer_name'),
@@ -9576,6 +9585,11 @@ $migrateSchemaChecks = [
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
     'cms_faqs.meta_title' => str_contains($migrateSource, 'cms_faqs.meta_title'),
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
+    'cms_event_types' => str_contains($migrateSource, 'cms_event_types'),
+    'cms_events.event_type_id' => str_contains($migrateSource, 'cms_events.event_type_id'),
+    'cms_events.place_id' => str_contains($migrateSource, 'cms_events.place_id'),
+    'cms_events.recurrence_group_id' => str_contains($migrateSource, 'cms_events.recurrence_group_id'),
+    'idx_cms_events_recurrence' => str_contains($migrateSource, 'idx_cms_events_recurrence'),
     'cms_events.publish_at' => str_contains($migrateSource, 'cms_events.publish_at'),
     'cms_places.deleted_at' => str_contains($migrateSource, 'cms_places.deleted_at'),
     'cms_contact_topics' => str_contains($migrateSource, 'cms_contact_topics'),
@@ -12506,6 +12520,96 @@ if ($boardSourceIssues === []) {
     $failures++;
     foreach ($boardSourceIssues as $boardSourceIssue) {
         echo '- ' . $boardSourceIssue . "\n";
+    }
+}
+
+echo "=== events_source_guardrails ===\n";
+$eventsSourceIssues = [];
+$eventTypesAdminSource = is_file(dirname(__DIR__) . '/admin/event_types.php') ? (string)file_get_contents(dirname(__DIR__) . '/admin/event_types.php') : '';
+$eventSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_save.php');
+$eventsAdminSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
+$eventsIndexSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/events/index.php');
+$eventDetailSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/events/event.php');
+$eventIndexViewSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-index.php');
+$eventArticleViewSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
+$eventsRouteTypePosition = strpos($htaccessSource, 'RewriteRule ^events/typ/');
+$eventsRouteDetailPosition = strpos($htaccessSource, 'RewriteRule ^events/([a-z0-9\\-]+)/?$ events/event.php');
+$eventsRouterTypePosition = strpos($httpRouterSource, '#^events/typ/');
+$eventsRouterDetailPosition = strpos($httpRouterSource, '#^events/([a-z0-9-]+)/?$#i');
+if (!str_contains($presentationSource, 'function eventTypePath(')
+    || !str_contains($presentationSource, 'function uniqueEventTypeSlug(')
+    || !str_contains($presentationSource, 'function eventRecurrenceShift(')
+    || !str_contains($presentationSource, 'function eventRecurrenceGroupId(')) {
+    $eventsSourceIssues[] = 'event helpers are missing type URLs or recurrence helpers';
+}
+if (!str_contains($eventTypesAdminSource, 'uniqueEventTypeSlug(')
+    || !str_contains($eventTypesAdminSource, 'eventTypePath(')
+    || !str_contains($eventTypesAdminSource, 'upsertPathRedirect(')
+    || !str_contains($eventTypesAdminSource, 'meta_description')) {
+    $eventsSourceIssues[] = 'event type admin is missing slug validation, public URL, redirects or SEO metadata';
+}
+if (!str_contains($eventsAdminSourceForGuard, 'event_types.php')
+    || !str_contains($eventsAdminSourceForGuard, 'LEFT JOIN cms_event_types t ON t.id = e.event_type_id')) {
+    $eventsSourceIssues[] = 'events admin overview is missing managed event type navigation or joins';
+}
+if (!str_contains($eventFormSource, 'name="event_type_id"')
+    || !str_contains($eventFormSource, 'name="place_id"')
+    || !str_contains($eventFormSource, 'name="recurrence_frequency"')
+    || !str_contains($eventFormSource, 'Opakování vytvoří skutečné samostatné události')) {
+    $eventsSourceIssues[] = 'event form is missing managed type, venue or recurrence controls';
+}
+if (!str_contains($eventSaveSource, 'SELECT * FROM cms_event_types WHERE id = ?')
+    || !str_contains($eventSaveSource, 'SELECT id FROM cms_places WHERE id = ? AND deleted_at IS NULL')
+    || !str_contains($eventSaveSource, 'eventRecurrenceGroupId()')
+    || !str_contains($eventSaveSource, 'eventRecurrenceShift(')) {
+    $eventsSourceIssues[] = 'event save is missing type/place validation or recurrence row generation';
+}
+if (!str_contains($eventsIndexSourceForGuard, "\$_GET['type_slug']")
+    || !str_contains($eventsIndexSourceForGuard, 'eventTypePath($activeEventType)')
+    || !str_contains($eventsIndexSourceForGuard, 'renderPublicNotFoundPage')) {
+    $eventsSourceIssues[] = 'public events index is missing clean event type landing support';
+}
+if (!str_contains($eventIndexViewSourceForGuard, 'events-type-description-title')
+    || !str_contains($eventIndexViewSourceForGuard, 'eventTypes')
+    || !str_contains($eventIndexViewSourceForGuard, 'event_type_path')) {
+    $eventsSourceIssues[] = 'public events index view is missing event type description or links';
+}
+if (!str_contains($eventDetailSourceForGuard, 'recurrence_group_id')
+    || !str_contains($eventDetailSourceForGuard, 'ORDER BY e.event_date ASC, e.id ASC')
+    || !str_contains($eventDetailSourceForGuard, 'LEFT JOIN cms_places p ON p.id = e.place_id')) {
+    $eventsSourceIssues[] = 'event detail is missing recurrence lookup or place join';
+}
+if (!str_contains($eventArticleViewSourceForGuard, 'aria-labelledby="event-place-title"')
+    || !str_contains($eventArticleViewSourceForGuard, 'aria-labelledby="event-recurrence-title"')
+    || !str_contains($eventArticleViewSourceForGuard, 'aria-current="page"')) {
+    $eventsSourceIssues[] = 'event detail view is missing accessible place or recurrence sections';
+}
+if (!str_contains($adminExportSource, "'event_types'")
+    || !str_contains($adminExportSource, 'event_type_id, place_id, recurrence_group_id')) {
+    $eventsSourceIssues[] = 'export is missing event types or event venue/recurrence metadata';
+}
+if (!str_contains($adminImportSource, '$data[\'event_types\']')
+    || !str_contains($adminImportSource, 'uniqueEventTypeSlug(')
+    || !str_contains($adminImportSource, 'recurrence_group_id')) {
+    $eventsSourceIssues[] = 'import is missing event type import or recurrence metadata';
+}
+if (!str_contains($sitemapSource, 'eventTypeUrl(')
+    || !str_contains($sitemapSource, "sitemapLogSectionError('event_types'")) {
+    $eventsSourceIssues[] = 'sitemap is missing event type landing URLs';
+}
+if ($eventsRouteTypePosition === false || $eventsRouteDetailPosition === false || $eventsRouteTypePosition > $eventsRouteDetailPosition) {
+    $eventsSourceIssues[] = 'events type rewrite must be before events detail catch-all route';
+}
+if ($eventsRouterTypePosition === false || $eventsRouterDetailPosition === false || $eventsRouterTypePosition > $eventsRouterDetailPosition) {
+    $eventsSourceIssues[] = 'HTTP integration router must route event types before event details';
+}
+
+if ($eventsSourceIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($eventsSourceIssues as $eventsSourceIssue) {
+        echo '- ' . $eventsSourceIssue . "\n";
     }
 }
 

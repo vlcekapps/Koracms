@@ -528,16 +528,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Témata kontaktu importována.';
                 }
 
+                // Typy akcí
+                if (!empty($data['event_types']) && is_array($data['event_types'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_event_types
+                         (id, legacy_key, title, slug, description, meta_title, meta_description,
+                          is_active, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['event_types'] as $row) {
+                        $typeTitle = trim((string)($row['title'] ?? ''));
+                        if ($typeTitle === '') {
+                            continue;
+                        }
+                        $typeSlug = uniqueEventTypeSlug(
+                            $pdo,
+                            trim((string)($row['slug'] ?? '')) !== '' ? (string)$row['slug'] : $typeTitle,
+                            (int)($row['id'] ?? 0)
+                        );
+                        $legacyKey = trim((string)($row['legacy_key'] ?? ''));
+                        $ins->execute([
+                            (int)$row['id'],
+                            $legacyKey !== '' ? $legacyKey : null,
+                            $typeTitle,
+                            $typeSlug,
+                            (string)($row['description'] ?? ''),
+                            trim((string)($row['meta_title'] ?? '')),
+                            trim((string)($row['meta_description'] ?? '')),
+                            (int)($row['is_active'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                    }
+                    $summary[] = 'Typy akcí importovány.';
+                } else {
+                    seedDefaultEventTypes($pdo);
+                }
+
                 // Události
                 if (!empty($data['events']) && is_array($data['events'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_events
-                         (id, title, slug, event_kind, excerpt, description, program_note, location,
+                         (id, title, slug, event_kind, event_type_id, place_id, recurrence_group_id,
+                          excerpt, description, program_note, location,
                           organizer_name, organizer_email, registration_url, price_note, accessibility_note,
-                          image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,
+                          image_file, event_date, event_end, is_published, status, publish_at, unpublish_at, admin_note,
                           created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
+                    $eventTypeByLegacy = [];
+                    foreach (loadEventTypes($pdo, false) as $eventType) {
+                        $legacyKey = trim((string)($eventType['legacy_key'] ?? ''));
+                        if ($legacyKey !== '') {
+                            $eventTypeByLegacy[$legacyKey] = (int)$eventType['id'];
+                        }
+                    }
                     foreach ($data['events'] as $row) {
                         $importTitle = trim((string)($row['title'] ?? ''));
                         if ($importTitle === '') {
@@ -549,11 +595,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             $importSlug = uniqueEventSlug($pdo, $importSlug, (int)$row['id']);
                         }
+                        $legacyEventKind = normalizeEventKind((string)($row['event_kind'] ?? 'general'));
+                        $importEventTypeId = !empty($row['event_type_id'])
+                            ? (int)$row['event_type_id']
+                            : ($eventTypeByLegacy[$legacyEventKind] ?? null);
                         $ins->execute([
                             (int)$row['id'],
                             $importTitle,
                             $importSlug,
-                            normalizeEventKind((string)($row['event_kind'] ?? 'general')),
+                            $legacyEventKind,
+                            $importEventTypeId,
+                            !empty($row['place_id']) ? (int)$row['place_id'] : null,
+                            substr(trim((string)($row['recurrence_group_id'] ?? '')), 0, 64),
                             $row['excerpt'] ?? '',
                             $row['description'] ?? '',
                             $row['program_note'] ?? '',
@@ -567,7 +620,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['event_date'],
                             $row['event_end'] ?: null,
                             (int)($row['is_published'] ?? 1),
-                            in_array(($row['status'] ?? 'published'), ['pending', 'published'], true) ? $row['status'] : 'published',
+                            in_array(($row['status'] ?? 'published'), ['draft', 'pending', 'published'], true) ? $row['status'] : 'published',
+                            !empty($row['publish_at']) ? $row['publish_at'] : null,
                             !empty($row['unpublish_at']) ? $row['unpublish_at'] : null,
                             $row['admin_note'] ?? '',
                             $row['created_at'] ?? date('Y-m-d H:i:s'),

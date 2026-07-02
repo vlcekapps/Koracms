@@ -376,6 +376,23 @@ if (isModuleEnabled('events')) {
     sitemapWriteUrl(siteUrl('/events/'), 'weekly', '0.6');
 
     try {
+        $eventTypes = $pdo->query(
+            "SELECT t.id, t.slug, COALESCE(t.updated_at, MAX(e.updated_at), MAX(e.created_at)) AS sitemap_lastmod
+             FROM cms_event_types t
+             INNER JOIN cms_events e ON e.event_type_id = t.id
+             WHERE t.is_active = 1
+               AND " . eventPublicVisibilitySql('e') . "
+             GROUP BY t.id, t.slug, t.updated_at
+             ORDER BY t.sort_order, t.title"
+        )->fetchAll();
+        foreach ($eventTypes as $eventType) {
+            sitemapWriteUrl(eventTypeUrl($eventType), 'weekly', '0.5', sitemapLastmod((string)($eventType['sitemap_lastmod'] ?? '')));
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('event_types', $e);
+    }
+
+    try {
         $events = $pdo->query(
             "SELECT id, slug, COALESCE(updated_at, created_at, event_date) AS sitemap_lastmod
              FROM cms_events

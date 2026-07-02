@@ -9,7 +9,9 @@ $pdo = db_connect();
 $id = inputInt('post', 'id');
 $title = trim((string)($_POST['title'] ?? ''));
 $submittedSlug = trim((string)($_POST['slug'] ?? ''));
-$eventKind = normalizeEventKind((string)($_POST['event_kind'] ?? 'general'));
+$eventTypeId = inputInt('post', 'event_type_id');
+$placeId = inputInt('post', 'place_id');
+$eventKind = 'general';
 $excerpt = trim((string)($_POST['excerpt'] ?? ''));
 $description = (string)($_POST['description'] ?? '');
 $programNote = (string)($_POST['program_note'] ?? '');
@@ -31,6 +33,45 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
     header('Location: ' . $redirectBase . $query);
     exit;
 };
+
+$eventType = null;
+if ($eventTypeId !== null) {
+    $eventTypeStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE id = ?");
+    $eventTypeStmt->execute([$eventTypeId]);
+    $eventType = $eventTypeStmt->fetch() ?: null;
+    if (!$eventType) {
+        $redirectToForm('event_type');
+    }
+    $legacyKey = trim((string)($eventType['legacy_key'] ?? ''));
+    $eventKind = $legacyKey !== ''
+        ? normalizeEventKind($legacyKey)
+        : substr(eventTypeSlug((string)($eventType['slug'] ?? $eventType['title'] ?? 'general')), 0, 50);
+    if ($eventKind === '') {
+        $eventKind = 'general';
+    }
+} else {
+    $eventKind = normalizeEventKind((string)($_POST['event_kind'] ?? 'general'));
+}
+
+if ($placeId !== null) {
+    $placeStmt = $pdo->prepare("SELECT id FROM cms_places WHERE id = ? AND deleted_at IS NULL");
+    $placeStmt->execute([$placeId]);
+    if (!$placeStmt->fetch()) {
+        $redirectToForm('place');
+    }
+}
+
+$recurrenceFrequency = 'none';
+$recurrenceInterval = 1;
+$recurrenceCount = 1;
+if ($id === null) {
+    $recurrenceFrequency = normalizeEventRecurrenceFrequency((string)($_POST['recurrence_frequency'] ?? 'none'));
+    $recurrenceInterval = (int)($_POST['recurrence_interval'] ?? 1);
+    $recurrenceCount = (int)($_POST['recurrence_count'] ?? 1);
+    if ($recurrenceFrequency !== 'none' && ($recurrenceInterval < 1 || $recurrenceInterval > 12 || $recurrenceCount < 2 || $recurrenceCount > 52)) {
+        $redirectToForm('recurrence');
+    }
+}
 
 $publishAtInput = trim((string)($_POST['publish_at'] ?? ''));
 $publishAtSql = null;
@@ -151,7 +192,7 @@ if ($id !== null) {
 
     $stmt = $pdo->prepare(
         "UPDATE cms_events
-         SET title = ?, slug = ?, event_kind = ?, excerpt = ?, description = ?, program_note = ?,
+         SET title = ?, slug = ?, event_kind = ?, event_type_id = ?, place_id = ?, excerpt = ?, description = ?, program_note = ?,
              location = ?, organizer_name = ?, organizer_email = ?, registration_url = ?, price_note = ?,
              accessibility_note = ?, image_file = ?, event_date = ?, event_end = ?, is_published = ?,
              publish_at = ?, unpublish_at = ?, admin_note = ?, status = ?, updated_at = NOW(){$createdAtClause}
@@ -161,6 +202,8 @@ if ($id !== null) {
         $title,
         $slug,
         $eventKind,
+        $eventTypeId,
+        $placeId,
         $excerpt,
         $description,
         $programNote,
@@ -185,6 +228,8 @@ if ($id !== null) {
         'title' => $title,
         'slug' => $slug,
         'event_kind' => $eventKind,
+        'event_type_id' => $eventTypeId,
+        'place_id' => $placeId,
         'excerpt' => $excerpt,
         'description' => $description,
         'program_note' => $programNote,
@@ -215,17 +260,21 @@ if ($id !== null) {
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
 
     $previewToken = bin2hex(random_bytes(16));
+    $recurrenceGroupId = $recurrenceFrequency !== 'none' ? eventRecurrenceGroupId() : '';
     $stmt = $pdo->prepare(
         "INSERT INTO cms_events (
-            title, slug, event_kind, excerpt, description, program_note, location,
+            title, slug, event_kind, event_type_id, place_id, recurrence_group_id, excerpt, description, program_note, location,
             organizer_name, organizer_email, registration_url, price_note, accessibility_note,
             image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
         $title,
         $slug,
         $eventKind,
+        $eventTypeId,
+        $placeId,
+        $recurrenceGroupId,
         $excerpt,
         $description,
         $programNote,
@@ -246,6 +295,52 @@ if ($id !== null) {
         $previewToken,
     ]);
     $id = (int)$pdo->lastInsertId();
+
+    if ($recurrenceFrequency !== 'none') {
+        $copyStmt = $pdo->prepare(
+            "INSERT INTO cms_events (
+                title, slug, event_kind, event_type_id, place_id, recurrence_group_id, excerpt, description, program_note, location,
+                organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+                image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
+             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        );
+
+        for ($index = 1; $index < $recurrenceCount; $index++) {
+            $offset = $recurrenceInterval * $index;
+            $shiftedStart = eventRecurrenceShift($eventDateTime, $recurrenceFrequency, $offset);
+            $shiftedEnd = $eventEndTime instanceof DateTimeImmutable
+                ? eventRecurrenceShift($eventEndTime, $recurrenceFrequency, $offset)
+                : null;
+            $copySlug = uniqueEventSlug($pdo, $slug . '-' . $shiftedStart->format('Y-m-d'), null);
+
+            $copyStmt->execute([
+                $title,
+                $copySlug,
+                $eventKind,
+                $eventTypeId,
+                $placeId,
+                $recurrenceGroupId,
+                $excerpt,
+                $description,
+                $programNote,
+                $location,
+                $organizerName,
+                $organizerEmail,
+                $registrationUrl,
+                $priceNote,
+                $accessibilityNote,
+                $imageFilename,
+                $shiftedStart->format('Y-m-d H:i:s'),
+                $shiftedEnd?->format('Y-m-d H:i:s'),
+                $visible,
+                $publishAtSql,
+                $unpublishAtSql,
+                $adminNote,
+                $status,
+                bin2hex(random_bytes(16)),
+            ]);
+        }
+    }
     logAction('event_add', "id={$id} title={$title} slug={$slug} kind={$eventKind} status={$status}");
     if ($status === 'pending') {
         notifyPendingContent('Událost', $title, '/admin/events.php');

@@ -17,7 +17,7 @@ if ($id === null) {
 $pdo = db_connect();
 
 $stmt = $pdo->prepare(
-    "SELECT id, title, slug, excerpt, description, event_date, event_end, event_kind,
+    "SELECT id, title, slug, excerpt, description, event_date, event_end, event_kind, event_type_id, place_id,
             location, organizer_name, organizer_email, registration_url, price_note,
             accessibility_note, program_note, image_file
      FROM cms_events
@@ -36,11 +36,11 @@ $previewToken = bin2hex(random_bytes(16));
 
 $pdo->prepare(
     "INSERT INTO cms_events
-        (title, slug, excerpt, description, event_date, event_end, event_kind,
+        (title, slug, excerpt, description, event_date, event_end, event_kind, event_type_id, place_id,
          location, organizer_name, organizer_email, registration_url, price_note,
          accessibility_note, program_note, image_file,
          status, is_published, preview_token, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 0, ?, NOW(), NOW())"
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 0, ?, NOW(), NOW())"
 )->execute([
     (string)$source['title'] . ' (kopie)',
     $newSlug,
@@ -49,6 +49,8 @@ $pdo->prepare(
     $source['event_date'],
     $source['event_end'],
     (string)($source['event_kind'] ?? 'general'),
+    $source['event_type_id'] !== null ? (int)$source['event_type_id'] : null,
+    $source['place_id'] !== null ? (int)$source['place_id'] : null,
     (string)($source['location'] ?? ''),
     (string)($source['organizer_name'] ?? ''),
     (string)($source['organizer_email'] ?? ''),

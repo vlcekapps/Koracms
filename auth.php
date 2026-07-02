@@ -818,7 +818,7 @@ function adminRouteModuleRequirements(): array
         ],
         'events' => [
             'message' => adminRouteModuleDisabledMessage('events'),
-            'files' => ['events.php', 'event_form.php', 'event_save.php', 'event_delete.php', 'event_clone.php'],
+            'files' => ['events.php', 'event_types.php', 'event_form.php', 'event_save.php', 'event_delete.php', 'event_clone.php'],
         ],
         'podcast' => [
             'message' => adminRouteModuleDisabledMessage('podcast'),
