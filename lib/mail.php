@@ -55,6 +55,45 @@ function sendChatReply(string $recipient, string $authorName, string $subject, s
     );
 }
 
+function sendContactReply(string $recipient, string $senderName, string $referenceCode, string $subject, string $message): bool
+{
+    $normalizedRecipient = trim($recipient);
+    $normalizedSenderName = trim($senderName);
+    $normalizedReferenceCode = trim($referenceCode);
+    $normalizedSubject = trim($subject);
+    $normalizedMessage = trim($message);
+
+    if (!filter_var($normalizedRecipient, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    if ($normalizedSubject === '' || $normalizedMessage === '') {
+        return false;
+    }
+
+    $siteName = getSetting('site_name', 'Kora CMS');
+    $greeting = $normalizedSenderName !== ''
+        ? 'Dobrý den, ' . $normalizedSenderName . ",\n\n"
+        : "Dobrý den,\n\n";
+    $referenceLine = $normalizedReferenceCode !== ''
+        ? "Referenční kód zprávy: {$normalizedReferenceCode}\n\n"
+        : '';
+    $body = $greeting
+        . $normalizedMessage . "\n\n"
+        . $referenceLine
+        . "S pozdravem\n"
+        . $siteName;
+
+    return sendMail(
+        $normalizedRecipient,
+        $normalizedSubject,
+        $body,
+        [
+            'reply_to' => mailSanitizeHeaderValue(getSetting('contact_email', '')),
+            'reply_to_name' => $siteName,
+        ]
+    );
+}
+
 function mailSanitizeHeaderValue(string $value): string
 {
     return trim((string)preg_replace('/[\r\n]+/', ' ', $value));

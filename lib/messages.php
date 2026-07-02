@@ -165,6 +165,119 @@ function setContactMessageStatus(PDO $pdo, int $messageId, string $status): bool
     return (int)$exists->fetchColumn() > 0;
 }
 
+function contactTopicSlug(string $value): string
+{
+    return slugify($value);
+}
+
+function uniqueContactTopicSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = contactTopicSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'tema';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_contact_topics WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function contactTopics(PDO $pdo, bool $activeOnly = false): array
+{
+    $where = $activeOnly ? 'WHERE is_active = 1' : '';
+    try {
+        return $pdo->query(
+            "SELECT id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at
+             FROM cms_contact_topics
+             {$where}
+             ORDER BY sort_order, name"
+        )->fetchAll();
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function contactTopicById(PDO $pdo, int $topicId, bool $activeOnly = true): ?array
+{
+    if ($topicId <= 0) {
+        return null;
+    }
+
+    $where = $activeOnly ? ' AND is_active = 1' : '';
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at
+             FROM cms_contact_topics
+             WHERE id = ?{$where}
+             LIMIT 1"
+        );
+        $stmt->execute([$topicId]);
+        $row = $stmt->fetch();
+    } catch (\PDOException $e) {
+        return null;
+    }
+
+    return is_array($row) ? $row : null;
+}
+
+function contactTopicsRequireSelection(PDO $pdo): bool
+{
+    return contactTopics($pdo, true) !== [];
+}
+
+/**
+ * @param array<string,mixed>|null $topic
+ */
+function contactNotificationRecipient(string $fallbackEmail, ?array $topic): string
+{
+    $topicEmail = trim((string)($topic['recipient_email'] ?? ''));
+    if ($topicEmail !== '' && filter_var($topicEmail, FILTER_VALIDATE_EMAIL)) {
+        return $topicEmail;
+    }
+
+    $fallbackEmail = trim($fallbackEmail);
+    return filter_var($fallbackEmail, FILTER_VALIDATE_EMAIL) ? $fallbackEmail : '';
+}
+
+function contactReferenceCode(?DateTimeInterface $date = null, ?string $suffix = null): string
+{
+    $date ??= new DateTimeImmutable();
+    $normalizedSuffix = strtoupper((string)preg_replace('/[^A-Z0-9]/i', '', (string)($suffix ?? '')));
+    if ($normalizedSuffix === '') {
+        $normalizedSuffix = strtoupper(bin2hex(random_bytes(2)));
+    }
+    $normalizedSuffix = substr(str_pad($normalizedSuffix, 4, '0'), 0, 4);
+
+    return 'KNT-' . $date->format('Ymd') . '-' . $normalizedSuffix;
+}
+
+function uniqueContactReferenceCode(PDO $pdo): string
+{
+    $stmt = $pdo->prepare("SELECT id FROM cms_contact WHERE reference_code = ? LIMIT 1");
+
+    do {
+        $code = contactReferenceCode();
+        $stmt->execute([$code]);
+    } while ($stmt->fetch());
+
+    return $code;
+}
+
 function setChatMessageStatus(PDO $pdo, int $messageId, string $status): bool
 {
     $normalizedStatus = normalizeMessageStatus($status);

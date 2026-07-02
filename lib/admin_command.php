@@ -74,6 +74,8 @@ function adminCommandBaseRegistry(): array
         ['screen', 'downloads', 'Ke stažení', 'Soubory, verze a kategorie ke stažení.', $base . 'downloads.php', 'downloads', '', 'content_manage_shared'],
         ['screen', 'reservations', 'Rezervace', 'Rezervace, zdroje a lokality.', $base . 'res_bookings.php', 'reservations', '', 'bookings_manage'],
         ['screen', 'newsletter', 'Newsletter', 'Odběratelé, rozesílky a historie newsletteru.', $base . 'newsletter.php', 'newsletter', '', 'newsletter_manage'],
+        ['screen', 'contact.messages', 'Kontaktní zprávy', 'Zprávy z kontaktního formuláře, stav a odpovědi.', $base . 'contact.php', 'contact', '', 'messages_manage'],
+        ['screen', 'contact.topics', 'Témata kontaktu', 'Směrování dotazů a popisy témat kontaktního formuláře.', $base . 'contact_topics.php', 'contact', '', 'messages_manage'],
         ['screen', 'statistics', 'Statistiky', 'Návštěvnost, referrery a nejčtenější obsah.', $base . 'statistics.php', 'statistics', '', 'statistics_view'],
         ['screen', 'widgets', 'Widgety', 'Skládání homepage, sidebaru a footeru.', $base . 'widgets.php', '', '', 'settings_manage'],
         ['screen', 'settings', 'Nastavení webu', 'Obecná nastavení, moduly, navigace a provoz.', $base . 'settings.php', '', '', 'settings_manage'],

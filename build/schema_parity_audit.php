@@ -50,7 +50,7 @@ function schemaParityReadFile(string $projectRoot, string $relativePath, array &
 
 function schemaParityTableContains(string $source, string $tableName, string $needle): bool
 {
-    $marker = 'CREATE TABLE IF NOT EXISTS ' . $tableName;
+    $marker = 'CREATE TABLE IF NOT EXISTS ' . $tableName . ' (';
     $start = strpos($source, $marker);
     if ($start === false) {
         return false;
@@ -135,6 +135,17 @@ $criticalInstallColumns = [
     'cms_board_subscribers.confirmed' => ['cms_board_subscribers', 'confirmed'],
     'cms_board_subscriber_categories.subscriber_id' => ['cms_board_subscriber_categories', 'subscriber_id'],
     'cms_board_subscriber_categories.category_id' => ['cms_board_subscriber_categories', 'category_id'],
+    'cms_contact_topics.slug' => ['cms_contact_topics', 'slug'],
+    'cms_contact_topics.recipient_email' => ['cms_contact_topics', 'recipient_email'],
+    'cms_contact_topics.is_active' => ['cms_contact_topics', 'is_active'],
+    'cms_contact.sender_name' => ['cms_contact', 'sender_name'],
+    'cms_contact.topic_id' => ['cms_contact', 'topic_id'],
+    'cms_contact.topic_label' => ['cms_contact', 'topic_label'],
+    'cms_contact.reference_code' => ['cms_contact', 'reference_code'],
+    'cms_contact.replied_at' => ['cms_contact', 'replied_at'],
+    'cms_contact.replied_by_user_id' => ['cms_contact', 'replied_by_user_id'],
+    'cms_contact.reply_subject' => ['cms_contact', 'reply_subject'],
+    'cms_contact.reply_body' => ['cms_contact', 'reply_body'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -194,6 +205,19 @@ $criticalMigrationSnippets = [
     'cms_board_subscribers',
     'uq_board_subscribers_email',
     'cms_board_subscriber_categories',
+    'cms_contact_topics',
+    'uq_cms_contact_topics_slug',
+    'idx_cms_contact_topics_active_order',
+    'cms_contact.sender_name',
+    'cms_contact.topic_id',
+    'cms_contact.topic_label',
+    'cms_contact.reference_code',
+    'cms_contact.replied_at',
+    'cms_contact.replied_by_user_id',
+    'cms_contact.reply_subject',
+    'cms_contact.reply_body',
+    'idx_cms_contact_reference_code',
+    'idx_cms_contact_topic_status',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

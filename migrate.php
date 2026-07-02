@@ -201,15 +201,40 @@ $tables = [
         created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_contact_topics' => "CREATE TABLE IF NOT EXISTS cms_contact_topics (
+        id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name            VARCHAR(255) NOT NULL,
+        slug            VARCHAR(150) NOT NULL,
+        description     TEXT,
+        recipient_email VARCHAR(255) NOT NULL DEFAULT '',
+        is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+        sort_order      INT          NOT NULL DEFAULT 0,
+        created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_contact_topics_slug (slug),
+        KEY idx_cms_contact_topics_active_order (is_active, sort_order, name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_contact' => "CREATE TABLE IF NOT EXISTS cms_contact (
-        id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        sender_email VARCHAR(255) NOT NULL,
-        subject      VARCHAR(255) NOT NULL,
-        message      TEXT         NOT NULL,
-        is_read      TINYINT(1)   NOT NULL DEFAULT 0,
-        status       ENUM('new','read','handled') NOT NULL DEFAULT 'new',
-        created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        sender_name        VARCHAR(255) NOT NULL DEFAULT '',
+        sender_email       VARCHAR(255) NOT NULL,
+        topic_id           INT          NULL DEFAULT NULL,
+        topic_label        VARCHAR(255) NOT NULL DEFAULT '',
+        reference_code     VARCHAR(32)  NOT NULL DEFAULT '',
+        subject            VARCHAR(255) NOT NULL,
+        message            TEXT         NOT NULL,
+        is_read            TINYINT(1)   NOT NULL DEFAULT 0,
+        status             ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+        replied_at         DATETIME     NULL DEFAULT NULL,
+        replied_by_user_id INT          NULL DEFAULT NULL,
+        reply_subject      VARCHAR(255) NOT NULL DEFAULT '',
+        reply_body         TEXT,
+        created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_cms_contact_reference_code (reference_code),
+        KEY idx_cms_contact_topic_status (topic_id, status),
+        KEY idx_cms_contact_replied_by (replied_by_user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_users' => "CREATE TABLE IF NOT EXISTS cms_users (
@@ -1038,7 +1063,15 @@ $addColumns = [
         created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     // cms_contact
+    'cms_contact.sender_name'        => "ALTER TABLE cms_contact ADD COLUMN sender_name VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_contact.topic_id'           => "ALTER TABLE cms_contact ADD COLUMN topic_id INT NULL DEFAULT NULL",
+    'cms_contact.topic_label'        => "ALTER TABLE cms_contact ADD COLUMN topic_label VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_contact.reference_code'     => "ALTER TABLE cms_contact ADD COLUMN reference_code VARCHAR(32) NOT NULL DEFAULT ''",
     'cms_contact.status'             => "ALTER TABLE cms_contact ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
+    'cms_contact.replied_at'         => "ALTER TABLE cms_contact ADD COLUMN replied_at DATETIME NULL DEFAULT NULL",
+    'cms_contact.replied_by_user_id' => "ALTER TABLE cms_contact ADD COLUMN replied_by_user_id INT NULL DEFAULT NULL",
+    'cms_contact.reply_subject'      => "ALTER TABLE cms_contact ADD COLUMN reply_subject VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_contact.reply_body'         => "ALTER TABLE cms_contact ADD COLUMN reply_body TEXT",
     'cms_contact.updated_at'         => "ALTER TABLE cms_contact ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_faq_categories
     'cms_faq_categories.parent_id'   => "ALTER TABLE cms_faq_categories ADD COLUMN parent_id INT NULL DEFAULT NULL",
@@ -2932,6 +2965,23 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Index <code>idx_media_visibility</code> pro knihovnu médií – CHYBA: " . h($e->getMessage());
+}
+
+foreach ([
+    ['cms_contact', 'idx_cms_contact_reference_code', '(reference_code)', 'referenční kódy kontaktu'],
+    ['cms_contact', 'idx_cms_contact_topic_status', '(topic_id, status)', 'filtrování kontaktu podle tématu a stavu'],
+    ['cms_contact', 'idx_cms_contact_replied_by', '(replied_by_user_id)', 'odpovědi kontaktu podle administrátora'],
+] as [$contactIndexTable, $contactIndexName, $contactIndexColumns, $contactIndexLabel]) {
+    try {
+        if (!$indexExists($contactIndexTable, $contactIndexName)) {
+            $pdo->exec("ALTER TABLE {$contactIndexTable} ADD INDEX {$contactIndexName} {$contactIndexColumns}");
+            $log[] = "✓ Index <code>{$contactIndexName}</code> pro {$contactIndexLabel} přidán – OK";
+        } else {
+            $log[] = "· Index <code>{$contactIndexName}</code> pro {$contactIndexLabel} již existuje – přeskočeno";
+        }
+    } catch (\PDOException $e) {
+        $log[] = "✗ Index <code>{$contactIndexName}</code> pro {$contactIndexLabel} – CHYBA: " . h($e->getMessage());
+    }
 }
 
 $fulltextIndexes = [

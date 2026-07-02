@@ -41,6 +41,8 @@ $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
 $createdSubscriberEmails = [];
+$createdContactTopicIds = [];
+$createdContactMessageIds = [];
 $createdNavLinkIds = [];
 $createdPageViewIds = [];
 $createdTempFiles = [];
@@ -2526,6 +2528,212 @@ try {
     clearSettingsCache();
 
     httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
+
+    $contactCenterIssues = [];
+    $contactOriginalModule = getSetting('module_contact', '0');
+    $contactOriginalEmail = getSetting('contact_email', '');
+    saveSetting('module_contact', '1');
+    saveSetting('contact_email', 'contact-http@example.test');
+    clearSettingsCache();
+
+    $contactTopicSlug = 'http-kontakt-' . bin2hex(random_bytes(4));
+    $contactTopicName = 'HTTP téma kontaktu ' . bin2hex(random_bytes(3));
+    $contactTopicRecipient = 'topic-http-' . bin2hex(random_bytes(4)) . '@example.test';
+    $contactTopicsPage = fetchUrl($baseUrl . BASE_URL . '/admin/contact_topics.php', $adminSession['cookie'], 0);
+    $contactTopicsCsrf = extractHiddenInputValue($contactTopicsPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($contactTopicsPage) !== 200 || $contactTopicsCsrf === '') {
+        $contactCenterIssues[] = 'správa témat kontaktu nevrátila 200 nebo nevykreslila CSRF token';
+    } else {
+        $contactTopicCreateResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/contact_topics.php',
+            [
+                'csrf_token' => $contactTopicsCsrf,
+                'name' => $contactTopicName,
+                'slug' => $contactTopicSlug,
+                'description' => 'Popis tématu pro HTTP integration.',
+                'recipient_email' => $contactTopicRecipient,
+                'is_active' => '1',
+                'sort_order' => '10',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($contactTopicCreateResponse) !== 302) {
+            $contactCenterIssues[] = 'uložení tématu kontaktu nevrátilo PRG redirect';
+        }
+    }
+
+    $contactTopicStmt = $pdo->prepare("SELECT id, name FROM cms_contact_topics WHERE slug = ? LIMIT 1");
+    $contactTopicStmt->execute([$contactTopicSlug]);
+    $contactTopicRow = $contactTopicStmt->fetch();
+    $contactTopicId = is_array($contactTopicRow) ? (int)$contactTopicRow['id'] : 0;
+    if ($contactTopicId <= 0) {
+        $contactCenterIssues[] = 'uložené téma kontaktu se nepodařilo dohledat podle slugu';
+    } else {
+        $createdContactTopicIds[] = $contactTopicId;
+    }
+
+    $contactPublicSession = koraPrimeTestSession([], 'kora-http-contact-public-' . bin2hex(random_bytes(3)));
+    $contactPublicUrl = $baseUrl . BASE_URL . '/contact/index.php';
+    $contactPublicPage = fetchUrl($contactPublicUrl, $contactPublicSession['cookie'], 0);
+    $contactPublicCsrf = extractHiddenInputValue($contactPublicPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($contactPublicPage) !== 200 || $contactPublicCsrf === '') {
+        $contactCenterIssues[] = 'veřejný kontaktní formulář nevrátil 200 nebo nevykreslil CSRF token';
+    }
+    if (!str_contains($contactPublicPage['body'], 'name="sender_name"')) {
+        $contactCenterIssues[] = 'veřejný kontaktní formulář neobsahuje volitelné jméno';
+    }
+    if ($contactTopicId > 0 && !str_contains($contactPublicPage['body'], 'name="topic_id"')) {
+        $contactCenterIssues[] = 'veřejný kontaktní formulář s aktivním tématem nevyžaduje výběr tématu';
+    }
+
+    $invalidContactSubject = 'HTTP contact invalid captcha ' . bin2hex(random_bytes(4));
+    $invalidContactEmail = 'http-contact-invalid-' . bin2hex(random_bytes(4)) . '@example.test';
+    $invalidContactCountBeforeStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_contact WHERE sender_email = ? OR subject = ?");
+    $invalidContactCountBeforeStmt->execute([$invalidContactEmail, $invalidContactSubject]);
+    $invalidContactCountBefore = (int)$invalidContactCountBeforeStmt->fetchColumn();
+    $invalidContactResponse = postUrl(
+        $contactPublicUrl,
+        [
+            'csrf_token' => $contactPublicCsrf,
+            'sender_name' => 'HTTP Neplatná Captcha',
+            'from' => $invalidContactEmail,
+            'topic_id' => (string)$contactTopicId,
+            'subject' => $invalidContactSubject,
+            'message' => 'Tato zpráva se nesmí uložit kvůli chybné captche.',
+            'captcha' => '0',
+        ],
+        $contactPublicSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidContactResponse) !== 200) {
+        $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nevrátil 200';
+    }
+    if (!str_contains($invalidContactResponse['body'], 'Chybná odpověď na ověřovací otázku.')) {
+        $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nezobrazil validační chybu';
+    }
+    if (!httpIntegrationFieldHasAriaInvalid($invalidContactResponse['body'], 'captcha')
+        || !str_contains($invalidContactResponse['body'], 'id="contact-captcha-error"')) {
+        $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nemá field-level aria chybu u captchy';
+    }
+    $invalidContactCountAfterStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_contact WHERE sender_email = ? OR subject = ?");
+    $invalidContactCountAfterStmt->execute([$invalidContactEmail, $invalidContactSubject]);
+    if ((int)$invalidContactCountAfterStmt->fetchColumn() !== $invalidContactCountBefore) {
+        $contactCenterIssues[] = 'kontaktní formulář uložil zprávu i po chybné captche';
+    }
+
+    $validContactPage = fetchUrl($contactPublicUrl, $contactPublicSession['cookie'], 0);
+    $validContactCsrf = extractHiddenInputValue($validContactPage['body'], 'csrf_token');
+    $validContactCaptcha = httpIntegrationExtractCaptchaAnswer($validContactPage['body']);
+    $validContactSubject = 'HTTP contact valid ' . bin2hex(random_bytes(4));
+    $validContactEmail = 'http-contact-valid-' . bin2hex(random_bytes(4)) . '@example.test';
+    $validContactSender = 'HTTP Odesílatel';
+    $validContactResponse = postUrl(
+        $contactPublicUrl,
+        [
+            'csrf_token' => $validContactCsrf,
+            'sender_name' => $validContactSender,
+            'from' => $validContactEmail,
+            'topic_id' => (string)$contactTopicId,
+            'subject' => $validContactSubject,
+            'message' => 'Validní kontaktní zpráva pro HTTP integration.',
+            'captcha' => $validContactCaptcha,
+        ],
+        $contactPublicSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($validContactResponse) !== 200) {
+        $contactCenterIssues[] = 'validní kontaktní formulář nevrátil 200';
+    }
+    if (!str_contains($validContactResponse['body'], 'Referenční kód zprávy:')) {
+        $contactCenterIssues[] = 'validní kontaktní formulář nezobrazil referenční kód';
+    }
+
+    $contactMessageStmt = $pdo->prepare(
+        "SELECT * FROM cms_contact WHERE sender_email = ? AND subject = ? ORDER BY id DESC LIMIT 1"
+    );
+    $contactMessageStmt->execute([$validContactEmail, $validContactSubject]);
+    $contactMessage = $contactMessageStmt->fetch();
+    $contactMessageId = is_array($contactMessage) ? (int)$contactMessage['id'] : 0;
+    if ($contactMessageId <= 0) {
+        $contactCenterIssues[] = 'validní kontaktní formulář neuložil zprávu';
+    } else {
+        $createdContactMessageIds[] = $contactMessageId;
+        if ((string)($contactMessage['sender_name'] ?? '') !== $validContactSender) {
+            $contactCenterIssues[] = 'uložená kontaktní zpráva nezachovala jméno odesílatele';
+        }
+        if ((int)($contactMessage['topic_id'] ?? 0) !== $contactTopicId
+            || (string)($contactMessage['topic_label'] ?? '') !== $contactTopicName) {
+            $contactCenterIssues[] = 'uložená kontaktní zpráva nezachovala téma nebo snapshot názvu tématu';
+        }
+        if (preg_match('/^KNT-\d{8}-[A-Z0-9]{4}$/', (string)($contactMessage['reference_code'] ?? '')) !== 1) {
+            $contactCenterIssues[] = 'uložená kontaktní zpráva nemá očekávaný referenční kód';
+        }
+    }
+
+    if ($contactMessageId > 0) {
+        $contactOverviewResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/contact.php?status=all&topic_id=' . $contactTopicId,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($contactOverviewResponse) !== 200
+            || !str_contains($contactOverviewResponse['body'], $validContactSubject)
+            || !str_contains($contactOverviewResponse['body'], $contactTopicName)) {
+            $contactCenterIssues[] = 'přehled kontaktních zpráv nefiltruje nebo nezobrazuje nové téma/reference';
+        }
+
+        $contactDetailUrl = $baseUrl . BASE_URL . '/admin/contact_message.php?id=' . $contactMessageId;
+        $contactDetailResponse = fetchUrl($contactDetailUrl, $adminSession['cookie'], 0);
+        $contactReplyCsrf = extractHiddenInputValue($contactDetailResponse['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($contactDetailResponse) !== 200
+            || $contactReplyCsrf === ''
+            || !str_contains($contactDetailResponse['body'], 'Odpověď odesílateli')
+            || !str_contains($contactDetailResponse['body'], (string)($contactMessage['reference_code'] ?? ''))) {
+            $contactCenterIssues[] = 'detail kontaktní zprávy nezobrazil referenci nebo formulář odpovědi';
+        } else {
+            $replySubject = 'Re: ' . $validContactSubject;
+            $replyBody = 'HTTP odpověď na kontaktní zprávu.';
+            $contactReplyResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/contact_reply.php',
+                [
+                    'csrf_token' => $contactReplyCsrf,
+                    'id' => (string)$contactMessageId,
+                    'redirect' => BASE_URL . '/admin/contact_message.php?id=' . $contactMessageId,
+                    'subject' => $replySubject,
+                    'message' => $replyBody,
+                ],
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($contactReplyResponse) !== 302) {
+                $contactCenterIssues[] = 'odeslání odpovědi na kontaktní zprávu nevrátilo 302 redirect';
+            }
+
+            $replyStoredStmt = $pdo->prepare(
+                "SELECT status, replied_at, replied_by_user_id, reply_subject, reply_body
+                 FROM cms_contact
+                 WHERE id = ?
+                 LIMIT 1"
+            );
+            $replyStoredStmt->execute([$contactMessageId]);
+            $replyStored = $replyStoredStmt->fetch();
+            if (!is_array($replyStored)
+                || (string)($replyStored['status'] ?? '') !== 'handled'
+                || trim((string)($replyStored['replied_at'] ?? '')) === ''
+                || (int)($replyStored['replied_by_user_id'] ?? 0) !== $adminUserId
+                || (string)($replyStored['reply_subject'] ?? '') !== $replySubject
+                || (string)($replyStored['reply_body'] ?? '') !== $replyBody) {
+                $contactCenterIssues[] = 'odpověď z administrace neuložila stav vyřízeno a metadata odpovědi';
+            }
+        }
+    }
+
+    saveSetting('module_contact', $contactOriginalModule);
+    saveSetting('contact_email', $contactOriginalEmail);
+    clearSettingsCache();
+
+    httpIntegrationPrintResult('contact_topics_and_reply_http', $contactCenterIssues, $failures);
 
     $formPresetIssues = [];
     $issuePresetDefinition = formPresetDefinition('issue_report');
@@ -5939,6 +6147,15 @@ try {
 
     foreach ($createdSubscriberEmails as $subscriberEmailToDelete) {
         $pdo->prepare("DELETE FROM cms_subscribers WHERE email = ?")->execute([$subscriberEmailToDelete]);
+    }
+
+    foreach ($createdContactMessageIds as $contactMessageIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_contact WHERE id = ?")->execute([$contactMessageIdToDelete]);
+    }
+
+    foreach ($createdContactTopicIds as $contactTopicIdToDelete) {
+        $pdo->prepare("UPDATE cms_contact SET topic_id = NULL WHERE topic_id = ?")->execute([$contactTopicIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_contact_topics WHERE id = ?")->execute([$contactTopicIdToDelete]);
     }
 
     foreach ($createdPageViewIds as $pageViewIdToDelete) {

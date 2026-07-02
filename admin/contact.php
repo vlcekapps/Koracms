@@ -5,12 +5,14 @@ requireModuleEnabled('contact');
 
 $pdo = db_connect();
 $statusDefinitions = messageStatusDefinitions();
+$topics = contactTopics($pdo, false);
 $validFilters = array_merge(array_keys($statusDefinitions), ['all']);
 $statusFilter = trim($_GET['status'] ?? 'new');
 if (!in_array($statusFilter, $validFilters, true)) {
     $statusFilter = 'new';
 }
 $q = trim($_GET['q'] ?? '');
+$topicFilter = inputInt('get', 'topic_id') ?? 0;
 
 $statusCounts = inboxStatusCounts($pdo, 'cms_contact', true);
 $where = 'WHERE 1';
@@ -21,9 +23,17 @@ if ($statusFilter !== 'all') {
     $params[] = $statusFilter;
 }
 
+if ($topicFilter > 0) {
+    $where .= ' AND c.topic_id = ?';
+    $params[] = $topicFilter;
+}
+
 if ($q !== '') {
-    $where .= ' AND (c.sender_email LIKE ? OR c.subject LIKE ? OR c.message LIKE ?)';
+    $where .= ' AND (c.sender_name LIKE ? OR c.sender_email LIKE ? OR c.reference_code LIKE ? OR c.topic_label LIKE ? OR c.subject LIKE ? OR c.message LIKE ?)';
     $needle = '%' . $q . '%';
+    $params[] = $needle;
+    $params[] = $needle;
+    $params[] = $needle;
     $params[] = $needle;
     $params[] = $needle;
     $params[] = $needle;
@@ -31,7 +41,8 @@ if ($q !== '') {
 
 try {
     $stmt = $pdo->prepare(
-        "SELECT c.id, c.sender_email, c.subject, c.message, c.status, c.created_at, c.updated_at
+        "SELECT c.id, c.sender_name, c.sender_email, c.topic_id, c.topic_label, c.reference_code,
+                c.subject, c.message, c.status, c.created_at, c.updated_at
          FROM cms_contact c
          {$where}
          ORDER BY FIELD(c.status, 'new', 'read', 'handled'), c.created_at DESC"
@@ -47,7 +58,8 @@ try {
         $fallbackParams[0] = $statusFilter === 'new' ? 0 : 1;
     }
     $stmt = $pdo->prepare(
-        "SELECT c.id, c.sender_email, c.subject, c.message,
+        "SELECT c.id, '' AS sender_name, c.sender_email, NULL AS topic_id, '' AS topic_label, '' AS reference_code,
+                c.subject, c.message,
                 CASE WHEN c.is_read = 1 THEN 'read' ELSE 'new' END AS status,
                 c.created_at, c.created_at AS updated_at
          FROM cms_contact c
@@ -64,6 +76,9 @@ if ($statusFilter !== 'all') {
 }
 if ($q !== '') {
     $currentParams['q'] = $q;
+}
+if ($topicFilter > 0) {
+    $currentParams['topic_id'] = $topicFilter;
 }
 $currentRedirect = BASE_URL . '/admin/contact.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
 $bulkOptions = [
@@ -118,13 +133,26 @@ adminHeader('Kontakt');
   </a>
 </nav>
 
+<p class="button-row button-row--start">
+  <a href="contact_topics.php" class="btn">Témata kontaktu</a>
+</p>
+
 <form method="get" class="button-row admin-stack-sm">
   <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
   <label for="q" class="sr-only">Hledat v kontaktních zprávách</label>
   <input type="search" id="q" name="q" placeholder="Hledat v kontaktních zprávách…"
          value="<?= h($q) ?>" class="admin-search-input">
+  <label for="topic_id" class="sr-only">Filtrovat podle tématu</label>
+  <select id="topic_id" name="topic_id" class="admin-select-sm">
+    <option value="0">Všechna témata</option>
+    <?php foreach ($topics as $topic): ?>
+      <option value="<?= (int)$topic['id'] ?>"<?= (int)$topic['id'] === $topicFilter ? ' selected' : '' ?>>
+        <?= h((string)$topic['name']) ?>
+      </option>
+    <?php endforeach; ?>
+  </select>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== ''): ?>
+  <?php if ($q !== '' || $topicFilter > 0): ?>
     <a href="?status=<?= h($statusFilter) ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -161,6 +189,7 @@ adminHeader('Kontakt');
     <thead>
       <tr>
         <th scope="col"><label for="contact-check-all" class="sr-only">Vybrat všechny kontaktní zprávy</label><input type="checkbox" id="contact-check-all" form="contact-bulk-form"></th>
+        <th scope="col">Reference a téma</th>
         <th scope="col">Od</th>
         <th scope="col">Předmět a zpráva</th>
         <th scope="col">Přijato</th>
@@ -176,6 +205,13 @@ adminHeader('Kontakt');
             <input type="checkbox" id="contact-message-select-<?= (int)$message['id'] ?>" name="ids[]" value="<?= (int)$message['id'] ?>" form="contact-bulk-form">
           </td>
           <td>
+            <strong><?= trim((string)($message['reference_code'] ?? '')) !== '' ? h((string)$message['reference_code']) : 'Bez reference' ?></strong>
+            <br><small class="table-meta"><?= trim((string)($message['topic_label'] ?? '')) !== '' ? h((string)$message['topic_label']) : 'Bez tématu' ?></small>
+          </td>
+          <td>
+            <?php if (trim((string)($message['sender_name'] ?? '')) !== ''): ?>
+              <strong><?= h((string)$message['sender_name']) ?></strong><br>
+            <?php endif; ?>
             <a href="mailto:<?= h((string)$message['sender_email']) ?>"><?= h((string)$message['sender_email']) ?></a>
           </td>
           <td>

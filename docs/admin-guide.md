@@ -600,6 +600,40 @@ Cleanup provádí `cron.php` a maže jen:
 
 ---
 
+## Kontakt
+
+Modul Kontakt zůstává jednoduchým veřejným kontaktním formulářem, ale nově umí směrovat dotazy podle témat a dovoluje odpovědět přímo z administrace.
+
+### Témata dotazů
+
+V administraci kontaktních zpráv je odkaz **Témata kontaktu**. U každého tématu lze nastavit:
+
+- název a slug
+- popis, který se zobrazí u veřejného formuláře
+- volitelný cílový e-mail
+- aktivní stav
+- pořadí
+
+Pokud existuje alespoň jedno aktivní téma, veřejný formulář vyžaduje výběr tématu. Notifikace správci se pošle na e-mail tématu; když není vyplněný nebo není platný, použije se globální kontaktní e-mail z nastavení webu.
+
+### Veřejné odeslání
+
+Veřejný formulář dál používá CSRF ochranu, honeypot, rate limiting a captchu. Návštěvník může nově vyplnit i jméno. Po úspěšném odeslání CMS zobrazí referenční kód zprávy ve tvaru `KNT-YYYYMMDD-XXXX`, který se uloží i do administrace.
+
+Bez aktivních témat se formulář chová jako dříve, jen navíc nabízí volitelné jméno a po odeslání zobrazí referenční kód.
+
+### Odpověď z administrace
+
+Detail kontaktní zprávy zobrazuje referenční kód, jméno, e-mail, téma, stav a poslední uloženou odpověď. Pokud zpráva obsahuje platný e-mail odesílatele, lze odeslat odpověď přímo z detailu.
+
+Po úspěšném odeslání odpovědi CMS uloží předmět, text odpovědi, čas, uživatele a zprávu označí jako **Vyřízené**. První verze ukládá poslední odpověď; plná historie konverzace patří případně do budoucího helpdesk rozšíření.
+
+### Import a export
+
+JSON export/import přenáší konfiguraci témat kontaktu, ale nepřenáší samotné kontaktní zprávy. Ty jsou soukromou komunikací návštěvníků a nemají se zbytečně kopírovat mezi instalacemi.
+
+---
+
 ## Vývěska / Úřední deska
 
 Modul vývěsky je určený pro oznámení, dokumenty a další veřejné položky, které se mají zobrazit od určitého data a případně po čase spadnout do archivu.

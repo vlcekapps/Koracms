@@ -305,6 +305,23 @@ test_section('blog taxonomy landing links');
 
 assert_equals('linuxovy-koutek', blogCategorySlug('Linuxový koutek'), 'category slug normalizes Czech diacritics');
 assert_equals('nvda-tip', blogTagSlug('NVDA tip'), 'tag slug uses shared blog taxonomy normalization');
+assert_equals('technicka-podpora', contactTopicSlug('Technická podpora'), 'contact topic slug normalizes Czech diacritics');
+assert_equals(
+    'KNT-20260401-AB12',
+    contactReferenceCode(new DateTimeImmutable('2026-04-01 09:23:56'), 'ab-12'),
+    'contact reference code uses date and normalized suffix'
+);
+assert_equals(
+    'tema@example.test',
+    contactNotificationRecipient('global@example.test', ['recipient_email' => 'tema@example.test']),
+    'contact topic recipient overrides global contact email'
+);
+assert_equals(
+    'global@example.test',
+    contactNotificationRecipient('global@example.test', ['recipient_email' => 'neplatny-email']),
+    'contact topic recipient falls back to global contact email'
+);
+assert_equals('', contactNotificationRecipient('neplatny-email', ['recipient_email' => '']), 'invalid contact email fallback stays empty');
 assert_equals(
     'linuxovy-koutek-3',
     nextBlogTaxonomySlug('Linuxový koutek', ['linuxovy-koutek', 'linuxovy-koutek-2'], 'kategorie'),

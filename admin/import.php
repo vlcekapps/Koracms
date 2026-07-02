@@ -491,6 +491,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Historie chat zpráv importována.';
                 }
 
+                if (!empty($data['contact_topics']) && is_array($data['contact_topics'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_contact_topics
+                         (id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['contact_topics'] as $row) {
+                        $topicName = trim((string)($row['name'] ?? ''));
+                        if ($topicName === '') {
+                            continue;
+                        }
+                        $topicId = (int)($row['id'] ?? 0);
+                        $topicSlug = contactTopicSlug((string)($row['slug'] ?? ''));
+                        $topicSlug = uniqueContactTopicSlug(
+                            $pdo,
+                            $topicSlug !== '' ? $topicSlug : $topicName,
+                            $topicId > 0 ? $topicId : null
+                        );
+                        $topicEmail = trim((string)($row['recipient_email'] ?? ''));
+                        if ($topicEmail !== '' && !filter_var($topicEmail, FILTER_VALIDATE_EMAIL)) {
+                            $topicEmail = '';
+                        }
+                        $ins->execute([
+                            $topicId,
+                            $topicName,
+                            $topicSlug,
+                            (string)($row['description'] ?? ''),
+                            $topicEmail,
+                            (int)($row['is_active'] ?? 1),
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                    }
+                    $summary[] = 'Témata kontaktu importována.';
+                }
+
                 // Události
                 if (!empty($data['events']) && is_array($data['events'])) {
                     $ins = $pdo->prepare(

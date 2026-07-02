@@ -193,6 +193,23 @@ CREATE TABLE IF NOT EXISTS cms_board_subscriber_categories (
   subscriber_id INT,
   category_id INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_contact_topics (
+  id INT,
+  slug VARCHAR(150),
+  recipient_email VARCHAR(255),
+  is_active TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_contact (
+  id INT,
+  sender_name VARCHAR(255),
+  topic_id INT,
+  topic_label VARCHAR(255),
+  reference_code VARCHAR(32),
+  replied_at DATETIME,
+  replied_by_user_id INT,
+  reply_subject VARCHAR(255),
+  reply_body TEXT
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -244,6 +261,19 @@ PHP,
 // cms_board_subscribers
 // uq_board_subscribers_email
 // cms_board_subscriber_categories
+// cms_contact_topics
+// uq_cms_contact_topics_slug
+// idx_cms_contact_topics_active_order
+// cms_contact.sender_name
+// cms_contact.topic_id
+// cms_contact.topic_label
+// cms_contact.reference_code
+// cms_contact.replied_at
+// cms_contact.replied_by_user_id
+// cms_contact.reply_subject
+// cms_contact.reply_body
+// idx_cms_contact_reference_code
+// idx_cms_contact_topic_status
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

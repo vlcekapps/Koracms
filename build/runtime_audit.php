@@ -38,6 +38,7 @@ $authorsViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/vi
 $mediaLibrarySource = (string) file_get_contents(__DIR__ . '/../lib/media_library.php');
 $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
+$messagesSource = (string) file_get_contents(__DIR__ . '/../lib/messages.php');
 $commentsSource = (string) file_get_contents(__DIR__ . '/../lib/comments.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
@@ -66,6 +67,8 @@ $blogPageSource = (string) file_get_contents(__DIR__ . '/../blog/page.php');
 $newsIndexSource = (string) file_get_contents(__DIR__ . '/../news/index.php');
 $boardIndexSource = (string) file_get_contents(__DIR__ . '/../board/index.php');
 $contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.php');
+$contactTopicsAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_topics.php');
+$contactReplyAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_reply.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
 $confirmEmailSource = (string) file_get_contents(__DIR__ . '/../confirm_email.php');
@@ -140,6 +143,7 @@ $readOnlyPodcastAudioSource = (string) file_get_contents(__DIR__ . '/../podcast/
 $readOnlyPodcastImageSource = (string) file_get_contents(__DIR__ . '/../podcast/image.php');
 $readOnlyPodcastCoverSource = (string) file_get_contents(__DIR__ . '/../podcast/cover.php');
 $adminExportSource = (string) file_get_contents(__DIR__ . '/../admin/export.php');
+$adminImportSource = (string) file_get_contents(__DIR__ . '/../admin/import.php');
 $adminBulkSource = (string) file_get_contents(__DIR__ . '/../admin/bulk.php');
 $blogBulkSource = (string) file_get_contents(__DIR__ . '/../admin/blog_bulk.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
@@ -8501,13 +8505,13 @@ $foundationChecks = [
         && str_contains($composerSource, '"format:fix:admin-messaging"')
         && str_contains($composerSource, '@format:check:admin-messaging')
         && str_contains($composerSource, 'admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php')
-        && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php')
+        && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_reply.php')
         && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_update.php')
         && str_contains($composerSource, 'admin/newsletter_bulk.php admin/newsletter_send.php admin/newsletter_subscriber_action.php'),
     'php cs fixer admin moderation smoke check exists' => str_contains($composerSource, '"format:check:admin-moderation"')
         && str_contains($composerSource, '"format:fix:admin-moderation"')
         && str_contains($composerSource, '@format:check:admin-moderation')
-        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/chat.php admin/form_submissions.php'),
+        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/contact_topics.php admin/chat.php admin/form_submissions.php'),
     'php cs fixer admin save smoke check exists' => str_contains($composerSource, '"format:check:admin-save"')
         && str_contains($composerSource, '"format:fix:admin-save"')
         && str_contains($composerSource, '@format:check:admin-save')
@@ -8713,7 +8717,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -9477,7 +9481,7 @@ if (!str_contains($installProbe['status'], '302')) {
 echo "=== install_schema_guard ===\n";
 $installSource = (string) file_get_contents(__DIR__ . '/../install.php');
 $installTableContains = static function (string $tableName, string $needle) use ($installSource): bool {
-    $marker = 'CREATE TABLE IF NOT EXISTS ' . $tableName;
+    $marker = 'CREATE TABLE IF NOT EXISTS ' . $tableName . ' (';
     $start = strpos($installSource, $marker);
     if ($start === false) {
         return false;
@@ -9524,6 +9528,11 @@ $installSchemaChecks = [
     'cms_faqs contains deleted_at' => $installTableContains('cms_faqs', 'deleted_at'),
     'cms_users contains totp_secret' => $installTableContains('cms_users', 'totp_secret'),
     'cms_users contains passkey_credentials' => $installTableContains('cms_users', 'passkey_credentials'),
+    'cms_contact_topics contains recipient_email' => $installTableContains('cms_contact_topics', 'recipient_email'),
+    'cms_contact contains sender_name' => $installTableContains('cms_contact', 'sender_name'),
+    'cms_contact contains topic_id' => $installTableContains('cms_contact', 'topic_id'),
+    'cms_contact contains reference_code' => $installTableContains('cms_contact', 'reference_code'),
+    'cms_contact contains reply_body' => $installTableContains('cms_contact', 'reply_body'),
 ];
 $installSchemaIssues = [];
 foreach ($installSchemaChecks as $label => $present) {
@@ -9556,6 +9565,12 @@ $migrateSchemaChecks = [
     'cms_faqs.meta_description' => str_contains($migrateSource, 'cms_faqs.meta_description'),
     'cms_events.publish_at' => str_contains($migrateSource, 'cms_events.publish_at'),
     'cms_places.deleted_at' => str_contains($migrateSource, 'cms_places.deleted_at'),
+    'cms_contact_topics' => str_contains($migrateSource, 'cms_contact_topics'),
+    'cms_contact.sender_name' => str_contains($migrateSource, 'cms_contact.sender_name'),
+    'cms_contact.topic_id' => str_contains($migrateSource, 'cms_contact.topic_id'),
+    'cms_contact.reference_code' => str_contains($migrateSource, 'cms_contact.reference_code'),
+    'cms_contact.reply_body' => str_contains($migrateSource, 'cms_contact.reply_body'),
+    'idx_cms_contact_topic_status' => str_contains($migrateSource, 'idx_cms_contact_topic_status'),
     'migrate reruns schema consistency checks even on matching version' => str_contains($migrateSource, 'kontrola konzistence schématu a chybějících sloupců'),
 ];
 $migrateSchemaIssues = [];
@@ -10770,6 +10785,44 @@ if ($sendMailHeaderIssues === []) {
     $failures++;
     foreach ($sendMailHeaderIssues as $sendMailHeaderIssue) {
         echo '- ' . $sendMailHeaderIssue . "\n";
+    }
+}
+
+echo "=== contact_module_guardrails ===\n";
+$contactModuleIssues = [];
+foreach ([
+    'contact public form loads active topics' => [$contactIndexSource, 'contactTopics($pdo, true)'],
+    'contact public form creates stable references' => [$contactIndexSource, 'uniqueContactReferenceCode($pdo)'],
+    'contact public form routes notifications by topic' => [$contactIndexSource, 'contactNotificationRecipient($destEmail, $topic)'],
+    'contact helpers normalize topic slugs' => [$messagesSource, 'function contactTopicSlug('],
+    'contact helpers build reference code' => [$messagesSource, 'function contactReferenceCode('],
+    'contact topics admin is module guarded' => [$contactTopicsAdminSource, "requireModuleEnabled('contact')"],
+    'contact topics admin is CSRF protected' => [$contactTopicsAdminSource, 'verifyCsrf();'],
+    'contact reply endpoint is module guarded' => [$contactReplyAdminSource, "requireModuleEnabled('contact')"],
+    'contact reply endpoint is CSRF protected' => [$contactReplyAdminSource, 'verifyCsrf();'],
+    'contact reply endpoint validates redirect target' => [$contactReplyAdminSource, 'internalRedirectTarget('],
+    'contact reply endpoint sends mail through helper' => [$contactReplyAdminSource, 'sendContactReply('],
+    'contact reply endpoint marks message handled' => [$contactReplyAdminSource, "status = 'handled'"],
+    'contact mail helper exists' => [$mailSource, 'function sendContactReply('],
+    'contact admin command has messages item' => [$adminCommandHelperSource, 'Kontaktní zprávy'],
+    'contact admin command has topics item' => [$adminCommandHelperSource, 'Témata kontaktu'],
+    'contact route guard includes reply endpoint' => [$authSource, "'contact_reply.php'"],
+    'contact route guard includes topics endpoint' => [$authSource, "'contact_topics.php'"],
+    'contact module definitions include topics admin path' => [$definitionsSource, '/admin/contact_topics.php'],
+    'contact export includes topics configuration' => [$adminExportSource, "'contact_topics'"],
+    'contact import includes topics configuration' => [$adminImportSource, '$data[\'contact_topics\']'],
+] as $contactGuardLabel => [$contactGuardSource, $contactGuardFragment]) {
+    if (!str_contains((string)$contactGuardSource, (string)$contactGuardFragment)) {
+        $contactModuleIssues[] = $contactGuardLabel . ' is missing fragment: ' . $contactGuardFragment;
+    }
+}
+
+if ($contactModuleIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($contactModuleIssues as $contactModuleIssue) {
+        echo '- ' . $contactModuleIssue . "\n";
     }
 }
 
@@ -13459,6 +13512,8 @@ $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
 $contactMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_message.php');
+$contactTopicsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_topics.php');
+$contactReplySource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_reply.php');
 $downloadsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
 $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
@@ -14211,6 +14266,17 @@ foreach ([
         'source' => $contactMessageDetailSource,
         'fragments' => [
             'class="table-cell--prewrap"',
+            'Odpověď odesílateli',
+        ],
+    ],
+    'contact topics' => [
+        'source' => $contactTopicsSource,
+        'fragments' => [
+            'Témata kontaktního formuláře',
+            'adminFieldAttributes(',
+            'adminRenderFieldError(',
+            'field-help field-help--flush',
+            'class="table-meta"',
         ],
     ],
     'comments overview' => [
@@ -14901,6 +14967,7 @@ foreach ([
     'chat message detail' => '/admin/chat_message.php',
     'contact overview' => '/admin/contact.php',
     'contact message detail' => '/admin/contact_message.php',
+    'contact topics' => '/admin/contact_topics.php',
     'gallery photos' => '/admin/gallery_photos.php',
     'newsletter overview' => '/admin/newsletter.php',
     'newsletter subscriber detail' => '/admin/newsletter_subscriber.php',
@@ -15081,6 +15148,7 @@ $adminFieldErrorForms = [
     'user form' => [$userFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('author_slug'", "adminFieldAttributes('author_avatar'"],
     'profile form' => [$profileFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('totp_verify'", "adminFieldAttributes('author_slug'"],
     'newsletter form' => [$newsletterFormValidationSource, "adminFieldAttributes('subject'", "adminFieldAttributes('body'", "adminRenderFieldError('body'"],
+    'contact topics form' => [$contactTopicsSource, "adminFieldAttributes('name'", "adminFieldAttributes('recipient_email'", "adminRenderFieldError('slug'"],
 ];
 foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
     $formSource = (string)array_shift($formFragments);
@@ -16317,6 +16385,18 @@ foreach ([
 if (!str_contains($themeContactViewSource, 'role="status" aria-atomic="true" aria-labelledby="contact-success-message"')
     || !str_contains($themeContactViewSource, '<p id="contact-success-message">Zpráva byla odeslána. Děkujeme!</p>')) {
     $themeLayoutIssues[] = 'contact success message is missing text-backed status semantics';
+}
+foreach ([
+    'name="sender_name"',
+    'name="topic_id"',
+    'Referenční kód zprávy:',
+    'aria-invalid="true"',
+    'field-help field-error',
+    "'contact-' . str_replace('_', '-', \$key) . '-error'",
+] as $contactViewFragment) {
+    if (!str_contains($themeContactViewSource, $contactViewFragment)) {
+        $themeLayoutIssues[] = 'contact public form is missing topic/reference field-level fragment: ' . $contactViewFragment;
+    }
 }
 foreach ([
     'chat pending message' => [

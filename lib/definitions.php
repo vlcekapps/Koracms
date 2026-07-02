@@ -126,6 +126,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/contact.php',
+                '/admin/contact_topics.php',
             ],
         ],
         'gallery' => [

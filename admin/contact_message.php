@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/layout.php';
 requireCapability('messages_manage', 'Přístup odepřen. Pro správu kontaktních zpráv nemáte potřebné oprávnění.');
+requireModuleEnabled('contact');
 
 $pdo = db_connect();
 $messageId = inputInt('get', 'id');
@@ -12,9 +13,13 @@ if ($messageId === null) {
 }
 
 $stmt = $pdo->prepare(
-    "SELECT id, sender_email, subject, message, status, created_at, updated_at
-     FROM cms_contact
-     WHERE id = ?"
+    "SELECT c.id, c.sender_name, c.sender_email, c.topic_id, c.topic_label, c.reference_code,
+            c.subject, c.message, c.status, c.replied_at, c.replied_by_user_id,
+            c.reply_subject, c.reply_body, c.created_at, c.updated_at,
+            ru.email AS replied_by_email, ru.first_name AS replied_by_first_name, ru.last_name AS replied_by_last_name, ru.nickname AS replied_by_nickname
+     FROM cms_contact c
+     LEFT JOIN cms_users ru ON ru.id = c.replied_by_user_id
+     WHERE c.id = ?"
 );
 $stmt->execute([$messageId]);
 $message = $stmt->fetch();
@@ -33,12 +38,29 @@ if ($messageStatus === 'new') {
 }
 
 $selfRedirect = BASE_URL . '/admin/contact_message.php?id=' . (int)$message['id'] . '&redirect=' . rawurlencode($redirect);
+$repliedByLabel = trim((string)($message['replied_by_email'] ?? '')) !== ''
+    ? formSubmissionAssigneeDisplayName([
+        'email' => (string)($message['replied_by_email'] ?? ''),
+        'first_name' => (string)($message['replied_by_first_name'] ?? ''),
+        'last_name' => (string)($message['replied_by_last_name'] ?? ''),
+        'nickname' => (string)($message['replied_by_nickname'] ?? ''),
+    ])
+    : '–';
 
 adminHeader('Kontaktní zpráva');
 ?>
 
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Kontaktní zpráva byla aktualizována.</p>
+<?php endif; ?>
+<?php if (isset($_GET['reply']) && $_GET['reply'] === 'sent'): ?>
+  <p class="success" role="status">Odpověď odesílateli byla úspěšně odeslána.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
+  <p class="error" role="alert">U této zprávy není dostupná žádná platná e-mailová adresa pro odpověď.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
+  <p class="error" role="alert">Vyplňte předmět i text odpovědi.</p>
+<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
+  <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled kontaktních zpráv</a></p>
@@ -47,8 +69,20 @@ adminHeader('Kontaktní zpráva');
   <caption class="sr-only">Detail kontaktní zprávy</caption>
   <tbody>
     <tr>
+      <th scope="row">Referenční kód</th>
+      <td><?= trim((string)($message['reference_code'] ?? '')) !== '' ? h((string)$message['reference_code']) : '–' ?></td>
+    </tr>
+    <tr>
+      <th scope="row">Jméno</th>
+      <td><?= trim((string)($message['sender_name'] ?? '')) !== '' ? h((string)$message['sender_name']) : '–' ?></td>
+    </tr>
+    <tr>
       <th scope="row">E-mail odesílatele</th>
       <td><a href="mailto:<?= h((string)$message['sender_email']) ?>"><?= h((string)$message['sender_email']) ?></a></td>
+    </tr>
+    <tr>
+      <th scope="row">Téma</th>
+      <td><?= trim((string)($message['topic_label'] ?? '')) !== '' ? h((string)$message['topic_label']) : 'Bez tématu' ?></td>
     </tr>
     <tr>
       <th scope="row">Předmět</th>
@@ -75,9 +109,29 @@ adminHeader('Kontaktní zpráva');
       </td>
     </tr>
     <tr>
+      <th scope="row">Poslední odpověď</th>
+      <td>
+        <?php if (!empty($message['replied_at'])): ?>
+          <time datetime="<?= h(str_replace(' ', 'T', (string)$message['replied_at'])) ?>">
+            <?= formatCzechDate((string)$message['replied_at']) ?>
+          </time>
+          <br><small><?= h(trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Bez předmětu') ?></small>
+          <br><small><?= h($repliedByLabel) ?></small>
+        <?php else: ?>
+          –
+        <?php endif; ?>
+      </td>
+    </tr>
+    <tr>
       <th scope="row">Zpráva</th>
       <td class="table-cell--prewrap"><?= h((string)$message['message']) ?></td>
     </tr>
+    <?php if (trim((string)($message['reply_body'] ?? '')) !== ''): ?>
+      <tr>
+        <th scope="row">Text poslední odpovědi</th>
+        <td class="table-cell--prewrap"><?= h((string)$message['reply_body']) ?></td>
+      </tr>
+    <?php endif; ?>
   </tbody>
 </table>
 
@@ -119,5 +173,31 @@ adminHeader('Kontaktní zpráva');
     <button type="submit" class="btn btn-danger">Smazat</button>
   </form>
 </div>
+
+<h2>Odpověď odesílateli</h2>
+<?php if (!filter_var((string)$message['sender_email'], FILTER_VALIDATE_EMAIL)): ?>
+  <p>Tato zpráva neobsahuje platnou e-mailovou adresu, takže na ni nejde odpovědět přímo z administrace.</p>
+<?php else: ?>
+  <form method="post" action="<?= BASE_URL ?>/admin/contact_reply.php">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <fieldset>
+      <legend>Odeslat odpověď e-mailem</legend>
+
+      <label for="reply-to">Komu</label>
+      <input type="email" id="reply-to" value="<?= h((string)$message['sender_email']) ?>" disabled>
+
+      <label for="reply-subject">Předmět</label>
+      <input type="text" id="reply-subject" name="subject" maxlength="255"
+             value="<?= h(trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Re: ' . (string)$message['subject']) ?>">
+
+      <label for="reply-message">Text odpovědi</label>
+      <textarea id="reply-message" name="message" rows="7"><?= h(trim((string)($message['reply_body'] ?? '')) !== '' ? (string)$message['reply_body'] : "Dobrý den,\n\nděkujeme za vaši zprávu.\n\n") ?></textarea>
+
+      <button type="submit" class="btn">Odeslat odpověď</button>
+    </fieldset>
+  </form>
+<?php endif; ?>
 
 <?php adminFooter(); ?>

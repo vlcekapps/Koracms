@@ -181,15 +181,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_contact_topics (
+            id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name            VARCHAR(255) NOT NULL,
+            slug            VARCHAR(150) NOT NULL,
+            description     TEXT,
+            recipient_email VARCHAR(255) NOT NULL DEFAULT '',
+            is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+            sort_order      INT          NOT NULL DEFAULT 0,
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_contact_topics_slug (slug),
+            KEY idx_cms_contact_topics_active_order (is_active, sort_order, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_contact (
-            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            sender_email VARCHAR(255) NOT NULL,
-            subject      VARCHAR(255) NOT NULL,
-            message      TEXT         NOT NULL,
-            is_read      TINYINT(1)   NOT NULL DEFAULT 0,
-            status       ENUM('new','read','handled') NOT NULL DEFAULT 'new',
-            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            id                 INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            sender_name        VARCHAR(255) NOT NULL DEFAULT '',
+            sender_email       VARCHAR(255) NOT NULL,
+            topic_id           INT          NULL DEFAULT NULL,
+            topic_label        VARCHAR(255) NOT NULL DEFAULT '',
+            reference_code     VARCHAR(32)  NOT NULL DEFAULT '',
+            subject            VARCHAR(255) NOT NULL,
+            message            TEXT         NOT NULL,
+            is_read            TINYINT(1)   NOT NULL DEFAULT 0,
+            status             ENUM('new','read','handled') NOT NULL DEFAULT 'new',
+            replied_at         DATETIME     NULL DEFAULT NULL,
+            replied_by_user_id INT          NULL DEFAULT NULL,
+            reply_subject      VARCHAR(255) NOT NULL DEFAULT '',
+            reply_body         TEXT,
+            created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_cms_contact_reference_code (reference_code),
+            KEY idx_cms_contact_topic_status (topic_id, status),
+            KEY idx_cms_contact_replied_by (replied_by_user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_gallery_albums (

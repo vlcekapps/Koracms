@@ -43,6 +43,8 @@ $tables = [
                         FROM cms_chat",
     'chat_history'  => "SELECT id, chat_id, actor_user_id, event_type, message, created_at
                         FROM cms_chat_history",
+    'contact_topics' => "SELECT id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at
+                         FROM cms_contact_topics",
     'events'        => "SELECT id, title, slug, event_kind, excerpt, description, program_note, location,
                                organizer_name, organizer_email, registration_url, price_note, accessibility_note,
                                image_file, event_date, event_end, is_published, status, unpublish_at, admin_note,

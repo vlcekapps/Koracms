@@ -699,6 +699,8 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         'contact_action.php',
         'contact_bulk.php',
         'contact_message.php',
+        'contact_reply.php',
+        'contact_topics.php',
     ], true)) {
         return 'messages_manage';
     }
@@ -804,7 +806,7 @@ function adminRouteModuleRequirements(): array
         ],
         'contact' => [
             'message' => adminRouteModuleDisabledMessage('contact'),
-            'files' => ['contact.php', 'contact_action.php', 'contact_bulk.php', 'contact_delete.php', 'contact_message.php'],
+            'files' => ['contact.php', 'contact_action.php', 'contact_bulk.php', 'contact_delete.php', 'contact_message.php', 'contact_reply.php', 'contact_topics.php'],
         ],
         'gallery' => [
             'message' => adminRouteModuleDisabledMessage('gallery'),
