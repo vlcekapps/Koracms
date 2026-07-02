@@ -28,13 +28,28 @@ $backLabel = (string)($backLabel ?? 'Zpět do archivu');
       <?php endif; ?>
     </p>
 
-    <div class="prose menu-content">
-      <?php if (!empty($card['content'])): ?>
-        <?= renderContent($card['content']) ?>
-      <?php else: ?>
-        <p><em>Obsah tohoto lístku nebyl zadán.</em></p>
+    <?php if (!empty($card['has_structured_items'])): ?>
+      <?php
+      $foodStructuredSections = $card['sections'];
+      $foodStructuredMenuId = 'food-card-structured-menu';
+      $foodStructuredMenuHeading = 'Položky lístku';
+      require __DIR__ . '/food-structured-menu.php';
+      ?>
+      <?php if (trim((string)$card['content']) !== ''): ?>
+        <section class="food-menu-notes" aria-labelledby="food-card-notes-title">
+          <h2 id="food-card-notes-title" class="section-title section-title--compact">Poznámky k lístku</h2>
+          <div class="prose menu-content"><?= renderContent($card['content']) ?></div>
+        </section>
       <?php endif; ?>
-    </div>
+    <?php else: ?>
+      <div class="prose menu-content">
+        <?php if (!empty($card['content'])): ?>
+          <?= renderContent($card['content']) ?>
+        <?php else: ?>
+          <p><em>Obsah tohoto lístku nebyl zadán.</em></p>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
 
     <div class="button-row button-row--start">
       <a class="button-secondary" href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> <?= h($backLabel) ?></a>

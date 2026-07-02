@@ -259,6 +259,22 @@ CREATE TABLE IF NOT EXISTS cms_faq_feedback (
   vote VARCHAR(20),
   visitor_hash VARCHAR(64)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_sections (
+  id INT,
+  card_id INT,
+  title VARCHAR(255),
+  sort_order INT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_items (
+  id INT,
+  card_id INT,
+  section_id INT,
+  title VARCHAR(255),
+  price_amount DECIMAL(10,2),
+  allergens VARCHAR(100),
+  dietary_flags VARCHAR(255),
+  is_available TINYINT(1)
+) ENGINE=InnoDB;
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
@@ -354,6 +370,12 @@ PHP,
 // cms_faq_feedback
 // uq_cms_faq_feedback_visitor
 // idx_cms_faq_feedback_faq_vote
+// cms_food_sections
+// idx_food_sections_card_order
+// cms_food_items
+// idx_food_items_card_order
+// idx_food_items_section_order
+// ft_food_items_search
 PHP,
         'blog/index.php' => <<<'PHP'
 <?php

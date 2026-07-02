@@ -2033,6 +2033,7 @@ if ($downloadId !== false) {
 if ($foodCardId !== false) {
     $pages[] = ['label' => 'admin_food_form', 'url' => $baseUrl . '/admin/food_form.php?id=' . urlencode((string)$foodCardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
     $pages[] = ['label' => 'admin_food_create_form', 'url' => $baseUrl . '/admin/food_form.php', 'cookie' => 'PHPSESSID=' . $auditSessionId];
+    $pages[] = ['label' => 'admin_food_items', 'url' => $baseUrl . '/admin/food_items.php?card=' . urlencode((string)$foodCardId), 'cookie' => 'PHPSESSID=' . $auditSessionId];
 }
 if ($resourceRow) {
     $pages[] = ['label' => 'admin_res_resource_form', 'url' => $baseUrl . '/admin/res_resource_form.php?id=' . urlencode((string)$resourceRow['id']), 'cookie' => 'PHPSESSID=' . $auditSessionId];
@@ -3152,6 +3153,7 @@ foreach ($pages as $page) {
         'admin_download_create_form' => ['Přidat položku ke stažení', 'Zrušit'],
         'admin_food_form' => ['Uložit změny', 'Zrušit'],
         'admin_food_create_form' => ['Přidat jídelní lístek', 'Zrušit'],
+        'admin_food_items' => ['Přidat sekci', 'Přidat položku'],
         'admin_res_resource_form' => ['Uložit změny', 'Zrušit'],
         'admin_res_resource_create_form' => ['Vytvořit zdroj rezervací', 'Zrušit'],
         'admin_gallery_album_form' => ['Uložit změny', 'Zrušit'],
@@ -3231,6 +3233,7 @@ foreach ($pages as $page) {
         'admin_faq_create_form' => ['Vyplňte potřebné údaje k otázce a odpovědi.', 'Zveřejnit na webu'],
         'admin_food_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
         'admin_food_create_form' => ['Vyplňte potřebné údaje k tomuto lístku a pak zvolte, jestli má být aktuální a zveřejněný.', 'Použít jako aktuální lístek', 'Zveřejnit na webu', 'Nechte prázdné, pokud má lístek platit bez data konce.'],
+        'admin_food_items' => ['Strukturované položky se na webu zobrazí před volným HTML obsahem lístku.', 'Když žádné položky nezadáte', 'Nejprve přidejte alespoň jednu sekci lístku.'],
         'admin_place_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve veřejném adresáři míst.'],
         'admin_place_create_form' => ['Vyplňte základní údaje o místě a nakonec zvolte, jestli se má zobrazit na webu.', 'Zveřejnit na webu', 'Volitelné. Pomůže s filtrováním a orientací ve veřejném adresáři míst.'],
         'admin_board_form' => ['Vyplňte potřebné údaje k položce a zvolte, jestli se má zveřejnit na webu.', 'Zveřejnit na webu', 'Nechte prázdné, pokud má položka zůstat bez data stažení.'],
@@ -3447,6 +3450,7 @@ foreach ($pages as $page) {
         'admin_download_create_form' => ['Základní údaje položky', 'Náhled a zveřejnění'],
         'admin_food_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
         'admin_food_create_form' => ['Údaje o lístku', 'Aktualita a zveřejnění'],
+        'admin_food_items' => ['Přidat sekci', 'Přidat položku', 'Strukturovaný obsah lístku'],
         'admin_place_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
         'admin_place_create_form' => ['Základní údaje místa', 'Poloha a kontakt', 'Obrázek a zveřejnění'],
         'admin_board_form' => ['Položka sekce', 'Příloha a zveřejnění'],
@@ -13593,6 +13597,7 @@ $pageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save
 $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
 $foodSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_save.php');
 $foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
+$foodItemsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_items.php');
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
@@ -13627,6 +13632,23 @@ foreach (["'err' => 'valid_from'", "'err' => 'valid_to'", "'err' => 'valid_range
 foreach (["'valid_from' =>", "'valid_to' =>", "'valid_range' =>"] as $foodFormFragment) {
     if (!str_contains($foodFormSource, $foodFormFragment)) {
         $editorialValidationIssues[] = 'food form is missing validation message branch: ' . $foodFormFragment;
+    }
+}
+$foodInstallSource = (string)file_get_contents(dirname(__DIR__) . '/install.php');
+$foodMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
+foreach (['cms_food_sections', 'cms_food_items', 'idx_food_sections_card_order', 'idx_food_items_card_order', 'idx_food_items_section_order'] as $foodSchemaFragment) {
+    if (!str_contains($foodInstallSource, $foodSchemaFragment) || !str_contains($foodMigrateSource, $foodSchemaFragment)) {
+        $editorialValidationIssues[] = 'food structured menu schema is missing install/migrate fragment: ' . $foodSchemaFragment;
+    }
+}
+foreach (['foodAllergenDefinitions', 'normalizeFoodAllergenList', 'foodDietaryFlagDefinitions', 'normalizeFoodPriceInput', 'foodLoadCardSections', 'hasMenuSection'] as $foodHelperFragment) {
+    if (!str_contains($presentationSource, $foodHelperFragment)) {
+        $editorialValidationIssues[] = 'food structured menu helper is missing: ' . $foodHelperFragment;
+    }
+}
+foreach (['verifyCsrf()', '$sectionBelongsToCard', '$itemBelongsToCard', 'adminFieldAttributes(', 'Položky lístku'] as $foodItemsFragment) {
+    if (!str_contains($foodItemsAdminSource, $foodItemsFragment)) {
+        $editorialValidationIssues[] = 'food items admin is missing guarded fragment: ' . $foodItemsFragment;
     }
 }
 if (!str_contains($blogSaveSource, 'validateDateTimeLocal($publishAt)') || !str_contains($blogSaveSource, 'validateDateTimeLocal($unpublishAt)')) {
@@ -16539,6 +16561,7 @@ $themeBoardArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/th
 $themeChatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
 $themeContactViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/contact.php');
 $themeFoodIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-index.php');
+$themeFoodStructuredMenuViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-structured-menu.php');
 $themeDownloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
 $themeDownloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
 $themeEventsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-article.php');
@@ -16925,6 +16948,14 @@ if (!str_contains($themeReservationCancelBookingViewSource, 'data-confirm="Oprav
 }
 if (!str_contains($themeFoodCardViewSource, 'js-print-page')) {
     $themeLayoutIssues[] = 'food card view is missing shared print button hook';
+}
+foreach (['food-structured-menu', 'aria-labelledby="<?= h($foodStructuredMenuId) ?>"', 'food-menu-item__price', 'Alergeny:'] as $foodStructuredViewFragment) {
+    if (!str_contains($themeFoodStructuredMenuViewSource, $foodStructuredViewFragment)) {
+        $themeLayoutIssues[] = 'food structured menu view is missing fragment: ' . $foodStructuredViewFragment;
+    }
+}
+if (!str_contains($themeFoodIndexViewSource, 'food-structured-menu.php') || !str_contains($themeFoodCardViewSource, 'food-structured-menu.php')) {
+    $themeLayoutIssues[] = 'food public views do not include structured menu renderer';
 }
 $themeHeadingBackedGroups = [
     'food tabs' => [

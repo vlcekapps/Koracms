@@ -1032,6 +1032,59 @@ assert_contains('<script type="application/ld+json" nonce="', $structuredDataHtm
 assert_contains('"@type":"Thing"', $structuredDataHtml, 'structuredDataScript renders JSON-LD payload');
 assert_false(str_contains($structuredDataHtml, '<script type="application/ld+json">'), 'structuredDataScript does not render raw non-nonced script');
 
+test_section('food structured menu helpers');
+
+assert_equals([1, 7], normalizeFoodAllergenList(['1', '15', '7', '1', 'x']), 'food allergens keep only valid unique values');
+assert_equals([1, 3], normalizeFoodAllergenList('1,3,99'), 'food allergens parse comma-separated storage value');
+assert_equals(['vegetarian', 'spicy'], normalizeFoodDietaryFlags(['vegetarian', 'unknown', 'spicy', 'vegetarian']), 'food dietary flags keep only known unique values');
+assert_equals('129 Kč', foodPriceLabel('129.00', 'CZK'), 'food price renders Czech currency label');
+assert_equals('129,90 Kč (za porci)', foodPriceLabel('129.90', 'CZK', 'za porci'), 'food price renders decimal and note');
+assert_equals('Dle domluvy', foodPriceLabel(null, 'CZK', 'Dle domluvy'), 'food price can be empty with note');
+
+$foodSectionsFixture = [
+    [
+        'title' => 'Polévky',
+        'items' => [
+            ['title' => 'Česnečka'],
+            ['title' => 'Rajská polévka'],
+        ],
+    ],
+    [
+        'title' => 'Hlavní jídla',
+        'items' => [
+            ['title' => 'Smažený sýr'],
+        ],
+    ],
+];
+assert_true(foodCardHasStructuredItems($foodSectionsFixture), 'food structured menu detects existing items');
+assert_equals(3, foodCardStructuredItemCount($foodSectionsFixture), 'food structured menu counts items across sections');
+assert_equals(['Česnečka', 'Rajská polévka'], foodCardItemPreviewLabels($foodSectionsFixture, 2), 'food structured menu preview keeps order and limit');
+
+$foodStructuredData = foodCardStructuredData([
+    'title' => 'Testovací lístek',
+    'slug' => 'testovaci-listek',
+    'description' => 'Krátký popis lístku',
+    'sections' => [
+        [
+            'title' => 'Hlavní jídla',
+            'description' => 'Teplá jídla',
+            'items' => [
+                [
+                    'title' => 'Smažený sýr',
+                    'description' => 'S bramborem a tatarkou',
+                    'price_amount' => '129.00',
+                    'price_currency' => 'CZK',
+                    'is_available' => 1,
+                ],
+            ],
+        ],
+    ],
+]);
+assert_contains('"hasMenuSection"', $foodStructuredData, 'food structured data contains MenuSection');
+assert_contains('"@type":"MenuItem"', $foodStructuredData, 'food structured data contains MenuItem');
+assert_contains('"price":"129.00"', $foodStructuredData, 'food structured data contains price');
+assert_contains('"priceCurrency":"CZK"', $foodStructuredData, 'food structured data keeps ISO currency');
+
 $_SERVER['HTTP_USER_AGENT'] = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 assert_equals(true, isSocialPreviewCrawler(), 'Facebook crawler is detected as social preview crawler');
 $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0';

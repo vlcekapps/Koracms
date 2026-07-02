@@ -508,6 +508,8 @@ textarea { min-height: 200px; }
 .inline-badge--warning { background:#fff1c2; color:#7a4a00; }
 .inline-badge--info { background:#eef4fb; color:#1b4d7a; }
 .table-list-compact { margin:0; padding-left:1rem; }
+.checkbox-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(16rem, 1fr)); gap:.45rem .9rem; margin:.5rem 0; }
+.admin-section-card { margin:1rem 0; padding:1rem; border:1px solid var(--admin-border); border-radius:10px; background:var(--admin-surface); }
 .field-help { display:block; margin:.35rem 0 0; color:var(--admin-field-help); font-size:.92rem; line-height:1.45; font-weight:normal; }
 .field-help--indented { margin-left:1.4rem; }
 .field-error { color:var(--admin-error); font-weight:700; }

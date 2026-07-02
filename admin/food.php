@@ -189,6 +189,7 @@ adminHeader('Jídelní a nápojový lístek');
         </td>
         <td class="actions">
           <a href="food_form.php?id=<?= (int)$card['id'] ?>" class="btn">Upravit</a>
+          <a href="food_items.php?card=<?= (int)$card['id'] ?>" class="btn">Položky lístku</a>
           <a href="revisions.php?type=food&amp;id=<?= (int)$card['id'] ?>">Historie revizí</a>
           <?php if ($card['is_publicly_visible']): ?>
             <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>

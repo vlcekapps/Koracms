@@ -63,6 +63,8 @@ if (!$cardRow) {
 }
 
 $card = hydrateFoodCardPresentation($cardRow);
+$card['sections'] = foodLoadCardSections($pdo, (int)$card['id']);
+$card = hydrateFoodCardPresentation($card);
 $canonicalPath = foodCardPublicPath($card);
 $legacyPath = $cardId !== null ? BASE_URL . '/food/card.php?id=' . urlencode((string)$cardId) : '';
 if ($cardId !== null && $canonicalPath !== '' && $canonicalPath !== $legacyPath) {

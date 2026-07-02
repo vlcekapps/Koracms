@@ -9,7 +9,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 7,
+    'version'     => 8,
 ];
 
 $tables = [
@@ -74,6 +74,10 @@ $tables = [
                                FROM cms_downloads",
     'food_cards'    => "SELECT id, type, title, slug, description, content, valid_from, valid_to,
                                is_current, is_published, status, created_at, updated_at FROM cms_food_cards",
+    'food_sections' => "SELECT id, card_id, title, description, sort_order, created_at, updated_at FROM cms_food_sections",
+    'food_items'    => "SELECT id, card_id, section_id, title, description, price_amount, price_currency,
+                               price_note, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
+                        FROM cms_food_items",
     'podcast_shows' => "SELECT id, title, slug, description, author, subtitle, cover_image,
                                language, category, owner_name, owner_email, explicit_mode, show_type, feed_complete,
                                feed_episode_limit, website_url, is_published, status, created_at, updated_at FROM cms_podcast_shows",

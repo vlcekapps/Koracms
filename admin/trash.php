@@ -81,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'downloads') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
+            } elseif ($module === 'food_cards') {
+                $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'podcasts') {
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
             } elseif ($module === 'podcast_shows') {

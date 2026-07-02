@@ -2856,6 +2856,301 @@ function foodCardStateLabel(string $state): string
 }
 
 /**
+ * @return array<int, string>
+ */
+function foodAllergenDefinitions(): array
+{
+    return [
+        1 => 'Obiloviny obsahující lepek',
+        2 => 'Korýši',
+        3 => 'Vejce',
+        4 => 'Ryby',
+        5 => 'Podzemnice olejná',
+        6 => 'Sója',
+        7 => 'Mléko',
+        8 => 'Skořápkové plody',
+        9 => 'Celer',
+        10 => 'Hořčice',
+        11 => 'Sezam',
+        12 => 'Oxid siřičitý a siřičitany',
+        13 => 'Vlčí bob',
+        14 => 'Měkkýši',
+    ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function foodDietaryFlagDefinitions(): array
+{
+    return [
+        'vegetarian' => 'Vegetariánské',
+        'vegan' => 'Veganské',
+        'gluten_free' => 'Bez lepku',
+        'lactose_free' => 'Bez laktózy',
+        'spicy' => 'Pikantní',
+        'alcohol' => 'Obsahuje alkohol',
+    ];
+}
+
+/**
+ * @param mixed $value
+ * @return list<int>
+ */
+function normalizeFoodAllergenList($value): array
+{
+    $rawValues = is_array($value) ? $value : preg_split('/\s*,\s*/', (string)$value);
+    if (!is_array($rawValues)) {
+        return [];
+    }
+
+    $allowed = array_keys(foodAllergenDefinitions());
+    $allergens = [];
+    foreach ($rawValues as $rawValue) {
+        $allergen = (int)$rawValue;
+        if (in_array($allergen, $allowed, true) && !in_array($allergen, $allergens, true)) {
+            $allergens[] = $allergen;
+        }
+    }
+    sort($allergens);
+
+    return $allergens;
+}
+
+/**
+ * @param mixed $value
+ * @return list<string>
+ */
+function normalizeFoodDietaryFlags($value): array
+{
+    $rawValues = is_array($value) ? $value : preg_split('/\s*,\s*/', (string)$value);
+    if (!is_array($rawValues)) {
+        return [];
+    }
+
+    $allowed = array_keys(foodDietaryFlagDefinitions());
+    $flags = [];
+    foreach ($rawValues as $rawValue) {
+        $flag = trim((string)$rawValue);
+        if (in_array($flag, $allowed, true) && !in_array($flag, $flags, true)) {
+            $flags[] = $flag;
+        }
+    }
+
+    return $flags;
+}
+
+/**
+ * @param list<int> $allergens
+ * @return list<string>
+ */
+function foodAllergenLabels(array $allergens): array
+{
+    $definitions = foodAllergenDefinitions();
+    $labels = [];
+    foreach ($allergens as $allergen) {
+        if (isset($definitions[$allergen])) {
+            $labels[] = $allergen . ' - ' . $definitions[$allergen];
+        }
+    }
+
+    return $labels;
+}
+
+/**
+ * @param list<string> $flags
+ * @return list<string>
+ */
+function foodDietaryFlagLabels(array $flags): array
+{
+    $definitions = foodDietaryFlagDefinitions();
+    $labels = [];
+    foreach ($flags as $flag) {
+        if (isset($definitions[$flag])) {
+            $labels[] = $definitions[$flag];
+        }
+    }
+
+    return $labels;
+}
+
+/**
+ * @return string|null|false
+ */
+function normalizeFoodPriceInput(string $value)
+{
+    $normalized = str_replace(',', '.', trim($value));
+    if ($normalized === '') {
+        return null;
+    }
+    if (!preg_match('/^\d{1,8}(?:\.\d{1,2})?$/', $normalized)) {
+        return false;
+    }
+
+    return number_format((float)$normalized, 2, '.', '');
+}
+
+function normalizeFoodCurrency(string $value): string
+{
+    $currency = strtoupper(trim($value));
+    if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+        return 'CZK';
+    }
+
+    return $currency;
+}
+
+function foodPriceLabel(?string $amount, string $currency = 'CZK', string $note = ''): string
+{
+    $amount = $amount !== null ? trim($amount) : '';
+    if ($amount === '') {
+        return trim($note);
+    }
+
+    $number = (float)$amount;
+    $formatted = number_format($number, (floor($number) === $number ? 0 : 2), ',', ' ');
+    $normalizedCurrency = normalizeFoodCurrency($currency);
+    $currencyLabel = $normalizedCurrency === 'CZK' ? 'Kč' : $normalizedCurrency;
+    $label = trim($formatted . ' ' . $currencyLabel);
+    $note = trim($note);
+    if ($note !== '') {
+        $label .= ' (' . $note . ')';
+    }
+
+    return $label;
+}
+
+/**
+ * @param array<string, mixed> $item
+ * @return array<string, mixed>
+ */
+function hydrateFoodItemPresentation(array $item): array
+{
+    $allergens = normalizeFoodAllergenList($item['allergens'] ?? '');
+    $dietaryFlags = normalizeFoodDietaryFlags($item['dietary_flags'] ?? '');
+    $priceAmount = $item['price_amount'] !== null && $item['price_amount'] !== ''
+        ? number_format((float)$item['price_amount'], 2, '.', '')
+        : null;
+
+    $item['allergens'] = implode(',', $allergens);
+    $item['dietary_flags'] = implode(',', $dietaryFlags);
+    $item['allergen_values'] = $allergens;
+    $item['allergen_labels'] = foodAllergenLabels($allergens);
+    $item['dietary_flag_values'] = $dietaryFlags;
+    $item['dietary_flag_labels'] = foodDietaryFlagLabels($dietaryFlags);
+    $item['price_amount'] = $priceAmount;
+    $item['price_currency'] = normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK'));
+    $item['price_note'] = trim((string)($item['price_note'] ?? ''));
+    $item['price_label'] = foodPriceLabel($priceAmount, (string)$item['price_currency'], (string)$item['price_note']);
+    $item['is_available'] = (int)($item['is_available'] ?? 1) === 1 ? 1 : 0;
+
+    return $item;
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function foodLoadCardSections(PDO $pdo, int $cardId): array
+{
+    $sectionStmt = $pdo->prepare(
+        "SELECT id, card_id, title, description, sort_order
+         FROM cms_food_sections
+         WHERE card_id = ?
+         ORDER BY sort_order, id"
+    );
+    $sectionStmt->execute([$cardId]);
+    $sections = $sectionStmt->fetchAll();
+    if ($sections === []) {
+        return [];
+    }
+
+    $itemStmt = $pdo->prepare(
+        "SELECT id, card_id, section_id, title, description, price_amount, price_currency,
+                price_note, allergens, dietary_flags, is_available, sort_order
+         FROM cms_food_items
+         WHERE card_id = ?
+         ORDER BY section_id, sort_order, id"
+    );
+    $itemStmt->execute([$cardId]);
+    $itemsBySection = [];
+    foreach ($itemStmt->fetchAll() as $item) {
+        $itemsBySection[(int)$item['section_id']][] = hydrateFoodItemPresentation($item);
+    }
+
+    $result = [];
+    foreach ($sections as $section) {
+        $sectionId = (int)$section['id'];
+        $section['items'] = $itemsBySection[$sectionId] ?? [];
+        $section['item_count'] = count($section['items']);
+        $result[] = $section;
+    }
+
+    return $result;
+}
+
+/**
+ * @param list<array<string, mixed>> $cards
+ * @return list<array<string, mixed>>
+ */
+function foodAttachSectionsToCards(PDO $pdo, array $cards): array
+{
+    foreach ($cards as &$card) {
+        $card['sections'] = foodLoadCardSections($pdo, (int)($card['id'] ?? 0));
+        $card['has_structured_items'] = foodCardHasStructuredItems($card['sections']);
+        $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
+    }
+    unset($card);
+
+    return $cards;
+}
+
+/**
+ * @param list<array<string, mixed>> $sections
+ */
+function foodCardHasStructuredItems(array $sections): bool
+{
+    foreach ($sections as $section) {
+        if (!empty($section['items'])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @param list<array<string, mixed>> $sections
+ */
+function foodCardStructuredItemCount(array $sections): int
+{
+    $count = 0;
+    foreach ($sections as $section) {
+        $count += count($section['items'] ?? []);
+    }
+
+    return $count;
+}
+
+/**
+ * @param list<array<string, mixed>> $sections
+ * @return list<string>
+ */
+function foodCardItemPreviewLabels(array $sections, int $limit = 3): array
+{
+    $labels = [];
+    foreach ($sections as $section) {
+        foreach ($section['items'] ?? [] as $item) {
+            $labels[] = (string)($item['title'] ?? '');
+            if (count($labels) >= $limit) {
+                return array_values(array_filter($labels, static fn (string $label): bool => $label !== ''));
+            }
+        }
+    }
+
+    return array_values(array_filter($labels, static fn (string $label): bool => $label !== ''));
+}
+
+/**
  * @param array<string, mixed> $card
  * @return array<string, mixed>
  */
@@ -2933,6 +3228,56 @@ function foodCardStructuredData(array $card): string
         }
     }
 
+    $menuSections = [];
+    foreach (($card['sections'] ?? []) as $section) {
+        $menuItems = [];
+        foreach (($section['items'] ?? []) as $item) {
+            $itemName = trim((string)($item['title'] ?? ''));
+            if ($itemName === '') {
+                continue;
+            }
+
+            $menuItem = [
+                '@type' => 'MenuItem',
+                'name' => $itemName,
+            ];
+            $itemDescription = trim((string)($item['description'] ?? ''));
+            if ($itemDescription !== '') {
+                $menuItem['description'] = $itemDescription;
+            }
+            $priceAmount = trim((string)($item['price_amount'] ?? ''));
+            if ($priceAmount !== '') {
+                $menuItem['offers'] = [
+                    '@type' => 'Offer',
+                    'price' => $priceAmount,
+                    'priceCurrency' => normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK')),
+                    'availability' => (int)($item['is_available'] ?? 1) === 1
+                        ? 'https://schema.org/InStock'
+                        : 'https://schema.org/OutOfStock',
+                ];
+            }
+            $menuItems[] = $menuItem;
+        }
+
+        if ($menuItems === []) {
+            continue;
+        }
+
+        $menuSection = [
+            '@type' => 'MenuSection',
+            'name' => trim((string)($section['title'] ?? '')),
+            'hasMenuItem' => $menuItems,
+        ];
+        $sectionDescription = trim((string)($section['description'] ?? ''));
+        if ($sectionDescription !== '') {
+            $menuSection['description'] = $sectionDescription;
+        }
+        $menuSections[] = $menuSection;
+    }
+    if ($menuSections !== []) {
+        $data['hasMenuSection'] = $menuSections;
+    }
+
     return structuredDataScript($data);
 }
 
@@ -2955,6 +3300,9 @@ function hydrateFoodCardPresentation(array $card): array
     $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
         && (int)($card['is_published'] ?? 1) === 1;
     $card['is_temporally_active'] = (string)$card['state_key'] === 'current';
+    $card['sections'] = is_array($card['sections'] ?? null) ? $card['sections'] : [];
+    $card['has_structured_items'] = foodCardHasStructuredItems($card['sections']);
+    $card['structured_item_count'] = foodCardStructuredItemCount($card['sections']);
 
     return $card;
 }

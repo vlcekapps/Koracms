@@ -609,6 +609,36 @@ $tables = [
         UNIQUE KEY uq_cms_food_cards_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_food_sections' => "CREATE TABLE IF NOT EXISTS cms_food_sections (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        card_id     INT          NOT NULL,
+        title       VARCHAR(255) NOT NULL,
+        description TEXT,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_food_sections_card_order (card_id, sort_order, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_food_items' => "CREATE TABLE IF NOT EXISTS cms_food_items (
+        id             INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        card_id        INT           NOT NULL,
+        section_id     INT           NOT NULL,
+        title          VARCHAR(255)  NOT NULL,
+        description    TEXT,
+        price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
+        price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
+        price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+        allergens      VARCHAR(100)  NOT NULL DEFAULT '',
+        dietary_flags  VARCHAR(255)  NOT NULL DEFAULT '',
+        is_available   TINYINT(1)    NOT NULL DEFAULT 1,
+        sort_order     INT           NOT NULL DEFAULT 0,
+        created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_food_items_card_order (card_id, sort_order, id),
+        INDEX idx_food_items_section_order (section_id, sort_order, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_rate_limit' => "CREATE TABLE IF NOT EXISTS cms_rate_limit (
         id           VARCHAR(64) NOT NULL PRIMARY KEY,
         attempts     INT         NOT NULL DEFAULT 1,
@@ -3291,6 +3321,7 @@ $fulltextIndexes = [
     ['cms_places',     'ft_places_search',     '(name, excerpt, description)'],
     ['cms_polls',      'ft_polls_search',      '(question, description)'],
     ['cms_food_cards', 'ft_food_search',       '(title, description, content)'],
+    ['cms_food_items', 'ft_food_items_search', '(title, description)'],
 ];
 
 foreach ($fulltextIndexes as [$ftTable, $ftIndex, $ftColumns]) {

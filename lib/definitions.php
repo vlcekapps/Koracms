@@ -322,6 +322,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/food.php',
+                '/admin/food_items.php',
             ],
         ],
         'polls' => [

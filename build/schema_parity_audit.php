@@ -175,6 +175,16 @@ $criticalInstallColumns = [
     'cms_faq_feedback.faq_id' => ['cms_faq_feedback', 'faq_id'],
     'cms_faq_feedback.vote' => ['cms_faq_feedback', 'vote'],
     'cms_faq_feedback.visitor_hash' => ['cms_faq_feedback', 'visitor_hash'],
+    'cms_food_sections.card_id' => ['cms_food_sections', 'card_id'],
+    'cms_food_sections.title' => ['cms_food_sections', 'title'],
+    'cms_food_sections.sort_order' => ['cms_food_sections', 'sort_order'],
+    'cms_food_items.card_id' => ['cms_food_items', 'card_id'],
+    'cms_food_items.section_id' => ['cms_food_items', 'section_id'],
+    'cms_food_items.title' => ['cms_food_items', 'title'],
+    'cms_food_items.price_amount' => ['cms_food_items', 'price_amount'],
+    'cms_food_items.allergens' => ['cms_food_items', 'allergens'],
+    'cms_food_items.dietary_flags' => ['cms_food_items', 'dietary_flags'],
+    'cms_food_items.is_available' => ['cms_food_items', 'is_available'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -278,6 +288,12 @@ $criticalMigrationSnippets = [
     'cms_faq_feedback',
     'uq_cms_faq_feedback_visitor',
     'idx_cms_faq_feedback_faq_vote',
+    'cms_food_sections',
+    'idx_food_sections_card_order',
+    'cms_food_items',
+    'idx_food_items_card_order',
+    'idx_food_items_section_order',
+    'ft_food_items_search',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

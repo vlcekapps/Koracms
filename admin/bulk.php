@@ -173,7 +173,12 @@ $moduleConfig = match ($module) {
         'own_column' => null,
         'own_check'  => null,
         'log_prefix' => 'food',
-        'cleanup'    => null,
+        'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
+            $ph = implode(',', array_fill(0, count($deleteIds), '?'));
+            $pdo->prepare("DELETE FROM cms_food_items WHERE card_id IN ({$ph})")->execute($deleteIds);
+            $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id IN ({$ph})")->execute($deleteIds);
+            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id IN ({$ph})")->execute($deleteIds);
+        },
     ],
     'gallery_photos' => [
         'table'      => 'cms_gallery_photos',

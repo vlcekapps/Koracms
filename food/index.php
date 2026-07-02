@@ -29,7 +29,15 @@ $beverageCardRow = $pdo->query(
 )->fetch() ?: null;
 
 $foodCard = $foodCardRow ? hydrateFoodCardPresentation($foodCardRow) : null;
+if ($foodCard !== null) {
+    $foodCard['sections'] = foodLoadCardSections($pdo, (int)$foodCard['id']);
+    $foodCard = hydrateFoodCardPresentation($foodCard);
+}
 $beverageCard = $beverageCardRow ? hydrateFoodCardPresentation($beverageCardRow) : null;
+if ($beverageCard !== null) {
+    $beverageCard['sections'] = foodLoadCardSections($pdo, (int)$beverageCard['id']);
+    $beverageCard = hydrateFoodCardPresentation($beverageCard);
+}
 
 renderPublicPage([
     'title' => 'Jídelní a nápojový lístek – ' . $siteName,

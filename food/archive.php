@@ -39,8 +39,13 @@ $whereParts = [foodCardPublicVisibilitySql()];
 $params = [];
 
 if ($q !== '') {
-    $whereParts[] = '(title LIKE ? OR description LIKE ? OR content LIKE ?)';
-    for ($i = 0; $i < 3; $i++) {
+    $whereParts[] = '(title LIKE ? OR description LIKE ? OR content LIKE ?
+        OR EXISTS (
+            SELECT 1 FROM cms_food_items fi
+            WHERE fi.card_id = cms_food_cards.id
+              AND (fi.title LIKE ? OR fi.description LIKE ?)
+        ))';
+    for ($i = 0; $i < 5; $i++) {
         $params[] = '%' . $q . '%';
     }
 }
@@ -115,6 +120,7 @@ $cards = array_map(
     static fn (array $card): array => hydrateFoodCardPresentation($card),
     $cardsStmt->fetchAll()
 );
+$cards = foodAttachSectionsToCards($pdo, $cards);
 
 $buildFoodArchiveUrl = static function (array $overrides = []) use ($q, $filterType, $scope): string {
     $query = [];

@@ -115,6 +115,19 @@ $pageHeading = (string)($pageHeading ?? 'Archiv lístků');
                 <p><?= h((string)$card['description']) ?></p>
               <?php endif; ?>
 
+              <?php if (!empty($card['has_structured_items'])): ?>
+                <?php
+                $previewLabels = foodCardItemPreviewLabels($card['sections']);
+                $structuredCount = foodCardStructuredItemCount($card['sections']);
+                ?>
+                <p class="meta-row meta-row--tight">
+                  <span><?= h($structuredCount === 1 ? '1 položka lístku' : $structuredCount . ' položek lístku') ?></span>
+                  <?php if ($previewLabels !== []): ?>
+                    <span><?= h(implode(', ', $previewLabels)) ?></span>
+                  <?php endif; ?>
+                </p>
+              <?php endif; ?>
+
               <div class="button-row button-row--start">
                 <a class="button-secondary" href="<?= h((string)($card['listing_path'] ?? $card['public_path'])) ?>">Zobrazit lístek</a>
               </div>

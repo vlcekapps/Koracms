@@ -935,6 +935,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Jídelní lístky importovány.';
                 }
 
+                if (!empty($data['food_sections']) && is_array($data['food_sections'])) {
+                    $sectionExistsStmt = $pdo->prepare("SELECT id FROM cms_food_cards WHERE id = ?");
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_food_sections
+                         (id, card_id, title, description, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['food_sections'] as $row) {
+                        $cardId = (int)($row['card_id'] ?? 0);
+                        $sectionExistsStmt->execute([$cardId]);
+                        if (!$sectionExistsStmt->fetch()) {
+                            continue;
+                        }
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            continue;
+                        }
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $updatedAt = $row['updated_at'] ?? $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $cardId,
+                            $title,
+                            $row['description'] ?? '',
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Sekce jídelních lístků importovány.';
+                }
+
+                if (!empty($data['food_items']) && is_array($data['food_items'])) {
+                    $sectionExistsStmt = $pdo->prepare("SELECT id, card_id FROM cms_food_sections WHERE id = ?");
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_food_items
+                         (id, card_id, section_id, title, description, price_amount, price_currency, price_note,
+                          allergens, dietary_flags, is_available, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['food_items'] as $row) {
+                        $sectionId = (int)($row['section_id'] ?? 0);
+                        $sectionExistsStmt->execute([$sectionId]);
+                        $section = $sectionExistsStmt->fetch() ?: null;
+                        if (!$section) {
+                            continue;
+                        }
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($title === '') {
+                            continue;
+                        }
+                        $priceAmount = normalizeFoodPriceInput((string)($row['price_amount'] ?? ''));
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $updatedAt = $row['updated_at'] ?? $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            (int)$section['card_id'],
+                            $sectionId,
+                            $title,
+                            $row['description'] ?? '',
+                            $priceAmount === false ? null : $priceAmount,
+                            normalizeFoodCurrency((string)($row['price_currency'] ?? 'CZK')),
+                            trim((string)($row['price_note'] ?? '')),
+                            implode(',', normalizeFoodAllergenList($row['allergens'] ?? '')),
+                            implode(',', normalizeFoodDietaryFlags($row['dietary_flags'] ?? '')),
+                            (int)($row['is_available'] ?? 1) === 1 ? 1 : 0,
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Položky jídelních lístků importovány.';
+                }
+
                 // Podcast shows (nejdřív – epizody na ně odkazují přes show_id)
                 if (!empty($data['podcast_shows']) && is_array($data['podcast_shows'])) {
                     $ins = $pdo->prepare(

@@ -429,6 +429,19 @@ Každý lístek může mít:
 
 Pokud je u typu označený nový aktuální lístek, předchozí aktuální lístek stejného typu se při uložení automaticky odznačí.
 
+### Strukturované položky lístku
+
+Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lístku`. Tam lze spravovat:
+
+- sekce lístku, například polévky, hlavní jídla nebo nápoje
+- položky v sekcích
+- cenu, měnu a volitelnou poznámku k ceně
+- alergeny podle číselníku 1-14
+- dietní štítky, například vegetariánské, veganské, bez lepku, bez laktózy, pikantní nebo alkohol
+- dostupnost položky a pořadí v sekci
+
+Pokud lístek žádné strukturované položky nemá, veřejný web dál použije původní HTML obsah lístku. Pokud má lístek strukturované položky i HTML obsah, položky se zobrazí jako hlavní menu a HTML obsah jako doplňkové poznámky k lístku. Alergeny, dietní štítky a nedostupnost se zobrazují textově, ne jen barvou.
+
 ### Jak funguje platnost na webu
 
 - Stránka `Jídelní a nápojový lístek` zobrazuje jen lístky, které jsou zároveň označené jako aktuální a časově právě platí.
@@ -443,6 +456,7 @@ Pokud je u typu označený nový aktuální lístek, předchozí aktuální lís
 ### Co je nové v admin workflow
 
 - Přehled lístků nově umí hledání, workflow stav, filtr podle typu i filtr podle časové platnosti.
+- Odkaz `Položky lístku` otevře samostatnou správu strukturovaných sekcí, cen, alergenů a dietních štítků.
 - Z detailu i ze seznamu vede odkaz na historii revizí.
 - Revize zachycují změny typu, názvu, slugu, popisu, obsahu, platnosti, stavu aktuálnosti i zveřejnění.
 - Při změně slugu se automaticky uloží redirect ze staré adresy na novou.
@@ -452,6 +466,7 @@ Pokud je u typu označený nový aktuální lístek, předchozí aktuální lís
 Veřejný archiv nově podporuje:
 
 - fulltextové hledání
+- hledání podle názvů a popisů strukturovaných položek
 - filtrování podle typu
 - přepínání scope `Platí nyní / Připravujeme / Archivní / Všechny lístky`
 - stránkování
@@ -459,13 +474,14 @@ Veřejný archiv nově podporuje:
 Detail lístku nově:
 
 - ukazuje jasný stav `Platí nyní / Připravujeme / Archivní`
+- zobrazuje strukturované sekce a položky, pokud jsou vyplněné
 - zachovává návrat do původního archivního kontextu
 - nabízí akci `Vytisknout`
-- vkládá structured data typu `Menu`
+- vkládá structured data typu `Menu`; u strukturovaných položek doplňuje i `MenuSection`, `MenuItem` a cenu
 
 ### Co patří do README a co sem
 
-- [README.md](../README.md) stručně říká, že modul podporuje platnost, archiv, hledání a revize.
+- [README.md](../README.md) stručně říká, že modul podporuje platnost, strukturované položky, archiv, hledání a revize.
 - Tento dokument popisuje konkrétní redakční workflow, chování scope filtrů a pravidla viditelnosti aktuálních lístků.
 
 ---

@@ -63,7 +63,10 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 ?>
 
 <?php if ($id !== null): ?>
-  <p><a href="revisions.php?type=food&amp;id=<?= (int)$id ?>">Historie revizí</a></p>
+  <p class="button-row button-row--start">
+    <a href="food_items.php?card=<?= (int)$id ?>" class="btn">Položky lístku</a>
+    <a href="revisions.php?type=food&amp;id=<?= (int)$id ?>">Historie revizí</a>
+  </p>
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>

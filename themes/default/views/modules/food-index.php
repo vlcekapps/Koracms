@@ -23,7 +23,22 @@
         <?php if ($foodCard['meta_label'] !== ''): ?>
           <p class="meta-row meta-row--tight"><?= h((string)$foodCard['meta_label']) ?></p>
         <?php endif; ?>
-        <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
+        <?php if (!empty($foodCard['has_structured_items'])): ?>
+          <?php
+          $foodStructuredSections = $foodCard['sections'];
+          $foodStructuredMenuId = 'food-panel-food-menu';
+          $foodStructuredMenuHeading = 'Položky jídelního lístku';
+          require __DIR__ . '/food-structured-menu.php';
+          ?>
+          <?php if (trim((string)$foodCard['content']) !== ''): ?>
+            <section class="food-menu-notes" aria-labelledby="food-panel-food-notes">
+              <h3 id="food-panel-food-notes">Poznámky k lístku</h3>
+              <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
+            </section>
+          <?php endif; ?>
+        <?php else: ?>
+          <div class="prose menu-content"><?= renderContent((string)$foodCard['content']) ?></div>
+        <?php endif; ?>
         <div class="button-row button-row--start">
           <a class="button-secondary" href="<?= h((string)$foodCard['public_path']) ?>">Detail lístku</a>
         </div>
@@ -40,7 +55,22 @@
         <?php if ($beverageCard['meta_label'] !== ''): ?>
           <p class="meta-row meta-row--tight"><?= h((string)$beverageCard['meta_label']) ?></p>
         <?php endif; ?>
-        <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
+        <?php if (!empty($beverageCard['has_structured_items'])): ?>
+          <?php
+          $foodStructuredSections = $beverageCard['sections'];
+          $foodStructuredMenuId = 'food-panel-beverage-menu';
+          $foodStructuredMenuHeading = 'Položky nápojového lístku';
+          require __DIR__ . '/food-structured-menu.php';
+          ?>
+          <?php if (trim((string)$beverageCard['content']) !== ''): ?>
+            <section class="food-menu-notes" aria-labelledby="food-panel-beverage-notes">
+              <h3 id="food-panel-beverage-notes">Poznámky k lístku</h3>
+              <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
+            </section>
+          <?php endif; ?>
+        <?php else: ?>
+          <div class="prose menu-content"><?= renderContent((string)$beverageCard['content']) ?></div>
+        <?php endif; ?>
         <div class="button-row button-row--start">
           <a class="button-secondary" href="<?= h((string)$beverageCard['public_path']) ?>">Detail lístku</a>
         </div>
