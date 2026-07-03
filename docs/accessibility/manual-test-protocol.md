@@ -33,7 +33,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 ## Scénáře administrace
 
-1. Přihlášení, registrace, 2FA, reset hesla a odhlášení bez myši; registrace a žádost o reset nesmí vyžadovat matematickou CAPTCHA ani jiný kognitivní test.
+1. Přihlášení, registrace, 2FA, tokenový reset hesla a odhlášení bez myši; registrace a žádost o reset nesmí vyžadovat matematickou CAPTCHA ani jiný kognitivní test.
 2. Dashboard: Moje zkratky, fronta ke schválení, poslední aktivita a statistiky.
 3. Levá navigace a command centrum přes `Ctrl+K`.
 4. Media/content picker: otevření, hledání, změna typu výsledku, vložení a zavření.
@@ -65,6 +65,9 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Stavové hlášky se oznámí jednou a neruší při každém napsaném znaku.
 - Každé pole má srozumitelný label a chyba je spojena s polem.
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
+- Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
+- TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
+- Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.

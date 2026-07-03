@@ -66,7 +66,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 1.2.4 Captions (Live) | Not Applicable | Core CMS does not provide live audio/video streaming. |
 | 1.2.5 Audio Description (Prerecorded) | Partially Supports | Authors can provide descriptions, but there is no dedicated metadata workflow for audio description. |
 | 1.3.4 Orientation | Supports | CMS does not restrict screen orientation. |
-| 1.3.5 Identify Input Purpose | Partially Supports | Common input types exist; autocomplete coverage requires a dedicated audit. |
+| 1.3.5 Identify Input Purpose | Partially Supports | Authentication fields are now covered for `username`, `current-password`, `new-password` and 2FA `one-time-code` metadata by runtime and HTTP integration guardrails. Contact, ordering, reservations and generated form templates still need a broader autocomplete audit. |
 | 1.4.3 Contrast (Minimum) | Partially Supports | Default UI targets AA; custom themes and all states need manual measurement. |
 | 1.4.4 Resize Text | Supports | Layouts are responsive and do not block browser zoom. |
 | 1.4.5 Images of Text | Supports | Core UI does not use images of text as controls or headings. |
@@ -85,7 +85,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.2.4 Consistent Identification | Supports | Shared module manifests and labels support consistent naming. |
 | 3.3.3 Error Suggestion | Partially Supports | Many errors are specific; all validation copy needs review. |
 | 3.3.4 Error Prevention (Legal, Financial, Data) | Partially Supports | CSRF, confirmations, PRG and audit logs exist; critical workflows need mapping. |
-| 3.3.8 Accessible Authentication (Minimum) | Partially Supports | Registration and password reset request no longer require a math CAPTCHA; they use CSRF, rate limiting and honeypot protection, and runtime audit prevents returning a cognitive CAPTCHA to these auth flows. Login, 2FA and password-manager behavior still need manual verification. |
+| 3.3.8 Accessible Authentication (Minimum) | Partially Supports | Registration and password reset request no longer require a math CAPTCHA; they use CSRF, rate limiting and honeypot protection. Runtime and HTTP integration guardrails cover no-CAPTCHA auth rendering, password-manager autocomplete metadata, 2FA one-time-code/numeric metadata and text-backed admin/2FA error alerts. End-to-end password-manager, TOTP and screen-reader behavior still need manual verification. |
 | 4.1.3 Status Messages | Supports | Status and error messages use live region semantics and guarded roles. |
 
 ## Current Summary

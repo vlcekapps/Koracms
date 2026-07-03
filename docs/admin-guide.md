@@ -1035,7 +1035,7 @@ Recoverable chyby v administraci a souborových cleanupech se postupně převád
 
 Přepínač veřejné registrace v obecném nastavení blokuje registrační formulář a zároveň schovává odkazy na registraci ve veřejné přihlašovací obrazovce i ve společné patičce webu. Pokud jsou zapnuté rezervace, zůstane návštěvníkům dostupný odkaz na přihlášení, ale nové účty může při vypnuté registraci zakládat jen oprávněný správce.
 
-Veřejná registrace a žádost o obnovu hesla nevyžadují matematickou CAPTCHA ani jiný kognitivní test. Ochranu proti automatizovaným pokusům zajišťují CSRF tokeny, rate limiting a skrytý honeypot, takže auth flow zůstává použitelnější pro správce hesel, čtečky obrazovky i uživatele s kognitivní zátěží.
+Veřejná registrace a žádost o obnovu hesla nevyžadují matematickou CAPTCHA ani jiný kognitivní test. Ochranu proti automatizovaným pokusům zajišťují CSRF tokeny, rate limiting a skrytý honeypot, takže auth flow zůstává použitelnější pro správce hesel, čtečky obrazovky i uživatele s kognitivní zátěží. Přihlašovací pole používají `autocomplete="username"` a `current-password`, nová hesla `new-password` a 2FA kód `one-time-code` s numeric patternem; chybové stavy admin loginu a 2FA se oznamují jako textové alerty.
 
 Vývojové kontroly:
 

@@ -106,10 +106,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <h1>Přihlášení do administrace</h1>
 
   <?php if ($error !== ''): ?>
-    <p class="error" role="alert"><?= h($error) ?></p>
+    <div id="admin-login-errors" class="error" role="alert" aria-atomic="true" aria-labelledby="admin-login-errors-heading">
+      <p id="admin-login-errors-heading"><?= h($error) ?></p>
+    </div>
   <?php endif; ?>
 
-  <form method="post" novalidate>
+  <form method="post" novalidate<?php if ($error !== ''): ?> aria-describedby="admin-login-errors"<?php endif; ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
     <fieldset>

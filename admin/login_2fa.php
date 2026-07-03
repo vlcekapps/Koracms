@@ -56,10 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <p>Zadejte 6místný kód z vaší autentizační aplikace (FreeOTP, Authy, Google Authenticator).</p>
 
   <?php if ($error !== ''): ?>
-    <p class="error" role="alert"><?= h($error) ?></p>
+    <div id="admin-login-2fa-errors" class="error" role="alert" aria-atomic="true" aria-labelledby="admin-login-2fa-errors-heading">
+      <p id="admin-login-2fa-errors-heading"><?= h($error) ?></p>
+    </div>
   <?php endif; ?>
 
-  <form method="post" novalidate>
+  <form method="post" novalidate<?php if ($error !== ''): ?> aria-describedby="admin-login-2fa-errors"<?php endif; ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <fieldset>
       <legend>Ověřovací kód</legend>

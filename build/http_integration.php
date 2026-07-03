@@ -323,6 +323,33 @@ function httpIntegrationCheckboxIsChecked(string $html, string $fieldId): bool
     return preg_match($pattern, $html) === 1;
 }
 
+/**
+ * @param array<string, string> $attributes
+ */
+function httpIntegrationInputHasAttributes(string $html, string $fieldId, array $attributes): bool
+{
+    $pattern = '/<input\b(?=[^>]*\bid="' . preg_quote($fieldId, '/') . '")[^>]*>/is';
+    if (preg_match($pattern, $html, $matches) !== 1) {
+        return false;
+    }
+
+    $inputTag = $matches[0];
+    foreach ($attributes as $attributeName => $attributeValue) {
+        $attributePattern = '/\b' . preg_quote($attributeName, '/') . '="' . preg_quote($attributeValue, '/') . '"/i';
+        if (preg_match($attributePattern, $inputTag) !== 1) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function httpIntegrationAuthHtmlHasNoCaptchaChallenge(string $html): bool
+{
+    return !str_contains($html, 'name="captcha"')
+        && httpIntegrationExtractCaptchaAnswer($html) === '';
+}
+
 function httpIntegrationCreateTempFile(string $prefix, string $contents, array &$createdTempFiles): string
 {
     $path = tempnam(sys_get_temp_dir(), $prefix);
@@ -2007,6 +2034,117 @@ try {
     }
 
     httpIntegrationPrintResult('admin_login_redirect_http', $adminLoginRedirectIssues, $failures);
+
+    $authAccessibilityIssues = [];
+    $authOriginalPublicRegistration = httpIntegrationSettingValue($pdo, 'public_registration_enabled');
+    saveSetting('public_registration_enabled', '1');
+    clearSettingsCache();
+    try {
+        httpIntegrationClearLocalRateLimits($pdo, ['login', 'login_2fa', 'public_login', 'register', 'reset_password']);
+
+        $publicAuthSession = koraPrimeTestSession([], 'kora-http-auth-accessibility-public-' . bin2hex(random_bytes(3)));
+        $publicLoginPage = fetchUrl($baseUrl . BASE_URL . '/public_login.php', $publicAuthSession['cookie'], 0);
+        if (httpIntegrationStatusCode($publicLoginPage) !== 200
+            || !httpIntegrationInputHasAttributes($publicLoginPage['body'], 'email', ['autocomplete' => 'username'])
+            || !httpIntegrationInputHasAttributes($publicLoginPage['body'], 'password', ['autocomplete' => 'current-password'])
+            || !httpIntegrationAuthHtmlHasNoCaptchaChallenge($publicLoginPage['body'])) {
+            $authAccessibilityIssues[] = 'veřejné přihlášení nevykreslilo username/current-password metadata bez CAPTCHA';
+        }
+
+        $registerPage = fetchUrl($baseUrl . BASE_URL . '/register.php', $publicAuthSession['cookie'], 0);
+        if (httpIntegrationStatusCode($registerPage) !== 200
+            || !str_contains($registerPage['body'], 'name="hp_website"')
+            || !httpIntegrationInputHasAttributes($registerPage['body'], 'password', ['autocomplete' => 'new-password'])
+            || !httpIntegrationInputHasAttributes($registerPage['body'], 'password2', ['autocomplete' => 'new-password'])
+            || !httpIntegrationAuthHtmlHasNoCaptchaChallenge($registerPage['body'])) {
+            $authAccessibilityIssues[] = 'registrace nevykreslila honeypot a new-password metadata bez CAPTCHA';
+        }
+
+        $resetRequestPage = fetchUrl($baseUrl . BASE_URL . '/reset_password.php', $publicAuthSession['cookie'], 0);
+        if (httpIntegrationStatusCode($resetRequestPage) !== 200
+            || !str_contains($resetRequestPage['body'], 'name="hp_website"')
+            || !httpIntegrationInputHasAttributes($resetRequestPage['body'], 'email', ['autocomplete' => 'email'])
+            || !httpIntegrationAuthHtmlHasNoCaptchaChallenge($resetRequestPage['body'])) {
+            $authAccessibilityIssues[] = 'žádost o reset hesla nevykreslila honeypot a e-mail autocomplete bez CAPTCHA';
+        }
+
+        $adminLoginRenderSession = koraPrimeTestSession([], 'kora-http-auth-accessibility-admin-' . bin2hex(random_bytes(3)));
+        $adminLoginRenderPage = fetchUrl($baseUrl . BASE_URL . '/admin/login.php', $adminLoginRenderSession['cookie'], 0);
+        $adminLoginRenderCsrf = extractHiddenInputValue($adminLoginRenderPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($adminLoginRenderPage) !== 200
+            || $adminLoginRenderCsrf === ''
+            || !httpIntegrationInputHasAttributes($adminLoginRenderPage['body'], 'email', ['autocomplete' => 'username'])
+            || !httpIntegrationInputHasAttributes($adminLoginRenderPage['body'], 'heslo', ['autocomplete' => 'current-password'])
+            || !httpIntegrationAuthHtmlHasNoCaptchaChallenge($adminLoginRenderPage['body'])) {
+            $authAccessibilityIssues[] = 'admin přihlášení nevykreslilo username/current-password metadata bez CAPTCHA';
+        }
+
+        if ($adminLoginRenderCsrf !== '') {
+            $invalidAdminLoginResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/login.php',
+                [
+                    'csrf_token' => $adminLoginRenderCsrf,
+                    'redirect' => BASE_URL . '/admin/index.php',
+                    'email' => 'http-auth-invalid-' . bin2hex(random_bytes(4)) . '@example.test',
+                    'heslo' => 'neplatne-heslo',
+                ],
+                $adminLoginRenderSession['cookie'],
+                0
+            );
+            $invalidAdminLoginBody = $invalidAdminLoginResponse['body'];
+            if (httpIntegrationStatusCode($invalidAdminLoginResponse) !== 200
+                || !str_contains($invalidAdminLoginBody, 'id="admin-login-errors"')
+                || !str_contains($invalidAdminLoginBody, 'role="alert" aria-atomic="true" aria-labelledby="admin-login-errors-heading"')
+                || !str_contains($invalidAdminLoginBody, 'id="admin-login-errors-heading"')
+                || !str_contains($invalidAdminLoginBody, 'aria-describedby="admin-login-errors"')) {
+                $authAccessibilityIssues[] = 'chybový stav admin loginu nemá text-backed alert a form aria-describedby';
+            }
+        }
+
+        $admin2faRenderSession = koraPrimeTestSession([
+            '2fa_pending_user_id' => $totpAdminId,
+            '2fa_pending_redirect' => BASE_URL . '/admin/index.php',
+        ], 'kora-http-auth-accessibility-2fa-' . bin2hex(random_bytes(3)));
+        $admin2faPage = fetchUrl($baseUrl . BASE_URL . '/admin/login_2fa.php', $admin2faRenderSession['cookie'], 0);
+        $admin2faCsrf = extractHiddenInputValue($admin2faPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($admin2faPage) !== 200
+            || $admin2faCsrf === ''
+            || !httpIntegrationInputHasAttributes($admin2faPage['body'], 'totp_code', [
+                'autocomplete' => 'one-time-code',
+                'inputmode' => 'numeric',
+                'pattern' => '[0-9]{6}',
+                'maxlength' => '6',
+            ])
+            || !httpIntegrationAuthHtmlHasNoCaptchaChallenge($admin2faPage['body'])) {
+            $authAccessibilityIssues[] = 'admin 2FA nevykreslila one-time-code numeric metadata bez CAPTCHA';
+        }
+
+        if ($admin2faCsrf !== '') {
+            $currentTotpCode = totpCalculate($totpSecret);
+            $invalidTotpCode = $currentTotpCode === '000000' ? '111111' : '000000';
+            $invalidAdmin2faResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/login_2fa.php',
+                [
+                    'csrf_token' => $admin2faCsrf,
+                    'totp_code' => $invalidTotpCode,
+                ],
+                $admin2faRenderSession['cookie'],
+                0
+            );
+            $invalidAdmin2faBody = $invalidAdmin2faResponse['body'];
+            if (httpIntegrationStatusCode($invalidAdmin2faResponse) !== 200
+                || !str_contains($invalidAdmin2faBody, 'id="admin-login-2fa-errors"')
+                || !str_contains($invalidAdmin2faBody, 'role="alert" aria-atomic="true" aria-labelledby="admin-login-2fa-errors-heading"')
+                || !str_contains($invalidAdmin2faBody, 'id="admin-login-2fa-errors-heading"')
+                || !str_contains($invalidAdmin2faBody, 'aria-describedby="admin-login-2fa-errors"')) {
+                $authAccessibilityIssues[] = 'chybový stav admin 2FA nemá text-backed alert a form aria-describedby';
+            }
+        }
+    } finally {
+        saveSetting('public_registration_enabled', $authOriginalPublicRegistration);
+        clearSettingsCache();
+    }
+    httpIntegrationPrintResult('auth_accessibility_http', $authAccessibilityIssues, $failures);
 
     $migrateLoginRedirectIssues = [];
     $migratePath = BASE_URL . '/migrate.php';

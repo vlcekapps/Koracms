@@ -7,7 +7,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
 | Klávesnice a focus u JS dialogů | 2.1.1, 2.1.2, 2.4.3, 4.1.2 | Command centrum, widget dialog a media/content picker jsou funkčně silné, ale potřebují scénářový průchod bez myši a se čtečkou. | Ručně projít NVDA/Firefox + keyboard-only a doplnit regresní guardrails pro nalezené chyby. |
-| Accessible Authentication | 3.3.8 | Registrace a žádost o obnovu hesla už nevyžadují matematickou CAPTCHA a runtime audit hlídá, aby se kognitivní CAPTCHA do těchto auth flow nevrátila. Zbývá ruční posouzení loginu, 2FA, správců hesel a tokenového resetu. | Projít celé auth flow ve Firefox/NVDA a Chrome keyboard-only, ověřit použití správce hesel, TOTP kódu, reset tokenu a chybových stavů bez kognitivního testu. |
+| Accessible Authentication | 3.3.8 | Automatizace už hlídá auth bez kognitivní CAPTCHA, honeypot u registrace/reset requestu, `username`/`current-password`/`new-password`, 2FA `one-time-code` s numeric patternem a text-backed admin/2FA alerty. Zbývá ruční posouzení skutečného chování správců hesel, TOTP nabídky, tokenového resetu a screen reader oznámení. | Projít celé auth flow ve Firefox/NVDA a Chrome keyboard-only, ověřit použití správce hesel, TOTP kódu, reset tokenu a chybových stavů bez kognitivního testu. |
 | Kontrast a focus appearance | 1.4.3, 1.4.11, 2.4.7 | Automat hlídá strukturu, ale kontrast musí být změřen pro stavy hover/focus/disabled a theme varianty. | Změřit admin i default theme a zavést kontrastní tokeny nebo auditní seznam barev. |
 | Reflow a mobilní administrace | 1.4.10, 2.4.11, 2.5.8 | Husté tabulky, row actions a dlouhé formuláře mohou být problematické na 320 px a při zoomu. | Projít hlavní admin tabulky při 320 px/400 % zoomu, prioritně media, widgets, statistics a form builder. |
 
@@ -16,7 +16,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
 | Média a titulky | 1.2.1 až 1.2.5 | CMS podporuje embedy, ale neumí systematicky vést autora k přepisům, titulkům a audio description. | Doplnit dokumentaci pro autory a zvážit metadata pro transcript/caption u vlastních video/audio médií. |
-| Autocomplete a input purpose | 1.3.5 | Ne všechna osobní pole mají ověřené `autocomplete`. | Projít auth, kontakt, rezervace, food objednávky a Form Builder šablony. |
+| Autocomplete a input purpose | 1.3.5 | Auth flow má automatizovaný guardrail, ale ne všechna další osobní pole mají ověřené `autocomplete`. | Projít kontakt, rezervace, food objednávky a Form Builder šablony. |
 | Text spacing | 1.4.12 | CSS pravděpodobně neblokuje spacing, ale není doložené ručním testem. | Projít veřejné a admin šablony s text spacing bookmarkletem nebo ekvivalentním CSS testem. |
 | Error suggestions | 3.3.3 | Některé validace jen řeknou, že hodnota je chybná, ale nemusí poradit opravu. | Udělat copy pass nad chybami formulářů a doplnit konkrétní návrhy. |
 | Redundant entry | 3.3.7 | Opakované zadávání jména/e-mailu nebo kontaktních údajů může zůstávat ve více modulech. | Zmapovat veřejná a admin flow, kde lze bezpečně předvyplnit nebo znovu použít dříve zadanou hodnotu. |

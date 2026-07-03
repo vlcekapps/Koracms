@@ -9966,6 +9966,11 @@ foreach ([
     'name="redirect"',
     "header('Location: ' . \$redirect);",
     'adminLoginStylesheetTag()',
+    'autocomplete="username"',
+    'autocomplete="current-password"',
+    'id="admin-login-errors" class="error" role="alert" aria-atomic="true" aria-labelledby="admin-login-errors-heading"',
+    '<p id="admin-login-errors-heading"><?= h($error) ?></p>',
+    'aria-describedby="admin-login-errors"',
 ] as $adminLoginFragment) {
     if (!str_contains($adminLoginSource, $adminLoginFragment)) {
         $adminLoginRedirectIssues[] = 'admin login is missing redirect fragment: ' . $adminLoginFragment;
@@ -9979,6 +9984,11 @@ foreach ([
     'class="totp-code-input"',
     'class="login-secondary-action"',
     'adminLoginStylesheetTag()',
+    'autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}"',
+    'maxlength="6"',
+    'id="admin-login-2fa-errors" class="error" role="alert" aria-atomic="true" aria-labelledby="admin-login-2fa-errors-heading"',
+    '<p id="admin-login-2fa-errors-heading"><?= h($error) ?></p>',
+    'aria-describedby="admin-login-2fa-errors"',
 ] as $adminLogin2faFragment) {
     if (!str_contains($adminLogin2faSource, $adminLogin2faFragment)) {
         $adminLoginRedirectIssues[] = 'admin 2FA is missing login fragment: ' . $adminLogin2faFragment;
@@ -17247,6 +17257,10 @@ foreach ([
     }
 }
 foreach ([
+    'public login controller' => $publicLoginSource,
+    'public login view' => $themeLoginViewSource,
+    'admin login view' => $adminLoginSource,
+    'admin 2FA view' => $adminLogin2faSource,
     'register controller' => $registerSource,
     'reset password controller' => $resetPasswordSource,
     'register view' => $themeRegisterViewSource,
@@ -17262,6 +17276,52 @@ if (!str_contains($themeRegisterViewSource, 'honeypotField()')
     || !str_contains($themeResetPasswordViewSource, 'honeypotField()')
     || !str_contains($resetPasswordSource, 'honeypotTriggered()')) {
     $themeLayoutIssues[] = 'auth registration and password reset request must keep honeypot protection without cognitive captcha';
+}
+foreach ([
+    'public login username autocomplete' => [
+        'source' => $themeLoginViewSource,
+        'pattern' => '/id="email"[\s\S]{0,500}autocomplete="username"/',
+    ],
+    'public login current password autocomplete' => [
+        'source' => $themeLoginViewSource,
+        'pattern' => '/id="password"[\s\S]{0,500}autocomplete="current-password"/',
+    ],
+    'admin login username autocomplete' => [
+        'source' => $adminLoginSource,
+        'pattern' => '/id="email"[\s\S]{0,500}autocomplete="username"/',
+    ],
+    'admin login current password autocomplete' => [
+        'source' => $adminLoginSource,
+        'pattern' => '/id="heslo"[\s\S]{0,500}autocomplete="current-password"/',
+    ],
+    'register first password new password autocomplete' => [
+        'source' => $themeRegisterViewSource,
+        'pattern' => '/id="password"[\s\S]{0,500}autocomplete="new-password"/',
+    ],
+    'register confirmation password new password autocomplete' => [
+        'source' => $themeRegisterViewSource,
+        'pattern' => '/id="password2"[\s\S]{0,500}autocomplete="new-password"/',
+    ],
+    'reset first password new password autocomplete' => [
+        'source' => $themeResetPasswordViewSource,
+        'pattern' => '/id="new_pass"[\s\S]{0,500}autocomplete="new-password"/',
+    ],
+    'reset confirmation password new password autocomplete' => [
+        'source' => $themeResetPasswordViewSource,
+        'pattern' => '/id="new_pass2"[\s\S]{0,500}autocomplete="new-password"/',
+    ],
+    'admin 2FA one-time-code autocomplete' => [
+        'source' => $adminLogin2faSource,
+        'pattern' => '/id="totp_code"[\s\S]{0,500}autocomplete="one-time-code"[\s\S]{0,500}inputmode="numeric"[\s\S]{0,500}pattern="\[0-9\]\{6\}"/',
+    ],
+    'admin 2FA six digit length' => [
+        'source' => $adminLogin2faSource,
+        'pattern' => '/id="totp_code"[\s\S]{0,500}maxlength="6"/',
+    ],
+] as $authMetadataLabel => $authMetadataSpec) {
+    if (preg_match($authMetadataSpec['pattern'], $authMetadataSpec['source']) !== 1) {
+        $themeLayoutIssues[] = 'auth form metadata is missing ' . $authMetadataLabel;
+    }
 }
 foreach ([
     'login not confirmed alert' => [
