@@ -34,6 +34,7 @@ $createdPageIds = [];
 $createdGalleryAlbumIds = [];
 $createdGalleryPhotoIds = [];
 $createdMediaIds = [];
+$createdMediaCollectionIds = [];
 $createdBoardIds = [];
 $createdBoardCategoryIds = [];
 $createdBoardSubscriberIds = [];
@@ -6748,6 +6749,40 @@ try {
     $mediaAdminUrl = $baseUrl . BASE_URL . '/admin/media.php';
     $mediaReturnPath = BASE_URL . '/admin/media.php';
 
+    $mediaCollectionName = 'HTTP kolekce médií ' . bin2hex(random_bytes(4));
+    $mediaCollectionSlug = 'http-media-kolekce-' . bin2hex(random_bytes(4));
+    $mediaCollectionResponse = postUrl(
+        $mediaAdminUrl,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'save_collection',
+            'collection_id' => '0',
+            'collection_name' => $mediaCollectionName,
+            'collection_slug' => $mediaCollectionSlug,
+            'collection_description' => 'Kolekce pro HTTP ověření metadat médií.',
+            'collection_default_visibility' => 'public',
+            'collection_default_credit' => 'HTTP výchozí kredit',
+            'collection_default_license_label' => 'HTTP licence',
+            'collection_default_license_url' => 'https://example.com/media-license',
+            'collection_sort_order' => '10',
+            'return_to' => $mediaReturnPath,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($mediaCollectionResponse) !== 302) {
+        $mediaIssues[] = 'vytvoření kolekce médií nevrátilo 302 redirect';
+    }
+    $mediaCollectionStmt = $pdo->prepare("SELECT * FROM cms_media_collections WHERE slug = ? LIMIT 1");
+    $mediaCollectionStmt->execute([$mediaCollectionSlug]);
+    $mediaCollection = $mediaCollectionStmt->fetch() ?: null;
+    $mediaCollectionId = is_array($mediaCollection) ? (int)$mediaCollection['id'] : 0;
+    if ($mediaCollectionId <= 0) {
+        $mediaIssues[] = 'vytvoření kolekce médií neuložilo záznam do databáze';
+    } else {
+        $createdMediaCollectionIds[] = $mediaCollectionId;
+    }
+
     $validMediaOriginalName = 'http-media-upload-' . bin2hex(random_bytes(4)) . '.png';
     $validMediaPath = httpIntegrationCreatePngFixtureFile('kora-media-png-', $createdTempFiles);
     $validMediaUploadResponse = postMultipartUrl(
@@ -6756,6 +6791,7 @@ try {
             'csrf_token' => $adminSession['csrf'],
             'action' => 'upload',
             'upload_visibility' => 'public',
+            'upload_collection_id' => (string)$mediaCollectionId,
             'return_to' => $mediaReturnPath,
         ],
         [
@@ -6782,6 +6818,15 @@ try {
         $createdMediaIds[] = (int)$uploadedMedia['id'];
         if (normalizeMediaVisibility((string)($uploadedMedia['visibility'] ?? 'public')) !== 'public') {
             $mediaIssues[] = 'validní upload média neuložil visibility=public';
+        }
+        if ($mediaCollectionId > 0 && (int)($uploadedMedia['collection_id'] ?? 0) !== $mediaCollectionId) {
+            $mediaIssues[] = 'validní upload média neuložil vybranou kolekci';
+        }
+        if ($mediaCollectionId > 0
+            && ((string)($uploadedMedia['credit'] ?? '') !== 'HTTP výchozí kredit'
+                || (string)($uploadedMedia['license_label'] ?? '') !== 'HTTP licence'
+                || (string)($uploadedMedia['license_url'] ?? '') !== 'https://example.com/media-license')) {
+            $mediaIssues[] = 'validní upload média nepřevzal výchozí kredit a licenci z kolekce';
         }
         if (!str_starts_with(mediaFileUrl($uploadedMedia), BASE_URL . '/uploads/media/')) {
             $mediaIssues[] = 'validní upload média nepoužívá canonical public URL';
@@ -6823,6 +6868,14 @@ try {
     $validUploadPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
     if (!str_contains($validUploadPage['body'], 'Nahráno.') && !str_contains($validUploadPage['body'], 'Nahráno 1 souborů.')) {
         $mediaIssues[] = 'validní upload média nezobrazil success flash zprávu';
+    }
+    if ($mediaCollectionId > 0) {
+        $mediaCollectionFilterPage = fetchUrl($mediaAdminUrl . '?collection=' . $mediaCollectionId, $adminSession['cookie'], 0);
+        if (!str_contains($mediaCollectionFilterPage['body'], $mediaCollectionName)
+            || !str_contains($mediaCollectionFilterPage['body'], 'Kolekce:')
+            || !str_contains($mediaCollectionFilterPage['body'], 'HTTP licence')) {
+            $mediaIssues[] = 'filtr médií podle kolekce nezobrazuje kolekci, položku nebo licenci';
+        }
     }
 
     $invalidSvgOriginalName = 'http-media-svg-' . bin2hex(random_bytes(4)) . '.svg';
@@ -6905,9 +6958,13 @@ try {
                 'csrf_token' => $adminSession['csrf'],
                 'action' => 'update_meta',
                 'media_id' => (string)$uploadedMediaId,
+                'collection_id' => (string)$mediaCollectionId,
                 'alt_text' => 'HTTP alt text média',
                 'caption' => 'HTTP titulek média',
+                'description' => 'HTTP delší popis média pro picker.',
                 'credit' => 'HTTP kredit média',
+                'license_label' => 'HTTP CC licence',
+                'license_url' => 'https://example.com/cc',
                 'visibility' => 'public',
                 'return_to' => $uploadedEditPath,
             ],
@@ -6934,6 +6991,13 @@ try {
             if ((string)($uploadedMediaAfterMeta['credit'] ?? '') !== 'HTTP kredit média') {
                 $mediaIssues[] = 'update_meta média neuložil credit';
             }
+            if ((string)($uploadedMediaAfterMeta['description'] ?? '') !== 'HTTP delší popis média pro picker.') {
+                $mediaIssues[] = 'update_meta média neuložil description';
+            }
+            if ((string)($uploadedMediaAfterMeta['license_label'] ?? '') !== 'HTTP CC licence'
+                || (string)($uploadedMediaAfterMeta['license_url'] ?? '') !== 'https://example.com/cc') {
+                $mediaIssues[] = 'update_meta média neuložil licenční metadata';
+            }
         }
 
         $updateMetaPage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
@@ -6943,6 +7007,38 @@ try {
         $updateMetaPageSecondRead = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
         if (str_contains($updateMetaPageSecondRead['body'], 'Metadata média byla uložena.')) {
             $mediaIssues[] = 'update_meta média nezmizel success flash po druhém načtení';
+        }
+
+        $invalidLicenseResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'update_meta',
+                'media_id' => (string)$uploadedMediaId,
+                'collection_id' => (string)$mediaCollectionId,
+                'alt_text' => 'HTTP alt text média',
+                'caption' => 'HTTP titulek média',
+                'description' => 'HTTP delší popis média pro picker.',
+                'credit' => 'HTTP kredit média',
+                'license_label' => 'HTTP CC licence',
+                'license_url' => 'javascript:alert(1)',
+                'visibility' => 'public',
+                'return_to' => $uploadedEditPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($invalidLicenseResponse) !== 302) {
+            $mediaIssues[] = 'neplatná licenční URL média nevrátila redirect';
+        }
+        $invalidLicensePage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
+        if (!str_contains($invalidLicensePage['body'], 'Licenční URL musí začínat http:// nebo https://.')) {
+            $mediaIssues[] = 'neplatná licenční URL média nezobrazila validační chybu';
+        }
+        $uploadedMediaAfterInvalidLicense = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
+        if ($uploadedMediaAfterInvalidLicense !== null
+            && (string)($uploadedMediaAfterInvalidLicense['license_url'] ?? '') === 'javascript:alert(1)') {
+            $mediaIssues[] = 'neplatná licenční URL média se přesto uložila';
         }
 
         $replacementMediaOriginalName = 'http-media-replacement-' . bin2hex(random_bytes(4)) . '.png';
@@ -7181,6 +7277,36 @@ try {
             $mediaIssues[] = 'bulk make_private nepřepnul nepoužité médium do soukromého režimu';
         } elseif (!str_starts_with(mediaFileUrl($bulkUnusedMediaAfterPrivate), BASE_URL . '/media/file.php?id=' . (int)$bulkUnusedMedia['id'])) {
             $mediaIssues[] = 'bulk make_private nepřepnul canonical URL nepoužitého média na chráněný endpoint';
+        }
+
+        if ($mediaCollectionId > 0) {
+            $bulkCollectionDefaultsResponse = postUrl(
+                $mediaAdminUrl,
+                [
+                    'csrf_token' => $adminSession['csrf'],
+                    'action' => 'bulk',
+                    'bulk_action' => 'apply_collection_defaults',
+                    'bulk_collection_id' => (string)$mediaCollectionId,
+                    'media_ids' => [(string)$bulkUnusedMedia['id']],
+                    'return_to' => $mediaReturnPath,
+                ],
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($bulkCollectionDefaultsResponse) !== 302) {
+                $mediaIssues[] = 'bulk apply_collection_defaults nevrátil 302 redirect';
+            }
+            $bulkCollectionDefaultsPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+            if (!str_contains($bulkCollectionDefaultsPage['body'], 'Výchozí metadata z kolekce doplněna u 1 médií.')) {
+                $mediaIssues[] = 'bulk apply_collection_defaults nezobrazil success flash zprávu';
+            }
+            $bulkUnusedAfterDefaults = httpIntegrationFetchMediaById($pdo, (int)$bulkUnusedMedia['id']);
+            if ($bulkUnusedAfterDefaults === null
+                || (int)($bulkUnusedAfterDefaults['collection_id'] ?? 0) !== $mediaCollectionId
+                || (string)($bulkUnusedAfterDefaults['credit'] ?? '') !== 'HTTP výchozí kredit'
+                || (string)($bulkUnusedAfterDefaults['license_label'] ?? '') !== 'HTTP licence') {
+                $mediaIssues[] = 'bulk apply_collection_defaults nepřiřadil kolekci nebo nedoplnil výchozí metadata';
+            }
         }
 
         $bulkDeleteResponse = postUrl(
@@ -7613,6 +7739,10 @@ try {
             mediaDeletePhysicalFiles($mediaToDelete);
             $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaIdToDelete]);
         }
+    }
+    foreach ($createdMediaCollectionIds as $mediaCollectionIdToDelete) {
+        $pdo->prepare("UPDATE cms_media SET collection_id = NULL WHERE collection_id = ?")->execute([$mediaCollectionIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_media_collections WHERE id = ?")->execute([$mediaCollectionIdToDelete]);
     }
     foreach ($createdBoardIds as $boardIdToDelete) {
         $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$boardIdToDelete]);

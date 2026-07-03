@@ -64,8 +64,12 @@ $tables = [
     'gallery_photos' => "SELECT id, album_id, filename, title, slug, alt_text, caption, description,
                                credit, license_label, license_url, taken_at, location_label, sort_order, created_at
                                FROM cms_gallery_photos",
-    'media'         => "SELECT id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit,
-                               visibility, uploaded_by, created_at
+    'media_collections' => "SELECT id, name, slug, description, default_visibility, default_credit,
+                                   default_license_label, default_license_url, sort_order, created_at, updated_at
+                            FROM cms_media_collections",
+    'media'         => "SELECT id, filename, original_name, mime_type, file_size, folder, collection_id,
+                               alt_text, caption, description, credit, license_label, license_url,
+                               visibility, uploaded_by, created_at, updated_at
                         FROM cms_media",
     'dl_categories' => "SELECT id, name, slug, description, meta_title, meta_description, created_at, updated_at FROM cms_dl_categories",
     'download_series' => "SELECT id, title, slug, description, is_active, sort_order, created_at, updated_at FROM cms_download_series",

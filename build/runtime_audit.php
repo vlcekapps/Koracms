@@ -8326,6 +8326,9 @@ $foundationChecks = [
         && str_contains($schemaParityAuditSource, 'schemaParityProjectRoot')
         && str_contains($schemaParityAuditSource, 'schemaParityTableContains')
         && str_contains($schemaParityAuditSource, 'cms_pages.blog_id')
+        && str_contains($schemaParityAuditSource, 'cms_media_collections')
+        && str_contains($schemaParityAuditSource, 'cms_media.collection_id')
+        && str_contains($schemaParityAuditSource, 'cms_media.license_url')
         && str_contains($schemaParityAuditSource, 'cms_media.caption')
         && str_contains($schemaParityAuditSource, 'cms_gallery_photos.alt_text')
         && str_contains($schemaParityAuditSource, 'cms_gallery_albums.default_license_url')
@@ -9552,8 +9555,15 @@ $installSchemaChecks = [
     'cms_polls contains meta_title' => $installTableContains('cms_polls', 'meta_title'),
     'cms_polls contains meta_description' => $installTableContains('cms_polls', 'meta_description'),
     'cms_media contains caption' => $installTableContains('cms_media', 'caption'),
+    'cms_media contains collection_id' => $installTableContains('cms_media', 'collection_id'),
+    'cms_media contains description' => $installTableContains('cms_media', 'description'),
     'cms_media contains credit' => $installTableContains('cms_media', 'credit'),
+    'cms_media contains license_label' => $installTableContains('cms_media', 'license_label'),
+    'cms_media contains license_url' => $installTableContains('cms_media', 'license_url'),
     'cms_media contains visibility' => $installTableContains('cms_media', 'visibility'),
+    'cms_media contains updated_at' => $installTableContains('cms_media', 'updated_at'),
+    'cms_media_collections contains slug' => $installTableContains('cms_media_collections', 'slug'),
+    'cms_media_collections contains default_license_url' => $installTableContains('cms_media_collections', 'default_license_url'),
     'cms_faq_categories contains parent_id' => $installTableContains('cms_faq_categories', 'parent_id'),
     'cms_faq_categories contains slug' => $installTableContains('cms_faq_categories', 'slug'),
     'cms_faq_categories contains description' => $installTableContains('cms_faq_categories', 'description'),
@@ -9603,9 +9613,17 @@ $migrateSchemaChecks = [
     'cms_polls.meta_title' => str_contains($migrateSource, 'cms_polls.meta_title'),
     'cms_polls.meta_description' => str_contains($migrateSource, 'cms_polls.meta_description'),
     'cms_media.caption' => str_contains($migrateSource, 'cms_media.caption'),
+    'cms_media.collection_id' => str_contains($migrateSource, 'cms_media.collection_id'),
+    'cms_media.description' => str_contains($migrateSource, 'cms_media.description'),
     'cms_media.credit' => str_contains($migrateSource, 'cms_media.credit'),
+    'cms_media.license_label' => str_contains($migrateSource, 'cms_media.license_label'),
+    'cms_media.license_url' => str_contains($migrateSource, 'cms_media.license_url'),
     'cms_media.visibility' => str_contains($migrateSource, 'cms_media.visibility'),
+    'cms_media.updated_at' => str_contains($migrateSource, 'cms_media.updated_at'),
+    'cms_media_collections' => str_contains($migrateSource, 'cms_media_collections'),
+    'uq_media_collections_slug' => str_contains($migrateSource, 'uq_media_collections_slug'),
     'idx_media_visibility' => str_contains($migrateSource, 'idx_media_visibility'),
+    'idx_media_collection' => str_contains($migrateSource, 'idx_media_collection'),
     'cms_faq_categories.parent_id' => str_contains($migrateSource, 'cms_faq_categories.parent_id'),
     'cms_faq_categories.slug' => str_contains($migrateSource, 'cms_faq_categories.slug'),
     'uq_cms_faq_categories_slug' => str_contains($migrateSource, 'uq_cms_faq_categories_slug'),
@@ -13215,8 +13233,29 @@ if (!str_contains($mediaAdminSource, 'name="bulk_action"')) {
 if (!str_contains($mediaAdminSource, 'make_public') || !str_contains($mediaAdminSource, 'make_private') || !str_contains($mediaAdminSource, 'delete_unused')) {
     $mediaLibraryIssues[] = 'media admin is missing expected bulk actions';
 }
-if (!str_contains($mediaAdminSource, 'name="caption"') || !str_contains($mediaAdminSource, 'name="credit"') || !str_contains($mediaAdminSource, 'name="visibility"')) {
-    $mediaLibraryIssues[] = 'media admin is missing metadata fields for caption, credit or visibility';
+if (!str_contains($mediaAdminSource, 'assign_collection') || !str_contains($mediaAdminSource, 'apply_collection_defaults')) {
+    $mediaLibraryIssues[] = 'media admin is missing collection bulk actions';
+}
+if (!str_contains($mediaAdminSource, 'name="collection_id"')
+    || !str_contains($mediaAdminSource, 'name="description"')
+    || !str_contains($mediaAdminSource, 'name="license_label"')
+    || !str_contains($mediaAdminSource, 'name="license_url"')
+    || !str_contains($mediaAdminSource, 'name="caption"')
+    || !str_contains($mediaAdminSource, 'name="credit"')
+    || !str_contains($mediaAdminSource, 'name="visibility"')) {
+    $mediaLibraryIssues[] = 'media admin is missing metadata fields for collection, description, license, caption, credit or visibility';
+}
+foreach ([
+    'mediaCollectionOptions(',
+    'mediaCollectionById(',
+    'normalizeMediaLicenseUrl(',
+    'mediaMetadataStatusLabel(',
+    'collection_default_license_url',
+    'metadata',
+] as $mediaCollectionAdminFragment) {
+    if (!str_contains($mediaAdminSource, $mediaCollectionAdminFragment)) {
+        $mediaLibraryIssues[] = 'media admin is missing collection/metadata fragment: ' . $mediaCollectionAdminFragment;
+    }
 }
 if (!str_contains($mediaAdminSource, 'navigator.clipboard.writeText')) {
     $mediaLibraryIssues[] = 'media admin is missing clipboard copy helper';
@@ -13278,12 +13317,17 @@ if (!str_contains($mediaSearchSource, 'mediaThumbUrl($row)')) {
 if (!str_contains($mediaExportSource, "'media'")) {
     $mediaLibraryIssues[] = 'export is missing media table payload';
 }
-foreach (['caption', 'credit', 'visibility'] as $mediaFieldFragment) {
+foreach (['media_collections', 'collection_id', 'description', 'license_label', 'license_url', 'caption', 'credit', 'visibility', 'updated_at'] as $mediaFieldFragment) {
     if (!str_contains($mediaExportSource, $mediaFieldFragment)) {
         $mediaLibraryIssues[] = 'export is missing media field fragment: ' . $mediaFieldFragment;
     }
     if (!str_contains($mediaImportSource, $mediaFieldFragment)) {
         $mediaLibraryIssues[] = 'import is missing media field fragment: ' . $mediaFieldFragment;
+    }
+}
+foreach (['normalizeMediaLicenseUrl', 'mediaCollectionSlugExists', 'uniqueMediaCollectionSlug', 'mediaMetadataStatus'] as $mediaHelperFragment) {
+    if (!str_contains($mediaHelperSource, $mediaHelperFragment)) {
+        $mediaLibraryIssues[] = 'media helper is missing collection metadata fragment: ' . $mediaHelperFragment;
     }
 }
 if (!str_contains($mediaHtaccessSource, 'RewriteRule ^uploads/media/.+\.svg$ - [F,L,NC]')) {

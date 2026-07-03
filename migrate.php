@@ -1096,6 +1096,22 @@ $tables = [
         INDEX idx_entity (entity_type, entity_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_media_collections' => "CREATE TABLE IF NOT EXISTS cms_media_collections (
+        id                    INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name                  VARCHAR(160) NOT NULL,
+        slug                  VARCHAR(180) NOT NULL,
+        description           TEXT,
+        default_visibility    ENUM('public','private') NOT NULL DEFAULT 'public',
+        default_credit        VARCHAR(255) NOT NULL DEFAULT '',
+        default_license_label VARCHAR(120) NOT NULL DEFAULT '',
+        default_license_url   VARCHAR(255) NOT NULL DEFAULT '',
+        sort_order            INT          NOT NULL DEFAULT 0,
+        created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_media_collections_slug (slug),
+        INDEX idx_media_collections_order (sort_order, name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_media' => "CREATE TABLE IF NOT EXISTS cms_media (
         id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         filename    VARCHAR(255) NOT NULL,
@@ -1103,15 +1119,21 @@ $tables = [
         mime_type   VARCHAR(100) NOT NULL DEFAULT '',
         file_size   INT          NOT NULL DEFAULT 0,
         folder      VARCHAR(100) NOT NULL DEFAULT 'media',
+        collection_id INT        NULL DEFAULT NULL,
         alt_text    VARCHAR(500) NOT NULL DEFAULT '',
         caption     TEXT,
+        description TEXT,
         credit      VARCHAR(255) NOT NULL DEFAULT '',
+        license_label VARCHAR(120) NOT NULL DEFAULT '',
+        license_url VARCHAR(255) NOT NULL DEFAULT '',
         visibility  ENUM('public','private') NOT NULL DEFAULT 'public',
         uploaded_by INT          NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_media_folder (folder),
         INDEX idx_media_mime (mime_type),
-        INDEX idx_media_visibility (visibility)
+        INDEX idx_media_visibility (visibility),
+        INDEX idx_media_collection (collection_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_widgets' => "CREATE TABLE IF NOT EXISTS cms_widgets (
@@ -1368,9 +1390,14 @@ $addColumns = [
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER download_count",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_media
+    'cms_media.collection_id'        => "ALTER TABLE cms_media ADD COLUMN collection_id INT NULL DEFAULT NULL AFTER folder",
     'cms_media.caption'              => "ALTER TABLE cms_media ADD COLUMN caption TEXT AFTER alt_text",
-    'cms_media.credit'               => "ALTER TABLE cms_media ADD COLUMN credit VARCHAR(255) NOT NULL DEFAULT '' AFTER caption",
-    'cms_media.visibility'           => "ALTER TABLE cms_media ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public' AFTER credit",
+    'cms_media.description'          => "ALTER TABLE cms_media ADD COLUMN description TEXT AFTER caption",
+    'cms_media.credit'               => "ALTER TABLE cms_media ADD COLUMN credit VARCHAR(255) NOT NULL DEFAULT '' AFTER description",
+    'cms_media.license_label'        => "ALTER TABLE cms_media ADD COLUMN license_label VARCHAR(120) NOT NULL DEFAULT '' AFTER credit",
+    'cms_media.license_url'          => "ALTER TABLE cms_media ADD COLUMN license_url VARCHAR(255) NOT NULL DEFAULT '' AFTER license_label",
+    'cms_media.visibility'           => "ALTER TABLE cms_media ADD COLUMN visibility ENUM('public','private') NOT NULL DEFAULT 'public' AFTER license_url",
+    'cms_media.updated_at'           => "ALTER TABLE cms_media ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_polls
     'cms_polls.slug'                 => "ALTER TABLE cms_polls ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL AFTER question",
     // cms_users – rozšíření pro veřejné uživatele a role
@@ -3395,6 +3422,17 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Index <code>idx_media_visibility</code> pro knihovnu médií – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if (!$indexExists('cms_media', 'idx_media_collection')) {
+        $pdo->exec("ALTER TABLE cms_media ADD INDEX idx_media_collection (collection_id)");
+        $log[] = "✓ Index <code>idx_media_collection</code> pro kolekce médií přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_media_collection</code> pro kolekce médií již existuje – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Index <code>idx_media_collection</code> pro kolekce médií – CHYBA: " . h($e->getMessage());
 }
 
 foreach ([

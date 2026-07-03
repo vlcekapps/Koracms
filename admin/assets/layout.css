@@ -229,6 +229,8 @@ th { background: var(--admin-th-bg); }
 .res-booking-pending-note { color:#666; font-style:italic; }
 .media-upload-form { margin-bottom:1.5rem; }
 .media-upload-submit { margin-top:.75rem; }
+.media-collections-section { margin:1.5rem 0; }
+.media-collection-form { margin-bottom:1rem; }
 .media-filter-form, .media-bulk-form { margin-bottom:1rem; }
 .media-filter-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; align-items:end; }
 .media-filter-actions { margin-top:1.4rem; }

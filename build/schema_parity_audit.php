@@ -94,9 +94,17 @@ $criticalInstallColumns = [
     'cms_nav_links.target_blank' => ['cms_nav_links', 'target_blank'],
     'cms_nav_links.is_active' => ['cms_nav_links', 'is_active'],
     'cms_nav_links.nav_order' => ['cms_nav_links', 'nav_order'],
+    'cms_media_collections.name' => ['cms_media_collections', 'name'],
+    'cms_media_collections.slug' => ['cms_media_collections', 'slug'],
+    'cms_media_collections.default_visibility' => ['cms_media_collections', 'default_visibility'],
+    'cms_media.collection_id' => ['cms_media', 'collection_id'],
     'cms_media.caption' => ['cms_media', 'caption'],
+    'cms_media.description' => ['cms_media', 'description'],
     'cms_media.credit' => ['cms_media', 'credit'],
+    'cms_media.license_label' => ['cms_media', 'license_label'],
+    'cms_media.license_url' => ['cms_media', 'license_url'],
     'cms_media.visibility' => ['cms_media', 'visibility'],
+    'cms_media.updated_at' => ['cms_media', 'updated_at'],
     'cms_gallery_photos.slug' => ['cms_gallery_photos', 'slug'],
     'cms_gallery_albums.default_credit' => ['cms_gallery_albums', 'default_credit'],
     'cms_gallery_albums.default_license_label' => ['cms_gallery_albums', 'default_license_label'],
@@ -244,10 +252,19 @@ $criticalMigrationSnippets = [
     'cms_nav_links',
     'idx_nav_links_scope',
     'idx_nav_links_active',
+    'cms_media_collections',
+    'uq_media_collections_slug',
+    'idx_media_collections_order',
+    'cms_media.collection_id',
     'cms_media.caption',
+    'cms_media.description',
     'cms_media.credit',
+    'cms_media.license_label',
+    'cms_media.license_url',
     'cms_media.visibility',
+    'cms_media.updated_at',
     'idx_media_visibility',
+    'idx_media_collection',
     'cms_gallery_photos.slug',
     'cms_gallery_albums.default_credit',
     'cms_gallery_albums.default_license_label',
@@ -395,7 +412,9 @@ schemaParityRequire(
     $issues
 );
 schemaParityRequire(
-    str_contains($contentReferenceSearchSource, 'SELECT id, filename, original_name, alt_text, caption, credit, visibility, mime_type, file_size, folder, created_at')
+    str_contains($contentReferenceSearchSource, 'm.description')
+    && str_contains($contentReferenceSearchSource, 'm.license_label')
+    && str_contains($contentReferenceSearchSource, 'cms_media_collections')
     && str_contains($contentReferenceSearchSource, 'caption LIKE ?')
     && str_contains($contentReferenceSearchSource, "contentReferenceLogSourceError('media'"),
     'content_reference_search media query must keep media metadata columns and graceful logging.',

@@ -650,6 +650,28 @@ assert_equals('', statsPageTypeModuleKey('token_endpoint'), 'unknown or token en
 assert_equals(['2026-04-07', '2026-04-09'], statsPreviousDateRange('2026-04-10', '2026-04-12'), 'previous period has the same inclusive length');
 assert_equals('all', statsNormalizeContentModuleFilter('definitely-not-a-module'), 'unknown content module filter falls back to all');
 
+test_section('media collection metadata helpers');
+
+assert_equals('archiv-akci', normalizeMediaCollectionSlug('Archiv akcí'), 'media collection slug keeps Czech diacritics normalized');
+assert_equals('kolekce', normalizeMediaCollectionSlug(''), 'empty media collection slug falls back to kolekce');
+assert_equals('https://creativecommons.org/licenses/by/4.0/', normalizeMediaLicenseUrl('https://creativecommons.org/licenses/by/4.0/'), 'media license URL accepts HTTPS');
+assert_equals('', normalizeMediaLicenseUrl('javascript:alert(1)'), 'media license URL rejects unsafe scheme');
+assert_equals(
+    'missing_alt',
+    mediaMetadataStatus(['mime_type' => 'image/jpeg', 'alt_text' => '', 'credit' => 'Pavel Vlček', 'license_label' => 'CC BY 4.0']),
+    'image media without alt text reports missing alt'
+);
+assert_equals(
+    'missing_credit_license',
+    mediaMetadataStatus(['mime_type' => 'application/pdf', 'alt_text' => '', 'credit' => '', 'license_label' => '']),
+    'non-image media without rights metadata reports missing credit or license'
+);
+assert_equals(
+    'complete',
+    mediaMetadataStatus(['mime_type' => 'image/png', 'alt_text' => 'Logo projektu', 'credit' => 'Pavel Vlček', 'license_label' => 'Vlastní licence']),
+    'media with alt and rights metadata is complete'
+);
+
 test_section('gallery photo metadata helpers');
 
 $galleryPhotoWithAlt = [

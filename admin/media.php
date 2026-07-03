@@ -35,10 +35,26 @@ function mediaAdminUsageOptions(): array
 }
 
 /**
+ * @return array<string, string>
+ */
+function mediaAdminMetadataOptions(): array
+{
+    return [
+        '' => 'Všechna metadata',
+        'missing_alt' => 'Chybí alt text',
+        'missing_credit_license' => 'Chybí kredit nebo licence',
+        'incomplete' => 'Neúplná metadata',
+    ];
+}
+
+/**
  * @return array{
  *   q: string,
  *   type: string,
  *   visibility: string,
+ *   collection: int,
+ *   metadata: string,
+ *   collection_edit: int,
  *   uploader: int,
  *   usage: string,
  *   page: int,
@@ -50,6 +66,8 @@ function mediaAdminStateFromRequest(): array
     $page = filter_var($_GET['page'] ?? '1', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     $edit = filter_var($_GET['edit'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     $uploader = filter_var($_GET['uploader'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $collection = filter_var($_GET['collection'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $collectionEdit = filter_var($_GET['collection_edit'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
     $type = trim((string)($_GET['type'] ?? ''));
     if (!array_key_exists($type, mediaAdminTypeOptions())) {
@@ -66,10 +84,18 @@ function mediaAdminStateFromRequest(): array
         $usage = '';
     }
 
+    $metadata = trim((string)($_GET['metadata'] ?? ''));
+    if (!array_key_exists($metadata, mediaAdminMetadataOptions())) {
+        $metadata = '';
+    }
+
     return [
         'q' => trim((string)($_GET['q'] ?? '')),
         'type' => $type,
         'visibility' => $visibility,
+        'collection' => $collection !== false ? (int)$collection : 0,
+        'metadata' => $metadata,
+        'collection_edit' => $collectionEdit !== false ? (int)$collectionEdit : 0,
         'uploader' => $uploader !== false ? (int)$uploader : 0,
         'usage' => $usage,
         'page' => $page !== false ? (int)$page : 1,
@@ -82,6 +108,9 @@ function mediaAdminStateFromRequest(): array
  *   q: string,
  *   type: string,
  *   visibility: string,
+ *   collection: int,
+ *   metadata: string,
+ *   collection_edit: int,
  *   uploader: int,
  *   usage: string,
  *   page: int,
@@ -99,6 +128,15 @@ function mediaAdminPath(array $state): string
     }
     if (trim($state['visibility']) !== '') {
         $query['visibility'] = trim((string)$state['visibility']);
+    }
+    if ((int)$state['collection'] > 0) {
+        $query['collection'] = (int)$state['collection'];
+    }
+    if (trim((string)$state['metadata']) !== '') {
+        $query['metadata'] = trim((string)$state['metadata']);
+    }
+    if ((int)$state['collection_edit'] > 0) {
+        $query['collection_edit'] = (int)$state['collection_edit'];
     }
     if ($state['uploader'] > 0) {
         $query['uploader'] = (int)$state['uploader'];
@@ -161,11 +199,27 @@ function mediaAdminTypeSql(string $type): array
     };
 }
 
+function mediaAdminMetadataSql(string $metadata): string
+{
+    $missingImageAlt = "(m.mime_type LIKE 'image/%' AND m.mime_type <> 'image/svg+xml' AND TRIM(COALESCE(m.alt_text, '')) = '')";
+    $missingCreditOrLicense = "(TRIM(COALESCE(m.credit, '')) = '' OR TRIM(COALESCE(m.license_label, '')) = '')";
+
+    return match ($metadata) {
+        'missing_alt' => $missingImageAlt,
+        'missing_credit_license' => $missingCreditOrLicense,
+        'incomplete' => '(' . $missingImageAlt . ' OR ' . $missingCreditOrLicense . ')',
+        default => '',
+    };
+}
+
 /**
  * @param array{
  *   q: string,
  *   type: string,
  *   visibility: string,
+ *   collection: int,
+ *   metadata: string,
+ *   collection_edit: int,
  *   uploader: int,
  *   usage: string,
  *   page: int,
@@ -179,9 +233,9 @@ function mediaAdminFetchItems(PDO $pdo, array $state): array
     $params = [];
 
     if ($state['q'] !== '') {
-        $where[] = '(m.original_name LIKE ? OR m.alt_text LIKE ? OR m.caption LIKE ? OR m.credit LIKE ?)';
+        $where[] = '(m.original_name LIKE ? OR m.alt_text LIKE ? OR m.caption LIKE ? OR m.description LIKE ? OR m.credit LIKE ? OR m.license_label LIKE ? OR c.name LIKE ?)';
         $like = '%' . $state['q'] . '%';
-        array_push($params, $like, $like, $like, $like);
+        array_push($params, $like, $like, $like, $like, $like, $like, $like);
     }
 
     if ($state['visibility'] !== '') {
@@ -194,19 +248,31 @@ function mediaAdminFetchItems(PDO $pdo, array $state): array
         $params[] = (int)$state['uploader'];
     }
 
+    if ((int)$state['collection'] > 0) {
+        $where[] = 'm.collection_id = ?';
+        $params[] = (int)$state['collection'];
+    }
+
     [$typeSql, $typeParams] = mediaAdminTypeSql((string)$state['type']);
     if ($typeSql !== '') {
         $where[] = $typeSql;
         $params = array_merge($params, $typeParams);
     }
 
+    $metadataSql = mediaAdminMetadataSql((string)$state['metadata']);
+    if ($metadataSql !== '') {
+        $where[] = $metadataSql;
+    }
+
     $whereSql = $where !== [] ? 'WHERE ' . implode(' AND ', $where) : '';
 
     $stmt = $pdo->prepare(
         "SELECT m.*,
-                COALESCE(NULLIF(u.nickname, ''), NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email, '—') AS uploader_name
+                COALESCE(NULLIF(u.nickname, ''), NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email, '—') AS uploader_name,
+                c.name AS collection_name
          FROM cms_media m
          LEFT JOIN cms_users u ON u.id = m.uploaded_by
+         LEFT JOIN cms_media_collections c ON c.id = m.collection_id
          {$whereSql}
          ORDER BY m.created_at DESC, m.id DESC"
     );
@@ -236,8 +302,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fallbackTarget = mediaAdminPath($fallbackState);
     $target = mediaAdminRedirectTarget($fallbackTarget);
 
+    if ($action === 'save_collection') {
+        $collectionId = inputInt('post', 'collection_id') ?? 0;
+        $name = trim((string)($_POST['collection_name'] ?? ''));
+        $requestedSlug = trim((string)($_POST['collection_slug'] ?? ''));
+        $slug = $requestedSlug !== '' ? normalizeMediaCollectionSlug($requestedSlug) : uniqueMediaCollectionSlug($pdo, $name, $collectionId);
+        $licenseUrl = normalizeMediaLicenseUrl((string)($_POST['collection_default_license_url'] ?? ''));
+        $defaultVisibility = normalizeMediaVisibility((string)($_POST['collection_default_visibility'] ?? 'public'));
+
+        if ($name === '') {
+            mediaFlashSet('error', 'Název kolekce je povinný.');
+            mediaAdminRedirectWithFlash($target);
+        }
+        if ($requestedSlug !== '' && mediaCollectionSlugExists($pdo, $slug, $collectionId)) {
+            mediaFlashSet('error', 'Slug kolekce už existuje.');
+            mediaAdminRedirectWithFlash($target);
+        }
+        if (trim((string)($_POST['collection_default_license_url'] ?? '')) !== '' && $licenseUrl === '') {
+            mediaFlashSet('error', 'Licenční URL kolekce musí začínat http:// nebo https://.');
+            mediaAdminRedirectWithFlash($target);
+        }
+
+        if ($collectionId > 0 && mediaCollectionById($pdo, $collectionId) !== null) {
+            $pdo->prepare(
+                "UPDATE cms_media_collections
+                 SET name = ?, slug = ?, description = ?, default_visibility = ?, default_credit = ?,
+                     default_license_label = ?, default_license_url = ?, sort_order = ?, updated_at = NOW()
+                 WHERE id = ?"
+            )->execute([
+                $name,
+                $slug,
+                trim((string)($_POST['collection_description'] ?? '')),
+                $defaultVisibility,
+                trim((string)($_POST['collection_default_credit'] ?? '')),
+                trim((string)($_POST['collection_default_license_label'] ?? '')),
+                $licenseUrl,
+                max(0, (int)($_POST['collection_sort_order'] ?? 0)),
+                $collectionId,
+            ]);
+            mediaFlashSet('success', 'Kolekce médií byla uložena.');
+            logAction('media_collection_update', 'id=' . $collectionId);
+        } else {
+            $pdo->prepare(
+                "INSERT INTO cms_media_collections
+                 (name, slug, description, default_visibility, default_credit, default_license_label, default_license_url, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            )->execute([
+                $name,
+                $slug,
+                trim((string)($_POST['collection_description'] ?? '')),
+                $defaultVisibility,
+                trim((string)($_POST['collection_default_credit'] ?? '')),
+                trim((string)($_POST['collection_default_license_label'] ?? '')),
+                $licenseUrl,
+                max(0, (int)($_POST['collection_sort_order'] ?? 0)),
+            ]);
+            mediaFlashSet('success', 'Kolekce médií byla vytvořena.');
+            logAction('media_collection_create', 'id=' . (int)$pdo->lastInsertId());
+        }
+
+        mediaAdminRedirectWithFlash(mediaAdminPath(array_merge($state, ['collection_edit' => 0])));
+    }
+
+    if ($action === 'delete_collection') {
+        $collectionId = inputInt('post', 'collection_id') ?? 0;
+        $collection = mediaCollectionById($pdo, $collectionId);
+        if ($collection === null) {
+            mediaFlashSet('error', 'Kolekce nebyla nalezena.');
+            mediaAdminRedirectWithFlash($target);
+        }
+
+        $pdo->prepare("UPDATE cms_media SET collection_id = NULL WHERE collection_id = ?")->execute([$collectionId]);
+        $pdo->prepare("DELETE FROM cms_media_collections WHERE id = ?")->execute([$collectionId]);
+        mediaFlashSet('success', 'Kolekce byla smazána. Média v knihovně zůstala zachovaná.');
+        logAction('media_collection_delete', 'id=' . $collectionId);
+        mediaAdminRedirectWithFlash(mediaAdminPath(array_merge($state, ['collection' => 0, 'collection_edit' => 0])));
+    }
+
     if ($action === 'upload') {
-        $uploadVisibility = normalizeMediaVisibility((string)($_POST['upload_visibility'] ?? 'public'));
+        $uploadCollectionId = inputInt('post', 'upload_collection_id') ?? 0;
+        $uploadCollection = $uploadCollectionId > 0 ? mediaCollectionById($pdo, $uploadCollectionId) : null;
+        if ($uploadCollectionId > 0 && $uploadCollection === null) {
+            mediaFlashSet('error', 'Vybraná kolekce nebyla nalezena.');
+            mediaAdminRedirectWithFlash($target);
+        }
+        $uploadVisibility = $uploadCollection !== null
+            ? normalizeMediaVisibility((string)($uploadCollection['default_visibility'] ?? 'public'))
+            : normalizeMediaVisibility((string)($_POST['upload_visibility'] ?? 'public'));
         $files = $_FILES['media_files'] ?? null;
         $uploadedCount = 0;
         $errors = [];
@@ -269,13 +420,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->prepare(
                 "INSERT INTO cms_media
-                 (filename, original_name, mime_type, file_size, folder, alt_text, caption, credit, visibility, uploaded_by)
-                 VALUES (?, ?, ?, ?, 'media', '', '', '', ?, ?)"
+                 (filename, original_name, mime_type, file_size, folder, collection_id, alt_text, caption, description,
+                  credit, license_label, license_url, visibility, uploaded_by)
+                 VALUES (?, ?, ?, ?, 'media', ?, '', '', '', ?, ?, ?, ?, ?)"
             )->execute([
                 $stored['filename'],
                 $stored['original_name'],
                 $stored['mime_type'],
                 (int)$stored['file_size'],
+                $uploadCollection !== null ? (int)$uploadCollection['id'] : null,
+                $uploadCollection !== null ? trim((string)($uploadCollection['default_credit'] ?? '')) : '',
+                $uploadCollection !== null ? trim((string)($uploadCollection['default_license_label'] ?? '')) : '',
+                $uploadCollection !== null ? normalizeMediaLicenseUrl((string)($uploadCollection['default_license_url'] ?? '')) : '',
                 $uploadVisibility,
                 currentUserId(),
             ]);
@@ -318,14 +474,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        $collectionId = inputInt('post', 'collection_id') ?? 0;
+        if ($collectionId > 0 && mediaCollectionById($pdo, $collectionId) === null) {
+            mediaFlashSet('error', 'Vybraná kolekce nebyla nalezena.');
+            mediaAdminRedirectWithFlash($target);
+        }
+        $licenseUrlInput = trim((string)($_POST['license_url'] ?? ''));
+        $licenseUrl = normalizeMediaLicenseUrl($licenseUrlInput);
+        if ($licenseUrlInput !== '' && $licenseUrl === '') {
+            mediaFlashSet('error', 'Licenční URL musí začínat http:// nebo https://.');
+            mediaAdminRedirectWithFlash($target);
+        }
+
         $pdo->prepare(
             "UPDATE cms_media
-             SET alt_text = ?, caption = ?, credit = ?, visibility = ?
+             SET collection_id = ?, alt_text = ?, caption = ?, description = ?, credit = ?,
+                 license_label = ?, license_url = ?, visibility = ?, updated_at = NOW()
              WHERE id = ?"
         )->execute([
+            $collectionId > 0 ? $collectionId : null,
             trim((string)($_POST['alt_text'] ?? '')),
             trim((string)($_POST['caption'] ?? '')),
+            trim((string)($_POST['description'] ?? '')),
             trim((string)($_POST['credit'] ?? '')),
+            trim((string)($_POST['license_label'] ?? '')),
+            $licenseUrl,
             $newVisibility,
             $mediaId,
         ]);
@@ -355,7 +528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->prepare(
             "UPDATE cms_media
-             SET filename = ?, original_name = ?, mime_type = ?, file_size = ?
+             SET filename = ?, original_name = ?, mime_type = ?, file_size = ?, updated_at = NOW()
              WHERE id = ?"
         )->execute([
             $stored['filename'],
@@ -397,6 +570,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ), static fn (int $value): bool => $value > 0)));
 
         $bulkAction = trim((string)($_POST['bulk_action'] ?? ''));
+        $bulkCollectionId = inputInt('post', 'bulk_collection_id') ?? 0;
+        $bulkCollection = $bulkCollectionId > 0 ? mediaCollectionById($pdo, $bulkCollectionId) : null;
+        if (in_array($bulkAction, ['assign_collection', 'apply_collection_defaults'], true)
+            && ($bulkCollectionId <= 0 || $bulkCollection === null)) {
+            mediaFlashSet('error', 'Pro tuto hromadnou akci vyberte existující kolekci.');
+            mediaAdminRedirectWithFlash($target);
+        }
         if ($selectedIds === []) {
             mediaFlashSet('error', 'Nevybrali jste žádná média.');
             mediaAdminRedirectWithFlash($target);
@@ -443,6 +623,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
 
+            if ($bulkAction === 'assign_collection') {
+                $pdo->prepare("UPDATE cms_media SET collection_id = ?, updated_at = NOW() WHERE id = ?")->execute([$bulkCollectionId, $mediaId]);
+                $updatedCount++;
+                continue;
+            }
+
+            if ($bulkAction === 'apply_collection_defaults') {
+                $pdo->prepare(
+                    "UPDATE cms_media
+                     SET collection_id = ?,
+                         credit = CASE WHEN TRIM(COALESCE(credit, '')) = '' THEN ? ELSE credit END,
+                         license_label = CASE WHEN TRIM(COALESCE(license_label, '')) = '' THEN ? ELSE license_label END,
+                         license_url = CASE WHEN TRIM(COALESCE(license_url, '')) = '' THEN ? ELSE license_url END,
+                         updated_at = NOW()
+                     WHERE id = ?"
+                )->execute([
+                    $bulkCollectionId,
+                    trim((string)($bulkCollection['default_credit'] ?? '')),
+                    trim((string)($bulkCollection['default_license_label'] ?? '')),
+                    normalizeMediaLicenseUrl((string)($bulkCollection['default_license_url'] ?? '')),
+                    $mediaId,
+                ]);
+                $updatedCount++;
+                continue;
+            }
+
             if ($bulkAction === 'delete_unused') {
                 if (mediaHasUsage($media)) {
                     $blockedCount++;
@@ -458,6 +664,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mediaFlashSet('success', 'Veřejně označeno ' . $updatedCount . ' médií.');
         } elseif ($bulkAction === 'make_private') {
             mediaFlashSet('success', 'Soukromě označeno ' . $updatedCount . ' médií.');
+        } elseif ($bulkAction === 'assign_collection') {
+            mediaFlashSet('success', 'Do kolekce přiřazeno ' . $updatedCount . ' médií.');
+        } elseif ($bulkAction === 'apply_collection_defaults') {
+            mediaFlashSet('success', 'Výchozí metadata z kolekce doplněna u ' . $updatedCount . ' médií.');
         } elseif ($bulkAction === 'delete_unused') {
             mediaFlashSet('success', 'Smazáno ' . $deletedCount . ' nepoužitých médií.');
         } else {
@@ -495,6 +705,8 @@ foreach ($items as $item) {
 $editItem = $state['edit'] > 0 ? mediaGetById($state['edit']) : null;
 $editUsages = $editItem ? mediaFindUsages($editItem, 50) : [];
 $uploaderOptions = mediaAdminUploaderOptions($pdo);
+$collectionOptions = mediaCollectionOptions($pdo);
+$editCollection = $state['collection_edit'] > 0 ? mediaCollectionById($pdo, $state['collection_edit']) : null;
 $basePath = mediaAdminPath(array_merge($state, ['page' => 1, 'edit' => 0]));
 $pagerBase = $basePath . (str_contains($basePath, '?') ? '&' : '?');
 
@@ -519,17 +731,128 @@ adminHeader('Knihovna médií');
            aria-describedby="media-upload-help">
     <small id="media-upload-help" class="field-help">Obrázky, audio, video a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max 10 MB na soubor.</small>
 
+    <label for="upload_collection_id">Kolekce médií</label>
+    <select id="upload_collection_id" name="upload_collection_id" aria-describedby="upload-collection-help">
+      <option value="">Bez kolekce</option>
+      <?php foreach ($collectionOptions as $collection): ?>
+        <option value="<?= (int)$collection['id'] ?>"><?= h((string)$collection['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <small id="upload-collection-help" class="field-help">Při uploadu do kolekce se použije její výchozí viditelnost, kredit a licence.</small>
+
     <label for="upload_visibility">Viditelnost nových souborů</label>
     <select id="upload_visibility" name="upload_visibility">
       <?php foreach (mediaVisibilityOptions() as $visibilityValue => $visibilityLabel): ?>
         <option value="<?= h($visibilityValue) ?>"><?= h($visibilityLabel) ?></option>
       <?php endforeach; ?>
     </select>
-    <small class="field-help">Veřejná média lze vkládat do obsahu. Soukromá média se vydávají jen přes chráněný endpoint pro správce obsahu.</small>
+    <small class="field-help">Veřejná média lze vkládat do obsahu. Soukromá média se vydávají jen přes chráněný endpoint pro správce obsahu. Pokud vyberete kolekci, má přednost výchozí viditelnost kolekce.</small>
 
     <button type="submit" class="btn media-upload-submit">Nahrát soubory</button>
   </fieldset>
 </form>
+
+<section class="media-collections-section" aria-labelledby="media-collections-heading">
+  <h2 id="media-collections-heading">Kolekce médií</h2>
+  <p class="field-help">Kolekce pomáhají držet větší knihovnu jako archiv: nové uploady mohou převzít výchozí viditelnost, kredit a licenci.</p>
+
+  <form method="post" novalidate class="media-collection-form">
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="action" value="save_collection">
+    <input type="hidden" name="collection_id" value="<?= $editCollection !== null ? (int)$editCollection['id'] : 0 ?>">
+    <input type="hidden" name="return_to" value="<?= h(mediaAdminPath($state)) ?>">
+    <fieldset>
+      <legend><?= $editCollection !== null ? 'Upravit kolekci médií' : 'Přidat kolekci médií' ?></legend>
+
+      <label for="collection_name">Název kolekce <span aria-hidden="true">*</span></label>
+      <input type="text" id="collection_name" name="collection_name" required aria-required="true" value="<?= h((string)($editCollection['name'] ?? '')) ?>">
+
+      <label for="collection_slug">Slug kolekce</label>
+      <input type="text" id="collection_slug" name="collection_slug" aria-describedby="collection-slug-help" value="<?= h((string)($editCollection['slug'] ?? '')) ?>">
+      <small id="collection-slug-help" class="field-help">Prázdný slug se vygeneruje z názvu. Slug musí být unikátní.</small>
+
+      <label for="collection_description">Popis kolekce</label>
+      <textarea id="collection_description" name="collection_description" rows="3"><?= h((string)($editCollection['description'] ?? '')) ?></textarea>
+
+      <label for="collection_default_visibility">Výchozí viditelnost</label>
+      <select id="collection_default_visibility" name="collection_default_visibility">
+        <?php foreach (mediaVisibilityOptions() as $visibilityValue => $visibilityLabel): ?>
+          <option value="<?= h($visibilityValue) ?>"<?= normalizeMediaVisibility((string)($editCollection['default_visibility'] ?? 'public')) === $visibilityValue ? ' selected' : '' ?>><?= h($visibilityLabel) ?></option>
+        <?php endforeach; ?>
+      </select>
+
+      <label for="collection_default_credit">Výchozí kredit</label>
+      <input type="text" id="collection_default_credit" name="collection_default_credit" value="<?= h((string)($editCollection['default_credit'] ?? '')) ?>">
+
+      <label for="collection_default_license_label">Výchozí licence</label>
+      <input type="text" id="collection_default_license_label" name="collection_default_license_label" value="<?= h((string)($editCollection['default_license_label'] ?? '')) ?>">
+
+      <label for="collection_default_license_url">URL licence</label>
+      <input type="url" id="collection_default_license_url" name="collection_default_license_url" aria-describedby="collection-license-help" value="<?= h((string)($editCollection['default_license_url'] ?? '')) ?>">
+      <small id="collection-license-help" class="field-help">Použijte jen bezpečné adresy začínající http:// nebo https://.</small>
+
+      <label for="collection_sort_order">Pořadí</label>
+      <input type="number" id="collection_sort_order" name="collection_sort_order" min="0" step="1" value="<?= (int)($editCollection['sort_order'] ?? 0) ?>">
+
+      <div class="button-row">
+        <button type="submit" class="btn btn-success"><?= $editCollection !== null ? 'Uložit kolekci' : 'Přidat kolekci' ?></button>
+        <?php if ($editCollection !== null): ?>
+          <a href="<?= h(mediaAdminPath(array_merge($state, ['collection_edit' => 0]))) ?>" class="btn">Zrušit úpravu kolekce</a>
+        <?php endif; ?>
+      </div>
+    </fieldset>
+  </form>
+
+  <?php if ($collectionOptions === []): ?>
+    <p>Zatím není vytvořená žádná kolekce médií.</p>
+  <?php else: ?>
+    <div class="table-responsive">
+      <table>
+        <caption>Přehled kolekcí médií</caption>
+        <thead>
+          <tr>
+            <th scope="col">Kolekce</th>
+            <th scope="col">Výchozí metadata</th>
+            <th scope="col">Pořadí</th>
+            <th scope="col">Akce</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($collectionOptions as $collection): ?>
+            <tr>
+              <th scope="row">
+                <?= h((string)$collection['name']) ?>
+                <span class="table-meta"><?= h((string)$collection['slug']) ?></span>
+              </th>
+              <td>
+                <span class="table-meta"><?= h(mediaVisibilityOptions()[normalizeMediaVisibility((string)$collection['default_visibility'])] ?? 'Veřejné') ?></span>
+                <?php if (trim((string)($collection['default_credit'] ?? '')) !== ''): ?>
+                  <span class="table-meta">Kredit: <?= h((string)$collection['default_credit']) ?></span>
+                <?php endif; ?>
+                <?php if (trim((string)($collection['default_license_label'] ?? '')) !== ''): ?>
+                  <span class="table-meta">Licence: <?= h((string)$collection['default_license_label']) ?></span>
+                <?php endif; ?>
+              </td>
+              <td><?= (int)$collection['sort_order'] ?></td>
+              <td>
+                <div class="button-row">
+                  <a class="btn" href="<?= h(mediaAdminPath(array_merge($state, ['collection_edit' => (int)$collection['id']]))) ?>">Upravit</a>
+                  <form method="post" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                    <input type="hidden" name="action" value="delete_collection">
+                    <input type="hidden" name="collection_id" value="<?= (int)$collection['id'] ?>">
+                    <input type="hidden" name="return_to" value="<?= h(mediaAdminPath($state)) ?>">
+                    <button type="submit" class="btn btn-danger" data-confirm="Smazat kolekci <?= h((string)$collection['name']) ?>? Média zůstanou zachována.">Smazat</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
+</section>
 
 <form method="get" class="media-filter-form">
   <fieldset>
@@ -557,6 +880,23 @@ adminHeader('Knihovna médií');
         </select>
       </div>
       <div>
+        <label for="collection">Kolekce</label>
+        <select id="collection" name="collection">
+          <option value="">Všechny kolekce</option>
+          <?php foreach ($collectionOptions as $collection): ?>
+            <option value="<?= (int)$collection['id'] ?>"<?= (int)$state['collection'] === (int)$collection['id'] ? ' selected' : '' ?>><?= h((string)$collection['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div>
+        <label for="metadata">Kontrola metadat</label>
+        <select id="metadata" name="metadata">
+          <?php foreach (mediaAdminMetadataOptions() as $value => $label): ?>
+            <option value="<?= h($value) ?>"<?= $state['metadata'] === $value ? ' selected' : '' ?>><?= h($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div>
         <label for="usage">Použití</label>
         <select id="usage" name="usage">
           <?php foreach (mediaAdminUsageOptions() as $value => $label): ?>
@@ -575,7 +915,7 @@ adminHeader('Knihovna médií');
       </div>
       <div class="button-row media-filter-actions">
         <button type="submit" class="btn">Použít filtry</button>
-        <?php if ($state['q'] !== '' || $state['type'] !== '' || $state['visibility'] !== '' || $state['usage'] !== '' || (int)$state['uploader'] > 0): ?>
+        <?php if ($state['q'] !== '' || $state['type'] !== '' || $state['visibility'] !== '' || $state['usage'] !== '' || $state['metadata'] !== '' || (int)$state['collection'] > 0 || (int)$state['uploader'] > 0): ?>
           <a href="media.php" class="btn">Zrušit</a>
         <?php endif; ?>
       </div>
@@ -603,7 +943,16 @@ adminHeader('Knihovna médií');
           <option value="">Vyberte akci</option>
           <option value="make_public">Změnit na veřejné</option>
           <option value="make_private">Změnit na soukromé</option>
+          <option value="assign_collection">Přiřadit do kolekce</option>
+          <option value="apply_collection_defaults">Doplnit výchozí metadata kolekce</option>
           <option value="delete_unused">Smazat nepoužitá</option>
+        </select>
+        <label for="bulk_collection_id" class="media-bulk-label">Kolekce pro akci</label>
+        <select id="bulk_collection_id" name="bulk_collection_id" class="media-bulk-select">
+          <option value="">Vyberte kolekci</option>
+          <?php foreach ($collectionOptions as $collection): ?>
+            <option value="<?= (int)$collection['id'] ?>"><?= h((string)$collection['name']) ?></option>
+          <?php endforeach; ?>
         </select>
         <button type="submit" class="btn">Provést</button>
       </div>
@@ -644,15 +993,23 @@ adminHeader('Knihovna médií');
                 <strong class="media-card__title"><?= h((string)$item['original_name']) ?></strong>
                 <span class="table-meta"><?= h((string)$item['mime_type']) ?> · <?= h(number_format(((int)$item['file_size']) / 1024, 0, ',', ' ')) ?> KB</span>
                 <span class="table-meta">Nahrál: <?= h((string)$item['uploader_name']) ?></span>
+                <?php if (trim((string)($item['collection_name'] ?? '')) !== ''): ?>
+                  <span class="table-meta">Kolekce: <?= h((string)$item['collection_name']) ?></span>
+                <?php endif; ?>
               </div>
 
               <div class="status-stack">
                 <span class="status-badge <?= $isPublic ? 'status-badge--published' : 'status-badge--hidden' ?>"><?= $isPublic ? 'Veřejné' : 'Soukromé' ?></span>
+                <?php $metadataStatus = mediaMetadataStatus($item); ?>
+                <span class="status-badge <?= $metadataStatus === 'complete' ? 'status-badge--published' : 'status-badge--pending' ?>"><?= h(mediaMetadataStatusLabel($item)) ?></span>
                 <?php if (trim((string)($item['caption'] ?? '')) !== ''): ?>
                   <span class="table-meta">Titulek: <?= h((string)$item['caption']) ?></span>
                 <?php endif; ?>
                 <?php if (trim((string)($item['credit'] ?? '')) !== ''): ?>
                   <span class="table-meta">Kredit: <?= h((string)$item['credit']) ?></span>
+                <?php endif; ?>
+                <?php if (trim((string)($item['license_label'] ?? '')) !== ''): ?>
+                  <span class="table-meta">Licence: <?= h((string)$item['license_label']) ?></span>
                 <?php endif; ?>
               </div>
 
@@ -705,6 +1062,15 @@ adminHeader('Knihovna médií');
           <fieldset>
             <legend>Metadata a viditelnost</legend>
 
+            <label for="collection_id">Kolekce</label>
+            <select id="collection_id" name="collection_id" aria-describedby="collection-id-help">
+              <option value="">Bez kolekce</option>
+              <?php foreach ($collectionOptions as $collection): ?>
+                <option value="<?= (int)$collection['id'] ?>"<?= (int)($editItem['collection_id'] ?? 0) === (int)$collection['id'] ? ' selected' : '' ?>><?= h((string)$collection['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <small id="collection-id-help" class="field-help">Zařazení do kolekce pomáhá filtrovat archiv. Změna kolekce sama nepřepisuje už vyplněná metadata média.</small>
+
             <label for="alt_text">Alt text</label>
             <input type="text" id="alt_text" name="alt_text" aria-describedby="alt-text-help" value="<?= h((string)($editItem['alt_text'] ?? '')) ?>">
             <?php if (trim((string)($editItem['alt_text'] ?? '')) === '' && mediaIsImageMime((string)($editItem['mime_type'] ?? ''))): ?>
@@ -716,8 +1082,19 @@ adminHeader('Knihovna médií');
             <label for="caption">Titulek</label>
             <textarea id="caption" name="caption" rows="3" class="media-caption-textarea"><?= h((string)($editItem['caption'] ?? '')) ?></textarea>
 
+            <label for="description">Popis</label>
+            <textarea id="description" name="description" rows="4" aria-describedby="media-description-help"><?= h((string)($editItem['description'] ?? '')) ?></textarea>
+            <small id="media-description-help" class="field-help">Delší interní nebo redakční popis média. Picker jej použije ve výsledku hledání, ale nevkládá ho do HTML obrázku.</small>
+
             <label for="credit">Kredit</label>
             <input type="text" id="credit" name="credit" value="<?= h((string)($editItem['credit'] ?? '')) ?>">
+
+            <label for="license_label">Licence</label>
+            <input type="text" id="license_label" name="license_label" value="<?= h((string)($editItem['license_label'] ?? '')) ?>">
+
+            <label for="license_url">URL licence</label>
+            <input type="url" id="license_url" name="license_url" aria-describedby="license-url-help" value="<?= h((string)($editItem['license_url'] ?? '')) ?>">
+            <small id="license-url-help" class="field-help">Volitelné. Povolené jsou jen adresy začínající http:// nebo https://.</small>
 
             <label for="visibility_edit">Viditelnost</label>
             <select id="visibility_edit" name="visibility">
@@ -762,6 +1139,10 @@ adminHeader('Knihovna médií');
             <dd><?= h((string)$editItem['mime_type']) ?></dd>
             <dt><strong>Velikost</strong></dt>
             <dd><?= h(number_format(((int)$editItem['file_size']) / 1024, 0, ',', ' ')) ?> KB</dd>
+            <dt><strong>Kolekce</strong></dt>
+            <dd><?= h((string)($editItem['collection_id'] ?? '') !== '' && (int)($editItem['collection_id'] ?? 0) > 0 ? (string)(mediaCollectionById($pdo, (int)$editItem['collection_id'])['name'] ?? 'Neznámá kolekce') : 'Bez kolekce') ?></dd>
+            <dt><strong>Stav metadat</strong></dt>
+            <dd><?= h(mediaMetadataStatusLabel($editItem)) ?></dd>
             <dt><strong>URL</strong></dt>
             <dd class="media-info-list__value--url"><a href="<?= h(mediaFileUrl($editItem)) ?>" target="_blank" rel="noopener noreferrer"><?= h(mediaFileUrl($editItem)) ?><?= newWindowLinkSrOnlySuffix() ?></a></dd>
             <dt><strong>Použití</strong></dt>

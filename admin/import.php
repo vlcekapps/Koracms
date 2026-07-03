@@ -755,18 +755,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Galerie – fotografie importovány.';
                 }
 
+                // Knihovna médií – kolekce
+                if (!empty($data['media_collections']) && is_array($data['media_collections'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_media_collections
+                         (id, name, slug, description, default_visibility, default_credit,
+                          default_license_label, default_license_url, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['media_collections'] as $row) {
+                        $name = trim((string)($row['name'] ?? 'Kolekce médií'));
+                        if ($name === '') {
+                            $name = 'Kolekce médií';
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $slug = uniqueMediaCollectionSlug(
+                            $pdo,
+                            trim((string)($row['slug'] ?? '')) !== '' ? (string)$row['slug'] : $name,
+                            (int)($row['id'] ?? 0)
+                        );
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $name,
+                            $slug,
+                            (string)($row['description'] ?? ''),
+                            normalizeMediaVisibility((string)($row['default_visibility'] ?? 'public')),
+                            trim((string)($row['default_credit'] ?? '')),
+                            trim((string)($row['default_license_label'] ?? '')),
+                            normalizeMediaLicenseUrl((string)($row['default_license_url'] ?? '')),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Knihovna médií – kolekce importovány.';
+                }
+
                 // Knihovna médií
                 if (!empty($data['media']) && is_array($data['media'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_media
-                         (id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit, visibility, uploaded_by, created_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                         (id, filename, original_name, mime_type, file_size, folder, collection_id,
+                          alt_text, caption, description, credit, license_label, license_url, visibility,
+                          uploaded_by, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
+                    $collectionExistsStmt = $pdo->prepare("SELECT id FROM cms_media_collections WHERE id = ?");
                     foreach ($data['media'] as $row) {
                         $filename = basename((string)($row['filename'] ?? ''));
                         if ($filename === '') {
                             continue;
                         }
+                        $collectionId = !empty($row['collection_id']) ? (int)$row['collection_id'] : 0;
+                        if ($collectionId > 0) {
+                            $collectionExistsStmt->execute([$collectionId]);
+                            if (!$collectionExistsStmt->fetch()) {
+                                $collectionId = 0;
+                            }
+                        }
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $updatedAt = $row['updated_at'] ?? $createdAt;
                         $ins->execute([
                             (int)($row['id'] ?? 0),
                             $filename,
@@ -774,12 +823,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             trim((string)($row['mime_type'] ?? 'application/octet-stream')),
                             max(0, (int)($row['file_size'] ?? 0)),
                             trim((string)($row['folder'] ?? 'media')) !== '' ? trim((string)$row['folder']) : 'media',
+                            $collectionId > 0 ? $collectionId : null,
                             (string)($row['alt_text'] ?? ''),
                             (string)($row['caption'] ?? ''),
+                            (string)($row['description'] ?? ''),
                             trim((string)($row['credit'] ?? '')),
+                            trim((string)($row['license_label'] ?? '')),
+                            normalizeMediaLicenseUrl((string)($row['license_url'] ?? '')),
                             normalizeMediaVisibility((string)($row['visibility'] ?? 'public')),
                             !empty($row['uploaded_by']) ? (int)$row['uploaded_by'] : null,
-                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                            $createdAt,
+                            $updatedAt,
                         ]);
                     }
                     $summary[] = 'Knihovna médií importována.';

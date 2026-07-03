@@ -1121,6 +1121,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_lock (entity_type, entity_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_media_collections (
+            id                    INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name                  VARCHAR(160) NOT NULL,
+            slug                  VARCHAR(180) NOT NULL,
+            description           TEXT,
+            default_visibility    ENUM('public','private') NOT NULL DEFAULT 'public',
+            default_credit        VARCHAR(255) NOT NULL DEFAULT '',
+            default_license_label VARCHAR(120) NOT NULL DEFAULT '',
+            default_license_url   VARCHAR(255) NOT NULL DEFAULT '',
+            sort_order            INT          NOT NULL DEFAULT 0,
+            created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_media_collections_slug (slug),
+            INDEX idx_media_collections_order (sort_order, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_media (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             filename    VARCHAR(255) NOT NULL,
@@ -1128,15 +1144,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mime_type   VARCHAR(100) NOT NULL DEFAULT '',
             file_size   INT          NOT NULL DEFAULT 0,
             folder      VARCHAR(100) NOT NULL DEFAULT 'media',
+            collection_id INT        NULL DEFAULT NULL,
             alt_text    VARCHAR(500) NOT NULL DEFAULT '',
             caption     TEXT,
+            description TEXT,
             credit      VARCHAR(255) NOT NULL DEFAULT '',
+            license_label VARCHAR(120) NOT NULL DEFAULT '',
+            license_url VARCHAR(255) NOT NULL DEFAULT '',
             visibility  ENUM('public','private') NOT NULL DEFAULT 'public',
             uploaded_by INT          NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_media_folder (folder),
             INDEX idx_media_mime (mime_type),
-            INDEX idx_media_visibility (visibility)
+            INDEX idx_media_visibility (visibility),
+            INDEX idx_media_collection (collection_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_widgets (

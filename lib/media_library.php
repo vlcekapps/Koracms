@@ -19,6 +19,123 @@ function normalizeMediaVisibility(string $value): string
     return array_key_exists($value, mediaVisibilityOptions()) ? $value : 'public';
 }
 
+function normalizeMediaLicenseUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    return normalizeHttpExternalUrl($value, false);
+}
+
+function normalizeMediaCollectionSlug(string $value): string
+{
+    $slug = slugify($value);
+    return $slug !== '' ? $slug : 'kolekce';
+}
+
+function mediaCollectionSlugExists(PDO $pdo, string $slug, int $ignoreId = 0): bool
+{
+    $slug = normalizeMediaCollectionSlug($slug);
+    $sql = 'SELECT COUNT(*) FROM cms_media_collections WHERE slug = ?';
+    $params = [$slug];
+    if ($ignoreId > 0) {
+        $sql .= ' AND id <> ?';
+        $params[] = $ignoreId;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return (int)$stmt->fetchColumn() > 0;
+}
+
+function uniqueMediaCollectionSlug(PDO $pdo, string $base, int $ignoreId = 0): string
+{
+    $baseSlug = normalizeMediaCollectionSlug($base);
+    $slug = $baseSlug;
+    $suffix = 2;
+    while (mediaCollectionSlugExists($pdo, $slug, $ignoreId)) {
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+
+    return $slug;
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function mediaCollectionOptions(PDO $pdo): array
+{
+    $stmt = $pdo->query(
+        "SELECT id, name, slug, description, default_visibility, default_credit,
+                default_license_label, default_license_url, sort_order, created_at, updated_at
+         FROM cms_media_collections
+         ORDER BY sort_order ASC, name ASC, id ASC"
+    );
+
+    return $stmt ? $stmt->fetchAll() : [];
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function mediaCollectionById(PDO $pdo, int $id): ?array
+{
+    if ($id <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, name, slug, description, default_visibility, default_credit,
+                default_license_label, default_license_url, sort_order, created_at, updated_at
+         FROM cms_media_collections
+         WHERE id = ?
+         LIMIT 1"
+    );
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * @param array<string,mixed> $media
+ */
+function mediaMetadataStatus(array $media): string
+{
+    $isImage = mediaIsImageMime((string)($media['mime_type'] ?? '')) && !mediaIsSvgMime((string)($media['mime_type'] ?? ''));
+    $missingAlt = $isImage && trim((string)($media['alt_text'] ?? '')) === '';
+    $missingCreditOrLicense = trim((string)($media['credit'] ?? '')) === ''
+        || trim((string)($media['license_label'] ?? '')) === '';
+
+    if ($missingAlt && $missingCreditOrLicense) {
+        return 'incomplete';
+    }
+    if ($missingAlt) {
+        return 'missing_alt';
+    }
+    if ($missingCreditOrLicense) {
+        return 'missing_credit_license';
+    }
+
+    return 'complete';
+}
+
+/**
+ * @param array<string,mixed> $media
+ */
+function mediaMetadataStatusLabel(array $media): string
+{
+    return match (mediaMetadataStatus($media)) {
+        'missing_alt' => 'Chybí alt text',
+        'missing_credit_license' => 'Chybí kredit nebo licence',
+        'incomplete' => 'Neúplná metadata',
+        default => 'Metadata vyplněna',
+    };
+}
+
 /**
  * @return array<string,string>
  */

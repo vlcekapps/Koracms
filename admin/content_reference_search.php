@@ -162,7 +162,10 @@ function mediaReferenceExcerpt(array $row, int $limit = 180): string
     $parts = [];
     $altText = trim((string)($row['alt_text'] ?? ''));
     $caption = trim((string)($row['caption'] ?? ''));
+    $description = trim((string)($row['description'] ?? ''));
     $credit = trim((string)($row['credit'] ?? ''));
+    $licenseLabel = trim((string)($row['license_label'] ?? ''));
+    $collectionName = trim((string)($row['collection_name'] ?? ''));
     $mimeType = trim((string)($row['mime_type'] ?? ''));
     $fileSize = (int)($row['file_size'] ?? 0);
 
@@ -172,8 +175,17 @@ function mediaReferenceExcerpt(array $row, int $limit = 180): string
     if ($caption !== '') {
         $parts[] = 'Titulek: ' . $caption;
     }
+    if ($description !== '') {
+        $parts[] = 'Popis: ' . $description;
+    }
+    if ($collectionName !== '') {
+        $parts[] = 'Kolekce: ' . $collectionName;
+    }
     if ($credit !== '') {
         $parts[] = 'Kredit: ' . $credit;
+    }
+    if ($licenseLabel !== '') {
+        $parts[] = 'Licence: ' . $licenseLabel;
     }
     if ($mimeType !== '') {
         $parts[] = strtoupper($mimeType);
@@ -888,7 +900,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
              FROM cms_podcast_shows
              WHERE " . podcastShowPublicVisibilitySql() . "
                AND (title LIKE ? OR description LIKE ? OR slug LIKE ?)
-             ORDER BY created_at DESC
+             ORDER BY m.created_at DESC
              LIMIT 6"
         );
         $showStmt->execute([$like, $like, $like]);
@@ -959,14 +971,18 @@ if (($requestedType === 'all' || $requestedType === 'forms') && isModuleEnabled(
 if ($requestedType === 'all' || $requestedType === 'media') {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, filename, original_name, alt_text, caption, credit, visibility, mime_type, file_size, folder, created_at
-             FROM cms_media
-             WHERE visibility = 'public'
-               AND (original_name LIKE ? OR alt_text LIKE ? OR caption LIKE ? OR credit LIKE ? OR mime_type LIKE ?)
+            "SELECT m.id, m.filename, m.original_name, m.alt_text, m.caption, m.description,
+                    m.credit, m.license_label, m.license_url, m.visibility, m.mime_type, m.file_size,
+                    m.folder, m.created_at, c.name AS collection_name
+             FROM cms_media m
+             LEFT JOIN cms_media_collections c ON c.id = m.collection_id
+             WHERE m.visibility = 'public'
+               AND (m.original_name LIKE ? OR m.alt_text LIKE ? OR m.caption LIKE ? OR m.description LIKE ?
+                    OR m.credit LIKE ? OR m.license_label LIKE ? OR c.name LIKE ? OR m.mime_type LIKE ?)
              ORDER BY created_at DESC
              LIMIT 10"
         );
-        $stmt->execute([$like, $like, $like, $like, $like]);
+        $stmt->execute([$like, $like, $like, $like, $like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
             $row['title'] = trim((string)($row['original_name'] ?? ''));
             $row['type'] = mediaReferenceKind($row);

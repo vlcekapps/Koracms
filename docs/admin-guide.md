@@ -1291,10 +1291,24 @@ Každé médium může mít:
 
 - `alt text`
 - `caption`
+- delší popis
 - `credit`
+- licenci a licenční URL
+- zařazení do kolekce médií
 - viditelnost `Veřejné / Soukromé`
 
 Veřejná média dál mohou používat veřejné stránky a content picker. Soukromá média jsou určená pro interní workflow a nepůjčují se do veřejného pickeru.
+
+### Kolekce médií
+
+Kolekce slouží jako archivní vrstva nad starším polem `folder`. Správce může u kolekce nastavit:
+
+- název, slug a popis
+- výchozí viditelnost nových uploadů
+- výchozí kredit, licenci a licenční URL
+- pořadí kolekce v administraci
+
+Když se nové médium nahraje do kolekce, převezme její výchozí viditelnost, kredit a licenci. Existující média se tím zpětně nepřepisují. Smazání kolekce nesmaže žádné soubory; média se jen od kolekce odpojí.
 
 ### Bezpečnostní pravidla
 
@@ -1316,14 +1330,17 @@ Pokud je médium použité, smazání je zablokované a administrace ukáže nal
 ### Co je nové v administraci
 
 - seznam médií má filtry podle typu, viditelnosti, uploadera a stavu použití
-- fulltext prochází jméno souboru, `alt text`, `caption` i `credit`
+- seznam médií umí filtrovat podle kolekce a podle kontroly metadat: `Chybí alt text`, `Chybí kredit/licence` nebo `Neúplná metadata`
+- fulltext prochází jméno souboru, `alt text`, `caption`, popis, `credit`, licenci i název kolekce
 - po uploadu, úpravě, náhradě souboru i mazání se používá PRG návrat, takže refresh neopakuje POST
 - médium lze nahradit novým souborem ve stejné MIME rodině bez rozbití existujících referencí
-- bulk akce umí přepnout na `Veřejné`, `Soukromé` a smazat nepoužitá média
+- bulk akce umí přepnout na `Veřejné`, `Soukromé`, přiřadit kolekci, doplnit výchozí kredit/licenci z kolekce a smazat nepoužitá média
 - společný upload helper při přípravě adresáře, nahrazení existujícího cíle a finálním přesunu uploadu zapisuje případné selhání do strukturovaného logu s hashem cesty
 - pokud při přesunu, náhradě nebo úklidu originálu, miniatury či WebP varianty selže souborová operace, CMS ji zapíše do strukturovaného logu s hashem cesty a příponou souboru, ne s plnou fyzickou cestou
 
+Content/media picker dál nabízí jen veřejná média. Výsledky vyhledávání ale nově ukazují i kolekci, delší popis a licenční metadata, aby editor poznal správný soubor ještě před vložením. Vložené HTML obrázku se tím nemění: picker dál zachovává `alt` atribut a nevkládá automatický `figcaption` z názvu souboru.
+
 ### Co patří do README a co sem
 
-- [README.md](../README.md) stručně říká, že knihovna médií podporuje `public/private`, canonical media helpery, blokaci mazání používaných souborů a náhradu souboru.
-- Tento dokument popisuje konkrétní redakční workflow, bezpečnostní pravidla a chování správy médií v administraci.
+- [README.md](../README.md) stručně říká, že knihovna médií podporuje `public/private`, kolekce, metadata, licence, canonical media helpery, blokaci mazání používaných souborů a náhradu souboru.
+- Tento dokument popisuje konkrétní redakční workflow, kolekce, bezpečnostní pravidla a chování správy médií v administraci.

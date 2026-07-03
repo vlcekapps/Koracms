@@ -112,11 +112,23 @@ CREATE TABLE IF NOT EXISTS cms_nav_links (
   is_active TINYINT(1),
   nav_order INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_media_collections (
+  id INT,
+  name VARCHAR(160),
+  slug VARCHAR(180),
+  default_visibility VARCHAR(20),
+  default_license_url VARCHAR(255)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_media (
   id INT,
+  collection_id INT,
   caption VARCHAR(255),
+  description TEXT,
   credit VARCHAR(255),
-  visibility VARCHAR(20)
+  license_label VARCHAR(120),
+  license_url VARCHAR(255),
+  visibility VARCHAR(20),
+  updated_at DATETIME
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_albums (
   id INT,
@@ -342,10 +354,19 @@ PHP,
 // cms_nav_links
 // idx_nav_links_scope
 // idx_nav_links_active
+// cms_media_collections
+// uq_media_collections_slug
+// idx_media_collections_order
+// cms_media.collection_id
 // cms_media.caption
+// cms_media.description
 // cms_media.credit
+// cms_media.license_label
+// cms_media.license_url
 // cms_media.visibility
+// cms_media.updated_at
 // idx_media_visibility
+// idx_media_collection
 // cms_gallery_photos.slug
 // cms_gallery_albums.default_credit
 // cms_gallery_albums.default_license_label
@@ -484,7 +505,7 @@ $sql = 'SELECT p.* FROM cms_pages p INNER JOIN cms_blogs b ON b.id = p.blog_id W
 PHP,
         'admin/content_reference_search.php' => <<<'PHP'
 <?php
-$sql = 'SELECT id, filename, original_name, alt_text, caption, credit, visibility, mime_type, file_size, folder, created_at FROM cms_media WHERE caption LIKE ?';
+$sql = 'SELECT m.id, m.filename, m.original_name, m.alt_text, m.caption, m.description, m.credit, m.license_label, m.license_url, m.visibility, m.mime_type, m.file_size, m.folder, m.created_at, c.name AS collection_name FROM cms_media m LEFT JOIN cms_media_collections c ON c.id = m.collection_id WHERE m.visibility = \'public\' AND m.caption LIKE ?';
 contentReferenceLogSourceError('media', $e);
 PHP,
         'gallery/photo.php' => <<<'PHP'
