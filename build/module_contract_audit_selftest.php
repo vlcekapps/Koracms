@@ -153,7 +153,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
             ? "['article']"
             : ($moduleKey === 'news' ? "['news']" : '[]');
         $publicPaths = $publicNav ? "['{$publicNavPath}']" : '[]';
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'sitemap_sections' => {$sitemapSections}, 'stats_page_types' => {$statsPageTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'sitemap_sections' => {$sitemapSections}, 'stats_page_types' => {$statsPageTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -177,6 +177,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleStatsPageTypes(): array { return ['blog' => ['article'], 'news' => ['news']]; }\n"
         . "function moduleStatsPageTypeMap(): array { return ['article' => 'blog', 'news' => 'news']; }\n"
         . "function moduleAdminLabel(string \$moduleKey): string { return \$moduleKey; }\n"
+        . "function moduleAdminCapability(string \$moduleKey): string { return 'content_manage_shared'; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
 
@@ -210,7 +211,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Testy a guardrails\n"
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
-        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections a admin_paths.\n"
+        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, admin_paths a admin_capability.\n"
         . "Sdílené lookup helpery modulePublicPathModuleMap() a moduleAdminPathModuleMap() drží mapy cest bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
@@ -226,10 +227,10 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
 function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
-        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types a sitemap_sections.\n"
+        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
         . "Obsahové trendy používají stats_page_types.\n"
         . "Cesty modulů mapují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
-        . "Admin routy chrání adminRouteModuleRequirements().\n"
+        . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
         . "Spusťte composer ci:module-ready.\n";
@@ -240,7 +241,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
         . "Sdílené lookupy cest poskytují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
-        . "Admin endpointy kryje adminRouteModuleRequirements().\n"
+        . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
         . "Obsahové trendy definuje stats_page_types.\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n";
@@ -257,6 +258,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'auth.php' => moduleContractAuditSelfTestAuthFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\nfunction statsPageTypeModuleKey(string \$pageType): string { return moduleStatsPageTypeMap()[\$pageType] ?? ''; }\nfunction statsContentModuleOptions(): array { foreach (array_keys(moduleStatsPageTypes()) as \$moduleKey) {} return []; }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
+        'lib/admin_command.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { moduleAdminCapability((string)\$moduleKey); 'module.' . (string)\$moduleKey; }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
         'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",
@@ -357,7 +359,7 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'content_reference_types' => [], 'search_result_types' => [], 'sitemap_sections' => [], 'stats_page_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => [], 'search_result_types' => [], 'sitemap_sections' => [], 'stats_page_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(

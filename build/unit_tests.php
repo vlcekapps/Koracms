@@ -238,6 +238,9 @@ assert_true(in_array('/admin/blog_series.php', $moduleAdminEntryPoints['blog'] ?
 assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
+assert_equals('blog_manage_own', moduleAdminCapability('blog'), 'blog admin capability comes from module manifest');
+assert_equals('bookings_manage', moduleAdminCapability('reservations'), 'reservation admin capability comes from module manifest');
+assert_equals('admin_access', moduleAdminCapability('unknown_module'), 'unknown module admin capability falls back safely');
 
 test_section('admin command helpers');
 

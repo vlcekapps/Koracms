@@ -1244,6 +1244,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $settingsLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'settings_label', $issues));
         $navLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'nav_label', $issues));
         $adminLabel = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_label', $issues));
+        $adminCapability = trim(moduleContractAuditManifestStringField($block, $moduleKey, 'admin_capability', $issues));
         $contentReferenceTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'content_reference_types', $issues);
         $searchResultTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues);
         $sitemapSections = moduleContractAuditManifestStringMapField($block, $moduleKey, 'sitemap_sections', $issues);
@@ -1259,6 +1260,11 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
 
         moduleContractAuditRequire($label !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty label.', $issues);
         moduleContractAuditRequire($adminLabel !== '', 'core module manifest entry ' . $moduleKey . ' must define a non-empty admin_label.', $issues);
+        moduleContractAuditRequire(
+            preg_match('/^[a-z][a-z0-9_]*$/', $adminCapability) === 1,
+            'core module manifest entry ' . $moduleKey . ' must define a valid admin_capability.',
+            $issues
+        );
         foreach ($contentReferenceTypes as $contentReferenceType => $contentReferenceLabel) {
             moduleContractAuditRequire(
                 preg_match('/^[a-z][a-z0-9_]*$/', $contentReferenceType) === 1,
@@ -1520,6 +1526,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_nav_path',
             'public_paths',
             'admin_paths',
+            'admin_capability',
             'adminRouteModuleRequirements()',
             'requireModuleEnabled()',
             'isModuleEnabled()',
@@ -1554,6 +1561,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'migrate.php',
             'public_paths',
             'adminRouteModuleRequirements()',
+            'admin_capability',
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
@@ -1575,6 +1583,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
             'adminRouteModuleRequirements()',
+            'admin_capability',
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
@@ -1601,6 +1610,7 @@ $contentReferenceSearchSource = moduleContractAuditReadFile($projectRoot, 'admin
 $publicSearchSource = moduleContractAuditReadFile($projectRoot, 'search.php', $issues);
 $sitemapSource = moduleContractAuditReadFile($projectRoot, 'sitemap.php', $issues);
 $httpIntegrationSource = moduleContractAuditReadFile($projectRoot, 'build/http_integration.php', $issues);
+$adminCommandSource = moduleContractAuditReadFile($projectRoot, 'lib/admin_command.php', $issues);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, 'function coreModuleDefinitions()')
@@ -1620,7 +1630,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function sitemapSectionModuleMap(')
     && str_contains($definitionsSource, 'function moduleStatsPageTypes(')
     && str_contains($definitionsSource, 'function moduleStatsPageTypeMap(')
-    && str_contains($definitionsSource, 'function moduleAdminLabel('),
+    && str_contains($definitionsSource, 'function moduleAdminLabel(')
+    && str_contains($definitionsSource, 'function moduleAdminCapability('),
     'lib/definitions.php must keep the central module manifest helper set.',
     $issues
 );
@@ -1631,6 +1642,14 @@ moduleContractAuditRequire(
     && str_contains($authSource, 'moduleAdminLabel($moduleKey)')
     && str_contains($authSource, "'message' => adminRouteModuleDisabledMessage('"),
     'auth.php must derive admin disabled module messages from moduleAdminLabel().',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($adminCommandSource, 'coreModuleDefinitions()')
+    && str_contains($adminCommandSource, 'moduleAdminCapability(')
+    && str_contains($adminCommandSource, "'module.' ."),
+    'lib/admin_command.php must derive fallback module shortcuts from coreModuleDefinitions() and admin_capability.',
     $issues
 );
 
@@ -1653,6 +1672,7 @@ foreach ([
     "'settings_label'",
     "'widget_label'",
     "'admin_label'",
+    "'admin_capability'",
     "'content_reference_types'",
     "'search_result_types'",
     "'sitemap_sections'",

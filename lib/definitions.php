@@ -9,6 +9,7 @@
  *     nav_label:string,
  *     widget_label:string,
  *     admin_label:string,
+ *     admin_capability:string,
  *     content_reference_types:array<string,string>,
  *     search_result_types:array<string,string>,
  *     sitemap_sections:array<string,string>,
@@ -32,6 +33,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Blog',
             'widget_label' => 'Blog',
             'admin_label' => 'Blog',
+            'admin_capability' => 'blog_manage_own',
             'content_reference_types' => ['blog' => 'Články blogu'],
             'search_result_types' => ['blog' => 'Článek'],
             'sitemap_sections' => [
@@ -69,6 +71,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Novinky',
             'widget_label' => 'Novinky',
             'admin_label' => 'Novinky',
+            'admin_capability' => 'news_manage_own',
             'content_reference_types' => ['news' => 'Novinky'],
             'search_result_types' => ['news' => 'Novinka'],
             'sitemap_sections' => ['news' => 'Novinky'],
@@ -93,6 +96,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Chat',
             'widget_label' => 'Chat',
             'admin_label' => 'Chat',
+            'admin_capability' => 'messages_manage',
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => ['chat_topics' => 'Témata chatu'],
@@ -117,6 +121,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Kontakt',
             'widget_label' => 'Kontakt',
             'admin_label' => 'Kontakt',
+            'admin_capability' => 'messages_manage',
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
@@ -141,6 +146,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Galerie',
             'widget_label' => 'Fotogalerie',
             'admin_label' => 'Galerie',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['gallery' => 'Fotogalerie'],
             'search_result_types' => [
                 'gallery_album' => 'Album galerie',
@@ -173,6 +179,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Akce',
             'widget_label' => 'Události',
             'admin_label' => 'Události',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['event' => 'Události'],
             'search_result_types' => ['event' => 'Akce'],
             'sitemap_sections' => [
@@ -202,6 +209,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Podcasty',
             'widget_label' => 'Podcast',
             'admin_label' => 'Podcasty',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['podcast' => 'Podcasty'],
             'search_result_types' => [
                 'podcast_show' => 'Podcast',
@@ -237,6 +245,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Zajímavá místa',
             'widget_label' => 'Místa',
             'admin_label' => 'Zajímavá místa',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['place' => 'Zajímavá místa'],
             'search_result_types' => ['place' => 'Místo'],
             'sitemap_sections' => ['places' => 'Zajímavá místa'],
@@ -262,6 +271,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Newsletter',
             'admin_label' => 'Newsletter',
+            'admin_capability' => 'newsletter_manage',
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
@@ -286,6 +296,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Ke stažení',
             'widget_label' => 'Ke stažení',
             'admin_label' => 'Ke stažení',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['download' => 'Ke stažení'],
             'search_result_types' => ['download' => 'Ke stažení'],
             'sitemap_sections' => [
@@ -318,6 +329,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Jídelní lístek',
             'widget_label' => 'Jídelní lístek',
             'admin_label' => 'Jídelní lístek',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => [],
             'search_result_types' => ['food_card' => 'Lístek'],
             'sitemap_sections' => ['food' => 'Jídelní lístek'],
@@ -346,6 +358,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Ankety',
             'widget_label' => 'Ankety',
             'admin_label' => 'Ankety',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['poll' => 'Ankety'],
             'search_result_types' => ['poll' => 'Anketa'],
             'sitemap_sections' => ['polls' => 'Ankety'],
@@ -370,6 +383,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'FAQ',
             'widget_label' => 'FAQ',
             'admin_label' => 'FAQ',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['faq' => 'FAQ'],
             'search_result_types' => ['faq' => 'FAQ'],
             'sitemap_sections' => [
@@ -398,6 +412,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => '',
             'admin_label' => 'Vývěska',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['board' => ''],
             'search_result_types' => ['board' => ''],
             'sitemap_sections' => [
@@ -430,6 +445,7 @@ function coreModuleDefinitions(): array
             'nav_label' => 'Rezervace',
             'widget_label' => 'Rezervace',
             'admin_label' => 'Rezervace',
+            'admin_capability' => 'bookings_manage',
             'content_reference_types' => [],
             'search_result_types' => ['reservation_resource' => 'Rezervace'],
             'sitemap_sections' => ['reservations' => 'Rezervace'],
@@ -462,6 +478,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Formuláře',
             'admin_label' => 'Formuláře',
+            'admin_capability' => 'content_manage_shared',
             'content_reference_types' => ['forms' => 'Formuláře'],
             'search_result_types' => [],
             'sitemap_sections' => ['forms' => 'Formuláře'],
@@ -485,6 +502,7 @@ function coreModuleDefinitions(): array
             'nav_label' => '',
             'widget_label' => 'Statistiky',
             'admin_label' => 'Statistiky',
+            'admin_capability' => 'statistics_view',
             'content_reference_types' => [],
             'search_result_types' => [],
             'sitemap_sections' => [],
@@ -871,6 +889,17 @@ function moduleAdminLabel(string $moduleKey): string
 
     $label = trim($definition['admin_label']);
     return $label !== '' ? $label : $definition['label'];
+}
+
+function moduleAdminCapability(string $moduleKey): string
+{
+    $definition = coreModuleDefinitions()[$moduleKey] ?? null;
+    if ($definition === null) {
+        return 'admin_access';
+    }
+
+    $capability = trim($definition['admin_capability']);
+    return $capability !== '' ? $capability : 'admin_access';
 }
 
 /**

@@ -95,6 +95,37 @@ function adminCommandBaseRegistry(): array
         ['action', 'new.booking', 'Nová rezervace', 'Přidat rezervaci z administrace.', $base . 'res_booking_add.php', 'reservations', 'Akce', 'bookings_manage'],
     ];
 
+    $knownCommandUrls = [];
+    foreach ($items as $item) {
+        $url = (string)($item[4] ?? '');
+        if ($url !== '') {
+            $knownCommandUrls[$url] = true;
+        }
+    }
+
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        $adminPaths = $definition['admin_paths'];
+        $primaryAdminPath = $adminPaths[0];
+
+        $url = BASE_URL . $primaryAdminPath;
+        if (isset($knownCommandUrls[$url])) {
+            continue;
+        }
+
+        $label = moduleAdminLabel((string)$moduleKey);
+        $items[] = [
+            'screen',
+            'module.' . (string)$moduleKey,
+            $label,
+            'Správa modulu ' . $label . '.',
+            $url,
+            (string)$moduleKey,
+            '',
+            moduleAdminCapability((string)$moduleKey),
+        ];
+        $knownCommandUrls[$url] = true;
+    }
+
     $result = [];
     foreach ($items as $item) {
         [$type, $key, $label, $description, $url, $module, $badge, $capability] = array_pad($item, 8, null);
