@@ -38,6 +38,7 @@ Options -Indexes
     SetEnvIfNoCase Request_URI "(^|/)media/preview\.php$" KORA_MEDIA_PREVIEW=1
     SetEnvIfNoCase User-Agent "(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|pinterest|vkshare|skypeuripreview|embedly|quora link preview|outbrain|applebot)" KORA_SOCIAL_CRAWLER=1
     SetEnvIfNoCase Request_URI "(^|/)(csp-report|health|confirm_email|subscribe_confirm|unsubscribe|newsletter_widget_subscribe|reset_password|public_logout)\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
+    SetEnvIfNoCase Request_URI "(^|/)reservations/calendar\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
     SetEnvIfNoCase Request_URI "(^|/)reservations/cancel_booking\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
     SetEnvIfNoCase Request_URI "(^|/)admin/logout\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
 </IfModule>

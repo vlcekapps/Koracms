@@ -153,6 +153,7 @@ test_section('safePublicReturnTarget()');
 assert_equals('/clanek?foo=1', safePublicReturnTarget('/clanek?foo=1', '/subscribe.php'), 'safe public return keeps ordinary internal URL');
 assert_equals('/subscribe.php', safePublicReturnTarget('https://evil.example/phish', '/subscribe.php'), 'safe public return rejects external URL');
 assert_equals('/subscribe.php', safePublicReturnTarget('/reset_password.php?token=secret', '/subscribe.php'), 'safe public return rejects password reset token URL');
+assert_equals('/subscribe.php', safePublicReturnTarget('/reservations/calendar.php?token=0123456789abcdef0123456789abcdef', '/subscribe.php'), 'safe public return rejects reservation calendar token URL');
 assert_equals('/subscribe.php', safePublicReturnTarget('/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef', '/subscribe.php'), 'safe public return rejects reservation cancellation token URL');
 
 test_section('storedRedirectTarget()');
@@ -222,6 +223,7 @@ assert_true(in_array('/board/subscribe.php', $modulePublicEntryPoints['board'] ?
 assert_true(in_array('/podcast/audio.php', $modulePublicEntryPoints['podcast'] ?? [], true), 'podcast audio endpoint is declared as a public module entrypoint');
 assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ?? [], true), 'newsletter subscribe route is declared as a public module entrypoint');
 assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
+assert_true(in_array('/reservations/calendar.php', $modulePublicEntryPoints['reservations'] ?? [], true), 'reservation calendar route is declared as a public module entrypoint');
 assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
 assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
 assert_equals('board', $modulePublicPathMap['/board/subscribe.php'] ?? null, 'board subscribe public path maps to board module');
@@ -359,6 +361,44 @@ assert_equals(
     '2026-06-01 09:30',
     eventRecurrenceShift(new DateTimeImmutable('2026-04-01 09:30'), 'monthly', 2)->format('Y-m-d H:i'),
     'event recurrence shifts monthly dates'
+);
+
+test_section('reservation reminders and calendar');
+
+$reservationTestBooking = [
+    'id' => 42,
+    'resource_name' => 'Masáž zad',
+    'resource_slug' => 'masaz-zad',
+    'booking_date' => '2026-04-02',
+    'start_time' => '09:00:00',
+    'end_time' => '10:00:00',
+    'calendar_token' => '0123456789abcdef0123456789abcdef',
+    'confirmation_token' => 'fedcba9876543210fedcba9876543210',
+    'party_size' => 2,
+    'guest_name' => 'Pavel Vlček',
+    'reminders_enabled' => 1,
+    'reminder_hours_before' => 2,
+    'reminder_sent_at' => null,
+    'status' => 'confirmed',
+];
+$reservationIcs = reservationBuildIcs($reservationTestBooking);
+assert_equals('rezervace-masaz-zad-20260402.ics', reservationIcsFilename($reservationTestBooking), 'reservation ICS filename is stable');
+assert_contains('BEGIN:VCALENDAR', $reservationIcs, 'reservation ICS starts calendar');
+assert_contains('SUMMARY:Rezervace: Masáž zad', $reservationIcs, 'reservation ICS contains resource summary');
+assert_contains('Zákazník: Pavel Vlček', $reservationIcs, 'reservation ICS contains customer name');
+assert_contains('/reservations/cancel_booking.php?token=', $reservationIcs, 'reservation ICS contains safe cancellation link when token exists');
+assert_false(
+    reservationReminderIsDue($reservationTestBooking, new DateTimeImmutable('2026-04-02 06:59:00')),
+    'reservation reminder is not due before reminder window'
+);
+assert_true(
+    reservationReminderIsDue($reservationTestBooking, new DateTimeImmutable('2026-04-02 07:00:00')),
+    'reservation reminder is due at reminder window'
+);
+$reservationTestBooking['reminder_sent_at'] = '2026-04-02 07:00:00';
+assert_false(
+    reservationReminderIsDue($reservationTestBooking, new DateTimeImmutable('2026-04-02 07:30:00')),
+    'reservation reminder is not due after it was sent'
 );
 assert_equals(
     'linuxovy-koutek-3',

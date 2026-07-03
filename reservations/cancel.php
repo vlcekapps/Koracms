@@ -55,6 +55,7 @@ if (($bookingTs - $nowTs) < ($hours * 3600)) {
 // Cancel the booking
 $upd = $pdo->prepare("UPDATE cms_res_bookings SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW() WHERE id = ?");
 $upd->execute([$bookingId]);
+reservationRecordBookingEvent($pdo, $bookingId, 'cancelled', 'Rezervace byla zrušena přihlášeným uživatelem.', $userId);
 
 // Send cancellation email
 $email = $booking['guest_email'] ?? '';

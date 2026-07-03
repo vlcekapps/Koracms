@@ -114,6 +114,90 @@ function cronDeleteOldFiles(string $directory, array $patterns, int $maxAgeSecon
 }
 
 /**
+ * @return array{sent:int, failed:int}
+ */
+function cronProcessReservationReminders(PDO $pdo): array
+{
+    $result = ['sent' => 0, 'failed' => 0];
+    if (!isModuleEnabled('reservations')) {
+        return $result;
+    }
+
+    $missingBookingColumns = cronMissingColumns($pdo, 'cms_res_bookings', [
+        'calendar_token',
+        'reminder_sent_at',
+        'reminder_last_error',
+    ]);
+    $missingResourceColumns = cronMissingColumns($pdo, 'cms_res_resources', [
+        'reminders_enabled',
+        'reminder_hours_before',
+        'reminder_message',
+        'calendar_invite_enabled',
+    ]);
+    $missingEventColumns = cronMissingColumns($pdo, 'cms_res_booking_events', [
+        'booking_id',
+        'event_type',
+        'description',
+        'created_at',
+    ]);
+    if ($missingBookingColumns !== [] || $missingResourceColumns !== [] || $missingEventColumns !== []) {
+        return $result;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT b.id
+         FROM cms_res_bookings b
+         JOIN cms_res_resources r ON r.id = b.resource_id
+         WHERE b.status = 'confirmed'
+           AND b.reminder_sent_at IS NULL
+           AND COALESCE(b.reminder_last_error, '') = ''
+           AND r.reminders_enabled = 1
+           AND TIMESTAMP(b.booking_date, b.start_time) > NOW()
+         ORDER BY b.booking_date, b.start_time, b.id
+         LIMIT 100"
+    );
+    $stmt->execute();
+    $bookingIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+    foreach ($bookingIds as $bookingId) {
+        $booking = reservationBookingForNotification($pdo, $bookingId);
+        if ($booking === null || !reservationReminderIsDue($booking)) {
+            continue;
+        }
+
+        $sent = reservationSendMail(
+            $booking,
+            reservationReminderSubject($booking),
+            reservationReminderBody($booking),
+            'reservation_reminder',
+            true
+        );
+
+        if ($sent) {
+            $pdo->prepare(
+                "UPDATE cms_res_bookings
+                 SET reminder_sent_at = NOW(), reminder_last_error = '', updated_at = NOW()
+                 WHERE id = ?"
+            )->execute([$bookingId]);
+            reservationRecordBookingEvent($pdo, $bookingId, 'reminder_sent', 'E-mailová připomínka byla odeslána.');
+            $result['sent']++;
+            continue;
+        }
+
+        $errorMessage = 'E-mailovou připomínku se nepodařilo odeslat.';
+        $pdo->prepare(
+            "UPDATE cms_res_bookings
+             SET reminder_last_error = ?, updated_at = NOW()
+             WHERE id = ?"
+        )->execute([$errorMessage, $bookingId]);
+        reservationRecordBookingEvent($pdo, $bookingId, 'reminder_failed', $errorMessage);
+        $result['failed']++;
+    }
+
+    return $result;
+}
+
+/**
  * @param list<string> $log
  */
 function cronAppendLog(array &$log, string $message): void
@@ -340,6 +424,18 @@ function runKoraCron(PDO $pdo): array
         }
     } catch (\PDOException $e) {
         cronAppendLog($log, 'Chyba čištění zámků obsahu: ' . $e->getMessage());
+    }
+
+    try {
+        $reservationReminders = cronProcessReservationReminders($pdo);
+        if ($reservationReminders['sent'] > 0) {
+            cronAppendLog($log, 'Odesláno ' . $reservationReminders['sent'] . ' připomínek rezervací');
+        }
+        if ($reservationReminders['failed'] > 0) {
+            cronAppendLog($log, 'Nepodařilo se odeslat ' . $reservationReminders['failed'] . ' připomínek rezervací');
+        }
+    } catch (\PDOException $e) {
+        cronAppendLog($log, 'Chyba připomínek rezervací: ' . $e->getMessage());
     }
 
     // 6. Automatická záloha databáze (1x denně)

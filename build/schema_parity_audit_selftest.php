@@ -333,6 +333,25 @@ CREATE TABLE IF NOT EXISTS cms_food_order_items (
   item_title VARCHAR(255),
   quantity INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_res_resources (
+  id INT,
+  reminders_enabled TINYINT(1),
+  reminder_hours_before INT,
+  reminder_message TEXT,
+  calendar_invite_enabled TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_res_bookings (
+  id INT,
+  calendar_token CHAR(32),
+  reminder_sent_at DATETIME,
+  reminder_last_error TEXT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_res_booking_events (
+  id INT,
+  booking_id INT,
+  event_type VARCHAR(40),
+  description TEXT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_stats_content_daily (
   id INT,
   stat_date DATE,
@@ -489,6 +508,18 @@ PHP,
 // cms_food_order_items
 // idx_food_order_items_order
 // idx_food_order_items_item
+// cms_res_resources.reminders_enabled
+// cms_res_resources.reminder_hours_before
+// cms_res_resources.reminder_message
+// cms_res_resources.calendar_invite_enabled
+// cms_res_bookings.calendar_token
+// cms_res_bookings.reminder_sent_at
+// cms_res_bookings.reminder_last_error
+// cms_res_booking_events
+// uq_res_calendar_token
+// idx_res_reminders
+// idx_res_booking_events_booking
+// idx_res_booking_events_type
 // cms_stats_content_daily
 // uq_stats_content_daily
 // idx_stats_content_module_date

@@ -280,6 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $status = (int)$resource['requires_approval'] ? 'pending' : 'confirmed';
                 $token = bin2hex(random_bytes(16));
+                $calendarToken = reservationCalendarToken();
 
                 if ($isGuest) {
                     $userId = null;
@@ -299,8 +300,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insertStmt = $pdo->prepare(
                     "INSERT INTO cms_res_bookings
                      (resource_id, user_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
-                      party_size, notes, status, confirmation_token, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+                      party_size, notes, status, confirmation_token, calendar_token, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
                 );
                 $insertStmt->execute([
                     $resId,
@@ -315,7 +316,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $notes,
                     $status,
                     $token,
+                    $calendarToken,
                 ]);
+                $bookingId = (int)$pdo->lastInsertId();
 
                 $recheckStmt = $pdo->prepare(
                     "SELECT COUNT(*) FROM cms_res_bookings
@@ -331,7 +334,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $pdo->commit();
 
-                    if ($guestEmail !== '') {
+                    reservationRecordBookingEvent(
+                        $pdo,
+                        $bookingId,
+                        'created',
+                        $status === 'confirmed' ? 'Rezervace byla vytvořena a potvrzena.' : 'Rezervace byla vytvořena a čeká na schválení.',
+                        null,
+                        ['status' => $status]
+                    );
+
+                    $notificationBooking = reservationBookingForNotification($pdo, $bookingId);
+
+                    if ($guestEmail !== '' && $notificationBooking !== null) {
                         $statusLabel = $status === 'confirmed' ? 'potvrzena' : 'čeká na schválení';
                         $cancelUrl = siteUrl('/reservations/cancel_booking.php?token=' . $token);
                         $mailBody = "Dobrý den,\n\n"
@@ -344,13 +358,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             . "Pokud chcete rezervaci zrušit, klikněte na tento odkaz:\n"
                             . $cancelUrl . "\n\n"
                             . "Děkujeme za rezervaci.";
-                        if (!sendMail($guestEmail, 'Rezervace – ' . $resource['name'], $mailBody)) {
-                            mailLogFailure('notification_failed', [
-                                'notification' => 'reservation_created',
-                                'resource_id' => $resId,
-                                'recipient_domain' => mailEmailDomain($guestEmail),
-                            ]);
-                        }
+                        reservationSendMail(
+                            $notificationBooking,
+                            'Rezervace – ' . $resource['name'],
+                            $mailBody,
+                            'reservation_created',
+                            $status === 'confirmed'
+                        );
                     }
 
                     if ($isGuest) {

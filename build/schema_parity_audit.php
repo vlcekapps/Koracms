@@ -235,6 +235,16 @@ $criticalInstallColumns = [
     'cms_stats_content_daily.title_snapshot' => ['cms_stats_content_daily', 'title_snapshot'],
     'cms_stats_content_daily.total_views' => ['cms_stats_content_daily', 'total_views'],
     'cms_stats_content_daily.unique_visitors' => ['cms_stats_content_daily', 'unique_visitors'],
+    'cms_res_resources.reminders_enabled' => ['cms_res_resources', 'reminders_enabled'],
+    'cms_res_resources.reminder_hours_before' => ['cms_res_resources', 'reminder_hours_before'],
+    'cms_res_resources.reminder_message' => ['cms_res_resources', 'reminder_message'],
+    'cms_res_resources.calendar_invite_enabled' => ['cms_res_resources', 'calendar_invite_enabled'],
+    'cms_res_bookings.calendar_token' => ['cms_res_bookings', 'calendar_token'],
+    'cms_res_bookings.reminder_sent_at' => ['cms_res_bookings', 'reminder_sent_at'],
+    'cms_res_bookings.reminder_last_error' => ['cms_res_bookings', 'reminder_last_error'],
+    'cms_res_booking_events.booking_id' => ['cms_res_booking_events', 'booking_id'],
+    'cms_res_booking_events.event_type' => ['cms_res_booking_events', 'event_type'],
+    'cms_res_booking_events.description' => ['cms_res_booking_events', 'description'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -389,6 +399,18 @@ $criticalMigrationSnippets = [
     'uq_stats_content_daily',
     'idx_stats_content_module_date',
     'idx_stats_content_path_hash',
+    'cms_res_resources.reminders_enabled',
+    'cms_res_resources.reminder_hours_before',
+    'cms_res_resources.reminder_message',
+    'cms_res_resources.calendar_invite_enabled',
+    'cms_res_bookings.calendar_token',
+    'cms_res_bookings.reminder_sent_at',
+    'cms_res_bookings.reminder_last_error',
+    'cms_res_booking_events',
+    'uq_res_calendar_token',
+    'idx_res_reminders',
+    'idx_res_booking_events_booking',
+    'idx_res_booking_events_type',
 ];
 
 foreach ($criticalMigrationSnippets as $snippet) {

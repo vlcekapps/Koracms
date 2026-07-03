@@ -252,7 +252,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Znalostní báze** | FAQ s veřejnými kategoriemi, hledáním, stránkováním, SEO, zpětnou vazbou a FAQPage strukturovanými daty |
 | **Formuláře** | Form Builder s přílohami, podmínkami, helpdesk workflow, webhooky a GitHub issue bridge |
 | **Vývěska** | Úřední deska s typem položky, datem vyvěšení, připnutím, filtrováním, archivem, kategoriovými landing stránkami, evidencí zveřejnění a bezpečným odběrem |
-| **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování a storno přes token |
+| **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování, připomínky, ICS pozvánky, historie změn a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL a volitelným zobrazením v navigaci |
 | **Kontakt** | Kontaktní formulář s tématy dotazů, CAPTCHA, honeypotem, rate limitingem, referenčními kódy a odpověďmi z administrace |
 | **Chat** | Moderovaná veřejná nástěnka s inbox workflow, historií a odpověďmi e-mailem |
@@ -279,6 +279,8 @@ Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zpráv
 Modul **Kontakt** nově funguje jako lehké kontaktní centrum: správce může vytvořit témata dotazů s vlastním popisem a volitelným cílovým e-mailem, návštěvník po odeslání uvidí referenční kód zprávy a administrátor může odpovědět e-mailem přímo z detailu kontaktní zprávy. Bez aktivních témat zůstává veřejný formulář jednoduchý jako dříve.
 
 Modul **Vývěska** nově podporuje důvěryhodnější veřejný archiv: detail položky ukazuje evidenci zveřejnění včetně změn URL, příloh a SHA-256 otisku souboru, kategorie mají čisté URL `/board/kategorie/{slug}` s popisem a SEO metadata a samostatný odběr vývěsky je oddělený od newsletteru. Přihlášení k odběru probíhá na `/board/subscribe.php`, vyžaduje captcha, rate-limit a potvrzení e-mailem.
+
+Modul **Rezervace** kromě zdrojů, kategorií, lokalit, schvalování a storna přes token podporuje kalendářové `.ics` pozvánky a e-mailové připomínky před potvrzeným termínem. Správce je zapíná u konkrétního zdroje, volí počet hodin předem a může doplnit vlastní text. Administrace u rezervace uchovává provozní historii změn a veřejná část **Moje rezervace** nabízí u budoucích potvrzených termínů bezpečné tokenové stažení kalendářového souboru. Export/import přenáší konfiguraci rezervačních zdrojů, ale ne osobní rezervace ani jejich historii.
 
 Knihovna **Média** nově rozlišuje veřejné a soukromé soubory, odmítá nové SVG uploady, používá canonical media helpery místo ručně skládaných `/uploads/media/...` URL, blokuje mazání používaných souborů a podporuje náhradu souboru, kolekce médií, rozšířená metadata, licenční údaje i hromadné akce v administraci. Kolekce mohou mít výchozí viditelnost, kredit a licenci pro nové uploady; přehled médií umí filtrovat podle kolekce i chybějících metadat. Souborové přesuny, náhrady a úklid miniatur se logují strukturovaně bez fyzických cest. Admin obrazovka médií používá pro upload, filtry, grid, hromadné akce a detail metadat sdílenou CSS vrstvu bez lokálních `style` atributů.
 

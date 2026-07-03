@@ -88,6 +88,17 @@ $tables = [
                                price_note, portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                                media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
                         FROM cms_food_items",
+    'res_categories' => "SELECT id, name, sort_order, created_at FROM cms_res_categories",
+    'res_resources' => "SELECT id, category_id, name, slug, description, capacity, slot_mode, slot_duration_min,
+                               min_advance_hours, max_advance_days, cancellation_hours, requires_approval, allow_guests,
+                               reminders_enabled, reminder_hours_before, reminder_message, calendar_invite_enabled,
+                               max_concurrent, location, is_active, created_at, updated_at
+                        FROM cms_res_resources",
+    'res_hours' => "SELECT id, resource_id, day_of_week, open_time, close_time, is_closed FROM cms_res_hours",
+    'res_slots' => "SELECT id, resource_id, day_of_week, start_time, end_time, max_bookings FROM cms_res_slots",
+    'res_blocked' => "SELECT id, resource_id, blocked_date, reason, created_at FROM cms_res_blocked",
+    'res_locations' => "SELECT id, name, address, created_at FROM cms_res_locations",
+    'res_resource_locations' => "SELECT resource_id, location_id FROM cms_res_resource_locations",
     'podcast_shows' => "SELECT id, title, slug, description, author, subtitle, cover_image,
                                language, category, owner_name, owner_email, explicit_mode, show_type, feed_complete,
                                feed_episode_limit, website_url, is_published, status, created_at, updated_at FROM cms_podcast_shows",

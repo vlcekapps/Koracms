@@ -59,11 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($err === '') {
+        $calendarToken = reservationCalendarToken();
         $pdo->prepare(
             "INSERT INTO cms_res_bookings
              (resource_id, user_id, guest_name, guest_email, guest_phone,
-              booking_date, start_time, end_time, party_size, notes, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', NOW(), NOW())"
+              booking_date, start_time, end_time, party_size, notes, status, calendar_token, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, NOW(), NOW())"
         )->execute([
             $resourceId,
             $userId,
@@ -75,9 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime,
             $partySize,
             $notes ?: null,
+            $calendarToken,
         ]);
 
         $newId = (int)$pdo->lastInsertId();
+        reservationRecordBookingEvent($pdo, $newId, 'created', 'Rezervace byla vytvořena administrátorem.', currentUserId());
+        $notificationBooking = reservationBookingForNotification($pdo, $newId);
+        if ($notificationBooking !== null && reservationBookingContactEmail($notificationBooking) !== '') {
+            $body = "Dobrý den,\n\n"
+                . "vaše rezervace byla vytvořena:\n\n"
+                . "Zdroj: " . (string)$notificationBooking['resource_name'] . "\n"
+                . "Datum: " . (string)$notificationBooking['booking_date'] . "\n"
+                . "Čas: " . substr((string)$notificationBooking['start_time'], 0, 5) . " – " . substr((string)$notificationBooking['end_time'], 0, 5) . "\n"
+                . "Počet osob: " . (int)$notificationBooking['party_size'] . "\n"
+                . "Stav: potvrzena\n\n"
+                . "Děkujeme za rezervaci.";
+            reservationSendMail($notificationBooking, 'Rezervace – ' . (string)$notificationBooking['resource_name'], $body, 'reservation_admin_created');
+        }
         logAction('booking_add', "id={$newId}, resource_id={$resourceId}");
 
         header('Location: res_booking_detail.php?id=' . $newId . '&ok=1&redirect=' . rawurlencode(BASE_URL . '/admin/res_bookings.php'));

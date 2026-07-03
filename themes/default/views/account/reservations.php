@@ -45,6 +45,9 @@
                       <td><span class="status-badge status-badge--<?= h($booking['status']) ?>"><?= h($booking['status_label']) ?></span></td>
                       <?php if ($section['show_actions']): ?>
                         <td>
+                          <?php if (!empty($booking['calendar_url'])): ?>
+                            <a class="button-secondary" href="<?= h((string)$booking['calendar_url']) ?>">Stáhnout do kalendáře</a>
+                          <?php endif; ?>
                           <?php if (!empty($booking['can_cancel'])): ?>
                             <form method="post" action="<?= BASE_URL ?>/reservations/cancel.php" class="inline-form">
                               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

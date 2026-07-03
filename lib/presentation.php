@@ -4802,6 +4802,440 @@ function reservationResourcePublicUrl(array $resource, array $query = []): strin
 }
 
 /**
+ * @param array<string, mixed> $booking
+ */
+function reservationBookingContactName(array $booking): string
+{
+    $name = trim((string)($booking['guest_name'] ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    return trim((string)($booking['user_first_name'] ?? '') . ' ' . (string)($booking['user_last_name'] ?? ''));
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationBookingContactEmail(array $booking): string
+{
+    $email = trim((string)($booking['guest_email'] ?? ''));
+    if ($email !== '') {
+        return $email;
+    }
+
+    return trim((string)($booking['user_email'] ?? ''));
+}
+
+function reservationCalendarToken(): string
+{
+    return bin2hex(random_bytes(16));
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationCalendarUrl(array $booking): string
+{
+    $token = trim((string)($booking['calendar_token'] ?? ''));
+    if ($token === '') {
+        return '';
+    }
+
+    return siteUrl('/reservations/calendar.php?token=' . rawurlencode($token));
+}
+
+function reservationIcsEscape(string $value): string
+{
+    $value = str_replace(["\r\n", "\r"], "\n", $value);
+    $value = str_replace('\\', '\\\\', $value);
+    $value = str_replace(';', '\;', $value);
+    $value = str_replace(',', '\,', $value);
+    return str_replace("\n", '\n', $value);
+}
+
+function reservationIcsFoldLine(string $line): string
+{
+    if (strlen($line) <= 73) {
+        return $line;
+    }
+
+    $chunks = [];
+    $remaining = $line;
+    while ($remaining !== '') {
+        $chunk = mb_strcut($remaining, 0, 73, 'UTF-8');
+        if ($chunk === '') {
+            $chunk = substr($remaining, 0, 73);
+        }
+        $chunks[] = $chunk;
+        $remaining = substr($remaining, strlen($chunk));
+    }
+
+    return implode("\r\n ", $chunks);
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationIcsFilename(array $booking): string
+{
+    $date = preg_replace('/[^0-9]+/', '', (string)($booking['booking_date'] ?? '')) ?: date('Ymd');
+    $resourceSlug = reservationResourceSlug((string)($booking['resource_slug'] ?? $booking['resource_name'] ?? 'rezervace'));
+    if ($resourceSlug === '') {
+        $resourceSlug = 'rezervace';
+    }
+
+    return 'rezervace-' . $resourceSlug . '-' . $date . '.ics';
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationBookingLocationLabel(array $booking): string
+{
+    $location = trim((string)($booking['location_label'] ?? ''));
+    if ($location !== '') {
+        return $location;
+    }
+
+    return trim((string)($booking['resource_location'] ?? ''));
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationBuildIcs(array $booking): string
+{
+    $resourceName = trim((string)($booking['resource_name'] ?? $booking['name'] ?? 'Rezervace'));
+    if ($resourceName === '') {
+        $resourceName = 'Rezervace';
+    }
+    $start = new DateTime((string)$booking['booking_date'] . ' ' . (string)$booking['start_time']);
+    $end = new DateTime((string)$booking['booking_date'] . ' ' . (string)$booking['end_time']);
+    $token = trim((string)($booking['calendar_token'] ?? ''));
+    $uidToken = $token !== '' ? $token : ('booking-' . (int)($booking['id'] ?? 0));
+    $host = (string)(parse_url(siteUrl('/'), PHP_URL_HOST) ?: 'localhost');
+    $location = reservationBookingLocationLabel($booking);
+    $contactName = reservationBookingContactName($booking);
+    $cancelUrl = trim((string)($booking['confirmation_token'] ?? '')) !== ''
+        ? siteUrl('/reservations/cancel_booking.php?token=' . rawurlencode((string)$booking['confirmation_token']))
+        : '';
+
+    $description = 'Rezervace: ' . $resourceName;
+    if ($contactName !== '') {
+        $description .= "\nZákazník: " . $contactName;
+    }
+    if ((int)($booking['party_size'] ?? 0) > 0) {
+        $description .= "\nPočet osob: " . (int)$booking['party_size'];
+    }
+    if ($cancelUrl !== '') {
+        $description .= "\nZrušení rezervace: " . $cancelUrl;
+    }
+
+    $lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Kora CMS//Reservations//CS',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        'UID:' . reservationIcsEscape($uidToken . '@' . $host),
+        'DTSTAMP:' . gmdate('Ymd\THis\Z'),
+        'DTSTART:' . $start->format('Ymd\THis'),
+        'DTEND:' . $end->format('Ymd\THis'),
+        'SUMMARY:' . reservationIcsEscape('Rezervace: ' . $resourceName),
+        'DESCRIPTION:' . reservationIcsEscape($description),
+        'STATUS:CONFIRMED',
+    ];
+    if ($location !== '') {
+        $lines[] = 'LOCATION:' . reservationIcsEscape($location);
+    }
+    if ($cancelUrl !== '') {
+        $lines[] = 'URL:' . reservationIcsEscape($cancelUrl);
+    }
+    $lines[] = 'END:VEVENT';
+    $lines[] = 'END:VCALENDAR';
+
+    return implode("\r\n", array_map('reservationIcsFoldLine', $lines)) . "\r\n";
+}
+
+/**
+ * @param array<string, mixed> $booking
+ * @return array{filename:string, content_type:string, content:string}
+ */
+function reservationBookingIcsAttachment(array $booking): array
+{
+    return [
+        'filename' => reservationIcsFilename($booking),
+        'content_type' => 'text/calendar; charset=UTF-8; method=PUBLISH',
+        'content' => reservationBuildIcs($booking),
+    ];
+}
+
+/**
+ * @return array<string, string>
+ */
+function reservationBookingEventLabels(): array
+{
+    return [
+        'created' => 'Vytvoření rezervace',
+        'approved' => 'Schválení rezervace',
+        'rejected' => 'Zamítnutí rezervace',
+        'cancelled' => 'Zrušení rezervace',
+        'completed' => 'Dokončení rezervace',
+        'no_show' => 'Neomluvená absence',
+        'auto_completed' => 'Automatické dokončení',
+        'auto_cancelled' => 'Automatické zrušení',
+        'reminder_sent' => 'Odeslání připomínky',
+        'reminder_failed' => 'Chyba připomínky',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $metadata
+ */
+function reservationRecordBookingEvent(
+    PDO $pdo,
+    int $bookingId,
+    string $eventType,
+    string $description = '',
+    ?int $actorUserId = null,
+    array $metadata = []
+): void {
+    if ($bookingId <= 0) {
+        return;
+    }
+
+    $eventType = preg_replace('/[^a-z0-9_:-]+/i', '_', $eventType) ?: 'event';
+    $description = trim($description);
+    if ($description === '') {
+        $labels = reservationBookingEventLabels();
+        $description = $labels[$eventType] ?? 'Změna rezervace';
+    }
+    $metadataJson = $metadata !== []
+        ? json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        : null;
+    if (!is_string($metadataJson)) {
+        $metadataJson = null;
+    }
+
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO cms_res_booking_events
+             (booking_id, event_type, description, actor_user_id, metadata_json, created_at)
+             VALUES (?, ?, ?, ?, ?, NOW())"
+        );
+        $stmt->execute([$bookingId, $eventType, $description, $actorUserId, $metadataJson]);
+    } catch (\PDOException $e) {
+        // Historie nesmí rozbít hlavní rezervační operaci při deployi před migrací.
+    }
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function reservationBookingForNotification(PDO $pdo, int $bookingId): ?array
+{
+    $stmt = $pdo->prepare(
+        "SELECT b.*, r.name AS resource_name, r.slug AS resource_slug, r.location AS resource_location,
+                r.reminders_enabled, r.reminder_hours_before, r.reminder_message, r.calendar_invite_enabled,
+                u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name,
+                (
+                    SELECT GROUP_CONCAT(
+                        TRIM(CONCAT(l.name, CASE WHEN l.address <> '' THEN CONCAT(' (', l.address, ')') ELSE '' END))
+                        ORDER BY l.name SEPARATOR ', '
+                    )
+                    FROM cms_res_resource_locations rl
+                    JOIN cms_res_locations l ON l.id = rl.location_id
+                    WHERE rl.resource_id = r.id
+                ) AS location_label
+         FROM cms_res_bookings b
+         JOIN cms_res_resources r ON r.id = b.resource_id
+         LEFT JOIN cms_users u ON u.id = b.user_id
+         WHERE b.id = ?"
+    );
+    $stmt->execute([$bookingId]);
+    $booking = $stmt->fetch();
+
+    return is_array($booking) ? $booking : null;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function reservationBookingForCalendarToken(PDO $pdo, string $token): ?array
+{
+    $token = trim($token);
+    if ($token === '' || preg_match('/^[a-f0-9]{32}$/', $token) !== 1) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT b.*, r.name AS resource_name, r.slug AS resource_slug, r.location AS resource_location,
+                r.reminders_enabled, r.reminder_hours_before, r.reminder_message, r.calendar_invite_enabled,
+                u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name,
+                (
+                    SELECT GROUP_CONCAT(
+                        TRIM(CONCAT(l.name, CASE WHEN l.address <> '' THEN CONCAT(' (', l.address, ')') ELSE '' END))
+                        ORDER BY l.name SEPARATOR ', '
+                    )
+                    FROM cms_res_resource_locations rl
+                    JOIN cms_res_locations l ON l.id = rl.location_id
+                    WHERE rl.resource_id = r.id
+                ) AS location_label
+         FROM cms_res_bookings b
+         JOIN cms_res_resources r ON r.id = b.resource_id
+         LEFT JOIN cms_users u ON u.id = b.user_id
+         WHERE b.calendar_token = ?
+           AND b.status = 'confirmed'
+         LIMIT 1"
+    );
+    $stmt->execute([$token]);
+    $booking = $stmt->fetch();
+
+    return is_array($booking) ? $booking : null;
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationReminderIsDue(array $booking, ?DateTimeInterface $now = null): bool
+{
+    if ((int)($booking['reminders_enabled'] ?? 0) !== 1) {
+        return false;
+    }
+    if ((string)($booking['status'] ?? '') !== 'confirmed') {
+        return false;
+    }
+    if (!empty($booking['reminder_sent_at'])) {
+        return false;
+    }
+
+    $hoursBefore = max(1, (int)($booking['reminder_hours_before'] ?? 24));
+    $now = $now ?? new DateTimeImmutable();
+    $start = new DateTimeImmutable((string)$booking['booking_date'] . ' ' . (string)$booking['start_time']);
+    if ($start <= $now) {
+        return false;
+    }
+
+    return $start->modify('-' . $hoursBefore . ' hours') <= $now;
+}
+
+/**
+ * @param array<string, mixed> $booking
+ * @return list<array{filename:string, content_type:string, content:string}>
+ */
+function reservationMailAttachments(array $booking): array
+{
+    if ((int)($booking['calendar_invite_enabled'] ?? 0) !== 1) {
+        return [];
+    }
+    if ((string)($booking['status'] ?? '') !== 'confirmed') {
+        return [];
+    }
+    if (trim((string)($booking['calendar_token'] ?? '')) === '') {
+        return [];
+    }
+
+    return [reservationBookingIcsAttachment($booking)];
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationSendMail(
+    array $booking,
+    string $subject,
+    string $body,
+    string $notification,
+    bool $includeCalendar = true
+): bool {
+    $recipient = reservationBookingContactEmail($booking);
+    if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $options = [];
+    if ($includeCalendar) {
+        $attachments = reservationMailAttachments($booking);
+        if ($attachments !== []) {
+            $options['attachments'] = $attachments;
+        }
+    }
+
+    if (!sendMail($recipient, $subject, $body, $options)) {
+        mailLogFailure('notification_failed', [
+            'notification' => $notification,
+            'booking_id' => (int)($booking['id'] ?? 0),
+            'recipient_domain' => mailEmailDomain($recipient),
+        ]);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationReminderSubject(array $booking): string
+{
+    return 'Připomínka rezervace – ' . trim((string)($booking['resource_name'] ?? 'Rezervace'));
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationReminderBody(array $booking): string
+{
+    $resourceName = trim((string)($booking['resource_name'] ?? 'Rezervace'));
+    $message = trim((string)($booking['reminder_message'] ?? ''));
+    $cancelUrl = trim((string)($booking['confirmation_token'] ?? '')) !== ''
+        ? siteUrl('/reservations/cancel_booking.php?token=' . rawurlencode((string)$booking['confirmation_token']))
+        : '';
+
+    $body = "Dobrý den,\n\n"
+        . "připomínáme vaši rezervaci:\n\n"
+        . "Zdroj: {$resourceName}\n"
+        . "Datum: " . (string)$booking['booking_date'] . "\n"
+        . "Čas: " . substr((string)$booking['start_time'], 0, 5) . " – " . substr((string)$booking['end_time'], 0, 5) . "\n"
+        . "Počet osob: " . (int)($booking['party_size'] ?? 1) . "\n";
+
+    if ($message !== '') {
+        $body .= "\n" . $message . "\n";
+    }
+    if ($cancelUrl !== '') {
+        $body .= "\nPokud chcete rezervaci zrušit, klikněte na tento odkaz:\n" . $cancelUrl . "\n";
+    }
+
+    return $body . "\nDěkujeme.\n";
+}
+
+/**
+ * @param array<string, mixed> $booking
+ */
+function reservationStatusMailBody(array $booking, string $statusLabel, string $adminNote = ''): string
+{
+    $body = "Dobrý den,\n\n";
+    $body .= "vaše rezervace byla " . $statusLabel . ".\n\n";
+    $body .= "Zdroj: " . (string)$booking['resource_name'] . "\n";
+    $body .= "Datum: " . (string)$booking['booking_date'] . "\n";
+    $body .= "Čas: " . substr((string)$booking['start_time'], 0, 5) . ' – ' . substr((string)$booking['end_time'], 0, 5) . "\n";
+    $body .= "Počet osob: " . (int)($booking['party_size'] ?? 1) . "\n";
+
+    if ($adminNote !== '') {
+        $body .= "\nPoznámka administrátora:\n" . $adminNote . "\n";
+    }
+
+    if ((string)($booking['status'] ?? '') === 'confirmed' && trim((string)($booking['confirmation_token'] ?? '')) !== '') {
+        $cancelUrl = siteUrl('/reservations/cancel_booking.php?token=' . rawurlencode((string)$booking['confirmation_token']));
+        $body .= "\nPokud chcete rezervaci zrušit, klikněte na tento odkaz:\n" . $cancelUrl . "\n";
+    }
+
+    return $body . "\nDěkujeme.\n";
+}
+
+/**
  * @param array<string, mixed> $album
  */
 function galleryAlbumPublicRequestPath(array $album): string

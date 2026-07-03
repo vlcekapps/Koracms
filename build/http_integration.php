@@ -12,6 +12,7 @@ koraAcquireDatabaseTestLock('http_integration');
 
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../admin/settings_shared.php';
+require_once __DIR__ . '/../cron.php';
 require_once __DIR__ . '/http_test_helpers.php';
 
 $baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
@@ -906,6 +907,16 @@ try {
     if (!httpIntegrationMethodGuardOk($reservationCancelMethodGuardResponse, ['GET', 'POST'])) {
         $stateChangingGetEndpointIssues[] = 'reservations/cancel_booking.php neodmítl nepodporovanou metodu bezpečnou 405 odpovědí s Allow: GET, POST';
     }
+    $reservationCalendarMethodGuardResponse = postRawUrl(
+        $baseUrl . BASE_URL . '/reservations/calendar.php?token=0123456789abcdef0123456789abcdef',
+        '',
+        'text/plain',
+        '',
+        0
+    );
+    if (!httpIntegrationMethodGuardOk($reservationCalendarMethodGuardResponse, ['GET', 'HEAD'])) {
+        $stateChangingGetEndpointIssues[] = 'reservations/calendar.php neodmítl nepodporovanou metodu bezpečnou 405 odpovědí s Allow: GET, HEAD';
+    }
     httpIntegrationPrintResult('state_changing_get_endpoints_http', $stateChangingGetEndpointIssues, $failures);
 
     $sensitiveGetCacheIssues = [];
@@ -914,6 +925,7 @@ try {
         '/subscribe_confirm.php?token=cache-guard' => 'subscribe_confirm.php',
         '/unsubscribe.php?token=cache-guard' => 'unsubscribe.php',
         '/reset_password.php?token=cache-guard' => 'reset_password.php',
+        '/reservations/calendar.php?token=0123456789abcdef0123456789abcdef' => 'reservations/calendar.php',
         '/reservations/cancel_booking.php?token=0123456789abcdef0123456789abcdef' => 'reservations/cancel_booking.php',
         '/public_logout.php' => 'public_logout.php',
         '/admin/logout.php' => 'admin/logout.php',
@@ -959,6 +971,19 @@ try {
     }
     if (str_contains($socialReservationCancelResponse['body'], 'cancel_booking.php?token=')) {
         $sensitiveGetCacheIssues[] = 'stránka zrušení rezervace propisuje token do HTML návratové URL';
+    }
+    $socialReservationCalendarResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/reservations/calendar.php?token=0123456789abcdef0123456789abcdef',
+        '',
+        0,
+        'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+    );
+    if (
+        !httpIntegrationHeaderContains($socialReservationCalendarResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($socialReservationCalendarResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($socialReservationCalendarResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $sensitiveGetCacheIssues[] = 'social crawler přebil no-store/noindex/no-referrer hlavičky kalendářového tokenu rezervace';
     }
     httpIntegrationPrintResult('sensitive_get_endpoints_cache_http', $sensitiveGetCacheIssues, $failures);
 
@@ -4349,6 +4374,14 @@ try {
     ]);
     $resourceId = (int)$pdo->lastInsertId();
     $createdResourceIds[] = $resourceId;
+    $pdo->prepare(
+        "UPDATE cms_res_resources
+         SET reminders_enabled = 1,
+             reminder_hours_before = 720,
+             reminder_message = 'Testovací připomínka rezervace.',
+             calendar_invite_enabled = 1
+         WHERE id = ?"
+    )->execute([$resourceId]);
 
     $reservationResponse = fetchUrl(
         $baseUrl . BASE_URL . '/reservations/book.php?slug=' . rawurlencode($resourceSlug) . '&date=2026-02-31',
@@ -4360,6 +4393,79 @@ try {
     }
     if (!responseHasLocationHeader($reservationResponse['headers'], BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($resourceSlug), $baseUrl)) {
         $reservationIssues[] = 'neplatné kalendářní datum rezervace nemíří zpět na detail zdroje';
+    }
+
+    $calendarToken = reservationCalendarToken();
+    $confirmationToken = bin2hex(random_bytes(16));
+    $bookingDate = (new DateTimeImmutable('+3 days'))->format('Y-m-d');
+    $pdo->prepare(
+        "INSERT INTO cms_res_bookings
+         (resource_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
+          party_size, notes, status, confirmation_token, calendar_token, created_at, updated_at)
+         VALUES (?, 'HTTP Host', 'reservation@example.test', '', ?, '09:00:00', '10:00:00',
+                 2, 'HTTP integration reservation', 'confirmed', ?, ?, NOW(), NOW())"
+    )->execute([$resourceId, $bookingDate, $confirmationToken, $calendarToken]);
+    $bookingId = (int)$pdo->lastInsertId();
+    reservationRecordBookingEvent($pdo, $bookingId, 'created', 'Rezervace byla vytvořena integračním testem.');
+
+    $calendarResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/reservations/calendar.php?token=' . rawurlencode($calendarToken),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($calendarResponse) !== 200) {
+        $reservationIssues[] = 'kalendářový endpoint pro platný token nevrátil 200';
+    }
+    if (!httpIntegrationHeaderContains($calendarResponse, 'Content-Type', 'text/calendar')) {
+        $reservationIssues[] = 'kalendářový endpoint nevrátil text/calendar';
+    }
+    if (!str_contains($calendarResponse['body'], 'BEGIN:VCALENDAR') || !str_contains($calendarResponse['body'], 'SUMMARY:Rezervace: HTTP Resource')) {
+        $reservationIssues[] = 'kalendářový endpoint nevrátil očekávaný ICS obsah';
+    }
+
+    $missingCalendarResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/reservations/calendar.php?token=0123456789abcdef0123456789abcdef',
+        '',
+        0
+    );
+    if (
+        httpIntegrationStatusCode($missingCalendarResponse) !== 404
+        || !httpIntegrationHeaderContains($missingCalendarResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($missingCalendarResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($missingCalendarResponse, 'Referrer-Policy', 'no-referrer')
+    ) {
+        $reservationIssues[] = 'neplatný kalendářový token nevrátil bezpečnou 404/no-store odpověď';
+    }
+
+    runKoraCron($pdo);
+    $reminderStmt = $pdo->prepare(
+        "SELECT reminder_sent_at, reminder_last_error
+         FROM cms_res_bookings
+         WHERE id = ?"
+    );
+    $reminderStmt->execute([$bookingId]);
+    $reminderRow = $reminderStmt->fetch() ?: [];
+    if (empty($reminderRow['reminder_sent_at']) || (string)($reminderRow['reminder_last_error'] ?? '') !== '') {
+        $reservationIssues[] = 'cron neoznačil připomínku rezervace jako odeslanou bez chyby';
+    }
+    runKoraCron($pdo);
+    $reminderEventsStmt = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM cms_res_booking_events
+         WHERE booking_id = ? AND event_type = 'reminder_sent'"
+    );
+    $reminderEventsStmt->execute([$bookingId]);
+    if ((int)$reminderEventsStmt->fetchColumn() !== 1) {
+        $reservationIssues[] = 'cron připomínka se nezapsala právě jednou do historie rezervace';
+    }
+
+    $bookingDetailResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/res_booking_detail.php?id=' . $bookingId,
+        $adminSession['cookie'],
+        0
+    );
+    if (!str_contains($bookingDetailResponse['body'], 'Historie rezervace') || !str_contains($bookingDetailResponse['body'], 'Odeslání připomínky')) {
+        $reservationIssues[] = 'admin detail rezervace nezobrazuje historii změn a připomínek';
     }
 
     httpIntegrationPrintResult('reservations_http', $reservationIssues, $failures);
@@ -7676,6 +7782,11 @@ try {
         $pdo->prepare("DELETE FROM cms_res_blocked WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_slots WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_hours WHERE resource_id = ?")->execute([$resourceId]);
+        $pdo->prepare(
+            "DELETE e FROM cms_res_booking_events e
+             JOIN cms_res_bookings b ON b.id = e.booking_id
+             WHERE b.resource_id = ?"
+        )->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_bookings WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_resources WHERE id = ?")->execute([$resourceId]);
     }

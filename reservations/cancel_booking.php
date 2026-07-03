@@ -60,6 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canCancel) {
          WHERE id = ? AND confirmation_token = ?"
     );
     $updateStmt->execute([$booking['id'], $token]);
+    if ($updateStmt->rowCount() > 0) {
+        reservationRecordBookingEvent(
+            $pdo,
+            (int)$booking['id'],
+            'cancelled',
+            'Rezervace byla zrušena přes veřejný storno odkaz.',
+            null,
+            ['source' => 'public_token']
+        );
+    }
 
     $email = $booking['guest_email'] ?: '';
     if ($email === '' && $booking['user_id']) {

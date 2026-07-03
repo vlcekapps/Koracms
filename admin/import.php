@@ -1115,6 +1115,180 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Položky jídelních lístků importovány.';
                 }
 
+                // Rezervace – importuje se jen konfigurace, ne osobní rezervace ani historie.
+                if (!empty($data['res_categories']) && is_array($data['res_categories'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_categories (id, name, sort_order, created_at)
+                         VALUES (?,?,?,?)"
+                    );
+                    foreach ($data['res_categories'] as $row) {
+                        $name = trim((string)($row['name'] ?? ''));
+                        if ($name === '') {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $name,
+                            (int)($row['sort_order'] ?? 0),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Kategorie rezervací importovány.';
+                }
+
+                if (!empty($data['res_resources']) && is_array($data['res_resources'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_resources
+                         (id, category_id, name, slug, description, capacity, slot_mode, slot_duration_min,
+                          min_advance_hours, max_advance_days, cancellation_hours, requires_approval, allow_guests,
+                          reminders_enabled, reminder_hours_before, reminder_message, calendar_invite_enabled,
+                          max_concurrent, location, is_active, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['res_resources'] as $row) {
+                        $name = trim((string)($row['name'] ?? ''));
+                        if ($name === '') {
+                            continue;
+                        }
+                        $slug = reservationResourceSlug((string)($row['slug'] ?? ''));
+                        if ($slug === '') {
+                            $slug = reservationResourceSlug($name);
+                        }
+                        $slotMode = in_array((string)($row['slot_mode'] ?? 'slots'), ['slots', 'range', 'duration'], true)
+                            ? (string)$row['slot_mode']
+                            : 'slots';
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            !empty($row['category_id']) ? (int)$row['category_id'] : null,
+                            $name,
+                            $slug,
+                            (string)($row['description'] ?? ''),
+                            max(1, (int)($row['capacity'] ?? 1)),
+                            $slotMode,
+                            max(1, (int)($row['slot_duration_min'] ?? 60)),
+                            max(0, (int)($row['min_advance_hours'] ?? 1)),
+                            max(1, (int)($row['max_advance_days'] ?? 30)),
+                            max(0, (int)($row['cancellation_hours'] ?? 24)),
+                            (int)($row['requires_approval'] ?? 0) === 1 ? 1 : 0,
+                            (int)($row['allow_guests'] ?? 0) === 1 ? 1 : 0,
+                            (int)($row['reminders_enabled'] ?? 0) === 1 ? 1 : 0,
+                            max(1, (int)($row['reminder_hours_before'] ?? 24)),
+                            (string)($row['reminder_message'] ?? ''),
+                            (int)($row['calendar_invite_enabled'] ?? 1) === 1 ? 1 : 0,
+                            max(1, (int)($row['max_concurrent'] ?? 1)),
+                            (string)($row['location'] ?? ''),
+                            (int)($row['is_active'] ?? 1) === 1 ? 1 : 0,
+                            $createdAt,
+                            $row['updated_at'] ?? $createdAt,
+                        ]);
+                    }
+                    $summary[] = 'Zdroje rezervací importovány.';
+                }
+
+                if (!empty($data['res_hours']) && is_array($data['res_hours'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_hours
+                         (id, resource_id, day_of_week, open_time, close_time, is_closed)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['res_hours'] as $row) {
+                        $resourceId = (int)($row['resource_id'] ?? 0);
+                        if ($resourceId <= 0) {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $resourceId,
+                            max(0, min(6, (int)($row['day_of_week'] ?? 0))),
+                            preg_match('/^\d{2}:\d{2}/', (string)($row['open_time'] ?? '')) ? (string)$row['open_time'] : '09:00:00',
+                            preg_match('/^\d{2}:\d{2}/', (string)($row['close_time'] ?? '')) ? (string)$row['close_time'] : '17:00:00',
+                            (int)($row['is_closed'] ?? 0) === 1 ? 1 : 0,
+                        ]);
+                    }
+                    $summary[] = 'Otevírací hodiny rezervací importovány.';
+                }
+
+                if (!empty($data['res_slots']) && is_array($data['res_slots'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_slots
+                         (id, resource_id, day_of_week, start_time, end_time, max_bookings)
+                         VALUES (?,?,?,?,?,?)"
+                    );
+                    foreach ($data['res_slots'] as $row) {
+                        $resourceId = (int)($row['resource_id'] ?? 0);
+                        if ($resourceId <= 0) {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $resourceId,
+                            max(0, min(6, (int)($row['day_of_week'] ?? 0))),
+                            preg_match('/^\d{2}:\d{2}/', (string)($row['start_time'] ?? '')) ? (string)$row['start_time'] : '09:00:00',
+                            preg_match('/^\d{2}:\d{2}/', (string)($row['end_time'] ?? '')) ? (string)$row['end_time'] : '10:00:00',
+                            max(1, (int)($row['max_bookings'] ?? 1)),
+                        ]);
+                    }
+                    $summary[] = 'Rezervační sloty importovány.';
+                }
+
+                if (!empty($data['res_blocked']) && is_array($data['res_blocked'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_blocked (id, resource_id, blocked_date, reason, created_at)
+                         VALUES (?,?,?,?,?)"
+                    );
+                    foreach ($data['res_blocked'] as $row) {
+                        $resourceId = (int)($row['resource_id'] ?? 0);
+                        $blockedDate = trim((string)($row['blocked_date'] ?? ''));
+                        if ($resourceId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $blockedDate)) {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $resourceId,
+                            $blockedDate,
+                            (string)($row['reason'] ?? ''),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Blokované termíny rezervací importovány.';
+                }
+
+                if (!empty($data['res_locations']) && is_array($data['res_locations'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_locations (id, name, address, created_at)
+                         VALUES (?,?,?,?)"
+                    );
+                    foreach ($data['res_locations'] as $row) {
+                        $name = trim((string)($row['name'] ?? ''));
+                        if ($name === '') {
+                            continue;
+                        }
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $name,
+                            (string)($row['address'] ?? ''),
+                            $row['created_at'] ?? date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    $summary[] = 'Lokality rezervací importovány.';
+                }
+
+                if (!empty($data['res_resource_locations']) && is_array($data['res_resource_locations'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_res_resource_locations (resource_id, location_id)
+                         VALUES (?,?)"
+                    );
+                    foreach ($data['res_resource_locations'] as $row) {
+                        $resourceId = (int)($row['resource_id'] ?? 0);
+                        $locationId = (int)($row['location_id'] ?? 0);
+                        if ($resourceId > 0 && $locationId > 0) {
+                            $ins->execute([$resourceId, $locationId]);
+                        }
+                    }
+                    $summary[] = 'Vazby zdrojů rezervací na lokality importovány.';
+                }
+
                 // Podcast shows (nejdřív – epizody na ně odkazují přes show_id)
                 if (!empty($data['podcast_shows']) && is_array($data['podcast_shows'])) {
                     $ins = $pdo->prepare(
@@ -1539,8 +1713,10 @@ adminHeader('Import / Export dat');
 
 <h2>Export dat</h2>
 <p>Stáhne veškerý obsah (články, novinky, stránky, události, galerie, místa, soubory ke stažení,
-   jídelní lístky, podcasty, ankety, FAQ, úřední desku, komentáře, odběratele a newslettery, nastavení) jako JSON soubor.
+   jídelní lístky, konfiguraci rezervací, podcasty, ankety, FAQ, úřední desku, komentáře,
+   odběratele a newslettery, nastavení) jako JSON soubor.
    Heslo administrátora se neexportuje.
+   Osobní rezervace ani jejich historie se z důvodu ochrany soukromí do JSON exportu nepřenášejí.
    Nahrané soubory (obrázky, audio, přílohy) je třeba přenést ručně ze složky <code>uploads/</code>.</p>
 <p>
   <a href="export.php" class="btn">Stáhnout zálohu (JSON)</a>

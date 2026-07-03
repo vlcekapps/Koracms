@@ -893,6 +893,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cancellation_hours INT          NOT NULL DEFAULT 24,
             requires_approval  TINYINT(1)   NOT NULL DEFAULT 0,
             allow_guests       TINYINT(1)   NOT NULL DEFAULT 0,
+            reminders_enabled  TINYINT(1)   NOT NULL DEFAULT 0,
+            reminder_hours_before INT       NOT NULL DEFAULT 24,
+            reminder_message   TEXT,
+            calendar_invite_enabled TINYINT(1) NOT NULL DEFAULT 1,
             max_concurrent     INT          NOT NULL DEFAULT 1,
             is_active          TINYINT(1)   NOT NULL DEFAULT 1,
             created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -955,11 +959,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             status             ENUM('pending','confirmed','cancelled','rejected','completed','no_show') NOT NULL DEFAULT 'pending',
             admin_note         TEXT,
             confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+            calendar_token     VARCHAR(64)  NULL DEFAULT NULL,
+            reminder_sent_at   DATETIME     NULL DEFAULT NULL,
+            reminder_last_error VARCHAR(500) NOT NULL DEFAULT '',
             cancelled_at       DATETIME     NULL DEFAULT NULL,
             created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_res_date (resource_id, booking_date, status),
-            INDEX idx_user (user_id, status)
+            INDEX idx_user (user_id, status),
+            UNIQUE KEY uq_res_calendar_token (calendar_token),
+            INDEX idx_res_reminders (status, reminder_sent_at, booking_date, start_time)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_res_booking_events (
+            id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            booking_id    INT          NOT NULL,
+            event_type    VARCHAR(50)  NOT NULL,
+            description   VARCHAR(500) NOT NULL DEFAULT '',
+            actor_user_id INT          NULL DEFAULT NULL,
+            metadata_json TEXT,
+            created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_res_booking_events_booking (booking_id, created_at),
+            INDEX idx_res_booking_events_type (event_type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         // ── Statistiky ────────────────────────────────────────────────────────

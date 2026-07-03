@@ -83,6 +83,10 @@ if ($adminNote !== '') {
 if ($action === 'cancel') {
     $setClauses[] = 'cancelled_at = NOW()';
 }
+if ($action === 'approve' && trim((string)($booking['calendar_token'] ?? '')) === '') {
+    $setClauses[] = 'calendar_token = ?';
+    $setParams[] = reservationCalendarToken();
+}
 
 $setParams[] = $bookingId;
 $pdo->prepare(
@@ -92,12 +96,31 @@ $pdo->prepare(
 logAction('booking_' . $action, "id={$bookingId}, new_status={$newStatus}");
 
 // ── E-mail notifikace ──
-$email = $booking['guest_email'];
-if (!$email && $booking['user_id']) {
-    $email = $booking['user_email'] ?? '';
-}
+$eventTypes = [
+    'approve' => 'approved',
+    'reject' => 'rejected',
+    'cancel' => 'cancelled',
+    'complete' => 'completed',
+    'no_show' => 'no_show',
+];
+$eventDescriptions = [
+    'approve' => 'Rezervace byla schválena.',
+    'reject' => 'Rezervace byla zamítnuta.',
+    'cancel' => 'Rezervace byla zrušena administrátorem.',
+    'complete' => 'Rezervace byla označena jako dokončená.',
+    'no_show' => 'Rezervace byla označena jako neomluvená absence.',
+];
+reservationRecordBookingEvent(
+    $pdo,
+    $bookingId,
+    $eventTypes[$action],
+    $eventDescriptions[$action],
+    currentUserId(),
+    ['from_status' => (string)$booking['status'], 'to_status' => $newStatus]
+);
 
-if ($email) {
+$notificationBooking = reservationBookingForNotification($pdo, $bookingId);
+if ($notificationBooking !== null && reservationBookingContactEmail($notificationBooking) !== '') {
     $statusLabels = [
         'confirmed' => 'potvrzena',
         'rejected'  => 'zamítnuta',
@@ -107,35 +130,9 @@ if ($email) {
     ];
 
     $statusLabel = $statusLabels[$newStatus];
-    $subject = 'Rezervace ' . $statusLabel . ' – ' . $booking['resource_name'];
-
-    $body  = "Dobrý den,\n\n";
-    $body .= "vaše rezervace byla " . $statusLabel . ".\n\n";
-    $body .= "Zdroj: " . $booking['resource_name'] . "\n";
-    $body .= "Datum: " . $booking['booking_date'] . "\n";
-    $body .= "Čas: " . $booking['start_time'] . ' – ' . $booking['end_time'] . "\n";
-    $body .= "Počet osob: " . $booking['party_size'] . "\n";
-
-    if ($adminNote !== '') {
-        $body .= "\nPoznámka administrátora:\n" . $adminNote . "\n";
-    }
-
-    // Odkaz na zrušení pro schválené rezervace (host i registrovaný)
-    if ($newStatus === 'confirmed' && $booking['confirmation_token']) {
-        $cancelUrl = siteUrl('/reservations/cancel_booking.php?token=' . $booking['confirmation_token']);
-        $body .= "\nPokud chcete rezervaci zrušit, klikněte na tento odkaz:\n" . $cancelUrl . "\n";
-    }
-
-    $body .= "\nDěkujeme.\n";
-
-    if (!sendMail($email, $subject, $body)) {
-        mailLogFailure('notification_failed', [
-            'notification' => 'reservation_status_changed',
-            'booking_id' => $bookingId,
-            'status' => $newStatus,
-            'recipient_domain' => mailEmailDomain((string)$email),
-        ]);
-    }
+    $subject = 'Rezervace ' . $statusLabel . ' – ' . (string)$notificationBooking['resource_name'];
+    $body = reservationStatusMailBody($notificationBooking, $statusLabel, $adminNote);
+    reservationSendMail($notificationBooking, $subject, $body, 'reservation_status_changed', $newStatus === 'confirmed');
 }
 
 $successRedirect = appendUrlQuery($detailRedirect, ['ok' => 1]);

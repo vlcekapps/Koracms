@@ -49,6 +49,21 @@ if (!empty($booking['user_id'])) {
 $bookingEndDt = new DateTime((string)$booking['booking_date'] . ' ' . (string)$booking['end_time']);
 $canComplete = in_array($booking['status'], ['pending', 'confirmed'], true) && $bookingEndDt <= new DateTime();
 $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
+$eventLabels = reservationBookingEventLabels();
+$bookingEvents = [];
+try {
+    $eventsStmt = $pdo->prepare(
+        "SELECT e.*, COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS actor_label
+         FROM cms_res_booking_events e
+         LEFT JOIN cms_users u ON u.id = e.actor_user_id
+         WHERE e.booking_id = ?
+         ORDER BY e.created_at, e.id"
+    );
+    $eventsStmt->execute([$id]);
+    $bookingEvents = $eventsStmt->fetchAll();
+} catch (\PDOException $e) {
+    $bookingEvents = [];
+}
 
 adminHeader('Detail rezervace #' . (int)$booking['id']);
 ?>
@@ -97,6 +112,35 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
     <?php endif; ?>
   </tbody>
 </table>
+
+<section aria-labelledby="reservation-history-heading">
+  <h2 id="reservation-history-heading">Historie rezervace</h2>
+  <?php if ($bookingEvents === []): ?>
+    <p>Zatím tu není žádná zaznamenaná historie této rezervace.</p>
+  <?php else: ?>
+    <table>
+      <caption>Historie změn rezervace #<?= (int)$booking['id'] ?></caption>
+      <thead>
+        <tr>
+          <th scope="col">Čas</th>
+          <th scope="col">Událost</th>
+          <th scope="col">Popis</th>
+          <th scope="col">Uživatel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($bookingEvents as $event): ?>
+          <tr>
+            <td><?= h((string)$event['created_at']) ?></td>
+            <td><?= h((string)($eventLabels[$event['event_type']] ?? $event['event_type'])) ?></td>
+            <td><?= h((string)($event['description'] ?? '')) ?></td>
+            <td><?= h(trim((string)($event['actor_label'] ?? '')) !== '' ? (string)$event['actor_label'] : 'Systém') ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  <?php endif; ?>
+</section>
 
 <h2>Co můžete udělat</h2>
 

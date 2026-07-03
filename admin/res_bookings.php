@@ -11,6 +11,9 @@ $filterResource = inputInt('get', 'resource_id');
 $filterStatus = in_array($_GET['status'] ?? '', ['pending', 'confirmed', 'cancelled', 'rejected', 'completed', 'no_show'], true)
     ? (string)$_GET['status']
     : '';
+$filterReminder = in_array($_GET['reminder'] ?? '', ['sent', 'waiting', 'off'], true)
+    ? (string)$_GET['reminder']
+    : '';
 $dateFrom = trim($_GET['date_from'] ?? '');
 $dateTo = trim($_GET['date_to'] ?? '');
 
@@ -34,6 +37,18 @@ if ($filterStatus !== '') {
     $params[] = $filterStatus;
 }
 
+if ($filterReminder === 'sent') {
+    $where[] = 'b.reminder_sent_at IS NOT NULL';
+} elseif ($filterReminder === 'waiting') {
+    $where[] = "r.reminders_enabled = 1
+        AND b.status = 'confirmed'
+        AND b.reminder_sent_at IS NULL
+        AND COALESCE(b.reminder_last_error, '') = ''
+        AND TIMESTAMP(b.booking_date, b.start_time) > NOW()";
+} elseif ($filterReminder === 'off') {
+    $where[] = 'r.reminders_enabled = 0';
+}
+
 if ($dateFrom !== '') {
     $where[] = 'b.booking_date >= ?';
     $params[] = $dateFrom;
@@ -44,7 +59,7 @@ if ($dateTo !== '') {
     $params[] = $dateTo;
 }
 
-$defaultFilter = ($q === '' && $filterStatus === '' && $dateFrom === '' && $dateTo === '' && $filterResource === null);
+$defaultFilter = ($q === '' && $filterStatus === '' && $filterReminder === '' && $dateFrom === '' && $dateTo === '' && $filterResource === null);
 if ($defaultFilter) {
     $where[] = "(b.status IN ('pending','confirmed','completed','no_show') OR (b.status IN ('cancelled','rejected') AND b.booking_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)))";
 }
@@ -66,7 +81,7 @@ $page = max(1, min($pages, (int)($_GET['strana'] ?? 1)));
 $offset = ($page - 1) * $perPage;
 
 $rowsStmt = $pdo->prepare(
-    "SELECT b.*, r.name AS resource_name, r.slug AS resource_slug,
+    "SELECT b.*, r.name AS resource_name, r.slug AS resource_slug, r.reminders_enabled,
             COALESCE(NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)), ''), u.email) AS user_name
      FROM cms_res_bookings b
      LEFT JOIN cms_res_resources r ON r.id = b.resource_id
@@ -91,6 +106,7 @@ $filterParams = array_filter([
     'q' => $q,
     'resource_id' => $filterResource,
     'status' => $filterStatus,
+    'reminder' => $filterReminder,
     'date_from' => $dateFrom,
     'date_to' => $dateTo,
 ], static fn ($value): bool => $value !== '' && $value !== null);
@@ -136,6 +152,15 @@ adminHeader('Rezervace');
         </select>
       </div>
       <div>
+        <label for="reminder">Připomínka</label>
+        <select id="reminder" name="reminder" class="res-bookings-filter-select">
+          <option value="">– Všechny –</option>
+          <option value="sent"<?= $filterReminder === 'sent' ? ' selected' : '' ?>>Odeslána</option>
+          <option value="waiting"<?= $filterReminder === 'waiting' ? ' selected' : '' ?>>Čeká</option>
+          <option value="off"<?= $filterReminder === 'off' ? ' selected' : '' ?>>Vypnuto</option>
+        </select>
+      </div>
+      <div>
         <label for="date_from">Datum od</label>
         <input type="date" id="date_from" name="date_from" value="<?= h($dateFrom) ?>" class="res-bookings-filter-select">
       </div>
@@ -177,6 +202,7 @@ adminHeader('Rezervace');
         <th scope="col">Termín</th>
         <th scope="col">Počet osob</th>
         <th scope="col">Stav</th>
+        <th scope="col">Připomínka</th>
         <th scope="col">Akce</th>
       </tr>
     </thead>
@@ -199,6 +225,16 @@ adminHeader('Rezervace');
         $detailHref = 'res_booking_detail.php?id=' . (int)$booking['id'];
         $detailHref .= '&redirect=' . rawurlencode($currentRedirect);
         $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
+        $reminderLabel = '–';
+        if ((int)($booking['reminders_enabled'] ?? 0) !== 1) {
+            $reminderLabel = 'Vypnuto';
+        } elseif (!empty($booking['reminder_sent_at'])) {
+            $reminderLabel = 'Odeslána ' . (string)$booking['reminder_sent_at'];
+        } elseif (trim((string)($booking['reminder_last_error'] ?? '')) !== '') {
+            $reminderLabel = 'Chyba: ' . (string)$booking['reminder_last_error'];
+        } elseif ((string)$booking['status'] === 'confirmed') {
+            $reminderLabel = 'Čeká';
+        }
         ?>
       <tr>
         <td><?= (int)$booking['id'] ?></td>
@@ -219,6 +255,7 @@ adminHeader('Rezervace');
             <?= h((string)($statusLabels[$booking['status']] ?? $booking['status'])) ?>
           </strong>
         </td>
+        <td><?= h($reminderLabel) ?></td>
         <td class="actions">
           <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
           <?php if ($booking['status'] === 'pending'): ?>

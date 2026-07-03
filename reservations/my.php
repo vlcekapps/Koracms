@@ -72,6 +72,16 @@ $cancelled = $cancelledStmt->fetchAll();
 foreach ($upcoming as &$booking) {
     $booking['status_label'] = $statusLabels[$booking['status']] ?? $booking['status'];
     $booking['can_cancel'] = canCancelBooking($booking, $nowTs);
+    $bookingTs = strtotime($booking['booking_date'] . ' ' . $booking['start_time']);
+    $booking['calendar_url'] = '';
+    if (
+        $booking['status'] === 'confirmed'
+        && $bookingTs !== false
+        && $bookingTs > $nowTs
+        && trim((string)($booking['calendar_token'] ?? '')) !== ''
+    ) {
+        $booking['calendar_url'] = reservationCalendarUrl($booking);
+    }
 }
 unset($booking);
 

@@ -23,6 +23,10 @@ $maxAdvanceDays = max(1, (int)($_POST['max_advance_days'] ?? 30));
 $cancellationHours = max(0, (int)($_POST['cancellation_hours'] ?? 0));
 $requiresApproval = isset($_POST['requires_approval']) ? 1 : 0;
 $allowGuests = isset($_POST['allow_guests']) ? 1 : 0;
+$remindersEnabled = isset($_POST['reminders_enabled']) ? 1 : 0;
+$reminderHoursBefore = (int)($_POST['reminder_hours_before'] ?? 24);
+$reminderMessage = trim((string)($_POST['reminder_message'] ?? ''));
+$calendarInviteEnabled = isset($_POST['calendar_invite_enabled']) ? 1 : 0;
 $maxConcurrent = max(1, (int)($_POST['max_concurrent'] ?? 1));
 $hoursData = $_POST['hours'] ?? [];
 $slotsData = $_POST['slots'] ?? [];
@@ -79,6 +83,10 @@ $stmtSlug = $pdo->prepare('SELECT id FROM cms_res_resources WHERE slug = ? AND i
 $stmtSlug->execute([$slug, $id ?? 0]);
 if ($stmtSlug->fetch()) {
     header('Location: ' . $redirectToForm($id, 'slug'));
+    exit;
+}
+if ($reminderHoursBefore < 1) {
+    header('Location: ' . $redirectToForm($id, 'reminder_hours'));
     exit;
 }
 
@@ -149,7 +157,9 @@ try {
              SET name = ?, slug = ?, description = ?, category_id = ?,
                  capacity = ?, slot_mode = ?, slot_duration_min = ?,
                  min_advance_hours = ?, max_advance_days = ?, cancellation_hours = ?,
-                 requires_approval = ?, allow_guests = ?, max_concurrent = ?
+                 requires_approval = ?, allow_guests = ?, reminders_enabled = ?,
+                 reminder_hours_before = ?, reminder_message = ?, calendar_invite_enabled = ?,
+                 max_concurrent = ?
              WHERE id = ?'
         )->execute([
             $name,
@@ -164,6 +174,10 @@ try {
             $cancellationHours,
             $requiresApproval,
             $allowGuests,
+            $remindersEnabled,
+            $reminderHoursBefore,
+            $reminderMessage !== '' ? $reminderMessage : null,
+            $calendarInviteEnabled,
             $maxConcurrent,
             $id,
         ]);
@@ -171,8 +185,10 @@ try {
         $pdo->prepare(
             'INSERT INTO cms_res_resources
                 (name, slug, description, category_id, capacity, slot_mode, slot_duration_min,
-                 min_advance_hours, max_advance_days, cancellation_hours, requires_approval, allow_guests, max_concurrent, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
+                 min_advance_hours, max_advance_days, cancellation_hours, requires_approval, allow_guests,
+                 reminders_enabled, reminder_hours_before, reminder_message, calendar_invite_enabled,
+                 max_concurrent, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
         )->execute([
             $name,
             $slug,
@@ -186,6 +202,10 @@ try {
             $cancellationHours,
             $requiresApproval,
             $allowGuests,
+            $remindersEnabled,
+            $reminderHoursBefore,
+            $reminderMessage !== '' ? $reminderMessage : null,
+            $calendarInviteEnabled,
             $maxConcurrent,
         ]);
 

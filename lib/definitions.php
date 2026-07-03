@@ -440,6 +440,7 @@ function coreModuleDefinitions(): array
                 '/reservations/book.php',
                 '/reservations/my.php',
                 '/reservations/cancel.php',
+                '/reservations/calendar.php',
                 '/reservations/cancel_booking.php',
             ],
             'public_nav_order' => 130,

@@ -841,12 +841,34 @@ function autoCompleteBookings(): void
     try {
         $pdo = db_connect();
         // confirmed → completed
+        $completedIds = array_map(
+            'intval',
+            $pdo->query(
+                "SELECT id
+                 FROM cms_res_bookings
+                 WHERE status = 'confirmed'
+                   AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
+            )->fetchAll(PDO::FETCH_COLUMN)
+        );
         $pdo->exec(
             "UPDATE cms_res_bookings SET status = 'completed', updated_at = NOW()
              WHERE status = 'confirmed'
                AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
         );
+        foreach ($completedIds as $bookingId) {
+            reservationRecordBookingEvent($pdo, $bookingId, 'auto_completed', 'Rezervace byla automaticky dokončena po uplynutí termínu.');
+        }
+
         // pending → cancelled (termín vypršel bez schválení)
+        $cancelledIds = array_map(
+            'intval',
+            $pdo->query(
+                "SELECT id
+                 FROM cms_res_bookings
+                 WHERE status = 'pending'
+                   AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
+            )->fetchAll(PDO::FETCH_COLUMN)
+        );
         $pdo->exec(
             "UPDATE cms_res_bookings
              SET status = 'cancelled', updated_at = NOW(), cancelled_at = NOW(),
@@ -857,6 +879,9 @@ function autoCompleteBookings(): void
              WHERE status = 'pending'
                AND (booking_date < CURDATE() OR (booking_date = CURDATE() AND end_time < CURTIME()))"
         );
+        foreach ($cancelledIds as $bookingId) {
+            reservationRecordBookingEvent($pdo, $bookingId, 'auto_cancelled', 'Rezervace byla automaticky zrušena, protože termín vypršel bez schválení.');
+        }
     } catch (\PDOException $e) {
         // Tabulka nemusí existovat
     }

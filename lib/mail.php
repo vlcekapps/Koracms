@@ -266,13 +266,101 @@ function sendBoardItemNotification(string $recipient, string $token, array $docu
 }
 
 /**
+ * @param array<string, mixed> $attachment
+ * @return array{filename:string, content_type:string, content:string}|null
+ */
+function mailNormalizeAttachment(array $attachment): ?array
+{
+    $filename = mailSanitizeHeaderValue((string)($attachment['filename'] ?? ''));
+    $contentType = mailSanitizeHeaderValue((string)($attachment['content_type'] ?? ''));
+    $content = (string)($attachment['content'] ?? '');
+
+    if ($filename === '' || $content === '') {
+        return null;
+    }
+    if ($contentType === '' || preg_match('/^[a-z0-9.+-]+\/[a-z0-9.+-]+(?:;\s*[a-z0-9.+-]+=[^;\r\n]+)*$/i', $contentType) !== 1) {
+        $contentType = 'application/octet-stream';
+    }
+
+    return [
+        'filename' => preg_replace('/[^A-Za-z0-9._ -]+/', '_', $filename) ?: 'attachment.bin',
+        'content_type' => $contentType,
+        'content' => $content,
+    ];
+}
+
+/**
+ * @param mixed $attachments
+ * @return list<array{filename:string, content_type:string, content:string}>
+ */
+function mailNormalizeAttachments(mixed $attachments): array
+{
+    if (!is_array($attachments)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($attachments as $attachment) {
+        if (!is_array($attachment)) {
+            continue;
+        }
+        $normalizedAttachment = mailNormalizeAttachment($attachment);
+        if ($normalizedAttachment !== null) {
+            $normalized[] = $normalizedAttachment;
+        }
+    }
+
+    return $normalized;
+}
+
+/**
+ * @param list<array{filename:string, content_type:string, content:string}> $attachments
+ * @return array{0:string, 1:string}
+ */
+function mailBuildMimeBody(string $body, array $attachments): array
+{
+    [$encodedBody, $transferEncoding] = mailEncodeBody($body);
+    if ($attachments === []) {
+        return [
+            "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: {$transferEncoding}\r\n",
+            $encodedBody,
+        ];
+    }
+
+    $boundary = '=_KoraCMS_' . bin2hex(random_bytes(12));
+    $messageBody = "This is a multi-part message in MIME format.\r\n\r\n"
+        . "--{$boundary}\r\n"
+        . "Content-Type: text/plain; charset=UTF-8\r\n"
+        . "Content-Transfer-Encoding: {$transferEncoding}\r\n\r\n"
+        . $encodedBody . "\r\n";
+
+    foreach ($attachments as $attachment) {
+        $encodedFilename = mailEncodeHeaderValue($attachment['filename']);
+        $encodedAttachment = rtrim(chunk_split(base64_encode($attachment['content']), 76, "\r\n"));
+        $messageBody .= "--{$boundary}\r\n"
+            . "Content-Type: {$attachment['content_type']}; name=\"{$encodedFilename}\"\r\n"
+            . "Content-Transfer-Encoding: base64\r\n"
+            . "Content-Disposition: attachment; filename=\"{$encodedFilename}\"\r\n\r\n"
+            . $encodedAttachment . "\r\n";
+    }
+
+    $messageBody .= "--{$boundary}--";
+
+    return [
+        "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n",
+        $messageBody,
+    ];
+}
+
+/**
  * Odešle e-mail v UTF-8 přes SMTP. Vrátí true při úspěchu.
  *
  * Konfigurace přes konstanty v config.php (SMTP_HOST, SMTP_PORT,
  * SMTP_USER, SMTP_PASS, SMTP_SECURE). Pokud nejsou definovány,
  * použije se localhost:25 bez autentizace.
  *
- * @param array{reply_to?:string, reply_to_name?:string} $options
+ * @param array{reply_to?:string, reply_to_name?:string, attachments?:mixed} $options
  */
 function sendMail(string $to, string $subject, string $body, array $options = []): bool
 {
@@ -309,7 +397,8 @@ function sendMail(string $to, string $subject, string $body, array $options = []
         return true;
     }
 
-    [$encodedBody, $transferEncoding] = mailEncodeBody($body);
+    $attachments = mailNormalizeAttachments($options['attachments'] ?? []);
+    [$contentHeaders, $encodedBody] = mailBuildMimeBody($body, $attachments);
     $messageId = mailBuildMessageId($safeFrom);
     $mailHost = mailIdentityHost($safeFrom);
     $encodedSubject = mailEncodeHeaderValue($safeSubject);
@@ -434,8 +523,7 @@ function sendMail(string $to, string $subject, string $body, array $options = []
          . "To: {$toHeader}\r\n"
          . "Subject: {$encodedSubject}\r\n"
          . "Reply-To: {$replyToHeader}\r\n"
-         . "Content-Type: text/plain; charset=UTF-8\r\n"
-         . "Content-Transfer-Encoding: {$transferEncoding}\r\n"
+         . $contentHeaders
          . "MIME-Version: 1.0\r\n"
          . "X-Mailer: Kora CMS SMTP\r\n"
          . "\r\n"

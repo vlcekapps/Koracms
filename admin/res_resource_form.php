@@ -67,6 +67,7 @@ $fieldErrorMap = [
     'hours' => ['hours'],
     'slots' => ['slots'],
     'blocked_date' => ['blocked_dates'],
+    'reminder_hours' => ['reminder_hours_before'],
 ];
 $fieldErrorMessages = [
     'name' => 'Název zdroje je povinný.',
@@ -75,6 +76,7 @@ $fieldErrorMessages = [
     'hours' => 'Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.',
     'slots' => 'Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.',
     'blocked_date' => 'Blokované datum musí být ve správném formátu.',
+    'reminder_hours' => 'Předstih připomínky musí být alespoň 1 hodina.',
 ];
 ?>
 
@@ -90,6 +92,8 @@ $fieldErrorMessages = [
   <p role="alert" class="error" id="form-error">Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.</p>
 <?php elseif ($err === 'blocked_date'): ?>
   <p role="alert" class="error" id="form-error">Blokované datum musí být ve správném formátu.</p>
+<?php elseif ($err === 'reminder_hours'): ?>
+  <p role="alert" class="error" id="form-error">Předstih připomínky musí být alespoň 1 hodina.</p>
 <?php elseif ($err === 'save'): ?>
   <p role="alert" class="error" id="form-error">Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.</p>
 <?php endif; ?>
@@ -233,6 +237,37 @@ $fieldErrorMessages = [
            aria-describedby="resource-max-concurrent-help"
            value="<?= (int)($resource['max_concurrent'] ?? 1) ?>">
     <small id="resource-max-concurrent-help" class="field-help">Kolik nezávislých skupin nebo osob si může rezervovat stejný slot, například masáž = 1 a prohlídka = 10.</small>
+  </fieldset>
+
+  <fieldset class="res-resource-fieldset">
+    <legend>Připomínky a kalendář</legend>
+
+    <div class="res-resource-check-row">
+      <input type="checkbox" id="calendar_invite_enabled" name="calendar_invite_enabled" value="1"
+             aria-describedby="resource-calendar-invite-help"
+             <?= (int)($resource['calendar_invite_enabled'] ?? 1) === 1 ? 'checked' : '' ?>>
+      <label for="calendar_invite_enabled" class="admin-checkbox-label">Přikládat kalendářovou pozvánku</label>
+    </div>
+    <small id="resource-calendar-invite-help" class="field-help res-resource-help-tight">Potvrzené rezervace dostanou soubor <code>.ics</code> a v části Moje rezervace bude dostupné stažení do kalendáře.</small>
+
+    <div class="res-resource-check-row res-resource-check-row--compact">
+      <input type="checkbox" id="reminders_enabled" name="reminders_enabled" value="1"
+             aria-describedby="resource-reminders-enabled-help"
+             <?= !empty($resource['reminders_enabled']) ? 'checked' : '' ?>>
+      <label for="reminders_enabled" class="admin-checkbox-label">Posílat e-mailovou připomínku před termínem</label>
+    </div>
+    <small id="resource-reminders-enabled-help" class="field-help res-resource-help-tight">Připomínku zpracuje cron pouze u potvrzených budoucích rezervací a každou odešle nejvýše jednou.</small>
+
+    <label for="reminder_hours_before">Kolik hodin předem připomenout</label>
+    <input type="number" id="reminder_hours_before" name="reminder_hours_before" min="1" class="admin-input-compact"
+           <?= adminFieldAttributes('reminder_hours_before', $err, $fieldErrorMap, ['resource-reminder-hours-help']) ?>
+           value="<?= max(1, (int)($resource['reminder_hours_before'] ?? 24)) ?>">
+    <small id="resource-reminder-hours-help" class="field-help">Například 24 znamená připomínku den před termínem.</small>
+    <?php adminRenderFieldError('reminder_hours_before', $err, $fieldErrorMap, $fieldErrorMessages['reminder_hours']); ?>
+
+    <label for="reminder_message">Vlastní text připomínky</label>
+    <textarea id="reminder_message" name="reminder_message" rows="3" aria-describedby="resource-reminder-message-help"><?= h((string)($resource['reminder_message'] ?? '')) ?></textarea>
+    <small id="resource-reminder-message-help" class="field-help">Nepovinné. Text se přidá do e-mailu s připomínkou.</small>
   </fieldset>
 
   <!-- C) Opening hours -->

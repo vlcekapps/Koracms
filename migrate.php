@@ -886,6 +886,10 @@ $tables = [
         cancellation_hours INT          NOT NULL DEFAULT 24,
         requires_approval  TINYINT(1)   NOT NULL DEFAULT 0,
         allow_guests       TINYINT(1)   NOT NULL DEFAULT 0,
+        reminders_enabled  TINYINT(1)   NOT NULL DEFAULT 0,
+        reminder_hours_before INT       NOT NULL DEFAULT 24,
+        reminder_message   TEXT,
+        calendar_invite_enabled TINYINT(1) NOT NULL DEFAULT 1,
         max_concurrent     INT          NOT NULL DEFAULT 1,
         is_active          TINYINT(1)   NOT NULL DEFAULT 1,
         created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -948,11 +952,28 @@ $tables = [
         status             ENUM('pending','confirmed','cancelled','rejected','completed','no_show') NOT NULL DEFAULT 'pending',
         admin_note         TEXT,
         confirmation_token VARCHAR(64)  NOT NULL DEFAULT '',
+        calendar_token     VARCHAR(64)  NULL DEFAULT NULL,
+        reminder_sent_at   DATETIME     NULL DEFAULT NULL,
+        reminder_last_error VARCHAR(500) NOT NULL DEFAULT '',
         cancelled_at       DATETIME     NULL DEFAULT NULL,
         created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_res_date (resource_id, booking_date, status),
-        INDEX idx_user (user_id, status)
+        INDEX idx_user (user_id, status),
+        UNIQUE KEY uq_res_calendar_token (calendar_token),
+        INDEX idx_res_reminders (status, reminder_sent_at, booking_date, start_time)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_res_booking_events' => "CREATE TABLE IF NOT EXISTS cms_res_booking_events (
+        id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        booking_id    INT          NOT NULL,
+        event_type    VARCHAR(50)  NOT NULL,
+        description   VARCHAR(500) NOT NULL DEFAULT '',
+        actor_user_id INT          NULL DEFAULT NULL,
+        metadata_json TEXT,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_res_booking_events_booking (booking_id, created_at),
+        INDEX idx_res_booking_events_type (event_type)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     // ── Statistiky ──
@@ -1416,6 +1437,13 @@ $addColumns = [
     'cms_users.updated_at'           => "ALTER TABLE cms_users ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     // cms_res_resources – povolení hostů
     'cms_res_resources.allow_guests' => "ALTER TABLE cms_res_resources ADD COLUMN allow_guests TINYINT(1) NOT NULL DEFAULT 0",
+    'cms_res_resources.reminders_enabled' => "ALTER TABLE cms_res_resources ADD COLUMN reminders_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER allow_guests",
+    'cms_res_resources.reminder_hours_before' => "ALTER TABLE cms_res_resources ADD COLUMN reminder_hours_before INT NOT NULL DEFAULT 24 AFTER reminders_enabled",
+    'cms_res_resources.reminder_message' => "ALTER TABLE cms_res_resources ADD COLUMN reminder_message TEXT AFTER reminder_hours_before",
+    'cms_res_resources.calendar_invite_enabled' => "ALTER TABLE cms_res_resources ADD COLUMN calendar_invite_enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER reminder_message",
+    'cms_res_bookings.calendar_token' => "ALTER TABLE cms_res_bookings ADD COLUMN calendar_token VARCHAR(64) NULL DEFAULT NULL AFTER confirmation_token",
+    'cms_res_bookings.reminder_sent_at' => "ALTER TABLE cms_res_bookings ADD COLUMN reminder_sent_at DATETIME NULL DEFAULT NULL AFTER calendar_token",
+    'cms_res_bookings.reminder_last_error' => "ALTER TABLE cms_res_bookings ADD COLUMN reminder_last_error VARCHAR(500) NOT NULL DEFAULT '' AFTER reminder_sent_at",
     // cms_articles – počítadlo zobrazení
     'cms_articles.view_count'        => "ALTER TABLE cms_articles ADD COLUMN view_count INT NOT NULL DEFAULT 0",
     'cms_articles.is_featured_in_blog' => "ALTER TABLE cms_articles ADD COLUMN is_featured_in_blog TINYINT(1) NOT NULL DEFAULT 0",
@@ -3433,6 +3461,45 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Index <code>idx_media_collection</code> pro kolekce médií – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if (!$indexExists('cms_res_bookings', 'uq_res_calendar_token')) {
+        $pdo->exec("ALTER TABLE cms_res_bookings ADD UNIQUE KEY uq_res_calendar_token (calendar_token)");
+        $log[] = "✓ Unikátní index <code>uq_res_calendar_token</code> pro kalendářové tokeny rezervací přidán – OK";
+    } else {
+        $log[] = "· Unikátní index <code>uq_res_calendar_token</code> již existuje – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Unikátní index <code>uq_res_calendar_token</code> – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if (!$indexExists('cms_res_bookings', 'idx_res_reminders')) {
+        $pdo->exec("ALTER TABLE cms_res_bookings ADD INDEX idx_res_reminders (status, reminder_sent_at, booking_date, start_time)");
+        $log[] = "✓ Index <code>idx_res_reminders</code> pro připomínky rezervací přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_res_reminders</code> již existuje – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Index <code>idx_res_reminders</code> – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if (!$indexExists('cms_res_booking_events', 'idx_res_booking_events_booking')) {
+        $pdo->exec("ALTER TABLE cms_res_booking_events ADD INDEX idx_res_booking_events_booking (booking_id, created_at)");
+        $log[] = "✓ Index <code>idx_res_booking_events_booking</code> pro historii rezervací přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_res_booking_events_booking</code> již existuje – přeskočeno";
+    }
+    if (!$indexExists('cms_res_booking_events', 'idx_res_booking_events_type')) {
+        $pdo->exec("ALTER TABLE cms_res_booking_events ADD INDEX idx_res_booking_events_type (event_type)");
+        $log[] = "✓ Index <code>idx_res_booking_events_type</code> pro historii rezervací přidán – OK";
+    } else {
+        $log[] = "· Index <code>idx_res_booking_events_type</code> již existuje – přeskočeno";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Indexy historie rezervací – CHYBA: " . h($e->getMessage());
 }
 
 foreach ([

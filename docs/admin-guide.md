@@ -848,6 +848,34 @@ Důležité: opakování je jednorázový generátor, ne živé kalendářové p
 
 ---
 
+## Rezervace – připomínky, kalendář a historie
+
+Modul **Rezervace** kromě zdrojů, kategorií, lokalit, veřejného booking flow a storna přes token umí kalendářové `.ics` pozvánky, e-mailové připomínky a provozní historii změn rezervace.
+
+### Nastavení zdroje
+
+V editoru zdroje rezervací je část **Připomínky a kalendář**. Správce zde může zapnout kalendářovou pozvánku, připomínky před termínem, určit počet hodin před začátkem rezervace a doplnit vlastní text připomínky. Nastavení platí vždy pro konkrétní zdroj, takže různé provozy mohou mít jiné chování.
+
+Kalendářová pozvánka se přikládá k e-mailu při vytvoření potvrzené rezervace nebo při pozdějším schválení čekající rezervace. Připomínky zpracovává běžný `cron.php`: pošle je jen potvrzeným budoucím rezervacím, jen jednou, a výsledek uloží k rezervaci.
+
+### Administrace rezervací
+
+Přehled rezervací nabízí filtr **Připomínka**, který rozlišuje odeslané, čekající a vypnuté připomínky. U jednotlivých řádků je vidět i případná chyba posledního pokusu, aby správce poznal, proč připomínka neodešla.
+
+Detail rezervace obsahuje sekci **Historie rezervace**. Zapisuje vytvoření, schválení, zamítnutí, zrušení, dokončení, no-show, automatické dokončení a odeslání nebo chybu připomínky. Historie je provozní audit pro administraci; není to veřejná časová osa.
+
+### Veřejný kalendářový soubor
+
+V části **Moje rezervace** se u budoucích potvrzených rezervací zobrazí odkaz **Stáhnout do kalendáře**. Odkaz vede na tokenový endpoint `/reservations/calendar.php?token=...`, který vrací `.ics` soubor s názvem zdroje, datem, časem, lokalitou, jménem zákazníka a bezpečným storno odkazem, pokud existuje.
+
+Tokenové kalendářové URL se neposílají do canonical URL, sitemapy ani SEO metadat a odpověď používá `no-store`, `noindex` a `no-referrer`, aby se osobní rezervační odkaz zbytečně neukládal v cache nebo náhledech sociálních sítí.
+
+### Import a export
+
+JSON export/import přenáší konfiguraci rezervačních kategorií, zdrojů, otevíracích hodin, slotů, blokovaných dnů a lokalit včetně nastavení připomínek a kalendáře. Neexportují se osobní rezervace, kalendářové tokeny ani historie změn.
+
+---
+
 ## Znalostní báze – FAQ workflow
 
 ### Co se nastavuje u otázky
