@@ -314,6 +314,10 @@ function adminHeader(string $pageTitle): void
             'label' => 'Chat'
                 . adminNavBadge($unreadChatMessages, $unreadChatMessages . ' nových chat zpráv'),
         ];
+        $communicationItems[] = [
+            'url' => $baseUrl . '/admin/chat_topics.php',
+            'label' => 'Témata chatu',
+        ];
     }
     if ($canManageNewsletter && isModuleEnabled('newsletter')) {
         $communicationItems[] = [

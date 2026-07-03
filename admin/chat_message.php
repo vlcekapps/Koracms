@@ -12,12 +12,16 @@ if ($messageId === null) {
 }
 
 $stmt = $pdo->prepare(
-    "SELECT c.id, c.name, c.email, c.web, c.message, c.status, c.public_visibility, c.created_at, c.updated_at,
+    "SELECT c.id, c.topic_id, c.topic_label, c.conversation_type, c.reference_code,
+            c.name, c.email, c.web, c.message, c.status, c.public_visibility, c.created_at, c.updated_at,
+            c.is_pinned, c.pinned_until, c.pinned_at, c.pinned_by_user_id,
             c.approved_at, c.approved_by_user_id, c.internal_note, c.replied_at, c.replied_by_user_id,
-            c.replied_subject, c.replied_to_email,
+            c.replied_subject, c.replied_to_email, c.replied_body,
+            t.name AS topic_name, t.slug AS topic_slug,
             au.email AS approved_by_email, au.first_name AS approved_by_first_name, au.last_name AS approved_by_last_name, au.nickname AS approved_by_nickname,
             ru.email AS replied_by_email, ru.first_name AS replied_by_first_name, ru.last_name AS replied_by_last_name, ru.nickname AS replied_by_nickname
      FROM cms_chat c
+     LEFT JOIN cms_chat_topics t ON t.id = c.topic_id
      LEFT JOIN cms_users au ON au.id = c.approved_by_user_id
      LEFT JOIN cms_users ru ON ru.id = c.replied_by_user_id
      WHERE c.id = ?"
@@ -42,7 +46,10 @@ if ($messageStatus === 'new') {
 
 $visibilityDefinitions = chatPublicVisibilityDefinitions();
 $statusDefinitions = messageStatusDefinitions();
+$conversationTypes = chatConversationTypeDefinitions();
+$topics = chatTopics($pdo, false);
 $historyEntries = chatHistoryEntries($pdo, $messageId);
+$threadReplies = chatAdminReplies($pdo, $messageId);
 $selfRedirect = BASE_URL . '/admin/chat_message.php?id=' . (int)$message['id'] . '&redirect=' . rawurlencode($redirect);
 $approvedByLabel = trim((string)($message['approved_by_email'] ?? '')) !== ''
     ? formSubmissionAssigneeDisplayName([
@@ -90,6 +97,18 @@ adminHeader('Chat zpráva');
       <td><?= h((string)$message['name']) ?></td>
     </tr>
     <tr>
+      <th scope="row">Typ zprávy</th>
+      <td><strong><?= h(chatConversationTypeLabel((string)($message['conversation_type'] ?? 'public'))) ?></strong></td>
+    </tr>
+    <tr>
+      <th scope="row">Referenční kód</th>
+      <td><?= trim((string)($message['reference_code'] ?? '')) !== '' ? h((string)$message['reference_code']) : '–' ?></td>
+    </tr>
+    <tr>
+      <th scope="row">Téma</th>
+      <td><?= trim((string)($message['topic_name'] ?? $message['topic_label'] ?? '')) !== '' ? h((string)($message['topic_name'] ?? $message['topic_label'])) : 'Bez tématu' ?></td>
+    </tr>
+    <tr>
       <th scope="row">E-mail</th>
       <td>
         <?php if ((string)$message['email'] !== ''): ?>
@@ -118,6 +137,16 @@ adminHeader('Chat zpráva');
       <td><strong><?= h(chatPublicVisibilityLabel((string)$message['public_visibility'])) ?></strong></td>
     </tr>
     <tr>
+      <th scope="row">Připnutí</th>
+      <td>
+        <?php if (chatMessageIsPinned($message)): ?>
+          Připnuto<?= trim((string)($message['pinned_until'] ?? '')) !== '' ? ' do ' . h(formatCzechDate((string)$message['pinned_until'])) : '' ?>
+        <?php else: ?>
+          Nepřipnuto
+        <?php endif; ?>
+      </td>
+    </tr>
+    <tr>
       <th scope="row">Přijato</th>
       <td><time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>"><?= formatCzechDate((string)$message['created_at']) ?></time></td>
     </tr>
@@ -144,6 +173,9 @@ adminHeader('Chat zpráva');
           <br><small><?= h(trim((string)($message['replied_subject'] ?? '')) !== '' ? (string)$message['replied_subject'] : 'Bez předmětu') ?></small>
           <br><small><?= h(trim((string)($message['replied_to_email'] ?? '')) !== '' ? (string)$message['replied_to_email'] : '–') ?></small>
           <br><small><?= h($repliedByLabel) ?></small>
+          <?php if (trim((string)($message['replied_body'] ?? '')) !== ''): ?>
+            <br><small>Text poslední odpovědi je uložen níže.</small>
+          <?php endif; ?>
         <?php else: ?>
           –
         <?php endif; ?>
@@ -157,6 +189,12 @@ adminHeader('Chat zpráva');
       <th scope="row">Zpráva</th>
       <td class="table-cell--prewrap"><?= h((string)$message['message']) ?></td>
     </tr>
+    <?php if (trim((string)($message['replied_body'] ?? '')) !== ''): ?>
+      <tr>
+        <th scope="row">Text poslední odpovědi</th>
+        <td class="table-cell--prewrap"><?= h((string)$message['replied_body']) ?></td>
+      </tr>
+    <?php endif; ?>
   </tbody>
 </table>
 
@@ -243,12 +281,84 @@ adminHeader('Chat zpráva');
       <?php endforeach; ?>
     </select>
 
+    <label for="chat-type">Typ zprávy</label>
+    <select id="chat-type" name="conversation_type">
+      <?php foreach ($conversationTypes as $typeKey => $definition): ?>
+        <option value="<?= h($typeKey) ?>"<?= $typeKey === (string)($message['conversation_type'] ?? 'public') ? ' selected' : '' ?>>
+          <?= h((string)$definition['label']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+
+    <label for="chat-topic">Téma</label>
+    <select id="chat-topic" name="topic_id">
+      <option value="">Bez tématu</option>
+      <?php foreach ($topics as $topic): ?>
+        <option value="<?= (int)$topic['id'] ?>"<?= (int)($message['topic_id'] ?? 0) === (int)$topic['id'] ? ' selected' : '' ?>>
+          <?= h((string)$topic['name']) ?><?= (int)$topic['is_active'] !== 1 ? ' (vypnuté)' : '' ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+
+    <label class="checkbox-label">
+      <input type="checkbox" name="is_pinned" value="1"<?= (int)($message['is_pinned'] ?? 0) === 1 ? ' checked' : '' ?>>
+      Připnout zprávu ve veřejném chatu
+    </label>
+
+    <label for="chat-pinned-until">Připnout do</label>
+    <input type="datetime-local" id="chat-pinned-until" name="pinned_until"
+           value="<?= h(trim((string)($message['pinned_until'] ?? '')) !== '' ? date('Y-m-d\TH:i', strtotime((string)$message['pinned_until'])) : '') ?>">
+
     <label for="chat-note">Interní poznámka</label>
     <textarea id="chat-note" name="internal_note" rows="4"><?= h((string)($message['internal_note'] ?? '')) ?></textarea>
 
     <button type="submit" class="btn">Uložit workflow</button>
   </fieldset>
 </form>
+
+<h2>Veřejné odpovědi ve vlákně</h2>
+<?php if ($threadReplies === []): ?>
+  <p>Zatím tu nejsou žádné odpovědi.</p>
+<?php else: ?>
+  <table>
+    <caption>Odpovědi na chat zprávu</caption>
+    <thead>
+      <tr>
+        <th scope="col">Autor</th>
+        <th scope="col">Odpověď</th>
+        <th scope="col">Stav</th>
+        <th scope="col">Přijato</th>
+        <th scope="col">Akce</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($threadReplies as $reply): ?>
+        <tr>
+          <td>
+            <strong><?= h((string)$reply['name']) ?></strong>
+            <?php if (trim((string)($reply['email'] ?? '')) !== ''): ?>
+              <br><a href="mailto:<?= h((string)$reply['email']) ?>"><?= h((string)$reply['email']) ?></a>
+            <?php endif; ?>
+          </td>
+          <td class="table-cell--prewrap"><?= h((string)$reply['message']) ?></td>
+          <td><strong><?= h(chatReplyStatusLabel((string)$reply['status'])) ?></strong></td>
+          <td><time datetime="<?= h(str_replace(' ', 'T', (string)$reply['created_at'])) ?>"><?= formatCzechDate((string)$reply['created_at']) ?></time></td>
+          <td class="actions">
+            <?php foreach (['approve' => 'Schválit', 'hide' => 'Skrýt', 'delete' => 'Smazat'] as $replyAction => $replyLabel): ?>
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_reply_action.php"<?= $replyAction === 'delete' ? ' data-confirm="Smazat tuto odpověď trvale?"' : '' ?>>
+                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                <input type="hidden" name="id" value="<?= (int)$reply['id'] ?>">
+                <input type="hidden" name="action" value="<?= h($replyAction) ?>">
+                <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+                <button type="submit" class="btn<?= $replyAction === 'delete' ? ' btn-danger' : '' ?>"><?= h($replyLabel) ?></button>
+              </form>
+            <?php endforeach; ?>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+<?php endif; ?>
 
 <h2>Odpověď odesílateli</h2>
 <?php if (trim((string)$message['email']) === ''): ?>

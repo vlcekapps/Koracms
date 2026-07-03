@@ -267,6 +267,8 @@ try {
         'authors/index.php' => 'authors',
         'author.php' => 'author',
         'blog/article.php' => 'blog-article',
+        'chat/index.php' => 'chat-index',
+        'chat/message.php' => 'chat-message',
         'events/index.php' => 'events-index',
         'events/ics.php' => 'event-ics',
         'faq/index.php' => 'faq-index',
@@ -347,6 +349,16 @@ try {
     httpServerRouterSelfTestAssertRoute($faqCategoryRoute, 'faq-index', '/faq/index.php');
     httpServerRouterSelfTestAssert(($faqCategoryRoute['get']['category_slug'] ?? '') === 'instalace', 'FAQ category slug was not routed.');
     httpServerRouterSelfTestAssert(($faqCategoryRoute['get']['zobrazeni'] ?? '') === 'inline', 'FAQ category query string was not preserved.');
+
+    $chatTopicRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/chat/tema/obecne?preview=1');
+    httpServerRouterSelfTestAssertRoute($chatTopicRoute, 'chat-index', '/chat/index.php');
+    httpServerRouterSelfTestAssert(($chatTopicRoute['get']['topic_slug'] ?? '') === 'obecne', 'Chat topic slug was not routed.');
+    httpServerRouterSelfTestAssert(($chatTopicRoute['get']['preview'] ?? '') === '1', 'Chat topic query string was not preserved.');
+
+    $chatMessageRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/chat/zprava/42?preview=1');
+    httpServerRouterSelfTestAssertRoute($chatMessageRoute, 'chat-message', '/chat/message.php');
+    httpServerRouterSelfTestAssert(($chatMessageRoute['get']['id'] ?? '') === '42', 'Chat message id was not routed.');
+    httpServerRouterSelfTestAssert(($chatMessageRoute['get']['preview'] ?? '') === '1', 'Chat message query string was not preserved.');
 
     $podcastEpisodeRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/podcast/porad/epizoda');
     httpServerRouterSelfTestAssertRoute($podcastEpisodeRoute, 'podcast-episode', '/podcast/episode.php');

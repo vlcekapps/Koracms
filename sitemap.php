@@ -210,6 +210,37 @@ if (isModuleEnabled('news')) {
     }
 }
 
+if (isModuleEnabled('chat')) {
+    sitemapWriteUrl(siteUrl('/chat/'), 'weekly', '0.5');
+
+    try {
+        $chatTopics = $pdo->query(
+            "SELECT t.id, t.slug,
+                    GREATEST(
+                        COALESCE(t.updated_at, t.created_at),
+                        COALESCE(MAX(c.updated_at), MAX(c.created_at), COALESCE(t.updated_at, t.created_at))
+                    ) AS sitemap_lastmod
+             FROM cms_chat_topics t
+             INNER JOIN cms_chat c ON c.topic_id = t.id
+                AND c.conversation_type = 'public'
+                AND c.public_visibility = 'approved'
+             WHERE t.is_active = 1
+             GROUP BY t.id, t.slug, t.created_at, t.updated_at
+             ORDER BY t.sort_order ASC, t.name ASC"
+        )->fetchAll();
+        foreach ($chatTopics as $topic) {
+            sitemapWriteUrl(
+                siteUrl('/chat/tema/' . rawurlencode((string)$topic['slug'])),
+                'weekly',
+                '0.4',
+                sitemapLastmod((string)($topic['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('chat_topics', $e);
+    }
+}
+
 if (isModuleEnabled('board')) {
     sitemapWriteUrl(siteUrl('/board/'), 'weekly', '0.6');
 

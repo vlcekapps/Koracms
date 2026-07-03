@@ -19,9 +19,26 @@ if (!in_array($visibilityFilter, $validVisibilityFilters, true)) {
 }
 
 $queryText = trim((string)($_GET['q'] ?? ''));
+$topics = chatTopics($pdo, false);
+$topicFilter = trim((string)($_GET['topic_id'] ?? 'all'));
+$topicFilterId = $topicFilter !== 'all' ? (int)$topicFilter : null;
+$conversationTypes = chatConversationTypeDefinitions();
+$conversationTypeFilter = normalizeChatConversationType((string)($_GET['type'] ?? 'public'));
+if ((string)($_GET['type'] ?? 'public') === 'all') {
+    $conversationTypeFilter = 'all';
+}
+$pinFilter = trim((string)($_GET['pin'] ?? 'all'));
+if (!in_array($pinFilter, ['all', 'pinned'], true)) {
+    $pinFilter = 'all';
+}
+$replyFilter = trim((string)($_GET['replies'] ?? 'all'));
+if (!in_array($replyFilter, ['all', 'pending'], true)) {
+    $replyFilter = 'all';
+}
 $perPage = chatAdminMessagesPerPage();
 $statusCounts = inboxStatusCounts($pdo, 'cms_chat');
 $visibilityCounts = chatPublicVisibilityCounts($pdo);
+$replyStatusCounts = chatReplyStatusCounts($pdo);
 $whereSql = 'WHERE 1';
 $queryParams = [];
 
@@ -35,9 +52,29 @@ if ($visibilityFilter !== 'all') {
     $queryParams[] = $visibilityFilter;
 }
 
+if ($conversationTypeFilter !== 'all') {
+    $whereSql .= ' AND c.conversation_type = ?';
+    $queryParams[] = $conversationTypeFilter;
+}
+
+if ($topicFilterId !== null && $topicFilterId > 0) {
+    $whereSql .= ' AND c.topic_id = ?';
+    $queryParams[] = $topicFilterId;
+}
+
+if ($pinFilter === 'pinned') {
+    $whereSql .= ' AND c.is_pinned = 1 AND (c.pinned_until IS NULL OR c.pinned_until >= NOW())';
+}
+
+if ($replyFilter === 'pending') {
+    $whereSql .= " AND EXISTS (SELECT 1 FROM cms_chat_replies cr WHERE cr.chat_id = c.id AND cr.status = 'pending')";
+}
+
 if ($queryText !== '') {
-    $whereSql .= ' AND (c.name LIKE ? OR c.email LIKE ? OR c.web LIKE ? OR c.message LIKE ?)';
+    $whereSql .= ' AND (c.name LIKE ? OR c.email LIKE ? OR c.web LIKE ? OR c.message LIKE ? OR c.reference_code LIKE ? OR c.topic_label LIKE ?)';
     $queryNeedle = '%' . $queryText . '%';
+    $queryParams[] = $queryNeedle;
+    $queryParams[] = $queryNeedle;
     $queryParams[] = $queryNeedle;
     $queryParams[] = $queryNeedle;
     $queryParams[] = $queryNeedle;
@@ -53,10 +90,16 @@ $pagination = paginate(
 
 $messagesStmt = $pdo->prepare(
     "SELECT c.id, c.name, c.email, c.web, c.message, c.status, c.public_visibility, c.created_at, c.updated_at,
-            c.approved_at, c.replied_at
+            c.approved_at, c.replied_at, c.topic_id, c.topic_label, c.conversation_type, c.reference_code,
+            c.is_pinned, c.pinned_until,
+            t.name AS topic_name,
+            (SELECT COUNT(*) FROM cms_chat_replies cr WHERE cr.chat_id = c.id) AS reply_count,
+            (SELECT COUNT(*) FROM cms_chat_replies cr WHERE cr.chat_id = c.id AND cr.status = 'pending') AS pending_reply_count
      FROM cms_chat c
+     LEFT JOIN cms_chat_topics t ON t.id = c.topic_id
      {$whereSql}
-     ORDER BY FIELD(c.public_visibility, 'pending', 'approved', 'hidden'),
+     ORDER BY (c.is_pinned = 1 AND (c.pinned_until IS NULL OR c.pinned_until >= NOW())) DESC,
+              FIELD(c.public_visibility, 'pending', 'approved', 'hidden'),
               FIELD(c.status, 'new', 'read', 'handled'),
               c.created_at DESC
      LIMIT ? OFFSET ?"
@@ -70,6 +113,18 @@ if ($statusFilter !== 'all') {
 }
 if ($visibilityFilter !== 'all') {
     $currentParams['visibility'] = $visibilityFilter;
+}
+if ($conversationTypeFilter !== 'public') {
+    $currentParams['type'] = $conversationTypeFilter;
+}
+if ($topicFilterId !== null && $topicFilterId > 0) {
+    $currentParams['topic_id'] = (string)$topicFilterId;
+}
+if ($pinFilter !== 'all') {
+    $currentParams['pin'] = $pinFilter;
+}
+if ($replyFilter !== 'all') {
+    $currentParams['replies'] = $replyFilter;
 }
 if ($queryText !== '') {
     $currentParams['q'] = $queryText;
@@ -114,6 +169,8 @@ foreach ($messages as $message) {
         ),
         'normalized_status' => $messageStatus,
         'normalized_visibility' => $messageVisibility,
+        'normalized_type' => normalizeChatConversationType((string)($message['conversation_type'] ?? 'public')),
+        'is_currently_pinned' => chatMessageIsPinned($message),
     ];
 }
 
@@ -161,11 +218,35 @@ adminHeader('Chat');
     <legend class="sr-only">Hledat v chat zprávách</legend>
     <input type="hidden" name="status" value="<?= h($statusFilter) ?>">
     <input type="hidden" name="visibility" value="<?= h($visibilityFilter) ?>">
+    <label for="type" class="sr-only">Typ zprávy</label>
+    <select id="type" name="type">
+      <option value="all"<?= $conversationTypeFilter === 'all' ? ' selected' : '' ?>>Všechny typy</option>
+      <?php foreach ($conversationTypes as $typeKey => $definition): ?>
+        <option value="<?= h($typeKey) ?>"<?= $conversationTypeFilter === $typeKey ? ' selected' : '' ?>><?= h((string)$definition['label']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <label for="topic_id" class="sr-only">Téma chatu</label>
+    <select id="topic_id" name="topic_id">
+      <option value="all"<?= $topicFilterId === null ? ' selected' : '' ?>>Všechna témata</option>
+      <?php foreach ($topics as $topic): ?>
+        <option value="<?= (int)$topic['id'] ?>"<?= $topicFilterId === (int)$topic['id'] ? ' selected' : '' ?>><?= h((string)$topic['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <label for="pin" class="sr-only">Připnutí</label>
+    <select id="pin" name="pin">
+      <option value="all"<?= $pinFilter === 'all' ? ' selected' : '' ?>>Všechny zprávy</option>
+      <option value="pinned"<?= $pinFilter === 'pinned' ? ' selected' : '' ?>>Jen připnuté</option>
+    </select>
+    <label for="replies" class="sr-only">Odpovědi</label>
+    <select id="replies" name="replies">
+      <option value="all"<?= $replyFilter === 'all' ? ' selected' : '' ?>>Všechny odpovědi</option>
+      <option value="pending"<?= $replyFilter === 'pending' ? ' selected' : '' ?>>Odpovědi ke schválení (<?= (int)$replyStatusCounts['pending'] ?>)</option>
+    </select>
     <label for="q" class="sr-only">Hledat v chat zprávách</label>
     <input type="search" id="q" name="q" placeholder="Hledat v chat zprávách…"
            value="<?= h($queryText) ?>" class="admin-search-input">
     <button type="submit" class="btn">Použít filtr</button>
-    <?php if ($queryText !== ''): ?>
+    <?php if ($queryText !== '' || $conversationTypeFilter !== 'public' || $topicFilterId !== null || $pinFilter !== 'all' || $replyFilter !== 'all'): ?>
       <a href="?status=<?= h($statusFilter) ?>&amp;visibility=<?= h($visibilityFilter) ?>" class="btn">Zrušit filtr</a>
     <?php endif; ?>
   </fieldset>
@@ -200,6 +281,7 @@ adminHeader('Chat');
         <th scope="col"><label for="chat-check-all" class="sr-only">Vybrat všechny chat zprávy</label><input type="checkbox" id="chat-check-all" form="chat-bulk-form"></th>
         <th scope="col">Odesílatel</th>
         <th scope="col">Zpráva</th>
+        <th scope="col">Typ a téma</th>
         <th scope="col">Přijato</th>
         <th scope="col">Stav</th>
         <th scope="col">Veřejně</th>
@@ -222,7 +304,24 @@ adminHeader('Chat');
               <br><a href="<?= h((string)$message['web']) ?>" target="_blank" rel="nofollow noopener noreferrer"><?= h((string)$message['web']) ?><?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
           </td>
-          <td><?= h((string)$message['message_preview']) ?></td>
+          <td>
+            <?= h((string)$message['message_preview']) ?>
+            <?php if ((int)($message['reply_count'] ?? 0) > 0): ?>
+              <br><small><?= (int)$message['reply_count'] ?> odpovědí<?= (int)$message['pending_reply_count'] > 0 ? ', z toho ' . (int)$message['pending_reply_count'] . ' ke schválení' : '' ?></small>
+            <?php endif; ?>
+            <?php if ($message['is_currently_pinned']): ?>
+              <br><small>Připnuto<?= trim((string)($message['pinned_until'] ?? '')) !== '' ? ' do ' . h(formatCzechDate((string)$message['pinned_until'])) : '' ?></small>
+            <?php endif; ?>
+          </td>
+          <td>
+            <strong><?= h(chatConversationTypeLabel((string)$message['normalized_type'])) ?></strong>
+            <?php if (trim((string)($message['reference_code'] ?? '')) !== ''): ?>
+              <br><code><?= h((string)$message['reference_code']) ?></code>
+            <?php endif; ?>
+            <?php if (trim((string)($message['topic_name'] ?? $message['topic_label'] ?? '')) !== ''): ?>
+              <br><small><?= h((string)($message['topic_name'] ?? $message['topic_label'])) ?></small>
+            <?php endif; ?>
+          </td>
           <td>
             <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
               <?= formatCzechDate((string)$message['created_at']) ?>
@@ -268,6 +367,13 @@ adminHeader('Chat');
                 <button type="submit" class="btn">Vyřízené</button>
               </form>
             <?php endif; ?>
+            <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
+              <input type="hidden" name="action" value="<?= $message['is_currently_pinned'] ? 'unpin' : 'pin' ?>">
+              <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+              <button type="submit" class="btn"><?= $message['is_currently_pinned'] ? 'Odepnout' : 'Připnout' ?></button>
+            </form>
           </td>
         </tr>
       <?php endforeach; ?>

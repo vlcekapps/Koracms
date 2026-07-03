@@ -336,6 +336,21 @@ assert_equals(
     'contact topic recipient falls back to global contact email'
 );
 assert_equals('', contactNotificationRecipient('neplatny-email', ['recipient_email' => '']), 'invalid contact email fallback stays empty');
+assert_equals('obecna-diskuze', chatTopicSlug('Obecná diskuze'), 'chat topic slug normalizes Czech diacritics');
+assert_equals(
+    'CHT-20260401-AB12',
+    chatReferenceCode(new DateTimeImmutable('2026-04-01 09:23:56'), 'ab-12'),
+    'chat reference code uses date and normalized suffix'
+);
+assert_equals('public', normalizeChatConversationType('bad-value'), 'invalid chat conversation type falls back to public');
+assert_equals('support', normalizeChatConversationType('support'), 'support chat conversation type accepted');
+assert_equals('pending', normalizeChatReplyStatus('bad-value'), 'invalid chat reply status falls back to pending');
+assert_equals('approved', normalizeChatReplyStatus('approved'), 'approved chat reply status accepted');
+assert_true(chatMessageIsPinned(['is_pinned' => 1, 'pinned_until' => null]), 'chat pinned message without expiration is pinned');
+assert_true(chatMessageIsPinned(['is_pinned' => 1, 'pinned_until' => '2026-04-02 12:00:00'], new DateTimeImmutable('2026-04-01 12:00:00')), 'chat pinned message before expiration is pinned');
+assert_false(chatMessageIsPinned(['is_pinned' => 1, 'pinned_until' => '2026-04-01 11:00:00'], new DateTimeImmutable('2026-04-01 12:00:00')), 'chat pinned message after expiration is not pinned');
+assert_equals('/chat/tema/obecne', str_replace(BASE_URL, '', chatTopicPath(['slug' => 'obecne'])), 'chat topic path uses clean URL');
+assert_equals('/chat/zprava/42', str_replace(BASE_URL, '', chatMessagePath(['id' => 42])), 'chat message path uses clean URL');
 assert_equals('prednasky-a-workshopy', eventTypeSlug('Přednášky a workshopy'), 'event type slug normalizes Czech diacritics');
 assert_equals(
     '/events/typ/prednasky',

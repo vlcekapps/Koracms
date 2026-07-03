@@ -173,14 +173,35 @@ $tables = [
         FULLTEXT INDEX ft_news_search (title, content)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_chat_topics' => "CREATE TABLE IF NOT EXISTS cms_chat_topics (
+        id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(255) NOT NULL,
+        slug        VARCHAR(150) NOT NULL,
+        description TEXT,
+        is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+        sort_order  INT          NOT NULL DEFAULT 0,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cms_chat_topics_slug (slug),
+        KEY idx_cms_chat_topics_active_order (is_active, sort_order, name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_chat' => "CREATE TABLE IF NOT EXISTS cms_chat (
         id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        topic_id   INT          NULL DEFAULT NULL,
+        topic_label VARCHAR(255) NOT NULL DEFAULT '',
+        conversation_type ENUM('public','support') NOT NULL DEFAULT 'public',
+        reference_code VARCHAR(32) NOT NULL DEFAULT '',
         name       VARCHAR(100) NOT NULL,
         email      VARCHAR(255) NOT NULL DEFAULT '',
         web        VARCHAR(255) NOT NULL DEFAULT '',
         message    TEXT         NOT NULL,
         status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
         public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+        is_pinned  TINYINT(1)   NOT NULL DEFAULT 0,
+        pinned_until DATETIME NULL DEFAULT NULL,
+        pinned_at DATETIME NULL DEFAULT NULL,
+        pinned_by_user_id INT NULL DEFAULT NULL,
         approved_at DATETIME NULL DEFAULT NULL,
         approved_by_user_id INT NULL DEFAULT NULL,
         internal_note TEXT,
@@ -188,8 +209,27 @@ $tables = [
         replied_by_user_id INT NULL DEFAULT NULL,
         replied_subject VARCHAR(255) NOT NULL DEFAULT '',
         replied_to_email VARCHAR(255) NOT NULL DEFAULT '',
+        replied_body TEXT,
         created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_cms_chat_public (conversation_type, public_visibility, topic_id, created_at),
+        KEY idx_cms_chat_reference (reference_code),
+        KEY idx_cms_chat_pinned (is_pinned, pinned_until)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_chat_replies' => "CREATE TABLE IF NOT EXISTS cms_chat_replies (
+        id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        chat_id     INT          NOT NULL,
+        name        VARCHAR(100) NOT NULL,
+        email       VARCHAR(255) NOT NULL DEFAULT '',
+        message     TEXT         NOT NULL,
+        status      ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+        approved_at DATETIME     NULL DEFAULT NULL,
+        approved_by_user_id INT  NULL DEFAULT NULL,
+        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_cms_chat_replies_chat_status (chat_id, status, created_at),
+        KEY idx_cms_chat_replies_status (status, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_chat_history' => "CREATE TABLE IF NOT EXISTS cms_chat_history (
@@ -1275,8 +1315,16 @@ $addColumns = [
     'cms_polls.results_visibility'   => "ALTER TABLE cms_polls ADD COLUMN results_visibility ENUM('after_vote','always','closed','hidden') NOT NULL DEFAULT 'after_vote'",
     'cms_poll_votes.vote_session_id' => "ALTER TABLE cms_poll_votes ADD COLUMN vote_session_id INT NULL DEFAULT NULL AFTER option_id",
     // cms_chat
+    'cms_chat.topic_id'              => "ALTER TABLE cms_chat ADD COLUMN topic_id INT NULL DEFAULT NULL AFTER id",
+    'cms_chat.topic_label'           => "ALTER TABLE cms_chat ADD COLUMN topic_label VARCHAR(255) NOT NULL DEFAULT '' AFTER topic_id",
+    'cms_chat.conversation_type'     => "ALTER TABLE cms_chat ADD COLUMN conversation_type ENUM('public','support') NOT NULL DEFAULT 'public' AFTER topic_label",
+    'cms_chat.reference_code'        => "ALTER TABLE cms_chat ADD COLUMN reference_code VARCHAR(32) NOT NULL DEFAULT '' AFTER conversation_type",
     'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
     'cms_chat.public_visibility'     => "ALTER TABLE cms_chat ADD COLUMN public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending'",
+    'cms_chat.is_pinned'             => "ALTER TABLE cms_chat ADD COLUMN is_pinned TINYINT(1) NOT NULL DEFAULT 0 AFTER public_visibility",
+    'cms_chat.pinned_until'          => "ALTER TABLE cms_chat ADD COLUMN pinned_until DATETIME NULL DEFAULT NULL AFTER is_pinned",
+    'cms_chat.pinned_at'             => "ALTER TABLE cms_chat ADD COLUMN pinned_at DATETIME NULL DEFAULT NULL AFTER pinned_until",
+    'cms_chat.pinned_by_user_id'     => "ALTER TABLE cms_chat ADD COLUMN pinned_by_user_id INT NULL DEFAULT NULL AFTER pinned_at",
     'cms_chat.approved_at'           => "ALTER TABLE cms_chat ADD COLUMN approved_at DATETIME NULL DEFAULT NULL",
     'cms_chat.approved_by_user_id'   => "ALTER TABLE cms_chat ADD COLUMN approved_by_user_id INT NULL DEFAULT NULL",
     'cms_chat.internal_note'         => "ALTER TABLE cms_chat ADD COLUMN internal_note TEXT",
@@ -1284,6 +1332,7 @@ $addColumns = [
     'cms_chat.replied_by_user_id'    => "ALTER TABLE cms_chat ADD COLUMN replied_by_user_id INT NULL DEFAULT NULL",
     'cms_chat.replied_subject'       => "ALTER TABLE cms_chat ADD COLUMN replied_subject VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_chat.replied_to_email'      => "ALTER TABLE cms_chat ADD COLUMN replied_to_email VARCHAR(255) NOT NULL DEFAULT ''",
+    'cms_chat.replied_body'          => "ALTER TABLE cms_chat ADD COLUMN replied_body TEXT",
     'cms_chat.updated_at'            => "ALTER TABLE cms_chat ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     'cms_chat_history.id'            => "CREATE TABLE IF NOT EXISTS cms_chat_history (
         id            BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3505,6 +3554,25 @@ try {
     }
 } catch (\PDOException $e) {
     $log[] = "✗ Indexy vícevýběrových anket – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    foreach ([
+        ['cms_chat', 'idx_cms_chat_public', 'INDEX idx_cms_chat_public (conversation_type, public_visibility, topic_id, created_at)'],
+        ['cms_chat', 'idx_cms_chat_reference', 'INDEX idx_cms_chat_reference (reference_code)'],
+        ['cms_chat', 'idx_cms_chat_pinned', 'INDEX idx_cms_chat_pinned (is_pinned, pinned_until)'],
+        ['cms_chat_replies', 'idx_cms_chat_replies_chat_status', 'INDEX idx_cms_chat_replies_chat_status (chat_id, status, created_at)'],
+        ['cms_chat_replies', 'idx_cms_chat_replies_status', 'INDEX idx_cms_chat_replies_status (status, created_at)'],
+    ] as [$chatIndexTable, $chatIndexName, $chatIndexDefinition]) {
+        if (!$indexExists($chatIndexTable, $chatIndexName)) {
+            $pdo->exec("ALTER TABLE {$chatIndexTable} ADD {$chatIndexDefinition}");
+            $log[] = "✓ Index <code>{$chatIndexName}</code> pro rozšířený chat přidán – OK";
+        } else {
+            $log[] = "· Index <code>{$chatIndexName}</code> pro rozšířený chat již existuje – přeskočeno";
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Indexy rozšířeného chatu – CHYBA: " . h($e->getMessage());
 }
 
 try {

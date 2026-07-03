@@ -53,6 +53,8 @@ $adminCommandPageSource = is_file(__DIR__ . '/../admin/command.php') ? (string) 
 $adminCommandSearchSource = is_file(__DIR__ . '/../admin/command_search.php') ? (string) file_get_contents(__DIR__ . '/../admin/command_search.php') : '';
 $adminShortcutSource = is_file(__DIR__ . '/../admin/shortcut.php') ? (string) file_get_contents(__DIR__ . '/../admin/shortcut.php') : '';
 $adminCommandHelperSource = is_file(__DIR__ . '/../lib/admin_command.php') ? (string) file_get_contents(__DIR__ . '/../lib/admin_command.php') : '';
+$exportAdminSource = is_file(__DIR__ . '/../admin/export.php') ? (string) file_get_contents(__DIR__ . '/../admin/export.php') : '';
+$importAdminSource = is_file(__DIR__ . '/../admin/import.php') ? (string) file_get_contents(__DIR__ . '/../admin/import.php') : '';
 $cspReportSource = (string) file_get_contents(__DIR__ . '/../csp-report.php');
 $htaccessSource = (string) file_get_contents(__DIR__ . '/../.htaccess');
 $uploadsHtaccessSource = is_file(__DIR__ . '/../uploads/.htaccess') ? (string) file_get_contents(__DIR__ . '/../uploads/.htaccess') : '';
@@ -72,6 +74,11 @@ $contactIndexSource = (string) file_get_contents(__DIR__ . '/../contact/index.ph
 $contactTopicsAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_topics.php');
 $contactReplyAdminSource = (string) file_get_contents(__DIR__ . '/../admin/contact_reply.php');
 $chatIndexSource = (string) file_get_contents(__DIR__ . '/../chat/index.php');
+$chatMessageSource = (string) file_get_contents(__DIR__ . '/../chat/message.php');
+$adminChatSource = (string) file_get_contents(__DIR__ . '/../admin/chat.php');
+$adminChatMessageSource = (string) file_get_contents(__DIR__ . '/../admin/chat_message.php');
+$chatTopicsAdminSource = (string) file_get_contents(__DIR__ . '/../admin/chat_topics.php');
+$chatReplyActionAdminSource = (string) file_get_contents(__DIR__ . '/../admin/chat_reply_action.php');
 $formsIndexSource = (string) file_get_contents(__DIR__ . '/../forms/index.php');
 $foodCardSource = (string) file_get_contents(__DIR__ . '/../food/card.php');
 $galleryAlbumSource = (string) file_get_contents(__DIR__ . '/../gallery/album.php');
@@ -3726,11 +3733,18 @@ foreach ($pages as $page) {
             'name="q"',
             'name="status"',
             'name="visibility"',
+            'name="type"',
+            'name="topic_id"',
+            'name="pin"',
+            'name="replies"',
             'chat_message.php',
+            'chat_topics.php',
             'name="action" value="approve"',
             'name="action" value="hide"',
+            'name="action" value="pin"',
             'Označit jako přečtené',
             'Označit jako vyřízené',
+            'Odpovědi ke schválení',
             'data-selection-status="chat"',
             'Hromadné akce s vybranými zprávami',
         ] as $expectedFragment) {
@@ -3747,6 +3761,16 @@ foreach ($pages as $page) {
         if (str_contains($result['body'], 'Vrátit jako nové')) {
             $issues[] = 'admin chat detail still contains outdated "return as new" wording';
         }
+        foreach ([
+            'name="conversation_type"',
+            'name="topic_id"',
+            'name="is_pinned"',
+            'Veřejné odpovědi ve vlákně',
+        ] as $expectedFragment) {
+            if (!str_contains($result['body'], $expectedFragment)) {
+                $issues[] = 'admin chat detail is missing thread/workflow fragment: ' . $expectedFragment;
+            }
+        }
     }
 
     if ($page['label'] === 'chat') {
@@ -3754,8 +3778,10 @@ foreach ($pages as $page) {
             $chatApprovedMessageText,
             'name="q"',
             'name="razeni"',
+            'name="conversation_type"',
             'name="email"',
             'name="message"',
+            'Zobrazit vlákno',
         ] as $expectedFragment) {
             if ($expectedFragment !== '' && !str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'public chat is missing fragment: ' . $expectedFragment;
@@ -7487,6 +7513,7 @@ if (!empty($cleanup['contact_ids'])) {
 }
 if (!empty($cleanup['chat_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['chat_ids']), '?'));
+    $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id IN ({$placeholders})")->execute($cleanup['chat_ids']);
     $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($cleanup['chat_ids']);
     $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($cleanup['chat_ids']);
 }
@@ -7644,12 +7671,15 @@ try {
     $cronChatHistoryCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?");
     $cronChatHistoryCheckStmt->execute([$cronChatId]);
     $remainingCronChatHistory = (int)$cronChatHistoryCheckStmt->fetchColumn();
+    $cronChatRepliesCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_chat_replies WHERE chat_id = ?");
+    $cronChatRepliesCheckStmt->execute([$cronChatId]);
+    $remainingCronChatReplies = (int)$cronChatRepliesCheckStmt->fetchColumn();
 
     if ($remainingRateLimit !== 0) {
         $cronIssues[] = 'cron did not clean expired rate-limit records';
         $pdo->prepare("DELETE FROM cms_rate_limit WHERE id = ?")->execute([$cronRateLimitId]);
     }
-    if ($remainingCronChat !== 0 || $remainingCronChatHistory !== 0) {
+    if ($remainingCronChat !== 0 || $remainingCronChatHistory !== 0 || $remainingCronChatReplies !== 0) {
         $cronIssues[] = 'cron did not clean old handled chat messages according to chat_retention_days';
     }
     $cronLastRunTimestamp = strtotime($cronLastRunAt);
@@ -7686,6 +7716,7 @@ try {
     clearSettingsCache();
     $GLOBALS['_CMS_SETTINGS']['chat_retention_days'] = $originalChatRetentionDays;
     if ($cronChatId > 0) {
+        $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
     }
@@ -7696,6 +7727,7 @@ try {
     clearSettingsCache();
     $GLOBALS['_CMS_SETTINGS']['chat_retention_days'] = $originalChatRetentionDays ?? '0';
     if (!empty($cronChatId)) {
+        $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$cronChatId]);
         $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$cronChatId]);
     }
@@ -7800,6 +7832,7 @@ foreach ([
     'faq/item.php',
     'gallery/album.php',
     'gallery/photo.php',
+    'chat/message.php',
     'downloads/item.php',
     'downloads/series.php',
     'events/event.php',
@@ -7852,6 +7885,8 @@ $adminRouteModuleExpectations = [
     '/admin/comment_bulk.php' => 'blog',
     '/admin/news_save.php' => 'news',
     '/admin/chat_action.php' => 'chat',
+    '/admin/chat_reply_action.php' => 'chat',
+    '/admin/chat_topics.php' => 'chat',
     '/admin/contact_bulk.php' => 'contact',
     '/admin/gallery_photo_reorder.php' => 'gallery',
     '/admin/event_clone.php' => 'events',
@@ -8510,7 +8545,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'authors/index.php blog/index.php blog/article.php blog/page.php')
         && str_contains($composerSource, 'board/index.php board/document.php board/file.php')
-        && str_contains($composerSource, 'chat/index.php contact/index.php')
+        && str_contains($composerSource, 'chat/index.php chat/message.php contact/index.php')
         && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php')
         && str_contains($composerSource, 'events/index.php events/event.php events/ics.php')
         && str_contains($composerSource, 'faq/index.php faq/item.php')
@@ -8543,12 +8578,12 @@ $foundationChecks = [
         && str_contains($composerSource, '@format:check:admin-messaging')
         && str_contains($composerSource, 'admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php')
         && str_contains($composerSource, 'admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_reply.php')
-        && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_update.php')
+        && str_contains($composerSource, 'admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php')
         && str_contains($composerSource, 'admin/newsletter_bulk.php admin/newsletter_send.php admin/newsletter_subscriber_action.php'),
     'php cs fixer admin moderation smoke check exists' => str_contains($composerSource, '"format:check:admin-moderation"')
         && str_contains($composerSource, '"format:fix:admin-moderation"')
         && str_contains($composerSource, '@format:check:admin-moderation')
-        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/contact_topics.php admin/chat.php admin/form_submissions.php'),
+        && str_contains($composerSource, 'admin/comments.php admin/contact.php admin/contact_topics.php admin/chat.php admin/chat_topics.php admin/form_submissions.php'),
     'php cs fixer admin save smoke check exists' => str_contains($composerSource, '"format:check:admin-save"')
         && str_contains($composerSource, '"format:fix:admin-save"')
         && str_contains($composerSource, '@format:check:admin-save')
@@ -8712,7 +8747,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'board/index.php board/document.php board/file.php')
         && str_contains($composerSource, '"@analyse:strict:public-board"')
         && str_contains($composerSource, '"analyse:strict:public-chat"')
-        && str_contains($composerSource, 'chat/index.php')
+        && str_contains($composerSource, 'chat/index.php chat/message.php')
         && str_contains($composerSource, '"@analyse:strict:public-chat"')
         && str_contains($composerSource, '"analyse:strict:public-contact"')
         && str_contains($composerSource, 'contact/index.php')
@@ -8754,7 +8789,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/calendar.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php admin/chat_topics.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -9651,6 +9686,13 @@ $installSchemaChecks = [
     'cms_contact contains topic_id' => $installTableContains('cms_contact', 'topic_id'),
     'cms_contact contains reference_code' => $installTableContains('cms_contact', 'reference_code'),
     'cms_contact contains reply_body' => $installTableContains('cms_contact', 'reply_body'),
+    'cms_chat_topics contains slug' => $installTableContains('cms_chat_topics', 'slug'),
+    'cms_chat contains topic_id' => $installTableContains('cms_chat', 'topic_id'),
+    'cms_chat contains conversation_type' => $installTableContains('cms_chat', 'conversation_type'),
+    'cms_chat contains reference_code' => $installTableContains('cms_chat', 'reference_code'),
+    'cms_chat contains is_pinned' => $installTableContains('cms_chat', 'is_pinned'),
+    'cms_chat contains replied_body' => $installTableContains('cms_chat', 'replied_body'),
+    'cms_chat_replies contains chat_id' => $installTableContains('cms_chat_replies', 'chat_id'),
     'cms_dl_categories contains slug' => $installTableContains('cms_dl_categories', 'slug'),
     'cms_dl_categories contains meta_title' => $installTableContains('cms_dl_categories', 'meta_title'),
     'cms_dl_categories contains meta_description' => $installTableContains('cms_dl_categories', 'meta_description'),
@@ -9723,6 +9765,14 @@ $migrateSchemaChecks = [
     'cms_contact.reference_code' => str_contains($migrateSource, 'cms_contact.reference_code'),
     'cms_contact.reply_body' => str_contains($migrateSource, 'cms_contact.reply_body'),
     'idx_cms_contact_topic_status' => str_contains($migrateSource, 'idx_cms_contact_topic_status'),
+    'cms_chat_topics' => str_contains($migrateSource, 'cms_chat_topics'),
+    'cms_chat.topic_id' => str_contains($migrateSource, 'cms_chat.topic_id'),
+    'cms_chat.conversation_type' => str_contains($migrateSource, 'cms_chat.conversation_type'),
+    'cms_chat.reference_code' => str_contains($migrateSource, 'cms_chat.reference_code'),
+    'cms_chat.is_pinned' => str_contains($migrateSource, 'cms_chat.is_pinned'),
+    'cms_chat.replied_body' => str_contains($migrateSource, 'cms_chat.replied_body'),
+    'cms_chat_replies' => str_contains($migrateSource, 'cms_chat_replies'),
+    'idx_cms_chat_public' => str_contains($migrateSource, 'idx_cms_chat_public'),
     'cms_dl_categories.slug' => str_contains($migrateSource, 'cms_dl_categories.slug'),
     'uq_cms_dl_categories_slug' => str_contains($migrateSource, 'uq_cms_dl_categories_slug'),
     'cms_download_series' => str_contains($migrateSource, 'cms_download_series'),
@@ -9743,6 +9793,70 @@ if ($migrateSchemaIssues === []) {
 } else {
     $failures++;
     foreach ($migrateSchemaIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== chat_feature_guardrails ===\n";
+$chatFeatureIssues = [];
+$chatTopicRoutePosition = strpos($htaccessSource, 'RewriteRule ^chat/tema/([a-z0-9\-]+)/?$ chat/index.php?topic_slug=$1');
+$chatMessageRoutePosition = strpos($htaccessSource, 'RewriteRule ^chat/zprava/([0-9]+)/?$ chat/message.php?id=$1');
+$blogCatchAllRoutePosition = strpos($htaccessSource, 'RewriteRule ^([a-z0-9\-]+)/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&slug=$2');
+$chatTopicRouterPosition = strpos($httpServerRouterSource, '#^chat/tema/([a-z0-9-]+)/?$#i');
+$chatMessageRouterPosition = strpos($httpServerRouterSource, '#^chat/zprava/([0-9]+)/?$#i');
+$blogCatchAllRouterPosition = strpos($httpServerRouterSource, '#^([a-z0-9-]+)/([a-z0-9-]+)/?$#i');
+if (!is_int($chatTopicRoutePosition) || !is_int($chatMessageRoutePosition)) {
+    $chatFeatureIssues[] = 'chat clean URL rewrite rules are missing';
+}
+if (is_int($blogCatchAllRoutePosition)
+    && (is_int($chatTopicRoutePosition) && $chatTopicRoutePosition > $blogCatchAllRoutePosition
+        || is_int($chatMessageRoutePosition) && $chatMessageRoutePosition > $blogCatchAllRoutePosition)) {
+    $chatFeatureIssues[] = 'chat clean URL rewrite rules must be before the blog catch-all route';
+}
+if (!is_int($chatTopicRouterPosition) || !is_int($chatMessageRouterPosition)) {
+    $chatFeatureIssues[] = 'chat clean URL routes are missing from the PHP HTTP test router';
+}
+if (is_int($blogCatchAllRouterPosition)
+    && (is_int($chatTopicRouterPosition) && $chatTopicRouterPosition > $blogCatchAllRouterPosition
+        || is_int($chatMessageRouterPosition) && $chatMessageRouterPosition > $blogCatchAllRouterPosition)) {
+    $chatFeatureIssues[] = 'chat clean URL routes must be before the blog catch-all route in the PHP HTTP test router';
+}
+foreach ([
+    'chat topic helper' => str_contains($messagesSource, 'function chatTopicPath('),
+    'chat message helper' => str_contains($messagesSource, 'function chatMessagePath('),
+    'chat reference helper' => str_contains($messagesSource, 'function uniqueChatReferenceCode('),
+    'chat pinned helper' => str_contains($messagesSource, 'function chatMessageIsPinned('),
+    'public chat hides support messages' => str_contains($chatIndexSource, "c.conversation_type = 'public'"),
+    'public chat supports private support mode' => str_contains($chatIndexSource, "\$conversationType === 'support'"),
+    'public chat stores support reference codes' => str_contains($chatIndexSource, 'uniqueChatReferenceCode('),
+    'public chat detail hides private messages' => str_contains($chatMessageSource, "c.conversation_type = 'public'"),
+    'public chat detail stores replies pending' => str_contains($chatMessageSource, 'cms_chat_replies') && str_contains($chatMessageSource, "'pending'"),
+    'admin chat supports pin and unpin actions' => str_contains($adminChatSource, "?'unpin':'pin'")
+        || str_contains($adminChatSource, "? 'unpin' : 'pin'"),
+    'admin chat detail supports reply moderation actions' => str_contains($adminChatMessageSource, '/admin/chat_reply_action.php'),
+    'admin chat topics form has fieldset' => str_contains($chatTopicsAdminSource, '<fieldset>') && str_contains($chatTopicsAdminSource, '<legend>'),
+    'admin chat reply action uses csrf' => str_contains($chatReplyActionAdminSource, 'verifyCsrf()'),
+    'admin chat reply action validates redirect' => str_contains($chatReplyActionAdminSource, 'internalRedirectTarget('),
+    'sitemap includes public chat topics only' => str_contains($sitemapSource, 'cms_chat_topics')
+        && str_contains($sitemapSource, "c.conversation_type = 'public'")
+        && str_contains($sitemapSource, "c.public_visibility = 'approved'"),
+    'chat export includes topics and replies' => str_contains($exportAdminSource, "'chat_topics'")
+        && str_contains($exportAdminSource, "'chat_replies'"),
+    'chat import includes fallback conversation type' => str_contains($importAdminSource, "normalizeChatConversationType((string)(\$row['conversation_type'] ?? 'public'))")
+        && str_contains($importAdminSource, "normalizeChatReplyStatus((string)(\$row['status'] ?? 'pending'))"),
+    'chat cron cleanup removes replies' => str_contains($cronSource, 'DELETE FROM cms_chat_replies WHERE chat_id IN'),
+    'chat router self-test covers clean URLs' => str_contains($httpServerRouterSelftestSource, '/chat/tema/obecne')
+        && str_contains($httpServerRouterSelftestSource, '/chat/zprava/42'),
+] as $chatGuardLabel => $chatGuardOk) {
+    if (!$chatGuardOk) {
+        $chatFeatureIssues[] = $chatGuardLabel;
+    }
+}
+if ($chatFeatureIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($chatFeatureIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

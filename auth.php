@@ -693,8 +693,10 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         'chat_delete.php',
         'chat_action.php',
         'chat_message.php',
+        'chat_reply_action.php',
         'chat_update.php',
         'chat_reply.php',
+        'chat_topics.php',
         'contact.php',
         'contact_delete.php',
         'contact_action.php',
@@ -803,7 +805,7 @@ function adminRouteModuleRequirements(): array
         ],
         'chat' => [
             'message' => adminRouteModuleDisabledMessage('chat'),
-            'files' => ['chat.php', 'chat_action.php', 'chat_bulk.php', 'chat_delete.php', 'chat_message.php', 'chat_reply.php', 'chat_update.php'],
+            'files' => ['chat.php', 'chat_action.php', 'chat_bulk.php', 'chat_delete.php', 'chat_message.php', 'chat_reply.php', 'chat_reply_action.php', 'chat_update.php', 'chat_topics.php'],
         ],
         'contact' => [
             'message' => adminRouteModuleDisabledMessage('contact'),

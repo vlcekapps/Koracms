@@ -3,7 +3,7 @@
     <div class="section-heading">
       <div>
         <p class="section-kicker">Komunita</p>
-        <h1 id="chat-title" class="section-title section-title--hero">Chat</h1>
+        <h1 id="chat-title" class="section-title section-title--hero"><?= h($activeTopic !== null ? 'Chat: ' . (string)$activeTopic['name'] : 'Chat') ?></h1>
       </div>
     </div>
 
@@ -11,11 +11,33 @@
       <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="chat-pending-message">
         <p id="chat-pending-message">Zpráva byla přijata a po schválení se objeví ve veřejném chatu.</p>
       </div>
+    <?php elseif ($successState === 'support'): ?>
+      <div class="status-message status-message--success" role="status" aria-atomic="true" aria-labelledby="chat-support-message">
+        <p id="chat-support-message">
+          Soukromý dotaz byl přijat.<?php if ($successReference !== ''): ?> Referenční kód: <strong><?= h($successReference) ?></strong>.<?php endif; ?>
+        </p>
+      </div>
     <?php endif; ?>
 
     <p class="section-summary">
-      Chat funguje jako moderovaná veřejná nástěnka. Zobrazujeme jen schválené zprávy a e-mail autora zůstává jen pro administraci.
+      <?php if ($activeTopic !== null && trim((string)($activeTopic['description'] ?? '')) !== ''): ?>
+        <?= h((string)$activeTopic['description']) ?>
+      <?php else: ?>
+        Chat funguje jako moderovaná veřejná nástěnka. Zobrazujeme jen schválené zprávy a e-mail autora zůstává jen pro administraci.
+      <?php endif; ?>
     </p>
+
+    <?php if (!empty($topics)): ?>
+      <nav class="button-row" aria-labelledby="chat-topics-heading">
+        <h2 id="chat-topics-heading" class="sr-only">Témata chatu</h2>
+        <a href="<?= BASE_URL ?>/chat/index.php" class="btn"<?= $activeTopic === null ? ' aria-current="page"' : '' ?>>Všechna témata</a>
+        <?php foreach ($topics as $topic): ?>
+          <a href="<?= h(chatTopicPath($topic)) ?>" class="btn"<?= $activeTopic !== null && (int)$activeTopic['id'] === (int)$topic['id'] ? ' aria-current="page"' : '' ?>>
+            <?= h((string)$topic['name']) ?>
+          </a>
+        <?php endforeach; ?>
+      </nav>
+    <?php endif; ?>
 
     <form method="get" class="chat-filter-form">
       <fieldset class="button-row">
@@ -51,12 +73,29 @@
             <header class="chat-message__header">
               <p class="meta-row">
                 <strong id="<?= h($chatMessageTitleId) ?>"><?= h((string)$message['name']) ?></strong>
+                <?php if (chatMessageIsPinned($message)): ?>
+                  <span class="badge">Připnuto</span>
+                <?php endif; ?>
                 <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
                   <?= formatCzechDate((string)$message['created_at']) ?>
                 </time>
               </p>
+              <?php if (trim((string)($message['topic_name'] ?? $message['topic_label'] ?? '')) !== ''): ?>
+                <p class="meta-row">
+                  Téma:
+                  <?php if (trim((string)($message['topic_slug'] ?? '')) !== ''): ?>
+                    <a href="<?= h(chatTopicPath(['slug' => (string)$message['topic_slug']])) ?>"><?= h((string)($message['topic_name'] ?? $message['topic_label'])) ?></a>
+                  <?php else: ?>
+                    <?= h((string)$message['topic_label']) ?>
+                  <?php endif; ?>
+                </p>
+              <?php endif; ?>
             </header>
             <p class="chat-message__body"><?= nl2br(h((string)$message['message'])) ?></p>
+            <p class="chat-message__actions">
+              <a href="<?= h(chatMessagePath($message)) ?>">Zobrazit vlákno</a>
+              <span>· <?= (int)($message['reply_count'] ?? 0) ?> odpovědí</span>
+            </p>
           </article>
         <?php endforeach; ?>
       </div>
@@ -92,6 +131,33 @@
 
       <fieldset class="form-fieldset">
         <legend>Přidat zprávu</legend>
+
+        <fieldset class="form-fieldset form-fieldset--nested">
+          <legend>Typ zprávy</legend>
+          <label class="checkbox-label" for="conversation_type_public">
+            <input id="conversation_type_public" type="radio" name="conversation_type" value="public"<?= ($formData['conversation_type'] ?? 'public') === 'public' ? ' checked' : '' ?>>
+            Veřejná zpráva do moderovaného chatu
+          </label>
+          <label class="checkbox-label" for="conversation_type_support">
+            <input id="conversation_type_support" type="radio" name="conversation_type" value="support"<?= ($formData['conversation_type'] ?? 'public') === 'support' ? ' checked' : '' ?>>
+            Soukromý dotaz správci
+          </label>
+          <p class="help-text">Soukromý dotaz se veřejně nezobrazí a vyžaduje e-mail pro odpověď.</p>
+        </fieldset>
+
+        <?php if (!empty($topics)): ?>
+          <div class="field">
+            <label for="topic_id">Téma</label>
+            <select id="topic_id" name="topic_id" class="form-control">
+              <option value="">Bez tématu</option>
+              <?php foreach ($topics as $topic): ?>
+                <option value="<?= (int)$topic['id'] ?>"<?= (string)($formData['topic_id'] ?? '') === (string)(int)$topic['id'] ? ' selected' : '' ?>>
+                  <?= h((string)$topic['name']) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        <?php endif; ?>
 
         <div class="field">
           <label for="name">Jméno <span aria-hidden="true">*</span></label>

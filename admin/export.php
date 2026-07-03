@@ -37,10 +37,17 @@ $tables = [
     'news'          => "SELECT id, title, slug, content, author_id, status, created_at, updated_at,
                                unpublish_at, admin_note, meta_title, meta_description, deleted_at
                         FROM cms_news",
-    'chat'          => "SELECT id, name, email, web, message, status, public_visibility, approved_at, approved_by_user_id,
-                               internal_note, replied_at, replied_by_user_id, replied_subject, replied_to_email,
+    'chat_topics'   => "SELECT id, name, slug, description, is_active, sort_order, created_at, updated_at
+                        FROM cms_chat_topics",
+    'chat'          => "SELECT id, topic_id, topic_label, conversation_type, reference_code,
+                               name, email, web, message, status, public_visibility,
+                               is_pinned, pinned_until, pinned_at, pinned_by_user_id,
+                               approved_at, approved_by_user_id,
+                               internal_note, replied_at, replied_by_user_id, replied_subject, replied_to_email, replied_body,
                                created_at, updated_at
                         FROM cms_chat",
+    'chat_replies'  => "SELECT id, chat_id, name, email, message, status, approved_at, approved_by_user_id, created_at, updated_at
+                        FROM cms_chat_replies",
     'chat_history'  => "SELECT id, chat_id, actor_user_id, event_type, message, created_at
                         FROM cms_chat_history",
     'contact_topics' => "SELECT id, name, slug, description, recipient_email, is_active, sort_order, created_at, updated_at

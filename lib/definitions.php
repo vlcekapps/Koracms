@@ -95,7 +95,7 @@ function coreModuleDefinitions(): array
             'admin_label' => 'Chat',
             'content_reference_types' => [],
             'search_result_types' => [],
-            'sitemap_sections' => [],
+            'sitemap_sections' => ['chat_topics' => 'Témata chatu'],
             'stats_page_types' => [],
             'settings_default' => '1',
             'public_nav_path' => '/chat/index.php',
@@ -108,6 +108,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/chat.php',
+                '/admin/chat_topics.php',
             ],
         ],
         'contact' => [

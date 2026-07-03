@@ -255,7 +255,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Rezervace** | Zdroje, kategorie, lokality, kalendáře, schvalování, připomínky, ICS pozvánky, historie změn a storno přes token |
 | **Statické stránky** | Vlastní stránky se slug URL a volitelným zobrazením v navigaci |
 | **Kontakt** | Kontaktní formulář s tématy dotazů, CAPTCHA, honeypotem, rate limitingem, referenčními kódy a odpověďmi z administrace |
-| **Chat** | Moderovaná veřejná nástěnka s inbox workflow, historií a odpověďmi e-mailem |
+| **Chat** | Moderovaná veřejná nástěnka s tématy, připnutými zprávami, vlákny a soukromým podpůrným inboxem |
 | **Newsletter** | Odběr e-mailem s potvrzením, odhlášením a historií rozesílek |
 
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
@@ -274,7 +274,7 @@ Modul **Jídelní lístek** nově rozlišuje `platné nyní / připravované / a
 
 Modul **Galerie** nově chrání neveřejná alba i fotografie i na úrovni detailu, vyhledávání a sitemapy, používá bezpečný media endpoint místo přímých `/uploads/gallery/` cest, podporuje redirecty po změně slugu, historii revizí, veřejné hledání, stránkování alb i detailu a structured data pro alba i fotografie. Fotografie mohou mít samostatný alt text, viditelný popisek, delší popis, kredit, licenci, datum a místo pořízení; alba mohou nastavit výchozí kredit a licenci pro nově nahrané fotografie a veřejný detail metadata zobrazí v přístupné sekci.
 
-Modul **Chat** nově funguje jako moderovaná veřejná nástěnka: nové zprávy se nejdřív ukládají ke schválení, veřejně se nezobrazuje e-mail ani web autora, veřejný výpis podporuje hledání, řazení a stránkování a administrace nabízí inbox workflow se schvalováním, interní poznámkou, historií změn a odpovědí e-mailem.
+Modul **Chat** funguje jako moderovaná veřejná nástěnka se strukturovanými tématy. Nové veřejné zprávy se nejdřív ukládají ke schválení, schválené zprávy lze připnout nahoru a každá veřejná zpráva má vlastní detail `/chat/zprava/{id}` s moderovanými odpověďmi. Témata mají čisté URL `/chat/tema/{slug}` a v administraci vlastní správu. Stejný veřejný formulář umí i soukromý dotaz správci: vyžaduje e-mail pro odpověď, uloží referenční kód `CHT-YYYYMMDD-XXXX` a nikdy se nezobrazí ve veřejném chatu ani sitemapě.
 
 Modul **Kontakt** nově funguje jako lehké kontaktní centrum: správce může vytvořit témata dotazů s vlastním popisem a volitelným cílovým e-mailem, návštěvník po odeslání uvidí referenční kód zprávy a administrátor může odpovědět e-mailem přímo z detailu kontaktní zprávy. Bez aktivních témat zůstává veřejný formulář jednoduchý jako dříve.
 
@@ -633,7 +633,7 @@ composer ci:basic
 - whitespace audit přes `build/whitespace_audit.php` a jeho self-test `build/whitespace_audit_selftest.php`, které nad verzovanými textovými zdroji hlídají koncové mezery a chybějící finální nový řádek
 - úzký PSR-12 smoke check přes `composer format:check` a navazující build/test dávky nad postupně rozšiřovanou stabilní sadou helperů; pro lokální dorovnání stejné sady lze použít `composer format:fix`, nyní včetně release smoke testů, HTTP test helperů, unit test harnessu a stabilních sdílených knihoven
 - PHPStan na levelu 6 nad rozšiřovanou sadou stabilních helperů podle `phpstan.neon.dist`; používá `build/phpstan_bootstrap.php` a `scanFiles`, takže zná sdílené symboly bez načítání DB/session side efektů. Self-test `build/phpstan_bootstrap_selftest.php` hlídá, že bootstrap nenačítá databázi, autentizaci, session ani runtime konfiguraci a že zachovává už definované bezpečné konstanty. PHPStan zároveň hlídá i release/testovací build nástroje proti návratu PHP 8.1+ typů do PHP 8.0 platformy
-- samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 242 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu, redirect guardrailů a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
+- samostatné PHPStan level 6 smoke checky přes `composer analyse:strict` a navazující dávky; vedle lint/bootstrap helperů aktuálně pokrývají 245 stabilizovaných souborů včetně veřejných entrypointů, sdílených knihoven, workflow auditu, redirect guardrailů a rozšiřované sady admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy
 - validaci `composer.json` a `composer.lock` přes `composer validate --strict`, takže lokální `ci:basic` hlídá stejný Composer kontrakt jako GitHub Actions
 - statický release package audit včetně self-testu `build/release_package_audit_selftest.php`, který hlídá, že instalační balíček a source archivy zůstávají bez vývojových nástrojů, lokálních metadat, citlivých konfigurací a uživatelských uploadů
 - theme view audit pro default šablonu včetně self-testu, který hlídá oddělení prezentační vrstvy od requestu, session/server stavu, runtime času, databáze a souborových side effectů i statická duplicitní `id`, neexistující cíle `aria-labelledby` / `aria-describedby` / `aria-controls`, neplatné statické `label for`, veřejné `<section>`, `<nav>`, `<aside>`, `role="search"`, všechny veřejné `<article>` prvky bez `aria-labelledby` a `<figure>` bloky bez `aria-labelledby` nebo `figcaption`, formulářová pole bez labelu nebo ARIA názvu, `<fieldset>` bez `<legend>`, obrázky bez `alt`, iframe bez `title`, tlačítka bez explicitního `type`, veřejné tabulky bez `<caption>` nebo `aria-labelledby` a `target="_blank"` odkazy bez `rel="noopener noreferrer"` nebo bez oznámení nového okna v přístupném názvu
@@ -714,6 +714,8 @@ server {
     location ~ ^/blog/([a-z0-9\-]+)/?$ { rewrite ^/blog/(.+?)/?$ /blog/article.php?slug=$1 last; }
     location ~ ^/board/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/board/kategorie/(.+?)/?$ /board/index.php?category_slug=$1 last; }
     location ~ ^/board/([a-z0-9\-]+)/?$ { rewrite ^/board/(.+?)/?$ /board/document.php?slug=$1 last; }
+    location ~ ^/chat/tema/([a-z0-9\-]+)/?$ { rewrite ^/chat/tema/(.+?)/?$ /chat/index.php?topic_slug=$1 last; }
+    location ~ ^/chat/zprava/([0-9]+)/?$ { rewrite ^/chat/zprava/([0-9]+)/?$ /chat/message.php?id=$1 last; }
     location ~ ^/downloads/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/kategorie/(.+?)/?$ /downloads/index.php?category_slug=$1 last; }
     location ~ ^/downloads/serie/([a-z0-9\-]+)/?$ { rewrite ^/downloads/serie/(.+?)/?$ /downloads/series.php?slug=$1 last; }
     location ~ ^/downloads/([a-z0-9\-]+)/?$ { rewrite ^/downloads/(.+?)/?$ /downloads/item.php?slug=$1 last; }

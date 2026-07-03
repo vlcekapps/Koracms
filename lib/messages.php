@@ -301,6 +301,275 @@ function setChatMessageStatus(PDO $pdo, int $messageId, string $status): bool
     return (int)$exists->fetchColumn() > 0;
 }
 
+function chatTopicSlug(string $value): string
+{
+    return slugify($value);
+}
+
+function uniqueChatTopicSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+{
+    $baseSlug = chatTopicSlug($candidate);
+    if ($baseSlug === '') {
+        $baseSlug = 'tema';
+    }
+
+    $slug = $baseSlug;
+    $suffix = 2;
+    $stmt = $pdo->prepare("SELECT id FROM cms_chat_topics WHERE slug = ? AND id != ?");
+
+    while (true) {
+        $stmt->execute([$slug, $excludeId ?? 0]);
+        if (!$stmt->fetch()) {
+            return $slug;
+        }
+        $slug = $baseSlug . '-' . $suffix;
+        $suffix++;
+    }
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function chatTopics(PDO $pdo, bool $activeOnly = false): array
+{
+    $where = $activeOnly ? 'WHERE is_active = 1' : '';
+    try {
+        return $pdo->query(
+            "SELECT id, name, slug, description, is_active, sort_order, created_at, updated_at
+             FROM cms_chat_topics
+             {$where}
+             ORDER BY sort_order, name"
+        )->fetchAll();
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function chatTopicById(PDO $pdo, int $topicId, bool $activeOnly = true): ?array
+{
+    if ($topicId <= 0) {
+        return null;
+    }
+
+    $where = $activeOnly ? ' AND is_active = 1' : '';
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, name, slug, description, is_active, sort_order, created_at, updated_at
+             FROM cms_chat_topics
+             WHERE id = ?{$where}
+             LIMIT 1"
+        );
+        $stmt->execute([$topicId]);
+        $row = $stmt->fetch();
+    } catch (\PDOException $e) {
+        return null;
+    }
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function chatTopicBySlug(PDO $pdo, string $slug, bool $activeOnly = true): ?array
+{
+    $normalizedSlug = chatTopicSlug($slug);
+    if ($normalizedSlug === '') {
+        return null;
+    }
+
+    $where = $activeOnly ? ' AND is_active = 1' : '';
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, name, slug, description, is_active, sort_order, created_at, updated_at
+             FROM cms_chat_topics
+             WHERE slug = ?{$where}
+             LIMIT 1"
+        );
+        $stmt->execute([$normalizedSlug]);
+        $row = $stmt->fetch();
+    } catch (\PDOException $e) {
+        return null;
+    }
+
+    return is_array($row) ? $row : null;
+}
+
+/**
+ * @param array<string,mixed> $topic
+ */
+function chatTopicPath(array $topic): string
+{
+    return BASE_URL . '/chat/tema/' . rawurlencode((string)($topic['slug'] ?? ''));
+}
+
+/**
+ * @param array<string,mixed> $message
+ */
+function chatMessagePath(array $message): string
+{
+    return BASE_URL . '/chat/zprava/' . (int)($message['id'] ?? 0);
+}
+
+/**
+ * @return array<string, array{label:string}>
+ */
+function chatConversationTypeDefinitions(): array
+{
+    return [
+        'public' => ['label' => 'Veřejná zpráva'],
+        'support' => ['label' => 'Soukromý dotaz'],
+    ];
+}
+
+function normalizeChatConversationType(string $conversationType): string
+{
+    $normalized = trim($conversationType);
+    return array_key_exists($normalized, chatConversationTypeDefinitions()) ? $normalized : 'public';
+}
+
+function chatConversationTypeLabel(string $conversationType): string
+{
+    $normalized = normalizeChatConversationType($conversationType);
+    return chatConversationTypeDefinitions()[$normalized]['label'] ?? 'Veřejná zpráva';
+}
+
+function chatReferenceCode(?DateTimeInterface $date = null, ?string $suffix = null): string
+{
+    $date ??= new DateTimeImmutable();
+    $normalizedSuffix = strtoupper((string)preg_replace('/[^A-Z0-9]/i', '', (string)($suffix ?? '')));
+    if ($normalizedSuffix === '') {
+        $normalizedSuffix = strtoupper(bin2hex(random_bytes(2)));
+    }
+    $normalizedSuffix = substr(str_pad($normalizedSuffix, 4, '0'), 0, 4);
+
+    return 'CHT-' . $date->format('Ymd') . '-' . $normalizedSuffix;
+}
+
+function uniqueChatReferenceCode(PDO $pdo): string
+{
+    $stmt = $pdo->prepare("SELECT id FROM cms_chat WHERE reference_code = ? LIMIT 1");
+
+    do {
+        $code = chatReferenceCode();
+        $stmt->execute([$code]);
+    } while ($stmt->fetch());
+
+    return $code;
+}
+
+/**
+ * @param array<string,mixed> $message
+ */
+function chatMessageIsPinned(array $message, ?DateTimeInterface $now = null): bool
+{
+    if ((int)($message['is_pinned'] ?? 0) !== 1) {
+        return false;
+    }
+
+    $pinnedUntil = trim((string)($message['pinned_until'] ?? ''));
+    if ($pinnedUntil === '') {
+        return true;
+    }
+
+    $timestamp = strtotime($pinnedUntil);
+    if ($timestamp === false) {
+        return false;
+    }
+
+    $nowTimestamp = $now instanceof DateTimeInterface ? $now->getTimestamp() : time();
+    return $timestamp >= $nowTimestamp;
+}
+
+/**
+ * @return array<string, array{label:string}>
+ */
+function chatReplyStatusDefinitions(): array
+{
+    return [
+        'pending' => ['label' => 'Ke schválení'],
+        'approved' => ['label' => 'Zveřejněno'],
+        'hidden' => ['label' => 'Skryto'],
+    ];
+}
+
+function normalizeChatReplyStatus(string $status): string
+{
+    $normalized = trim($status);
+    return array_key_exists($normalized, chatReplyStatusDefinitions()) ? $normalized : 'pending';
+}
+
+function chatReplyStatusLabel(string $status): string
+{
+    $normalized = normalizeChatReplyStatus($status);
+    return chatReplyStatusDefinitions()[$normalized]['label'] ?? 'Ke schválení';
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function chatPublicReplies(PDO $pdo, int $chatId): array
+{
+    if ($chatId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, chat_id, name, message, created_at
+         FROM cms_chat_replies
+         WHERE chat_id = ? AND status = 'approved'
+         ORDER BY created_at ASC, id ASC"
+    );
+    $stmt->execute([$chatId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * @return list<array<string,mixed>>
+ */
+function chatAdminReplies(PDO $pdo, int $chatId): array
+{
+    if ($chatId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT id, chat_id, name, email, message, status, approved_at, approved_by_user_id, created_at, updated_at
+         FROM cms_chat_replies
+         WHERE chat_id = ?
+         ORDER BY FIELD(status, 'pending', 'approved', 'hidden'), created_at ASC, id ASC"
+    );
+    $stmt->execute([$chatId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * @return array<string, int>
+ */
+function chatReplyStatusCounts(PDO $pdo): array
+{
+    $counts = array_fill_keys(array_keys(chatReplyStatusDefinitions()), 0);
+
+    try {
+        $rows = $pdo->query(
+            "SELECT status, COUNT(*) AS cnt
+             FROM cms_chat_replies
+             GROUP BY status"
+        )->fetchAll();
+        foreach ($rows as $row) {
+            $statusKey = normalizeChatReplyStatus((string)($row['status'] ?? 'pending'));
+            $counts[$statusKey] = (int)($row['cnt'] ?? 0);
+        }
+    } catch (\PDOException $e) {
+        return $counts;
+    }
+
+    return $counts;
+}
+
 /**
  * @return array<string, array{label:string}>
  */
@@ -468,6 +737,7 @@ function chatHistoryActorLabel(array $entry): string
 
 function deleteChatMessage(PDO $pdo, int $messageId): void
 {
+    $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$messageId]);
     $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$messageId]);
     $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$messageId]);
 }

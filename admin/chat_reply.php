@@ -50,12 +50,14 @@ $pdo->prepare(
          replied_by_user_id = ?,
          replied_subject = ?,
          replied_to_email = ?,
+         replied_body = ?,
          updated_at = NOW()
      WHERE id = ?"
 )->execute([
     currentUserId(),
     $subject,
     $recipient,
+    $replyMessage,
     $messageId,
 ]);
 

@@ -97,6 +97,8 @@ Options -Indexes
     RewriteRule ^blog/([a-z0-9\-]+)/?$ blog/article.php?slug=$1 [L,QSA,NC]
     RewriteRule ^board/kategorie/([a-z0-9\-]+)/?$ board/index.php?category_slug=$1 [L,QSA,NC]
     RewriteRule ^board/([a-z0-9\-]+)/?$ board/document.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^chat/tema/([a-z0-9\-]+)/?$ chat/index.php?topic_slug=$1 [L,QSA,NC]
+    RewriteRule ^chat/zprava/([0-9]+)/?$ chat/message.php?id=$1 [L,QSA,NC]
     RewriteRule ^downloads/kategorie/([a-z0-9\-]+)/?$ downloads/index.php?category_slug=$1 [L,QSA,NC]
     RewriteRule ^downloads/serie/([a-z0-9\-]+)/?$ downloads/series.php?slug=$1 [L,QSA,NC]
     RewriteRule ^downloads/([a-z0-9\-]+)/?$ downloads/item.php?slug=$1 [L,QSA,NC]

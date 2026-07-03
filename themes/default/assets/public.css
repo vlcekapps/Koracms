@@ -1401,6 +1401,15 @@ body.theme-public textarea.form-control {
   white-space: pre-line;
 }
 
+.chat-message__actions {
+  margin: var(--space-xs) 0 0;
+  color: var(--text-muted);
+}
+
+.form-fieldset--nested {
+  margin: 0 0 var(--space-sm);
+}
+
 .news-item {
   padding-bottom: 1rem;
   border-bottom: 1px solid rgba(201, 213, 226, 0.85);

@@ -114,6 +114,8 @@ if ($routePath === '') {
         '#^blog/([a-z0-9-]+)/?$#i' => ['blog/article.php', ['slug']],
         '#^board/kategorie/([a-z0-9-]+)/?$#i' => ['board/index.php', ['category_slug']],
         '#^board/([a-z0-9-]+)/?$#i' => ['board/document.php', ['slug']],
+        '#^chat/tema/([a-z0-9-]+)/?$#i' => ['chat/index.php', ['topic_slug']],
+        '#^chat/zprava/([0-9]+)/?$#i' => ['chat/message.php', ['id']],
         '#^downloads/kategorie/([a-z0-9-]+)/?$#i' => ['downloads/index.php', ['category_slug']],
         '#^downloads/serie/([a-z0-9-]+)/?$#i' => ['downloads/series.php', ['slug']],
         '#^downloads/([a-z0-9-]+)/?$#i' => ['downloads/item.php', ['slug']],

@@ -59,6 +59,9 @@ $createdNewsletterIds = [];
 $createdSubscriberEmails = [];
 $createdContactTopicIds = [];
 $createdContactMessageIds = [];
+$createdChatTopicIds = [];
+$createdChatMessageIds = [];
+$createdChatReplyIds = [];
 $createdNavLinkIds = [];
 $createdPageViewIds = [];
 $createdStatsContentTokens = [];
@@ -3051,6 +3054,220 @@ try {
     clearSettingsCache();
 
     httpIntegrationPrintResult('contact_topics_and_reply_http', $contactCenterIssues, $failures);
+
+    $chatCenterIssues = [];
+    $chatOriginalModule = getSetting('module_chat', '0');
+    saveSetting('module_chat', '1');
+    clearSettingsCache();
+    httpIntegrationClearLocalRateLimits($pdo, ['chat', 'chat_reply']);
+
+    $chatTopicSlug = 'http-chat-' . bin2hex(random_bytes(4));
+    $chatTopicName = 'HTTP téma chatu ' . bin2hex(random_bytes(3));
+    $chatTopicsPage = fetchUrl($baseUrl . BASE_URL . '/admin/chat_topics.php', $adminSession['cookie'], 0);
+    $chatTopicsCsrf = extractHiddenInputValue($chatTopicsPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($chatTopicsPage) !== 200 || $chatTopicsCsrf === '') {
+        $chatCenterIssues[] = 'správa témat chatu nevrátila 200 nebo nevykreslila CSRF token';
+    } else {
+        $chatTopicCreateResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/chat_topics.php',
+            [
+                'csrf_token' => $chatTopicsCsrf,
+                'name' => $chatTopicName,
+                'slug' => $chatTopicSlug,
+                'description' => 'Popis tématu chatu pro HTTP integration.',
+                'is_active' => '1',
+                'sort_order' => '10',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($chatTopicCreateResponse) !== 302) {
+            $chatCenterIssues[] = 'uložení tématu chatu nevrátilo PRG redirect';
+        }
+    }
+
+    $chatTopicStmt = $pdo->prepare("SELECT id, name FROM cms_chat_topics WHERE slug = ? LIMIT 1");
+    $chatTopicStmt->execute([$chatTopicSlug]);
+    $chatTopicRow = $chatTopicStmt->fetch();
+    $chatTopicId = is_array($chatTopicRow) ? (int)$chatTopicRow['id'] : 0;
+    if ($chatTopicId <= 0) {
+        $chatCenterIssues[] = 'uložené téma chatu se nepodařilo dohledat podle slugu';
+    } else {
+        $createdChatTopicIds[] = $chatTopicId;
+    }
+
+    $approvedChatMessage = 'HTTP schválená připnutá chat zpráva ' . bin2hex(random_bytes(4));
+    $approvedChatId = 0;
+    if ($chatTopicId > 0) {
+        $pdo->prepare(
+            "INSERT INTO cms_chat (
+                topic_id, topic_label, conversation_type, reference_code, name, email, web, message,
+                status, public_visibility, is_pinned, pinned_at, pinned_by_user_id, created_at, updated_at
+             ) VALUES (?, ?, 'public', '', ?, '', '', ?, 'read', 'approved', 1, NOW(), ?, NOW(), NOW())"
+        )->execute([
+            $chatTopicId,
+            $chatTopicName,
+            'HTTP Chat Autor',
+            $approvedChatMessage,
+            $adminUserId,
+        ]);
+        $approvedChatId = (int)$pdo->lastInsertId();
+        $createdChatMessageIds[] = $approvedChatId;
+    }
+
+    if ($approvedChatId > 0) {
+        $topicPublicResponse = fetchUrl($baseUrl . BASE_URL . '/chat/tema/' . rawurlencode($chatTopicSlug), '', 0);
+        if (httpIntegrationStatusCode($topicPublicResponse) !== 200
+            || !str_contains($topicPublicResponse['body'], $chatTopicName)
+            || !str_contains($topicPublicResponse['body'], $approvedChatMessage)
+            || !str_contains($topicPublicResponse['body'], 'Připnuto')
+            || !str_contains($topicPublicResponse['body'], '/chat/zprava/' . $approvedChatId)) {
+            $chatCenterIssues[] = 'veřejná stránka tématu chatu nezobrazila téma, připnutí nebo detail vlákna';
+        }
+
+        $chatMessageUrl = $baseUrl . chatMessagePath(['id' => $approvedChatId]);
+        $replySession = koraPrimeTestSession([], 'kora-http-chat-reply-' . bin2hex(random_bytes(3)));
+        $chatMessageResponse = fetchUrl($chatMessageUrl, $replySession['cookie'], 0);
+        $replyCookie = responseMergeCookies($chatMessageResponse['headers'], $replySession['cookie']);
+        $chatReplyCsrf = extractHiddenInputValue($chatMessageResponse['body'], 'csrf_token');
+        $chatReplyCaptcha = httpIntegrationExtractCaptchaAnswer($chatMessageResponse['body']);
+        if (httpIntegrationStatusCode($chatMessageResponse) !== 200
+            || $chatReplyCsrf === ''
+            || !str_contains($chatMessageResponse['body'], 'Přidat odpověď')) {
+            $chatCenterIssues[] = 'veřejný detail chat zprávy nezobrazil formulář odpovědi';
+        } else {
+            $replyText = 'HTTP odpověď do veřejného vlákna ' . bin2hex(random_bytes(4));
+            $replyPost = postUrl(
+                $chatMessageUrl,
+                [
+                    'csrf_token' => $chatReplyCsrf,
+                    'name' => 'HTTP Odpovídající',
+                    'email' => 'http-chat-reply-' . bin2hex(random_bytes(4)) . '@example.test',
+                    'message' => $replyText,
+                    'captcha' => $chatReplyCaptcha,
+                    'hp_website' => '',
+                ],
+                $replyCookie,
+                0
+            );
+            if (httpIntegrationStatusCode($replyPost) !== 302
+                || !responseHasLocationHeader($replyPost['headers'], chatMessagePath(['id' => $approvedChatId]) . '?reply=pending', $baseUrl)) {
+                $chatCenterIssues[] = 'odeslání veřejné odpovědi do chatu nevrátilo pending redirect';
+            }
+
+            $replyStmt = $pdo->prepare("SELECT id, status FROM cms_chat_replies WHERE chat_id = ? AND message = ? ORDER BY id DESC LIMIT 1");
+            $replyStmt->execute([$approvedChatId, $replyText]);
+            $replyRow = $replyStmt->fetch();
+            $replyId = is_array($replyRow) ? (int)$replyRow['id'] : 0;
+            if ($replyId <= 0) {
+                $chatCenterIssues[] = 'veřejná odpověď do chatu se neuložila';
+            } else {
+                $createdChatReplyIds[] = $replyId;
+                if ((string)($replyRow['status'] ?? '') !== 'pending') {
+                    $chatCenterIssues[] = 'veřejná odpověď do chatu není ve stavu pending';
+                }
+
+                $chatDetailAdmin = fetchUrl(
+                    $baseUrl . BASE_URL . '/admin/chat_message.php?id=' . $approvedChatId,
+                    $adminSession['cookie'],
+                    0
+                );
+                $chatDetailCsrf = extractHiddenInputValue($chatDetailAdmin['body'], 'csrf_token');
+                if (httpIntegrationStatusCode($chatDetailAdmin) !== 200
+                    || $chatDetailCsrf === ''
+                    || !str_contains($chatDetailAdmin['body'], $replyText)
+                    || !str_contains($chatDetailAdmin['body'], '/admin/chat_reply_action.php')) {
+                    $chatCenterIssues[] = 'admin detail chat zprávy nezobrazil odpověď čekající na moderaci';
+                } else {
+                    $replyApproveResponse = postUrl(
+                        $baseUrl . BASE_URL . '/admin/chat_reply_action.php',
+                        [
+                            'csrf_token' => $chatDetailCsrf,
+                            'id' => (string)$replyId,
+                            'action' => 'approve',
+                            'redirect' => BASE_URL . '/admin/chat_message.php?id=' . $approvedChatId,
+                        ],
+                        $adminSession['cookie'],
+                        0
+                    );
+                    if (httpIntegrationStatusCode($replyApproveResponse) !== 302) {
+                        $chatCenterIssues[] = 'schválení veřejné odpovědi chatu nevrátilo redirect';
+                    }
+                    $approvedReplyStatusStmt = $pdo->prepare("SELECT status FROM cms_chat_replies WHERE id = ? LIMIT 1");
+                    $approvedReplyStatusStmt->execute([$replyId]);
+                    if ((string)$approvedReplyStatusStmt->fetchColumn() !== 'approved') {
+                        $chatCenterIssues[] = 'schválení veřejné odpovědi chatu neuložilo stav approved';
+                    }
+                    $publicThreadAfterApprove = fetchUrl($chatMessageUrl, '', 0);
+                    if (!str_contains($publicThreadAfterApprove['body'], $replyText)) {
+                        $chatCenterIssues[] = 'schválená veřejná odpověď se nezobrazila ve vlákně';
+                    }
+                }
+            }
+        }
+    }
+
+    $supportChatSession = koraPrimeTestSession([], 'kora-http-chat-support-' . bin2hex(random_bytes(3)));
+    $supportChatPage = fetchUrl($baseUrl . BASE_URL . '/chat/index.php', $supportChatSession['cookie'], 0);
+    $supportChatCookie = responseMergeCookies($supportChatPage['headers'], $supportChatSession['cookie']);
+    $supportChatCsrf = extractHiddenInputValue($supportChatPage['body'], 'csrf_token');
+    $supportChatCaptcha = httpIntegrationExtractCaptchaAnswer($supportChatPage['body']);
+    $supportMessage = 'HTTP soukromý dotaz do chatu ' . bin2hex(random_bytes(4));
+    $supportEmail = 'http-chat-support-' . bin2hex(random_bytes(4)) . '@example.test';
+    if (httpIntegrationStatusCode($supportChatPage) !== 200 || $supportChatCsrf === '') {
+        $chatCenterIssues[] = 'veřejný chat pro soukromý dotaz nevrátil 200 nebo CSRF token';
+    } else {
+        $supportPost = postUrl(
+            $baseUrl . BASE_URL . '/chat/index.php',
+            [
+                'csrf_token' => $supportChatCsrf,
+                'conversation_type' => 'support',
+                'topic_id' => $chatTopicId > 0 ? (string)$chatTopicId : '',
+                'name' => 'HTTP Soukromý Dotaz',
+                'email' => $supportEmail,
+                'message' => $supportMessage,
+                'captcha' => $supportChatCaptcha,
+                'hp_website' => '',
+            ],
+            $supportChatCookie,
+            0
+        );
+        $supportLocation = responseLocationHeaderValue($supportPost['headers']);
+        if (httpIntegrationStatusCode($supportPost) !== 302
+            || !str_contains($supportLocation, BASE_URL . '/chat/index.php')
+            || !str_contains($supportLocation, 'ok=support')
+            || !str_contains($supportLocation, 'ref=CHT-')) {
+            $chatCenterIssues[] = 'soukromý chat dotaz nevrátil support redirect';
+        }
+
+        $supportStmt = $pdo->prepare("SELECT * FROM cms_chat WHERE email = ? AND message = ? ORDER BY id DESC LIMIT 1");
+        $supportStmt->execute([$supportEmail, $supportMessage]);
+        $supportRow = $supportStmt->fetch();
+        $supportId = is_array($supportRow) ? (int)$supportRow['id'] : 0;
+        if ($supportId <= 0) {
+            $chatCenterIssues[] = 'soukromý chat dotaz se neuložil';
+        } else {
+            $createdChatMessageIds[] = $supportId;
+            if ((string)($supportRow['conversation_type'] ?? '') !== 'support'
+                || (string)($supportRow['public_visibility'] ?? '') !== 'hidden'
+                || preg_match('/^CHT-\d{8}-[A-Z0-9]{4}$/', (string)($supportRow['reference_code'] ?? '')) !== 1) {
+                $chatCenterIssues[] = 'soukromý chat dotaz nemá typ support, hidden viditelnost nebo referenční kód';
+            }
+            $publicChatAfterSupport = fetchUrl($baseUrl . BASE_URL . '/chat/index.php', '', 0);
+            if (str_contains($publicChatAfterSupport['body'], $supportMessage)) {
+                $chatCenterIssues[] = 'soukromý chat dotaz se propsal do veřejného výpisu';
+            }
+            $privateDetailProbe = fetchUrl($baseUrl . BASE_URL . '/chat/zprava/' . $supportId, '', 0);
+            if (httpIntegrationStatusCode($privateDetailProbe) !== 404) {
+                $chatCenterIssues[] = 'soukromý chat dotaz má veřejně dostupný detail';
+            }
+        }
+    }
+
+    saveSetting('module_chat', $chatOriginalModule);
+    clearSettingsCache();
+
+    httpIntegrationPrintResult('chat_topics_threads_support_http', $chatCenterIssues, $failures);
 
     $formPresetIssues = [];
     $issuePresetDefinition = formPresetDefinition('issue_report');
@@ -7935,6 +8152,19 @@ try {
     foreach ($createdContactTopicIds as $contactTopicIdToDelete) {
         $pdo->prepare("UPDATE cms_contact SET topic_id = NULL WHERE topic_id = ?")->execute([$contactTopicIdToDelete]);
         $pdo->prepare("DELETE FROM cms_contact_topics WHERE id = ?")->execute([$contactTopicIdToDelete]);
+    }
+
+    foreach ($createdChatReplyIds as $chatReplyIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_chat_replies WHERE id = ?")->execute([$chatReplyIdToDelete]);
+    }
+    foreach ($createdChatMessageIds as $chatMessageIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$chatMessageIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$chatMessageIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$chatMessageIdToDelete]);
+    }
+    foreach ($createdChatTopicIds as $chatTopicIdToDelete) {
+        $pdo->prepare("UPDATE cms_chat SET topic_id = NULL WHERE topic_id = ?")->execute([$chatTopicIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_chat_topics WHERE id = ?")->execute([$chatTopicIdToDelete]);
     }
 
     foreach ($createdStatsContentTokens as $statsContentTokenToDelete) {

@@ -153,14 +153,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FULLTEXT INDEX ft_news_search (title, content)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat_topics (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name        VARCHAR(255) NOT NULL,
+            slug        VARCHAR(150) NOT NULL,
+            description TEXT,
+            is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_cms_chat_topics_slug (slug),
+            KEY idx_cms_chat_topics_active_order (is_active, sort_order, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat (
             id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            topic_id   INT          NULL DEFAULT NULL,
+            topic_label VARCHAR(255) NOT NULL DEFAULT '',
+            conversation_type ENUM('public','support') NOT NULL DEFAULT 'public',
+            reference_code VARCHAR(32) NOT NULL DEFAULT '',
             name       VARCHAR(100) NOT NULL,
             email      VARCHAR(255) NOT NULL DEFAULT '',
             web        VARCHAR(255) NOT NULL DEFAULT '',
             message    TEXT         NOT NULL,
             status     ENUM('new','read','handled') NOT NULL DEFAULT 'new',
             public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+            is_pinned  TINYINT(1)   NOT NULL DEFAULT 0,
+            pinned_until DATETIME NULL DEFAULT NULL,
+            pinned_at DATETIME NULL DEFAULT NULL,
+            pinned_by_user_id INT NULL DEFAULT NULL,
             approved_at DATETIME NULL DEFAULT NULL,
             approved_by_user_id INT NULL DEFAULT NULL,
             internal_note TEXT,
@@ -168,8 +189,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             replied_by_user_id INT NULL DEFAULT NULL,
             replied_subject VARCHAR(255) NOT NULL DEFAULT '',
             replied_to_email VARCHAR(255) NOT NULL DEFAULT '',
+            replied_body TEXT,
             created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_cms_chat_public (conversation_type, public_visibility, topic_id, created_at),
+            KEY idx_cms_chat_reference (reference_code),
+            KEY idx_cms_chat_pinned (is_pinned, pinned_until)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat_replies (
+            id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            chat_id     INT          NOT NULL,
+            name        VARCHAR(100) NOT NULL,
+            email       VARCHAR(255) NOT NULL DEFAULT '',
+            message     TEXT         NOT NULL,
+            status      ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending',
+            approved_at DATETIME     NULL DEFAULT NULL,
+            approved_by_user_id INT  NULL DEFAULT NULL,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            KEY idx_cms_chat_replies_chat_status (chat_id, status, created_at),
+            KEY idx_cms_chat_replies_status (status, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_chat_history (

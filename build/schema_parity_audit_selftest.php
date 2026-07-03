@@ -232,6 +232,26 @@ CREATE TABLE IF NOT EXISTS cms_board_subscriber_categories (
   subscriber_id INT,
   category_id INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_chat_topics (
+  id INT,
+  slug VARCHAR(150),
+  is_active TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_chat (
+  id INT,
+  topic_id INT,
+  topic_label VARCHAR(255),
+  conversation_type VARCHAR(20),
+  reference_code VARCHAR(32),
+  is_pinned TINYINT(1),
+  pinned_until DATETIME,
+  replied_body TEXT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_chat_replies (
+  id BIGINT,
+  chat_id INT,
+  status VARCHAR(20)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_contact_topics (
   id INT,
   slug VARCHAR(150),
@@ -463,6 +483,16 @@ PHP,
 // cms_board_subscribers
 // uq_board_subscribers_email
 // cms_board_subscriber_categories
+// cms_chat_topics
+// uq_cms_chat_topics_slug
+// idx_cms_chat_topics_active_order
+// cms_chat.topic_id
+// cms_chat.conversation_type
+// cms_chat.reference_code
+// idx_cms_chat_public
+// idx_cms_chat_reference
+// cms_chat_replies
+// idx_cms_chat_replies_chat_status
 // cms_contact_topics
 // uq_cms_contact_topics_slug
 // idx_cms_contact_topics_active_order

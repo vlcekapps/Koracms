@@ -590,7 +590,9 @@ Veřejný obrázek používá alt text v pořadí: ručně vyplněný alt text, 
 
 ## Chat
 
-Modul chatu teď funguje jako moderovaná veřejná nástěnka, ne jako okamžitě publikovaný shoutbox. Každá nová zpráva nejdřív přijde do administrace a veřejně se zobrazí až po schválení.
+Modul chatu funguje jako moderovaná veřejná nástěnka, ne jako okamžitě publikovaný shoutbox. Každá nová veřejná zpráva nejdřív přijde do administrace a veřejně se zobrazí až po schválení. Nově lze chat členit do témat, připínat důležité schválené zprávy a u veřejných zpráv povolit moderované odpovědi ve vlákně.
+
+Stejný formulář umí také soukromý podpůrný dotaz správci. V tom režimu je povinný e-mail pro odpověď, CMS vygeneruje referenční kód ve tvaru `CHT-YYYYMMDD-XXXX` a zpráva se nikdy nezobrazí ve veřejném chatu, v detailu veřejné zprávy ani v sitemapě.
 
 ### Co se zobrazuje veřejně
 
@@ -599,8 +601,24 @@ Veřejný chat ukazuje jen:
 - jméno autora
 - datum odeslání
 - text zprávy
+- případné téma
+- stav připnutí u důležitých zpráv
+- odkaz na detail veřejného vlákna
 
 E-mailová adresa zůstává jen pro administraci a veřejně se nikdy nezobrazuje. Pole `web` už veřejný formulář vůbec nenabízí.
+
+### Témata a veřejná vlákna
+
+V administraci je u chatu odkaz **Témata chatu**. U každého tématu lze nastavit:
+
+- název a slug
+- krátký popis pro veřejnou stránku tématu
+- aktivní/vypnutý stav
+- pořadí ve veřejné navigaci témat
+
+Aktivní téma má čistou veřejnou adresu `/chat/tema/{slug}`. Bez témat se chat chová jako dříve a všechny veřejné zprávy se zobrazují v jednom proudu.
+
+Každá schválená veřejná zpráva má detail `/chat/zprava/{id}`. Návštěvník na něm vidí zprávu a schválené odpovědi; nová odpověď se po odeslání uloží jako `Ke schválení` a veřejně se zobrazí až po ruční moderaci.
 
 ### Jak funguje moderace
 
@@ -631,6 +649,10 @@ Přehled chat zpráv nově umí:
 - stránkování
 - filtr podle inbox stavu `Nové / Přečtené / Vyřízené / Všechny`
 - filtr podle veřejné viditelnosti `Ke schválení / Zveřejněné / Skryté / Vše`
+- filtr podle typu `Veřejná zpráva / Soukromý dotaz`
+- filtr podle tématu
+- filtr jen na připnuté zprávy
+- filtr na zprávy s odpověďmi ke schválení
 - hromadné akce `Schválit`, `Skrýt`, `Označit jako přečtené`, `Označit jako vyřízené`, `Smazat`
 
 Detail zprávy přidává:
@@ -638,6 +660,10 @@ Detail zprávy přidává:
 - interní poznámku
 - historii změn
 - rychlé workflow akce
+- typ zprávy a případný referenční kód
+- téma zprávy
+- připnutí veřejné zprávy včetně volitelného času konce
+- moderaci odpovědí ve veřejném vlákně
 - odpověď odesílateli e-mailem, pokud je k dispozici platná adresa
 
 Samotné otevření detailu označí zprávu jako přečtenou, ale automaticky ji nezveřejní.
@@ -650,11 +676,12 @@ Cleanup provádí `cron.php` a maže jen:
 
 - zprávy se stavem `Vyřízené`
 - starší než nastavený limit
+- související historii a veřejné odpovědi vlákna
 
 ### Co patří do README a co sem
 
-- [README.md](../README.md) stručně říká, že chat je moderovaný, stránkovaný a má inbox workflow.
-- Tento dokument popisuje konkrétní redakční workflow, veřejnou viditelnost zpráv, moderaci, odpovědi a automatický cleanup.
+- [README.md](../README.md) stručně říká, že chat je moderovaný, stránkovaný, má témata, veřejná vlákna a podpůrný inbox.
+- Tento dokument popisuje konkrétní redakční workflow, veřejnou viditelnost zpráv, témata, připnutí, moderaci odpovědí, soukromé dotazy a automatický cleanup.
 
 ---
 
@@ -1022,7 +1049,7 @@ Vývojové kontroly:
 - GitHub Actions drží dva oddělené workflow: `.github/workflows/ci.yml` pro běžné `push`/`pull_request` s `composer ci:basic` a `.github/workflows/full-ci.yml` pro ruční a noční běh plného `composer ci:full`; plný workflow si připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS, takže runtime audit a HTTP integrace mají vzdálený guardrail bez zpomalení každého commitu
 - Oba GitHub Actions workflow používají minimální `contents: read` oprávnění, řízení souběhu a job timeouty, aby se kvalita hlídala s menším oprávněním a bez visících běhů
 - `composer format:fix` umí stejnou úzkou sadu helperů lokálně dorovnat do PSR-12 bez zásahu do širšího historického kódu; momentálně pokrývá lint/bootstrap helpery a první stabilní várku sdílených knihoven (`backup`, `comments`, `content`, `definitions`, `filedownloads`, `gallery`, `github`, `mail`, `media_library`, `messages`, `pagination`, `presentation`, `revisions`, `stats`, `theme`, `totp`, `ui`, `uploads`, `webhooks`, `widgets`)
-- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 242 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
+- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 245 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
 - Veřejné i administrační požadavky dostávají `X-Request-ID`; globální neošetřené chyby a vybrané technické chyby se zapisují jako JSON záznamy se stejným `request_id`, metodou a cestou. Při dohledávání produkční chyby tak stačí porovnat ID z odpovědi nebo monitoringu s PHP logem; u neošetřené chyby se stejný kód zobrazí i na chybové stránce. Strukturovaný zápis se používá i pro dílčí obnovitelné chyby veřejného blogu, detailu článku, vyhledávání, sitemapy, veřejných formulářů, chatu, kontaktu, stažení souboru a newsletterových potvrzovacích akcí, kde má stránka pokračovat ve vykreslení, ale log musí ukázat selhaný zdroj nebo sekci. Stejný bezpečný zápis používají i vybrané administrační přehledy, například media picker/content reference search, formuláře a statistiky, bez ukládání hledaných výrazů, obsahu zpráv nebo tokenů do kontextu logu. Sdílené helpery pro zámky obsahu, revize, widgety, použití médií, formulářové webhooky, e-mailové notifikace, souborové operace a cron cleanup logují jen technický kontext typu operace, entity, zóny, interní tabulky, webhook eventu, hostu endpointu, HTTP stavu, domény příjemce, SMTP fáze, hashe cesty nebo přípony souboru; celé webhook URL, tělo odpovědi protistrany, celé e-mailové adresy, surové SMTP odpovědi ani fyzické cesty k souborům se do logu neukládají.
 - `health.php` kromě databáze, privátního úložiště a orientačního stavu záloh uvádí i čas poslední nalezené SQL zálohy a čerstvost posledního běhu cronu. Podporuje jen `GET` a `HEAD`; ostatní metody vrací sdílenou JSON `405` odpověď s `Allow: GET, HEAD`, bezpečnostními/no-store hlavičkami a `request_id`. Cron při každém běhu uloží `cron_last_run_at`; health check ho hlásí jako `ok`, `stale` nebo `unknown`, aniž by čerstvá instalace bez prvního cronu hned spadla do chyby. Monitoring odpověď dostává s `Cache-Control: no-store`, aby se nevyhodnocoval starý stav z cache.
 - CSP se na veřejných odpovědích posílá i v režimu `Content-Security-Policy-Report-Only`. Prohlížeče tak mohou hlásit podezřelé nebo chybějící zdroje na `csp-report.php`, aniž by se návštěvníkovi rozbil legitimní obsah; běžné inline styly jsou v politice výslovně povolené přes `style-src-elem` a `style-src-attr` a starší inline-style reporty endpoint přijme bez zápisu do JSONL, aby log neplnil očekávaný šum z historických admin šablon. Endpoint přijímá jen `POST`, nepovolené metody odmítá sdílenou JSON `405` odpovědí s `Allow: POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah, ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`, má vlastní rate limit proti zahlcení logů a cron čistí report soubory starší než 30 dní.

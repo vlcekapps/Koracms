@@ -456,6 +456,7 @@ function runKoraCron(PDO $pdo): array
                 $placeholders = implode(',', array_fill(0, count($expiredChatIds), '?'));
                 $pdo->beginTransaction();
                 try {
+                    $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
                     $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
                     $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($expiredChatIds);
                     $pdo->commit();
