@@ -127,6 +127,28 @@ function adminNavBadge(int $count, string $label): string
         . h($label) . '</span></span>';
 }
 
+/**
+ * @param list<array<string, mixed>> $items
+ * @param array<string, bool> $knownUrls
+ */
+function adminRegisterNavUrls(array $items, array &$knownUrls): void
+{
+    foreach ($items as $item) {
+        if (($item['type'] ?? 'link') === 'details') {
+            $children = $item['items'] ?? [];
+            if (is_array($children)) {
+                adminRegisterNavUrls($children, $knownUrls);
+            }
+            continue;
+        }
+
+        $url = (string)($item['url'] ?? '');
+        if ($url !== '') {
+            $knownUrls[$url] = true;
+        }
+    }
+}
+
 function adminHeader(string $pageTitle): void
 {
     $siteName = h(getSetting('site_name', 'Kora CMS'));
@@ -151,11 +173,11 @@ function adminHeader(string $pageTitle): void
         : ($pendingComments < 5 ? 'čekající komentáře' : 'čekajících komentářů');
 
     $renderItem = static function (array $item): string {
-        return '    <li><a href="' . $item['url'] . '">' . $item['label'] . '</a></li>' . "\n";
+        return '    <li><a href="' . h((string)$item['url']) . '">' . $item['label'] . '</a></li>' . "\n";
     };
 
     $renderNestedItem = static function (array $item): string {
-        return '          <li><a class="nav-link--nested" href="' . $item['url'] . '">' . $item['label'] . '</a></li>' . "\n";
+        return '          <li><a class="nav-link--nested" href="' . h((string)$item['url']) . '">' . $item['label'] . '</a></li>' . "\n";
     };
 
     $renderNavSection = static function (string $id, string $heading, array $items) use ($renderItem, $renderNestedItem): string {
@@ -365,6 +387,30 @@ function adminHeader(string $pageTitle): void
         $settingsItems[] = ['url' => $baseUrl . '/admin/trash.php', 'label' => 'Koš'];
     }
 
+    $knownNavUrls = [];
+    foreach ([$topItems, $contentItems, $communicationItems, $reservationItems, $settingsItems] as $navItems) {
+        adminRegisterNavUrls($navItems, $knownNavUrls);
+    }
+
+    $moduleFallbackItems = [];
+    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+        if (!isModuleEnabled((string)$moduleKey) || !currentUserHasCapability(moduleAdminCapability((string)$moduleKey))) {
+            continue;
+        }
+
+        $adminPath = $definition['admin_paths'][0];
+        $url = $baseUrl . $adminPath;
+        if (isset($knownNavUrls[$url])) {
+            continue;
+        }
+
+        $moduleFallbackItems[] = [
+            'url' => $url,
+            'label' => h(moduleAdminLabel((string)$moduleKey)),
+        ];
+        $knownNavUrls[$url] = true;
+    }
+
     $bottomItems = [
         ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'],
         ['url' => $baseUrl . '/admin/logout.php', 'label' => 'Odhlásit se'],
@@ -408,6 +454,7 @@ function adminHeader(string $pageTitle): void
     echo $renderNavSection('nav-content', 'Obsah webu', $contentItems);
     echo $renderNavSection('nav-communication', 'Komunikace', $communicationItems);
     echo $renderNavSection('nav-reservations', 'Rezervace', $reservationItems);
+    echo $renderNavSection('nav-modules', 'Další moduly', $moduleFallbackItems);
     echo $renderNavSection('nav-settings', 'Nastavení a správa', $settingsItems);
 
     echo '  <ul class="admin-nav-bottom">' . "\n";

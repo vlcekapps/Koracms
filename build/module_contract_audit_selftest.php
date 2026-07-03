@@ -212,6 +212,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
         . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, admin_paths a admin_capability.\n"
+        . "Fallback administrativní navigace používá sekci Další moduly.\n"
         . "Sdílené lookup helpery modulePublicPathModuleMap() a moduleAdminPathModuleMap() drží mapy cest bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
@@ -231,6 +232,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
         . "Obsahové trendy používají stats_page_types.\n"
         . "Cesty modulů mapují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
         . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
+        . "Fallback navigace pro nové moduly používá sekci Další moduly.\n"
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
         . "Spusťte composer ci:module-ready.\n";
@@ -242,6 +244,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
         . "Sdílené lookupy cest poskytují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
+        . "Fallback navigace nových modulů používá sekci Další moduly.\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
         . "Obsahové trendy definuje stats_page_types.\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n";
@@ -259,6 +262,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\nfunction statsPageTypeModuleKey(string \$pageType): string { return moduleStatsPageTypeMap()[\$pageType] ?? ''; }\nfunction statsContentModuleOptions(): array { foreach (array_keys(moduleStatsPageTypes()) as \$moduleKey) {} return []; }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
         'lib/admin_command.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { moduleAdminCapability((string)\$moduleKey); 'module.' . (string)\$moduleKey; }\n",
+        'admin/layout.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { moduleAdminCapability((string)\$moduleKey); moduleAdminLabel((string)\$moduleKey); 'nav-modules'; }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
         'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",

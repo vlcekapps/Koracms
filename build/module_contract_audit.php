@@ -1527,6 +1527,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_paths',
             'admin_paths',
             'admin_capability',
+            'Další moduly',
             'adminRouteModuleRequirements()',
             'requireModuleEnabled()',
             'isModuleEnabled()',
@@ -1562,6 +1563,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_paths',
             'adminRouteModuleRequirements()',
             'admin_capability',
+            'Další moduly',
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
@@ -1584,6 +1586,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'moduleAdminPathModuleMap()',
             'adminRouteModuleRequirements()',
             'admin_capability',
+            'Další moduly',
             'content_reference_types',
             'search_result_types',
             'sitemap_sections',
@@ -1597,6 +1600,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
 $definitionsSource = moduleContractAuditReadFile($projectRoot, 'lib/definitions.php', $issues);
 $statsSource = moduleContractAuditReadFile($projectRoot, 'lib/stats.php', $issues);
 $settingsModulesSource = moduleContractAuditReadFile($projectRoot, 'admin/settings_modules.php', $issues);
+$adminLayoutSource = moduleContractAuditReadFile($projectRoot, 'admin/layout.php', $issues);
 $installSource = moduleContractAuditReadFile($projectRoot, 'install.php', $issues);
 $migrateSource = moduleContractAuditReadFile($projectRoot, 'migrate.php', $issues);
 $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $issues);
@@ -1650,6 +1654,15 @@ moduleContractAuditRequire(
     && str_contains($adminCommandSource, 'moduleAdminCapability(')
     && str_contains($adminCommandSource, "'module.' ."),
     'lib/admin_command.php must derive fallback module shortcuts from coreModuleDefinitions() and admin_capability.',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($adminLayoutSource, 'coreModuleDefinitions()')
+    && str_contains($adminLayoutSource, 'moduleAdminCapability(')
+    && str_contains($adminLayoutSource, 'moduleAdminLabel(')
+    && str_contains($adminLayoutSource, "'nav-modules'"),
+    'admin/layout.php must derive fallback module navigation from coreModuleDefinitions() and admin_capability.',
     $issues
 );
 
