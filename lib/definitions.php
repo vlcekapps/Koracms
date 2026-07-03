@@ -665,6 +665,22 @@ function moduleAdminPathModuleMap(): array
     return $map;
 }
 
+function modulePrimaryAdminPath(string $moduleKey): string
+{
+    $definition = moduleDefinition($moduleKey);
+    if ($definition === null) {
+        return '';
+    }
+
+    $adminPaths = $definition['admin_paths'] ?? [];
+    if (!is_array($adminPaths) || $adminPaths === []) {
+        return '';
+    }
+
+    $primaryPath = (string)$adminPaths[0];
+    return str_starts_with($primaryPath, '/admin/') ? $primaryPath : '';
+}
+
 function moduleWidgetLabel(string $moduleKey): string
 {
     if ($moduleKey === 'board') {

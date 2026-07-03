@@ -1522,6 +1522,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
+            'modulePrimaryAdminPath()',
             'settings_default',
             'public_nav_path',
             'public_paths',
@@ -1558,6 +1559,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
+            'modulePrimaryAdminPath()',
             'install.php',
             'migrate.php',
             'public_paths',
@@ -1584,6 +1586,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'coreModuleDefinitions()',
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
+            'modulePrimaryAdminPath()',
             'adminRouteModuleRequirements()',
             'admin_capability',
             'Další moduly',
@@ -1625,6 +1628,7 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
     && str_contains($definitionsSource, 'function modulePublicEntryPoints()')
     && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
+    && str_contains($definitionsSource, 'function modulePrimaryAdminPath(')
     && str_contains($definitionsSource, 'function moduleWidgetLabel(')
     && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels(')
     && str_contains($definitionsSource, 'function contentReferenceTypeModuleMap(')
@@ -1652,17 +1656,21 @@ moduleContractAuditRequire(
 moduleContractAuditRequire(
     str_contains($adminCommandSource, 'coreModuleDefinitions()')
     && str_contains($adminCommandSource, 'moduleAdminCapability(')
+    && str_contains($adminCommandSource, 'modulePrimaryAdminPath(')
+    && !str_contains($adminCommandSource, "['admin_paths'][0]")
     && str_contains($adminCommandSource, "'module.' ."),
-    'lib/admin_command.php must derive fallback module shortcuts from coreModuleDefinitions() and admin_capability.',
+    'lib/admin_command.php must derive fallback module shortcuts through modulePrimaryAdminPath() and admin_capability.',
     $issues
 );
 
 moduleContractAuditRequire(
     str_contains($adminLayoutSource, 'coreModuleDefinitions()')
     && str_contains($adminLayoutSource, 'moduleAdminCapability(')
+    && str_contains($adminLayoutSource, 'modulePrimaryAdminPath(')
+    && !str_contains($adminLayoutSource, "['admin_paths'][0]")
     && str_contains($adminLayoutSource, 'moduleAdminLabel(')
     && str_contains($adminLayoutSource, "'nav-modules'"),
-    'admin/layout.php must derive fallback module navigation from coreModuleDefinitions() and admin_capability.',
+    'admin/layout.php must derive fallback module navigation through modulePrimaryAdminPath() and admin_capability.',
     $issues
 );
 

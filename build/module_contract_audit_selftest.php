@@ -167,6 +167,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function moduleNavigationDefaults(): array { return []; }\n"
         . "function modulePublicEntryPoints(): array { return []; }\n"
         . "function moduleAdminEntryPoints(): array { return []; }\n"
+        . "function modulePrimaryAdminPath(string \$moduleKey): string { return '/admin/' . \$moduleKey . '.php'; }\n"
         . "function moduleWidgetLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function moduleContentReferenceTypeLabels(): array { return []; }\n"
         . "function contentReferenceTypeModuleMap(): array { return ['blog' => 'blog', 'news' => 'news']; }\n"
@@ -213,7 +214,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
         . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, admin_paths a admin_capability.\n"
         . "Fallback administrativní navigace používá sekci Další moduly.\n"
-        . "Sdílené lookup helpery modulePublicPathModuleMap() a moduleAdminPathModuleMap() drží mapy cest bez ručních seznamů.\n"
+        . "Sdílené lookup helpery modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath() drží mapy cest bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
         . "Content picker používá content_reference_types, veřejné vyhledávání search_result_types a sitemap používá sitemap_sections.\n"
@@ -230,7 +231,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
     return "Nové moduly popisuje docs/developer-modules.md.\n"
         . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
         . "Obsahové trendy používají stats_page_types.\n"
-        . "Cesty modulů mapují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
+        . "Cesty modulů mapují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
         . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace pro nové moduly používá sekci Další moduly.\n"
         . "Content picker používá content_reference_types.\n"
@@ -242,7 +243,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
 {
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
-        . "Sdílené lookupy cest poskytují modulePublicPathModuleMap() a moduleAdminPathModuleMap().\n"
+        . "Sdílené lookupy cest poskytují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace nových modulů používá sekci Další moduly.\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
@@ -261,8 +262,8 @@ function moduleContractAuditSelfTestValidFiles(): array
         'auth.php' => moduleContractAuditSelfTestAuthFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\nfunction statsPageTypeModuleKey(string \$pageType): string { return moduleStatsPageTypeMap()[\$pageType] ?? ''; }\nfunction statsContentModuleOptions(): array { foreach (array_keys(moduleStatsPageTypes()) as \$moduleKey) {} return []; }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
-        'lib/admin_command.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { moduleAdminCapability((string)\$moduleKey); 'module.' . (string)\$moduleKey; }\n",
-        'admin/layout.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { moduleAdminCapability((string)\$moduleKey); moduleAdminLabel((string)\$moduleKey); 'nav-modules'; }\n",
+        'lib/admin_command.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { modulePrimaryAdminPath((string)\$moduleKey); moduleAdminCapability((string)\$moduleKey); 'module.' . (string)\$moduleKey; }\n",
+        'admin/layout.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { modulePrimaryAdminPath((string)\$moduleKey); moduleAdminCapability((string)\$moduleKey); moduleAdminLabel((string)\$moduleKey); 'nav-modules'; }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
         'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",

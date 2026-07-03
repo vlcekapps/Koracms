@@ -393,12 +393,16 @@ function adminHeader(string $pageTitle): void
     }
 
     $moduleFallbackItems = [];
-    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
+    foreach (array_keys(coreModuleDefinitions()) as $moduleKey) {
         if (!isModuleEnabled((string)$moduleKey) || !currentUserHasCapability(moduleAdminCapability((string)$moduleKey))) {
             continue;
         }
 
-        $adminPath = $definition['admin_paths'][0];
+        $adminPath = modulePrimaryAdminPath((string)$moduleKey);
+        if ($adminPath === '') {
+            continue;
+        }
+
         $url = $baseUrl . $adminPath;
         if (isset($knownNavUrls[$url])) {
             continue;

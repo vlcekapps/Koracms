@@ -8100,6 +8100,7 @@ $foundationChecks = [
         && str_contains($definitionsSource, 'function moduleNavigationDefaults()')
         && str_contains($definitionsSource, 'function modulePublicEntryPoints()')
         && str_contains($definitionsSource, 'function moduleAdminEntryPoints()')
+        && str_contains($definitionsSource, 'function modulePrimaryAdminPath(')
         && str_contains($definitionsSource, 'function moduleWidgetLabel(')
         && str_contains($definitionsSource, 'function moduleAdminLabel(')
         && str_contains($definitionsSource, "'admin_label'")

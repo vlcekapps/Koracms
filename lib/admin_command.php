@@ -103,9 +103,11 @@ function adminCommandBaseRegistry(): array
         }
     }
 
-    foreach (coreModuleDefinitions() as $moduleKey => $definition) {
-        $adminPaths = $definition['admin_paths'];
-        $primaryAdminPath = $adminPaths[0];
+    foreach (array_keys(coreModuleDefinitions()) as $moduleKey) {
+        $primaryAdminPath = modulePrimaryAdminPath((string)$moduleKey);
+        if ($primaryAdminPath === '') {
+            continue;
+        }
 
         $url = BASE_URL . $primaryAdminPath;
         if (isset($knownCommandUrls[$url])) {
