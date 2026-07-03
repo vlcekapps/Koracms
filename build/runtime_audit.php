@@ -8327,6 +8327,8 @@ $foundationChecks = [
         && str_contains($schemaParityAuditSource, 'schemaParityTableContains')
         && str_contains($schemaParityAuditSource, 'cms_pages.blog_id')
         && str_contains($schemaParityAuditSource, 'cms_media.caption')
+        && str_contains($schemaParityAuditSource, 'cms_gallery_photos.alt_text')
+        && str_contains($schemaParityAuditSource, 'cms_gallery_albums.default_license_url')
         && str_contains($schemaParityAuditSource, 'cms_gallery_photos.deleted_at')
         && str_contains($schemaParityAuditSource, 'ORDER BY p.created_at DESC, p.id DESC')
         && str_contains($schemaParityAuditSource, 'articleExcerpt(')
@@ -12835,6 +12837,8 @@ $galleryPhotoViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/
 $galleryImageSource = (string)file_get_contents(dirname(__DIR__) . '/gallery/image.php');
 $gallerySearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
 $galleryWidgetSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
+$galleryExportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/export.php');
+$galleryImportSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
 $htaccessSource = (string)file_get_contents(dirname(__DIR__) . '/.htaccess');
 if (!str_contains($galleryAlbumSaveSource, "saveRevision(\$pdo, 'gallery_album'")) {
     $gallerySourceIssues[] = 'gallery album save is missing revision persistence';
@@ -12856,6 +12860,35 @@ if (!str_contains($galleryPhotoFormSource, 'revisions.php?type=gallery_photo')) 
 }
 if (!str_contains($galleryPhotoFormSource, 'name="is_published"')) {
     $gallerySourceIssues[] = 'gallery photo form is missing visibility toggle';
+}
+if (!str_contains($galleryAlbumFormSource, 'Výchozí metadata pro nové fotografie')
+    || !str_contains($galleryAlbumFormSource, 'name="default_license_url"')) {
+    $gallerySourceIssues[] = 'gallery album form is missing default photo metadata fields';
+}
+if (!str_contains($galleryAlbumSaveSource, 'normalizeGalleryLicenseUrl($defaultLicenseUrlInput)')
+    || !str_contains($galleryAlbumSaveSource, 'default_credit = ?')) {
+    $gallerySourceIssues[] = 'gallery album save is missing validated default metadata persistence';
+}
+if (!str_contains($galleryPhotoFormSource, 'Popis a práva')
+    || !str_contains($galleryPhotoFormSource, 'name="alt_text"')
+    || !str_contains($galleryPhotoFormSource, 'name="license_url"')) {
+    $gallerySourceIssues[] = 'gallery photo form is missing photo metadata fields';
+}
+if (!str_contains($galleryPhotoSaveSource, 'normalizeGalleryLicenseUrl($licenseUrlInput)')
+    || !str_contains($galleryPhotoSaveSource, 'alt_text = ?')
+    || !str_contains($galleryPhotoSaveSource, 'default_credit')) {
+    $gallerySourceIssues[] = 'gallery photo save is missing validated metadata persistence or upload inheritance';
+}
+if (!str_contains($galleryPhotoViewSource, 'gallery-photo-info-heading')
+    || !str_contains($galleryPhotoViewSource, 'aria-labelledby="gallery-photo-info-heading"')
+    || !str_contains($galleryPhotoViewSource, "alt_text_resolved")) {
+    $gallerySourceIssues[] = 'gallery photo view is missing accessible metadata section or resolved alt text';
+}
+if (!str_contains($galleryExportSource, 'default_license_url')
+    || !str_contains($galleryExportSource, 'alt_text, caption, description')
+    || !str_contains($galleryImportSource, 'normalizeGalleryLicenseUrl((string)($row[\'license_url\'] ?? \'\'))')
+    || !str_contains($galleryImportSource, 'default_credit')) {
+    $gallerySourceIssues[] = 'gallery export/import is missing photo metadata or album defaults';
 }
 if (!str_contains($galleryIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
     $gallerySourceIssues[] = 'gallery index is missing public search support';

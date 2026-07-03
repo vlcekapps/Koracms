@@ -35,11 +35,52 @@ $photoCount = (int)($photoCount ?? 0);
     </p>
 
     <figure class="photo-figure" aria-labelledby="gallery-photo-caption">
-      <img class="photo-figure__image" src="<?= h((string)$photo['image_url']) ?>" alt="<?= h($photoTitle) ?>">
-      <figcaption id="gallery-photo-caption" class="<?= $photo['title'] !== '' ? 'photo-figure__caption' : 'sr-only' ?>">
-        <?= h($photo['title'] !== '' ? (string)$photo['title'] : $photoTitle) ?>
+      <img class="photo-figure__image" src="<?= h((string)$photo['image_url']) ?>" alt="<?= h((string)$photo['alt_text_resolved']) ?>">
+      <figcaption id="gallery-photo-caption" class="<?= $photo['caption_text'] !== '' ? 'photo-figure__caption' : 'sr-only' ?>">
+        <?= h($photo['caption_text'] !== '' ? (string)$photo['caption_text'] : $photoTitle) ?>
       </figcaption>
     </figure>
+
+    <?php if ((string)($photo['description'] ?? '') !== '' || (string)($photo['credit'] ?? '') !== '' || (string)($photo['license_label'] ?? '') !== '' || (string)($photo['taken_at_label'] ?? '') !== '' || (string)($photo['location_label'] ?? '') !== ''): ?>
+      <section class="gallery-photo-info" aria-labelledby="gallery-photo-info-heading">
+        <h2 id="gallery-photo-info-heading" class="section-title">Informace o fotografii</h2>
+        <?php if ((string)($photo['description'] ?? '') !== ''): ?>
+          <p><?= h((string)$photo['description']) ?></p>
+        <?php endif; ?>
+        <dl class="info-list">
+          <?php if ((string)($photo['taken_at_label'] ?? '') !== ''): ?>
+            <div>
+              <dt>Datum pořízení</dt>
+              <dd><?= h((string)$photo['taken_at_label']) ?></dd>
+            </div>
+          <?php endif; ?>
+          <?php if ((string)($photo['location_label'] ?? '') !== ''): ?>
+            <div>
+              <dt>Místo</dt>
+              <dd><?= h((string)$photo['location_label']) ?></dd>
+            </div>
+          <?php endif; ?>
+          <?php if ((string)($photo['credit'] ?? '') !== ''): ?>
+            <div>
+              <dt>Kredit</dt>
+              <dd><?= h((string)$photo['credit']) ?></dd>
+            </div>
+          <?php endif; ?>
+          <?php if ((string)($photo['license_label'] ?? '') !== '' || (string)($photo['license_url'] ?? '') !== ''): ?>
+            <div>
+              <dt>Licence</dt>
+              <dd>
+                <?php if ((string)($photo['license_url'] ?? '') !== ''): ?>
+                  <a href="<?= h((string)$photo['license_url']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)($photo['license_label'] !== '' ? $photo['license_label'] : 'Licence fotografie')) ?><?= newWindowLinkSrOnlySuffix() ?></a>
+                <?php else: ?>
+                  <?= h((string)$photo['license_label']) ?>
+                <?php endif; ?>
+              </dd>
+            </div>
+          <?php endif; ?>
+        </dl>
+      </section>
+    <?php endif; ?>
 
     <h2 id="gallery-photo-nav-heading" class="sr-only">Navigace mezi fotografiemi</h2>
     <nav class="button-row button-row--start" aria-labelledby="gallery-photo-nav-heading">
@@ -75,10 +116,10 @@ $photoCount = (int)($photoCount ?? 0);
           <?php $relatedCaptionId = 'gallery-related-photo-caption-' . (int)($relatedPhoto['id'] ?? $relatedIndex); ?>
           <figure class="card gallery-photo-card" aria-labelledby="<?= h($relatedCaptionId) ?>">
             <a class="gallery-card__link" href="<?= h((string)$relatedPhoto['public_path']) ?>">
-              <img class="gallery-card__image" src="<?= h((string)$relatedPhoto['thumb_url']) ?>" alt="<?= h((string)$relatedPhoto['label']) ?>">
+              <img class="gallery-card__image" src="<?= h((string)$relatedPhoto['thumb_url']) ?>" alt="<?= h((string)$relatedPhoto['alt_text_resolved']) ?>">
             </a>
-            <?php if ($relatedPhoto['title'] !== ''): ?>
-              <figcaption id="<?= h($relatedCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$relatedPhoto['title']) ?></figcaption>
+            <?php if ($relatedPhoto['caption_text'] !== ''): ?>
+              <figcaption id="<?= h($relatedCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$relatedPhoto['caption_text']) ?></figcaption>
             <?php else: ?>
               <figcaption id="<?= h($relatedCaptionId) ?>" class="sr-only"><?= h((string)$relatedPhoto['label']) ?></figcaption>
             <?php endif; ?>

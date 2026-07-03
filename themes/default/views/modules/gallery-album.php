@@ -126,10 +126,10 @@ $clearUrl = (string)($clearUrl ?? galleryAlbumPublicPath($album));
           <?php $photoCaptionId = 'gallery-photo-caption-' . (int)($photo['id'] ?? $photoIndex); ?>
           <figure class="card gallery-photo-card" aria-labelledby="<?= h($photoCaptionId) ?>">
             <a class="gallery-card__link" href="<?= h((string)$photo['public_path']) ?>">
-              <img class="gallery-card__image" src="<?= h((string)$photo['thumb_url']) ?>" alt="<?= h((string)$photo['label']) ?>">
+              <img class="gallery-card__image" src="<?= h((string)$photo['thumb_url']) ?>" alt="<?= h((string)$photo['alt_text_resolved']) ?>">
             </a>
-            <?php if ($photo['title'] !== ''): ?>
-              <figcaption id="<?= h($photoCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$photo['title']) ?></figcaption>
+            <?php if ($photo['caption_text'] !== ''): ?>
+              <figcaption id="<?= h($photoCaptionId) ?>" class="gallery-photo-card__caption"><?= h((string)$photo['caption_text']) ?></figcaption>
             <?php else: ?>
               <figcaption id="<?= h($photoCaptionId) ?>" class="sr-only"><?= h((string)$photo['label']) ?></figcaption>
             <?php endif; ?>

@@ -22,16 +22,35 @@ if ($albumId === null) {
     $redirectToAlbumPhotos(null);
 }
 
-$albumStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_gallery_albums WHERE id = ?");
+$albumStmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
 $albumStmt->execute([$albumId]);
-if ((int)$albumStmt->fetchColumn() === 0) {
+$album = $albumStmt->fetch() ?: null;
+if ($album === null) {
     $redirectToAlbumPhotos(null);
 }
+
+$redirectToPhotoForm = static function (int $photoId, int $targetAlbumId, string $error): void {
+    header('Location: ' . BASE_URL . appendUrlQuery('/admin/gallery_photo_form.php', [
+        'id' => (string)$photoId,
+        'album_id' => (string)$targetAlbumId,
+        'err' => $error,
+    ]));
+    exit;
+};
 
 if ($mode === 'edit') {
     $id = inputInt('post', 'id');
     $title = trim($_POST['title'] ?? '');
     $slugInput = trim($_POST['slug'] ?? '');
+    $altText = trim((string)($_POST['alt_text'] ?? ''));
+    $caption = trim((string)($_POST['caption'] ?? ''));
+    $description = trim((string)($_POST['description'] ?? ''));
+    $credit = trim((string)($_POST['credit'] ?? ''));
+    $licenseLabel = trim((string)($_POST['license_label'] ?? ''));
+    $licenseUrlInput = trim((string)($_POST['license_url'] ?? ''));
+    $licenseUrl = normalizeGalleryLicenseUrl($licenseUrlInput);
+    $takenAt = trim((string)($_POST['taken_at'] ?? ''));
+    $locationLabel = trim((string)($_POST['location_label'] ?? ''));
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
     $canApproveContent = currentUserHasCapability('content_approve_shared');
     $isPublished = isset($_POST['is_published']) ? 1 : 0;
@@ -47,18 +66,23 @@ if ($mode === 'edit') {
         $redirectToAlbumPhotos($albumId);
     }
 
+    if ($licenseUrlInput !== '' && $licenseUrl === '') {
+        $redirectToPhotoForm($id, $albumId, 'license_url');
+    }
+    if ($takenAt !== '') {
+        $takenAtDate = DateTimeImmutable::createFromFormat('!Y-m-d', $takenAt);
+        if (!$takenAtDate instanceof DateTimeImmutable || $takenAtDate->format('Y-m-d') !== $takenAt) {
+            $redirectToPhotoForm($id, $albumId, 'taken_at');
+        }
+    }
+
     $slugCandidate = $slugInput !== ''
         ? $slugInput
         : ($title !== '' ? $title : pathinfo((string)$existingPhoto['filename'], PATHINFO_FILENAME));
     $normalizedSlug = galleryPhotoSlug($slugInput);
     $resolvedSlug = uniqueGalleryPhotoSlug($pdo, $slugCandidate, $id);
     if ($normalizedSlug !== '' && $normalizedSlug !== $resolvedSlug) {
-        header('Location: ' . BASE_URL . appendUrlQuery('/admin/gallery_photo_form.php', [
-            'id' => (string)$id,
-            'album_id' => (string)$albumId,
-            'err' => 'slug',
-        ]));
-        exit;
+        $redirectToPhotoForm($id, $albumId, 'slug');
     }
 
     $albumNameStmt = $pdo->prepare("SELECT name FROM cms_gallery_albums WHERE id = ?");
@@ -69,11 +93,21 @@ if ($mode === 'edit') {
 
     $pdo->prepare(
         "UPDATE cms_gallery_photos
-         SET title = ?, slug = ?, sort_order = ?, is_published = ?
+         SET title = ?, slug = ?, alt_text = ?, caption = ?, description = ?, credit = ?,
+             license_label = ?, license_url = ?, taken_at = ?, location_label = ?,
+             sort_order = ?, is_published = ?
          WHERE id = ?"
     )->execute([
         $title,
         $resolvedSlug,
+        $altText,
+        $caption,
+        $description,
+        $credit,
+        $licenseLabel,
+        $licenseUrl,
+        $takenAt !== '' ? $takenAt : null,
+        $locationLabel,
         $sortOrder,
         $canApproveContent ? $isPublished : (int)($existingPhoto['is_published'] ?? 1),
         $id,
@@ -82,6 +116,14 @@ if ($mode === 'edit') {
     $newRevision = galleryPhotoRevisionSnapshot([
         'title' => $title,
         'slug' => $resolvedSlug,
+        'alt_text' => $altText,
+        'caption' => $caption,
+        'description' => $description,
+        'credit' => $credit,
+        'license_label' => $licenseLabel,
+        'license_url' => $licenseUrl,
+        'taken_at' => $takenAt,
+        'location_label' => $locationLabel,
         'sort_order' => $sortOrder,
         'is_published' => $canApproveContent ? $isPublished : (int)($existingPhoto['is_published'] ?? 1),
         'status' => $existingPhoto['status'] ?? 'published',
@@ -128,9 +170,21 @@ if (!empty($files['name'])) {
         $slugCandidate = pathinfo((string)$photoUpload['original_name'], PATHINFO_FILENAME);
         $resolvedSlug = uniqueGalleryPhotoSlug($pdo, $slugCandidate);
         $pdo->prepare(
-            "INSERT INTO cms_gallery_photos (album_id, filename, title, slug, sort_order, is_published, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
-        )->execute([$albumId, $filename, '', $resolvedSlug, $nextSortOrder, $uploadVisibility, $uploadStatus]);
+            "INSERT INTO cms_gallery_photos
+             (album_id, filename, title, slug, credit, license_label, license_url, sort_order, is_published, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        )->execute([
+            $albumId,
+            $filename,
+            '',
+            $resolvedSlug,
+            trim((string)($album['default_credit'] ?? '')),
+            trim((string)($album['default_license_label'] ?? '')),
+            normalizeGalleryLicenseUrl((string)($album['default_license_url'] ?? '')),
+            $nextSortOrder,
+            $uploadVisibility,
+            $uploadStatus,
+        ]);
         $uploadedCount++;
         $nextSortOrder++;
     }

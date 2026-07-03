@@ -118,9 +118,23 @@ CREATE TABLE IF NOT EXISTS cms_media (
   credit VARCHAR(255),
   visibility VARCHAR(20)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_gallery_albums (
+  id INT,
+  default_credit VARCHAR(255),
+  default_license_label VARCHAR(100),
+  default_license_url VARCHAR(255)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_photos (
   id INT,
   slug VARCHAR(255),
+  alt_text VARCHAR(255),
+  caption TEXT,
+  description TEXT,
+  credit VARCHAR(255),
+  license_label VARCHAR(100),
+  license_url VARCHAR(255),
+  taken_at DATE NULL,
+  location_label VARCHAR(255),
   status VARCHAR(20),
   is_published TINYINT(1),
   deleted_at DATETIME NULL
@@ -333,6 +347,17 @@ PHP,
 // cms_media.visibility
 // idx_media_visibility
 // cms_gallery_photos.slug
+// cms_gallery_albums.default_credit
+// cms_gallery_albums.default_license_label
+// cms_gallery_albums.default_license_url
+// cms_gallery_photos.alt_text
+// cms_gallery_photos.caption
+// cms_gallery_photos.description
+// cms_gallery_photos.credit
+// cms_gallery_photos.license_label
+// cms_gallery_photos.license_url
+// cms_gallery_photos.taken_at
+// cms_gallery_photos.location_label
 // cms_gallery_photos.status
 // cms_gallery_photos.is_published
 // cms_gallery_photos.deleted_at

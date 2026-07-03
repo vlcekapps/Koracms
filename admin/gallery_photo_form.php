@@ -8,13 +8,19 @@ $albumId = inputInt('get', 'album_id');
 $errorKey = trim($_GET['err'] ?? '');
 $errorMap = [
     'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
+    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
+    'taken_at' => 'Zadejte datum pořízení ve tvaru RRRR-MM-DD.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
 $fieldErrorMap = [
     'slug' => ['slug'],
+    'license_url' => ['license_url'],
+    'taken_at' => ['taken_at'],
 ];
 $fieldErrorMessages = [
     'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
+    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
+    'taken_at' => 'Zadejte datum pořízení ve tvaru RRRR-MM-DD.',
 ];
 
 $photo = null;
@@ -93,6 +99,42 @@ adminHeader($pageTitle);
       <input type="number" id="sort_order" name="sort_order" min="0" value="<?= (int)$photo['sort_order'] ?>">
       <small class="field-help">Pořadí můžete rychle upravit i přímo v přehledu fotografií pomocí tlačítek Nahoru a Dolů.</small>
 
+      <fieldset class="admin-fieldset-spaced">
+        <legend>Popis a práva</legend>
+
+        <label for="alt_text">Alt text obrázku</label>
+        <input type="text" id="alt_text" name="alt_text" maxlength="255"
+               value="<?= h((string)($photo['alt_text'] ?? '')) ?>" aria-describedby="gallery-photo-alt-help">
+        <small id="gallery-photo-alt-help" class="field-help">Popište význam fotografie pro čtečky obrazovky. Pokud zůstane prázdný, CMS použije popisek nebo titulek.</small>
+
+        <label for="caption">Viditelný popisek</label>
+        <textarea id="caption" name="caption" rows="3"><?= h((string)($photo['caption'] ?? '')) ?></textarea>
+
+        <label for="description">Delší popis fotografie</label>
+        <textarea id="description" name="description" rows="4"><?= h((string)($photo['description'] ?? '')) ?></textarea>
+
+        <label for="credit">Kredit autora</label>
+        <input type="text" id="credit" name="credit" maxlength="255" value="<?= h((string)($photo['credit'] ?? '')) ?>">
+
+        <label for="license_label">Licence</label>
+        <input type="text" id="license_label" name="license_label" maxlength="100" value="<?= h((string)($photo['license_label'] ?? '')) ?>">
+
+        <label for="license_url">Adresa licence</label>
+        <input type="url" id="license_url" name="license_url" maxlength="255"
+               value="<?= h((string)($photo['license_url'] ?? '')) ?>"
+               placeholder="https://creativecommons.org/licenses/by/4.0/"<?= adminFieldAttributes('license_url', $errorKey, $fieldErrorMap, ['gallery-photo-license-url-help']) ?>>
+        <small id="gallery-photo-license-url-help" class="field-help">Volitelné. Použijte úplnou adresu začínající <code>http://</code> nebo <code>https://</code>.</small>
+        <?php adminRenderFieldError('license_url', $errorKey, $fieldErrorMap, $fieldErrorMessages['license_url']); ?>
+
+        <label for="taken_at">Datum pořízení</label>
+        <input type="date" id="taken_at" name="taken_at"
+               value="<?= h((string)($photo['taken_at'] ?? '')) ?>"<?= adminFieldAttributes('taken_at', $errorKey, $fieldErrorMap) ?>>
+        <?php adminRenderFieldError('taken_at', $errorKey, $fieldErrorMap, $fieldErrorMessages['taken_at']); ?>
+
+        <label for="location_label">Místo pořízení</label>
+        <input type="text" id="location_label" name="location_label" maxlength="255" value="<?= h((string)($photo['location_label'] ?? '')) ?>">
+      </fieldset>
+
       <div class="admin-field-row">
         <label class="admin-checkbox-label">
           <input type="checkbox" name="is_published" value="1"<?= (int)($photo['is_published'] ?? 1) === 1 ? ' checked' : '' ?>>
@@ -155,6 +197,9 @@ adminHeader($pageTitle);
       <small id="gallery-photos-help" class="field-help">Můžete vybrat více fotografií najednou. Povolené jsou JPEG, PNG, GIF a WebP do 10 MB na soubor.</small>
 
       <p class="admin-description admin-description--muted admin-action-row">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
+      <?php if ((string)($album['default_credit'] ?? '') !== '' || (string)($album['default_license_label'] ?? '') !== ''): ?>
+        <p class="admin-description admin-description--muted admin-action-row">Nově nahrané fotografie převezmou výchozí kredit nebo licenci nastavenou u alba.</p>
+      <?php endif; ?>
 
       <div class="button-row admin-fieldset-spaced">
         <button type="submit">Nahrát fotografie</button>

@@ -532,6 +532,7 @@ Každé album může mít:
 - volitelné nadřazené album
 - náhledovou fotografii alba
 - zveřejnění na webu
+- výchozí kredit a licenci pro nově nahrané fotografie
 
 Formulář alba nově obsahuje i odkaz na historii revizí.
 
@@ -541,10 +542,14 @@ Každá fotografie může mít:
 
 - titulek
 - slug
+- alt text, popisek a delší popis
+- kredit autora, licenci, datum a místo pořízení
 - pořadí v albu
 - zveřejnění na webu
 
 Fotografie lze rychle přesouvat i přímo v přehledu alba pomocí tlačítek `Nahoru` a `Dolů`, bez nutnosti ručně přepisovat pořadí.
+
+Přehled fotografií obsahuje filtr `Chybí alt text`, který pomáhá dohledat snímky s neúplnými popisnými metadaty. Výchozí kredit a licence z alba se použijí jen při novém uploadu; existující fotografie se tím zpětně nepřepisují.
 
 ### Veřejná viditelnost a bezpečnost
 
@@ -565,8 +570,11 @@ Veřejná galerie nově podporuje:
 - stránkování přehledu i alba
 - zachování filtračního kontextu při návratu z detailu fotografie
 - související fotografie v detailu
+- sekci `Informace o fotografii` s datem, místem, kreditem a licencí, pokud jsou vyplněné
 - akci `Kopírovat odkaz`
 - structured data `ImageGallery` a `ImageObject`
+
+Veřejný obrázek používá alt text v pořadí: ručně vyplněný alt text, potom popisek nebo titulek a nakonec bezpečný název fotografie. Metadata fotografie se ukládají i do exportu/importu CMS, takže se při přenosu obsahu neztratí.
 
 ### Revize a změny slugů
 
@@ -575,8 +583,8 @@ Veřejná galerie nově podporuje:
 
 ### Co patří do README a co sem
 
-- [README.md](../README.md) stručně říká, že galerie podporuje detailová URL, hledání, stránkování, revize a bezpečný media endpoint.
-- Tento dokument popisuje konkrétní workflow galerie, pravidla veřejné viditelnosti, práci s pořadím fotografií a bezpečnostní model doručování obrázků.
+- [README.md](../README.md) stručně říká, že galerie podporuje detailová URL, hledání, stránkování, revize, fotografická metadata a bezpečný media endpoint.
+- Tento dokument popisuje konkrétní workflow galerie, pravidla veřejné viditelnosti, práci s pořadím fotografií, popisná/licenční metadata a bezpečnostní model doručování obrázků.
 
 ---
 

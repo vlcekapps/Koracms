@@ -1370,6 +1370,12 @@ body.theme-public textarea.form-control {
   color: var(--text-muted);
 }
 
+.gallery-photo-info {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+}
+
 .chat-stream {
   display: grid;
   gap: 1rem;

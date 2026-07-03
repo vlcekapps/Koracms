@@ -5037,6 +5037,9 @@ function galleryAlbumRevisionSnapshot(array $album, array $albumNames = [], arra
         'description' => trim((string)($album['description'] ?? '')),
         'parent_album' => $parentId > 0 ? trim((string)($albumNames[$parentId] ?? '')) : '',
         'cover_photo' => $coverPhotoId > 0 ? trim((string)($photoLabels[$coverPhotoId] ?? '')) : '',
+        'default_credit' => trim((string)($album['default_credit'] ?? '')),
+        'default_license_label' => trim((string)($album['default_license_label'] ?? '')),
+        'default_license_url' => normalizeGalleryLicenseUrl((string)($album['default_license_url'] ?? '')),
         'is_published' => (string)((int)($album['is_published'] ?? 1)),
         'status' => (string)($album['status'] ?? 'published'),
     ];
@@ -5051,6 +5054,14 @@ function galleryPhotoRevisionSnapshot(array $photo, string $albumName = ''): arr
     return [
         'title' => trim((string)($photo['title'] ?? '')),
         'slug' => galleryPhotoSlug((string)($photo['slug'] ?? '')),
+        'alt_text' => trim((string)($photo['alt_text'] ?? '')),
+        'caption' => trim((string)($photo['caption'] ?? '')),
+        'description' => trim((string)($photo['description'] ?? '')),
+        'credit' => trim((string)($photo['credit'] ?? '')),
+        'license_label' => trim((string)($photo['license_label'] ?? '')),
+        'license_url' => normalizeGalleryLicenseUrl((string)($photo['license_url'] ?? '')),
+        'taken_at' => trim((string)($photo['taken_at'] ?? '')),
+        'location_label' => trim((string)($photo['location_label'] ?? '')),
         'album' => trim($albumName),
         'sort_order' => (string)((int)($photo['sort_order'] ?? 0)),
         'is_published' => (string)((int)($photo['is_published'] ?? 1)),
@@ -5077,7 +5088,10 @@ function galleryAlbumStructuredData(array $album, array $photos = []): string
             'contentUrl' => $imageUrl,
             'thumbnailUrl' => trim((string)($photo['thumb_url'] ?? galleryPhotoMediaUrl($photo, 'thumb'))),
             'url' => galleryPhotoPublicUrl($photo),
-            'caption' => trim((string)($photo['title'] ?? '')),
+            'caption' => galleryPhotoCaption($photo),
+            'creditText' => trim((string)($photo['credit'] ?? '')),
+            'license' => normalizeGalleryLicenseUrl((string)($photo['license_url'] ?? '')),
+            'dateCreated' => trim((string)($photo['taken_at'] ?? '')),
         ], static fn ($value): bool => $value !== '');
     }
 
@@ -5109,7 +5123,12 @@ function galleryPhotoStructuredData(array $photo, array $album = []): string
         '@context' => 'https://schema.org',
         '@type' => 'ImageObject',
         'name' => galleryPhotoLabel($photo),
-        'caption' => trim((string)($photo['title'] ?? '')),
+        'caption' => galleryPhotoCaption($photo),
+        'description' => trim((string)($photo['description'] ?? '')),
+        'creditText' => trim((string)($photo['credit'] ?? '')),
+        'copyrightNotice' => trim((string)($photo['license_label'] ?? '')),
+        'license' => normalizeGalleryLicenseUrl((string)($photo['license_url'] ?? '')),
+        'dateCreated' => trim((string)($photo['taken_at'] ?? '')),
         'contentUrl' => $imageUrl,
         'thumbnailUrl' => trim((string)($photo['thumb_url'] ?? galleryPhotoMediaUrl($photo, 'thumb'))),
         'url' => galleryPhotoPublicUrl($photo),
@@ -7331,6 +7350,62 @@ function galleryPhotoLabel(array $photo): string
     return 'Fotografie';
 }
 
+function normalizeGalleryLicenseUrl(string $value): string
+{
+    return normalizeHttpExternalUrl($value, false);
+}
+
+/**
+ * @param array<string, mixed> $photo
+ */
+function galleryPhotoCaption(array $photo): string
+{
+    $caption = trim((string)($photo['caption'] ?? ''));
+    if ($caption !== '') {
+        return $caption;
+    }
+
+    return trim((string)($photo['title'] ?? ''));
+}
+
+/**
+ * @param array<string, mixed> $photo
+ */
+function galleryPhotoAltText(array $photo): string
+{
+    $altText = trim((string)($photo['alt_text'] ?? ''));
+    if ($altText !== '') {
+        return $altText;
+    }
+
+    $caption = galleryPhotoCaption($photo);
+    if ($caption !== '') {
+        return $caption;
+    }
+
+    return galleryPhotoLabel($photo);
+}
+
+function galleryPhotoDateLabel(?string $date): string
+{
+    $value = trim((string)$date);
+    if ($value === '') {
+        return '';
+    }
+
+    $dateTime = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    if (!$dateTime instanceof DateTimeImmutable) {
+        return '';
+    }
+
+    static $months = [
+        '', 'ledna', 'února', 'března', 'dubna', 'května', 'června',
+        'července', 'srpna', 'září', 'října', 'listopadu', 'prosince',
+    ];
+
+    return $dateTime->format('j') . '. ' . $months[(int)$dateTime->format('n')] . ' ' . $dateTime->format('Y');
+}
+
 /**
  * @param array<string, mixed> $album
  * @return array<string, mixed>
@@ -7358,7 +7433,19 @@ function hydrateGalleryAlbumPresentation(array $album): array
 function hydrateGalleryPhotoPresentation(array $photo): array
 {
     $photo['slug'] = galleryPhotoSlug((string)($photo['slug'] ?? ''));
+    $photo['alt_text'] = trim((string)($photo['alt_text'] ?? ''));
+    $photo['caption'] = trim((string)($photo['caption'] ?? ''));
+    $photo['description'] = trim((string)($photo['description'] ?? ''));
+    $photo['credit'] = trim((string)($photo['credit'] ?? ''));
+    $photo['license_label'] = trim((string)($photo['license_label'] ?? ''));
+    $photo['license_url'] = normalizeGalleryLicenseUrl((string)($photo['license_url'] ?? ''));
+    $photo['taken_at'] = trim((string)($photo['taken_at'] ?? ''));
+    $photo['location_label'] = trim((string)($photo['location_label'] ?? ''));
     $photo['label'] = galleryPhotoLabel($photo);
+    $photo['caption_text'] = galleryPhotoCaption($photo);
+    $photo['alt_text_resolved'] = galleryPhotoAltText($photo);
+    $photo['taken_at_label'] = galleryPhotoDateLabel($photo['taken_at'] !== '' ? (string)$photo['taken_at'] : null);
+    $photo['metadata_complete'] = $photo['alt_text'] !== '';
     $photo['public_path'] = galleryPhotoPublicPath($photo);
     $photo['public_url'] = galleryPhotoPublicUrl($photo);
     if (!isset($photo['image_url'])) {

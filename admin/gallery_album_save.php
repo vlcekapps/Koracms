@@ -9,6 +9,10 @@ $id = inputInt('post', 'id') ?: null;
 $name = trim($_POST['name'] ?? '');
 $slugInput = trim($_POST['slug'] ?? '');
 $description = trim($_POST['description'] ?? '');
+$defaultCredit = trim((string)($_POST['default_credit'] ?? ''));
+$defaultLicenseLabel = trim((string)($_POST['default_license_label'] ?? ''));
+$defaultLicenseUrlInput = trim((string)($_POST['default_license_url'] ?? ''));
+$defaultLicenseUrl = normalizeGalleryLicenseUrl($defaultLicenseUrlInput);
 $parentId = inputInt('post', 'parent_id');
 $coverId = inputInt('post', 'cover_photo_id');
 
@@ -27,6 +31,10 @@ $redirectBack = static function (?int $albumId, string $error = '') {
 
 if ($name === '') {
     $redirectBack($id, 'required');
+}
+
+if ($defaultLicenseUrlInput !== '' && $defaultLicenseUrl === '') {
+    $redirectBack($id, 'license_url');
 }
 
 $pdo = db_connect();
@@ -118,13 +126,28 @@ if ($id !== null) {
 
     $pdo->prepare(
         "UPDATE cms_gallery_albums
-         SET name = ?, slug = ?, description = ?, parent_id = ?, cover_photo_id = ?, is_published = ?, updated_at = NOW()
+         SET name = ?, slug = ?, description = ?, default_credit = ?, default_license_label = ?, default_license_url = ?,
+             parent_id = ?, cover_photo_id = ?, is_published = ?, updated_at = NOW()
          WHERE id = ?"
-    )->execute([$name, $resolvedSlug, $description, $parentId, $coverPhotoId, $isPublished, $id]);
+    )->execute([
+        $name,
+        $resolvedSlug,
+        $description,
+        $defaultCredit,
+        $defaultLicenseLabel,
+        $defaultLicenseUrl,
+        $parentId,
+        $coverPhotoId,
+        $isPublished,
+        $id,
+    ]);
     $newRevision = galleryAlbumRevisionSnapshot([
         'name' => $name,
         'slug' => $resolvedSlug,
         'description' => $description,
+        'default_credit' => $defaultCredit,
+        'default_license_label' => $defaultLicenseLabel,
+        'default_license_url' => $defaultLicenseUrl,
         'parent_id' => $parentId,
         'cover_photo_id' => $coverPhotoId,
         'is_published' => $isPublished,
@@ -137,9 +160,21 @@ if ($id !== null) {
     $status = currentUserHasCapability('content_approve_shared') ? 'published' : 'pending';
     $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
     $pdo->prepare(
-        "INSERT INTO cms_gallery_albums (name, slug, description, parent_id, cover_photo_id, status, is_published)
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )->execute([$name, $resolvedSlug, $description, $parentId, null, $status, $visible]);
+        "INSERT INTO cms_gallery_albums
+         (name, slug, description, default_credit, default_license_label, default_license_url, parent_id, cover_photo_id, status, is_published)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $name,
+        $resolvedSlug,
+        $description,
+        $defaultCredit,
+        $defaultLicenseLabel,
+        $defaultLicenseUrl,
+        $parentId,
+        null,
+        $status,
+        $visible,
+    ]);
     $id = (int)$pdo->lastInsertId();
     logAction('gallery_album_add', 'id=' . $id . ' status=' . $status);
     if ($status === 'pending') {

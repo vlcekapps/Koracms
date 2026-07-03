@@ -115,7 +115,9 @@ $photoWhereParts = [
 ];
 $photoParams = [(int)$album['id']];
 if ($searchQuery !== '') {
-    $photoWhereParts[] = '(title LIKE ? OR slug LIKE ? OR filename LIKE ?)';
+    $photoWhereParts[] = '(title LIKE ? OR caption LIKE ? OR description LIKE ? OR slug LIKE ? OR filename LIKE ?)';
+    $photoParams[] = '%' . $searchQuery . '%';
+    $photoParams[] = '%' . $searchQuery . '%';
     $photoParams[] = '%' . $searchQuery . '%';
     $photoParams[] = '%' . $searchQuery . '%';
     $photoParams[] = '%' . $searchQuery . '%';
@@ -132,7 +134,8 @@ $photoPagination = paginate(
 ['total' => $totalPhotos, 'totalPages' => $pages, 'page' => $page, 'offset' => $offset] = $photoPagination;
 
 $photosStmt = $pdo->prepare(
-    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    "SELECT id, album_id, filename, title, slug, alt_text, caption, description, credit,
+            license_label, license_url, taken_at, location_label, sort_order, created_at
      FROM cms_gallery_photos
      {$photoWhereSql}
      ORDER BY sort_order, id

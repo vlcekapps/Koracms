@@ -9,17 +9,20 @@ $errorMap = [
     'required' => 'Vyplňte prosím název alba.',
     'slug' => 'Zadaný slug už používá jiné album. Zvolte prosím jiný.',
     'parent' => 'Zvolené nadřazené album není platné.',
+    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
 $fieldErrorMap = [
     'required' => ['name'],
     'slug' => ['slug'],
     'parent' => ['parent_id'],
+    'license_url' => ['default_license_url'],
 ];
 $fieldErrorMessages = [
     'name' => 'Vyplňte prosím název alba.',
     'slug' => 'Zadaný slug už používá jiné album. Zvolte prosím jiný.',
     'parent_id' => 'Zvolené nadřazené album není platné.',
+    'default_license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
 ];
 
 $album = [
@@ -29,6 +32,9 @@ $album = [
     'description' => '',
     'parent_id' => null,
     'cover_photo_id' => null,
+    'default_credit' => '',
+    'default_license_label' => '',
+    'default_license_url' => '',
 ];
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_gallery_albums WHERE id = ?");
@@ -103,6 +109,26 @@ adminHeader($pageTitle);
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4"><?= h((string)($album['description'] ?? '')) ?></textarea>
+
+    <fieldset class="admin-fieldset-spaced">
+      <legend>Výchozí metadata pro nové fotografie</legend>
+      <p class="admin-description admin-description--muted">Tyto údaje se použijí jen pro nově nahrané fotografie v tomto albu. Existující fotografie nepřepíšou.</p>
+
+      <label for="default_credit">Výchozí kredit autora</label>
+      <input type="text" id="default_credit" name="default_credit" maxlength="255"
+             value="<?= h((string)($album['default_credit'] ?? '')) ?>">
+
+      <label for="default_license_label">Výchozí licence</label>
+      <input type="text" id="default_license_label" name="default_license_label" maxlength="100"
+             value="<?= h((string)($album['default_license_label'] ?? '')) ?>">
+
+      <label for="default_license_url">Adresa výchozí licence</label>
+      <input type="url" id="default_license_url" name="default_license_url" maxlength="255"
+             value="<?= h((string)($album['default_license_url'] ?? '')) ?>"
+             placeholder="https://creativecommons.org/licenses/by/4.0/"<?= adminFieldAttributes('default_license_url', $errorKey, $fieldErrorMap, ['gallery-album-license-url-help']) ?>>
+      <small id="gallery-album-license-url-help" class="field-help">Volitelné. Použijte úplnou adresu začínající <code>http://</code> nebo <code>https://</code>.</small>
+      <?php adminRenderFieldError('default_license_url', $errorKey, $fieldErrorMap, $fieldErrorMessages['default_license_url']); ?>
+    </fieldset>
 
     <label for="parent_id">Nadřazené album</label>
     <select id="parent_id" name="parent_id"<?= adminFieldAttributes('parent_id', $errorKey, $fieldErrorMap) ?>>

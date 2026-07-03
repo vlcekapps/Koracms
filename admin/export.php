@@ -57,9 +57,12 @@ $tables = [
                                address, locality, latitude, longitude, contact_phone, contact_email,
                                opening_hours, meta_title, meta_description, is_published, sort_order, status, created_at, updated_at
                                FROM cms_places",
-    'gallery_albums' => "SELECT id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at
+    'gallery_albums' => "SELECT id, parent_id, name, slug, description, cover_photo_id,
+                               default_credit, default_license_label, default_license_url,
+                               created_at, updated_at
                                FROM cms_gallery_albums",
-    'gallery_photos' => "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    'gallery_photos' => "SELECT id, album_id, filename, title, slug, alt_text, caption, description,
+                               credit, license_label, license_url, taken_at, location_label, sort_order, created_at
                                FROM cms_gallery_photos",
     'media'         => "SELECT id, filename, original_name, mime_type, file_size, folder, alt_text, caption, credit,
                                visibility, uploaded_by, created_at

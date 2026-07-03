@@ -102,7 +102,8 @@ $photoPosition = $photoIndex === false ? null : $photoIndex + 1;
 $photoCount = count($orderedIds);
 
 $stmtPrev = $pdo->prepare(
-    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    "SELECT id, album_id, filename, title, slug, alt_text, caption, description, credit,
+            license_label, license_url, taken_at, location_label, sort_order, created_at
      FROM cms_gallery_photos p
      WHERE p.album_id = ?
        AND (p.sort_order < ? OR (p.sort_order = ? AND p.id < ?))
@@ -118,7 +119,8 @@ if ($prevPhoto !== null) {
 }
 
 $stmtNext = $pdo->prepare(
-    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    "SELECT id, album_id, filename, title, slug, alt_text, caption, description, credit,
+            license_label, license_url, taken_at, location_label, sort_order, created_at
      FROM cms_gallery_photos p
      WHERE p.album_id = ?
        AND (p.sort_order > ? OR (p.sort_order = ? AND p.id > ?))
@@ -134,7 +136,8 @@ if ($nextPhoto !== null) {
 }
 
 $relatedStmt = $pdo->prepare(
-    "SELECT id, album_id, filename, title, slug, sort_order, created_at
+    "SELECT id, album_id, filename, title, slug, alt_text, caption, description, credit,
+            license_label, license_url, taken_at, location_label, sort_order, created_at
      FROM cms_gallery_photos p
      WHERE p.album_id = ?
        AND p.id <> ?
@@ -157,12 +160,15 @@ $photoTitle = (string)$photo['label'];
 $copyUrl = galleryPhotoPublicUrl($photo);
 $backPath = galleryAlbumPublicPath($album, $listingQuery);
 $metaTitle = $photoTitle . ' – ' . $album['name'] . ' – ' . $siteName;
+$metaDescription = (string)($photo['description'] !== ''
+    ? $photo['description']
+    : (($photo['caption_text'] ?? '') !== '' ? $photo['caption_text'] : $photoTitle));
 
 renderPublicPage([
     'title' => $metaTitle,
     'meta' => [
         'title' => $metaTitle,
-        'description' => $photoTitle,
+        'description' => $metaDescription,
         'image' => $photo['image_url'],
         'url' => galleryPhotoPublicUrl($photo),
     ],

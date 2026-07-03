@@ -650,6 +650,45 @@ assert_equals('', statsPageTypeModuleKey('token_endpoint'), 'unknown or token en
 assert_equals(['2026-04-07', '2026-04-09'], statsPreviousDateRange('2026-04-10', '2026-04-12'), 'previous period has the same inclusive length');
 assert_equals('all', statsNormalizeContentModuleFilter('definitely-not-a-module'), 'unknown content module filter falls back to all');
 
+test_section('gallery photo metadata helpers');
+
+$galleryPhotoWithAlt = [
+    'id' => 10,
+    'filename' => 'hodiny.jpg',
+    'title' => 'Kukací hodiny',
+    'slug' => 'kukaci-hodiny',
+    'alt_text' => 'Kukací hodiny zavěšené na stěně.',
+    'caption' => 'Hodiny po opravě',
+    'credit' => 'Pavel Vlček',
+    'license_label' => 'CC BY 4.0',
+    'license_url' => 'https://creativecommons.org/licenses/by/4.0/',
+    'taken_at' => '2026-04-01',
+];
+$hydratedGalleryPhoto = hydrateGalleryPhotoPresentation($galleryPhotoWithAlt);
+assert_equals('Kukací hodiny zavěšené na stěně.', $hydratedGalleryPhoto['alt_text_resolved'], 'explicit gallery photo alt text wins');
+assert_equals('Hodiny po opravě', $hydratedGalleryPhoto['caption_text'], 'gallery photo caption prefers explicit caption');
+assert_equals('1. dubna 2026', $hydratedGalleryPhoto['taken_at_label'], 'gallery photo taken date has Czech label');
+assert_equals('https://creativecommons.org/licenses/by/4.0/', normalizeGalleryLicenseUrl('https://creativecommons.org/licenses/by/4.0/'), 'gallery license URL accepts HTTPS');
+assert_equals('', normalizeGalleryLicenseUrl('javascript:alert(1)'), 'gallery license URL rejects unsafe scheme');
+
+$galleryPhotoWithoutAlt = hydrateGalleryPhotoPresentation([
+    'id' => 11,
+    'filename' => 'letecky-den.jpg',
+    'title' => '',
+    'slug' => 'letecky-den',
+    'caption' => 'Letadlo při průletu nad letištěm.',
+]);
+assert_equals('Letadlo při průletu nad letištěm.', $galleryPhotoWithoutAlt['alt_text_resolved'], 'gallery photo alt falls back to caption');
+
+$galleryPhotoStructuredData = galleryPhotoStructuredData($hydratedGalleryPhoto, [
+    'id' => 2,
+    'name' => 'Album test',
+    'slug' => 'album-test',
+]);
+assert_contains('"caption":"Hodiny po opravě"', $galleryPhotoStructuredData, 'gallery structured data contains caption');
+assert_contains('"creditText":"Pavel Vlček"', $galleryPhotoStructuredData, 'gallery structured data contains credit');
+assert_contains('"license":"https://creativecommons.org/licenses/by/4.0/"', $galleryPhotoStructuredData, 'gallery structured data contains license URL');
+
 test_section('normalizeHttpMethods()');
 
 assert_equals(['GET', 'POST'], normalizeHttpMethods(['get', ' POST ', 'GET']), 'method normalizer trims, uppercases and deduplicates');

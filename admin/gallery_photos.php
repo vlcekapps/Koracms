@@ -25,6 +25,9 @@ $statusFilter = in_array($_GET['status'] ?? '', ['all', 'pending', 'published', 
 $sortFilter = in_array($_GET['sort'] ?? '', ['position', 'newest', 'title'], true)
     ? (string)$_GET['sort']
     : 'position';
+$metadataFilter = in_array($_GET['metadata'] ?? '', ['all', 'missing_alt'], true)
+    ? (string)$_GET['metadata']
+    : 'all';
 
 $whereSql = 'WHERE deleted_at IS NULL AND album_id = ?';
 $params = [$albumId];
@@ -40,6 +43,9 @@ if ($statusFilter === 'pending') {
     $whereSql .= " AND COALESCE(status,'published') = 'published' AND COALESCE(is_published, 1) = 1";
 } elseif ($statusFilter === 'hidden') {
     $whereSql .= " AND COALESCE(status,'published') = 'published' AND COALESCE(is_published, 1) = 0";
+}
+if ($metadataFilter === 'missing_alt') {
+    $whereSql .= " AND TRIM(COALESCE(alt_text, '')) = ''";
 }
 
 $orderBySql = match ($sortFilter) {
@@ -63,6 +69,7 @@ $currentUrl = BASE_URL . '/admin/gallery_photos.php?' . http_build_query(array_f
     'album_id' => (int)$album['id'],
     'q' => $q,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
+    'metadata' => $metadataFilter !== 'all' ? $metadataFilter : null,
     'sort' => $sortFilter !== 'position' ? $sortFilter : null,
 ], static fn ($value): bool => $value !== null && $value !== ''));
 $reorderDisabled = $sortFilter !== 'position';
@@ -89,6 +96,13 @@ $reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí
     </select>
   </div>
   <div>
+    <label for="metadata">Metadata</label>
+    <select id="metadata" name="metadata">
+      <option value="all"<?= $metadataFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <option value="missing_alt"<?= $metadataFilter === 'missing_alt' ? ' selected' : '' ?>>Chybí alt text</option>
+    </select>
+  </div>
+  <div>
     <label for="sort">Řazení</label>
     <select id="sort" name="sort">
       <option value="position"<?= $sortFilter === 'position' ? ' selected' : '' ?>>Podle pořadí</option>
@@ -97,7 +111,7 @@ $reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí
     </select>
   </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all' || $sortFilter !== 'position'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $metadataFilter !== 'all' || $sortFilter !== 'position'): ?>
     <a href="<?= BASE_URL ?>/admin/gallery_photos.php?album_id=<?= (int)$album['id'] ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -137,6 +151,9 @@ $reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí
           <td>
             <strong><?= h((string)$photo['label']) ?></strong><br>
             <small class="table-meta"><?= h(parse_url((string)$photo['public_path'], PHP_URL_PATH) ?: (string)$photo['public_path']) ?></small>
+            <?php if ((string)($photo['alt_text'] ?? '') === ''): ?>
+              <br><small class="table-meta"><strong>Chybí alt text</strong> – veřejně se použije popisek, titulek nebo název souboru.</small>
+            <?php endif; ?>
           </td>
           <td><?= (int)$photo['sort_order'] ?></td>
           <td>

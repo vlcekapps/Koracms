@@ -682,8 +682,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Galerie – alba (nejdřív, fotky odkazují na album_id)
                 if (!empty($data['gallery_albums']) && is_array($data['gallery_albums'])) {
                     $ins = $pdo->prepare(
-                        "INSERT IGNORE INTO cms_gallery_albums (id, parent_id, name, slug, description, cover_photo_id, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?)"
+                        "INSERT IGNORE INTO cms_gallery_albums
+                         (id, parent_id, name, slug, description, cover_photo_id,
+                          default_credit, default_license_label, default_license_url, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['gallery_albums'] as $row) {
                         $albumName = trim((string)($row['name'] ?? ''));
@@ -705,6 +707,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $albumSlug,
                             $row['description'] ?? '',
                             $row['cover_photo_id'] ?: null,
+                            (string)($row['default_credit'] ?? ''),
+                            (string)($row['default_license_label'] ?? ''),
+                            normalizeGalleryLicenseUrl((string)($row['default_license_url'] ?? '')),
                             $createdAt,
                             $updatedAt,
                         ]);
@@ -716,8 +721,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['gallery_photos']) && is_array($data['gallery_photos'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_gallery_photos
-                         (id, album_id, filename, title, slug, sort_order, created_at)
-                         VALUES (?,?,?,?,?,?,?)"
+                         (id, album_id, filename, title, slug, alt_text, caption, description,
+                          credit, license_label, license_url, taken_at, location_label, sort_order, created_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['gallery_photos'] as $row) {
                         $photoTitle = (string)($row['title'] ?? '');
@@ -734,6 +740,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['filename'],
                             $photoTitle,
                             $photoSlug,
+                            (string)($row['alt_text'] ?? ''),
+                            (string)($row['caption'] ?? ''),
+                            (string)($row['description'] ?? ''),
+                            (string)($row['credit'] ?? ''),
+                            (string)($row['license_label'] ?? ''),
+                            normalizeGalleryLicenseUrl((string)($row['license_url'] ?? '')),
+                            !empty($row['taken_at']) ? (string)$row['taken_at'] : null,
+                            (string)($row['location_label'] ?? ''),
                             (int)$row['sort_order'],
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);

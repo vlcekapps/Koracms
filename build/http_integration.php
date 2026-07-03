@@ -32,6 +32,7 @@ $createdFormIds = [];
 $createdFormSubmissionIds = [];
 $createdPageIds = [];
 $createdGalleryAlbumIds = [];
+$createdGalleryPhotoIds = [];
 $createdMediaIds = [];
 $createdBoardIds = [];
 $createdBoardCategoryIds = [];
@@ -3150,6 +3151,101 @@ try {
     }
 
     httpIntegrationPrintResult('content_reference_gallery_http', $galleryPickerIssues, $failures);
+
+    $galleryMetadataIssues = [];
+    $galleryMetadataAlbumSlug = 'http-gallery-metadata-' . bin2hex(random_bytes(4));
+    $galleryMetadataAlbumTitle = 'HTTP Gallery metadata ' . bin2hex(random_bytes(3));
+    $galleryMetadataCredit = 'Pavel Vlček';
+    $galleryMetadataLicenseLabel = 'CC BY 4.0';
+    $galleryMetadataLicenseUrl = 'https://creativecommons.org/licenses/by/4.0/';
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums
+         (name, slug, description, default_credit, default_license_label, default_license_url, status, is_published)
+         VALUES (?, ?, 'Album pro ověření metadat fotografií.', ?, ?, ?, 'published', 1)"
+    )->execute([
+        $galleryMetadataAlbumTitle,
+        $galleryMetadataAlbumSlug,
+        $galleryMetadataCredit,
+        $galleryMetadataLicenseLabel,
+        $galleryMetadataLicenseUrl,
+    ]);
+    $galleryMetadataAlbumId = (int)$pdo->lastInsertId();
+    $createdGalleryAlbumIds[] = $galleryMetadataAlbumId;
+
+    $galleryMetadataPhotoSlug = 'http-gallery-photo-metadata-' . bin2hex(random_bytes(4));
+    $galleryMetadataPhotoTitle = 'HTTP metadata fotografie';
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_photos
+         (album_id, filename, title, slug, alt_text, caption, description, credit, license_label, license_url, taken_at, location_label, sort_order, status, is_published)
+         VALUES (?, 'metadata.jpg', ?, ?, 'Fotografie s vyplněným alt textem.', 'Viditelný popisek metadata fotografie.',
+                 'Delší veřejný popis fotografie.', ?, ?, ?, '2026-04-01', 'Praha', 1, 'published', 1)"
+    )->execute([
+        $galleryMetadataAlbumId,
+        $galleryMetadataPhotoTitle,
+        $galleryMetadataPhotoSlug,
+        $galleryMetadataCredit,
+        $galleryMetadataLicenseLabel,
+        $galleryMetadataLicenseUrl,
+    ]);
+    $galleryMetadataPhotoId = (int)$pdo->lastInsertId();
+    $createdGalleryPhotoIds[] = $galleryMetadataPhotoId;
+
+    $galleryMissingAltPhotoSlug = 'http-gallery-photo-missing-alt-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_photos
+         (album_id, filename, title, slug, caption, sort_order, status, is_published)
+         VALUES (?, 'missing-alt.jpg', 'HTTP fotografie bez alt textu', ?, 'Popisek fotky bez alt textu.', 2, 'published', 1)"
+    )->execute([
+        $galleryMetadataAlbumId,
+        $galleryMissingAltPhotoSlug,
+    ]);
+    $galleryMissingAltPhotoId = (int)$pdo->lastInsertId();
+    $createdGalleryPhotoIds[] = $galleryMissingAltPhotoId;
+
+    $galleryPhotoDetailResponse = fetchUrl(
+        $baseUrl . galleryPhotoPublicPath(['id' => $galleryMetadataPhotoId, 'slug' => $galleryMetadataPhotoSlug]),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($galleryPhotoDetailResponse) !== 200) {
+        $galleryMetadataIssues[] = 'veřejný detail fotografie s metadaty nevrátil 200';
+    }
+    foreach ([
+        'alt="Fotografie s vyplněným alt textem."' => 'veřejný detail nepoužil explicitní alt text',
+        'Informace o fotografii' => 'veřejný detail nezobrazil metadata sekci',
+        'Delší veřejný popis fotografie.' => 'veřejný detail nezobrazil delší popis',
+        'Pavel Vlček' => 'veřejný detail nezobrazil kredit',
+        'https://creativecommons.org/licenses/by/4.0/' => 'veřejný detail nezobrazil odkaz na licenci',
+    ] as $fragment => $issue) {
+        if (!str_contains($galleryPhotoDetailResponse['body'], $fragment)) {
+            $galleryMetadataIssues[] = $issue;
+        }
+    }
+
+    $galleryAdminMissingAltResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/gallery_photos.php?album_id=' . $galleryMetadataAlbumId . '&metadata=missing_alt',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($galleryAdminMissingAltResponse) !== 200) {
+        $galleryMetadataIssues[] = 'admin filtr fotografií bez alt textu nevrátil 200';
+    } else {
+        if (!str_contains($galleryAdminMissingAltResponse['body'], 'HTTP fotografie bez alt textu')) {
+            $galleryMetadataIssues[] = 'admin filtr fotografií bez alt textu nezobrazil fotku s chybějícím alt textem';
+        }
+        if (str_contains($galleryAdminMissingAltResponse['body'], $galleryMetadataPhotoTitle)) {
+            $galleryMetadataIssues[] = 'admin filtr fotografií bez alt textu zobrazil i fotku s vyplněným alt textem';
+        }
+    }
+
+    $galleryExportResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($galleryExportResponse) === 200
+        && (!str_contains($galleryExportResponse['body'], '"alt_text"')
+            || !str_contains($galleryExportResponse['body'], '"default_license_url"'))) {
+        $galleryMetadataIssues[] = 'JSON export neobsahuje metadata galerie';
+    }
+
+    httpIntegrationPrintResult('gallery_metadata_http', $galleryMetadataIssues, $failures);
 
     $pdfPickerIssues = [];
     $pdfMediaOriginalName = 'http-picker-pdf-' . bin2hex(random_bytes(4)) . '.pdf';
@@ -7489,7 +7585,11 @@ try {
     foreach ($createdNavLinkIds as $navLinkIdToDelete) {
         $pdo->prepare("DELETE FROM cms_nav_links WHERE id = ?")->execute([$navLinkIdToDelete]);
     }
+    foreach ($createdGalleryPhotoIds as $galleryPhotoIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_gallery_photos WHERE id = ?")->execute([$galleryPhotoIdToDelete]);
+    }
     foreach ($createdGalleryAlbumIds as $galleryAlbumIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$galleryAlbumIdToDelete]);
         $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$galleryAlbumIdToDelete]);
     }
     foreach ($createdArticles as $articleIdToDelete) {
