@@ -11,7 +11,8 @@ $successMessage = trim((string)($flash['success'] ?? ''));
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     foreach ($moduleKeys as $m) {
-        saveSetting('module_' . $m, isset($_POST['module_' . $m]) ? '1' : '0');
+        $moduleSettingKey = moduleSettingKey($m);
+        saveSetting($moduleSettingKey, isset($_POST[$moduleSettingKey]) ? '1' : '0');
     }
     saveSetting('visitor_tracking_enabled', isset($_POST['visitor_tracking_enabled']) ? '1' : '0');
     $retDays = max(1, (int)($_POST['stats_retention_days'] ?? 90));
@@ -40,10 +41,11 @@ adminHeader('Správa modulů');
   <fieldset>
     <legend>Aktivní moduly</legend>
     <?php foreach ($moduleLabels as $k => $label): ?>
+      <?php $moduleSettingKey = moduleSettingKey((string)$k); ?>
       <div>
-        <input type="checkbox" id="module_<?= $k ?>" name="module_<?= $k ?>" value="1"
+        <input type="checkbox" id="<?= h($moduleSettingKey) ?>" name="<?= h($moduleSettingKey) ?>" value="1"
                <?= isModuleEnabled($k) ? 'checked' : '' ?>>
-        <label for="module_<?= $k ?>" class="admin-checkbox-label"><?= h($label) ?></label>
+        <label for="<?= h($moduleSettingKey) ?>" class="admin-checkbox-label"><?= h($label) ?></label>
       </div>
     <?php endforeach; ?>
   </fieldset>

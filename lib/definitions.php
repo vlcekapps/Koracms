@@ -566,7 +566,7 @@ function moduleDefaultSettings(): array
     $settings = [];
     foreach (moduleKeysForSettings() as $moduleKey) {
         $definition = coreModuleDefinitions()[$moduleKey];
-        $settings['module_' . $moduleKey] = $definition['settings_default'];
+        $settings[moduleSettingKey($moduleKey)] = $definition['settings_default'];
     }
 
     return $settings;
@@ -1494,7 +1494,7 @@ function applySiteProfilePreset(string $profileKey): void
 
     foreach (siteProfileModuleKeys() as $moduleKey) {
         $enabled = !empty($profileConfig['modules'][$moduleKey]) ? '1' : '0';
-        saveSetting('module_' . $moduleKey, $enabled);
+        saveSetting(moduleSettingKey($moduleKey), $enabled);
     }
 
     foreach ((array)($profileConfig['settings'] ?? []) as $settingKey => $settingValue) {

@@ -8028,7 +8028,7 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSelftestSource, 'Missing sitemap section manifest type')
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleNavigationDefaults()')
-        && str_contains($httpIntegrationFoundationSource, "saveSetting('module_' . \$moduleKey, '0')")
+        && str_contains($httpIntegrationFoundationSource, "saveSetting(moduleSettingKey(\$moduleKey), '0')")
         && str_contains($httpIntegrationFoundationSource, "responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl)")
         && str_contains($httpIntegrationFoundationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
         && str_contains($httpIntegrationFoundationSource, 'moduleAdminEntryPoints()')
@@ -8086,6 +8086,8 @@ $foundationChecks = [
         && str_contains($moduleContractAuditSource, 'moduleContractAuditKnownModuleKeys($definitionsSource')
         && !str_contains($moduleContractAuditSource, 'moduleContractAuditExpectedKeys'),
     'core module metadata is centralized' => str_contains($definitionsSource, 'function coreModuleDefinitions()')
+        && str_contains($dbSource, 'function moduleSettingKey(')
+        && str_contains($dbSource, 'getSetting(moduleSettingKey($module),')
         && str_contains($definitionsSource, 'function moduleKeysForSettings()')
         && str_contains($definitionsSource, 'function moduleDefaultSettings()')
         && str_contains($definitionsSource, 'function moduleContentReferenceTypeLabels()')

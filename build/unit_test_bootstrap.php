@@ -112,10 +112,16 @@ if (!function_exists('clearSettingsCache')) {
     {
     }
 }
+if (!function_exists('moduleSettingKey')) {
+    function moduleSettingKey(string $module): string
+    {
+        return 'module_' . trim($module);
+    }
+}
 if (!function_exists('isModuleEnabled')) {
     function isModuleEnabled(string $module): bool
     {
-        return false;
+        return getSetting(moduleSettingKey($module), '0') === '1';
     }
 }
 if (!function_exists('koraStorageDirectory')) {

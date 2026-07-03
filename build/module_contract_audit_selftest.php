@@ -182,6 +182,13 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
 }
 
+function moduleContractAuditSelfTestDbFixture(): string
+{
+    return "<?php\n"
+        . "function moduleSettingKey(string \$module): string { return 'module_' . trim(\$module); }\n"
+        . "function isModuleEnabled(string \$module): bool { return getSetting(moduleSettingKey(\$module), '0') === '1'; }\n";
+}
+
 function moduleContractAuditSelfTestAuthFixture(): string
 {
     $entries = [];
@@ -213,6 +220,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
         . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, admin_paths a admin_capability.\n"
+        . "Nastavovací klíče modulů skládejte přes moduleSettingKey().\n"
         . "Fallback administrativní navigace používá sekci Další moduly.\n"
         . "Sdílené lookup helpery modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath() drží mapy cest bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
@@ -230,6 +238,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
         . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
+        . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
         . "Obsahové trendy používají stats_page_types.\n"
         . "Cesty modulů mapují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
         . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
@@ -243,6 +252,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
 {
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
+        . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
         . "Sdílené lookupy cest poskytují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace nových modulů používá sekci Další moduly.\n"
@@ -259,6 +269,7 @@ function moduleContractAuditSelfTestValidFiles(): array
     $staticScriptTargets = moduleContractAuditSelfTestStaticScriptTargets();
     $files = [
         'lib/definitions.php' => moduleContractAuditSelfTestDefinitionsFixture(),
+        'db.php' => moduleContractAuditSelfTestDbFixture(),
         'auth.php' => moduleContractAuditSelfTestAuthFixture(),
         'lib/stats.php' => "<?php\nfunction navModuleDefaults(): array { return moduleNavigationDefaults(); }\nfunction statsPageTypeModuleKey(string \$pageType): string { return moduleStatsPageTypeMap()[\$pageType] ?? ''; }\nfunction statsContentModuleOptions(): array { foreach (array_keys(moduleStatsPageTypes()) as \$moduleKey) {} return []; }\n",
         'lib/widgets.php' => "<?php\nfunction widgetModuleDisplayName(string \$moduleKey): string { return moduleWidgetLabel(\$moduleKey); }\n",
@@ -270,13 +281,13 @@ function moduleContractAuditSelfTestValidFiles(): array
         'search.php' => "<?php\nmoduleSearchResultTypeLabels(); if (isModuleEnabled('blog')) { 'blog' AS type; } if (isModuleEnabled('news')) { 'news' AS type; } function resultUrl(array \$result): string { return match(\$result['type']) { 'blog' => '/', 'news' => '/', 'page' => '/', default => '/', }; } function typeLabel(string \$type): string { moduleSearchResultTypeLabels(); return ''; }\n",
         'sitemap.php' => "<?php\nif (isModuleEnabled('blog')) { sitemapLogSectionError('blog', new Exception()); } if (isModuleEnabled('news')) { sitemapLogSectionError('news', new Exception()); }\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
-        'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels();\n",
+        'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels(); moduleSettingKey('blog');\n",
         'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
         'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict":"' . $staticScriptTargets . '","analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check":"' . $staticScriptTargets . '","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
-        'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting('module_' . \$moduleKey, '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
+        'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting(moduleSettingKey(\$moduleKey), '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting(moduleSettingKey(\$moduleKey), '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting(moduleSettingKey(\$moduleKey), '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
         'docs/developer-modules.md' => moduleContractAuditSelfTestDeveloperModulesDocFixture(),
         'README.md' => moduleContractAuditSelfTestReadmeFixture(),
         'docs/admin-guide.md' => moduleContractAuditSelfTestAdminGuideFixture(),
@@ -431,7 +442,7 @@ $legacySettingsFiles['admin/settings_modules.php'] = "<?php\n\$moduleKeys = ['bl
 assertModuleContractAuditFails(
     'Legacy settings module list',
     $legacySettingsFiles,
-    'admin/settings_modules.php must derive configurable modules and labels from the central manifest.'
+    'admin/settings_modules.php must derive configurable modules, labels and setting keys from the central manifest.'
 );
 
 $legacyInstallFiles = $validFiles;
@@ -824,7 +835,7 @@ assertModuleContractAuditFails(
 );
 
 $missingAdminHttpFiles = $validFiles;
-$missingAdminHttpFiles['build/http_integration.php'] = "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting('module_' . \$moduleKey, '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting('module_' . \$moduleKey, '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n";
+$missingAdminHttpFiles['build/http_integration.php'] = "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting(moduleSettingKey(\$moduleKey), '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting(moduleSettingKey(\$moduleKey), '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures);\n";
 assertModuleContractAuditFails(
     'Missing admin module HTTP scenario',
     $missingAdminHttpFiles,

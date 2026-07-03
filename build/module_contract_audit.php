@@ -587,8 +587,8 @@ function moduleContractAuditValidatePublicNavHttpIntegration(string $definitions
     moduleContractAuditRequire(
         str_contains($httpIntegrationSource, "httpIntegrationPrintResult('public_module_navigation_http'")
         && str_contains($httpIntegrationSource, 'moduleNavigationDefaults()')
-        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '0')")
-        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '1')")
+        && str_contains($httpIntegrationSource, "saveSetting(moduleSettingKey(\$moduleKey), '0')")
+        && str_contains($httpIntegrationSource, "saveSetting(moduleSettingKey(\$moduleKey), '1')")
         && str_contains($httpIntegrationSource, "responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl)")
         && str_contains($httpIntegrationSource, 'veřejný modul ')
         && str_contains($httpIntegrationSource, 'Tento modul není povolen'),
@@ -618,7 +618,7 @@ function moduleContractAuditValidateAdminHttpIntegration(string $definitionsSour
     moduleContractAuditRequire(
         str_contains($httpIntegrationSource, "httpIntegrationPrintResult('admin_disabled_modules_http'")
         && str_contains($httpIntegrationSource, 'moduleAdminEntryPoints()')
-        && str_contains($httpIntegrationSource, "saveSetting('module_' . \$moduleKey, '0')")
+        && str_contains($httpIntegrationSource, "saveSetting(moduleSettingKey(\$moduleKey), '0')")
         && str_contains($httpIntegrationSource, 'admin stránka vypnutého modulu')
         && str_contains($httpIntegrationSource, 'není povolen'),
         'admin_paths modules must be covered by dynamic admin_disabled_modules_http integration.',
@@ -1528,6 +1528,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_paths',
             'admin_paths',
             'admin_capability',
+            'moduleSettingKey()',
             'Další moduly',
             'adminRouteModuleRequirements()',
             'requireModuleEnabled()',
@@ -1565,6 +1566,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'public_paths',
             'adminRouteModuleRequirements()',
             'admin_capability',
+            'moduleSettingKey()',
             'Další moduly',
             'content_reference_types',
             'search_result_types',
@@ -1589,6 +1591,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'modulePrimaryAdminPath()',
             'adminRouteModuleRequirements()',
             'admin_capability',
+            'moduleSettingKey()',
             'Další moduly',
             'content_reference_types',
             'search_result_types',
@@ -1600,6 +1603,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
     );
 }
 
+$dbSource = moduleContractAuditReadFile($projectRoot, 'db.php', $issues);
 $definitionsSource = moduleContractAuditReadFile($projectRoot, 'lib/definitions.php', $issues);
 $statsSource = moduleContractAuditReadFile($projectRoot, 'lib/stats.php', $issues);
 $settingsModulesSource = moduleContractAuditReadFile($projectRoot, 'admin/settings_modules.php', $issues);
@@ -1641,6 +1645,14 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function moduleAdminLabel(')
     && str_contains($definitionsSource, 'function moduleAdminCapability('),
     'lib/definitions.php must keep the central module manifest helper set.',
+    $issues
+);
+
+moduleContractAuditRequire(
+    str_contains($dbSource, 'function moduleSettingKey(')
+    && str_contains($dbSource, "return 'module_' . trim(\$module);")
+    && str_contains($dbSource, 'getSetting(moduleSettingKey($module),'),
+    'db.php must centralize module_* setting key construction through moduleSettingKey().',
     $issues
 );
 
@@ -1729,8 +1741,9 @@ moduleContractAuditRequire(
 moduleContractAuditRequire(
     str_contains($settingsModulesSource, '$moduleKeys = moduleKeysForSettings();')
     && str_contains($settingsModulesSource, '$moduleLabels = moduleSettingsLabels();')
+    && str_contains($settingsModulesSource, 'moduleSettingKey(')
     && !str_contains($settingsModulesSource, '$moduleKeys = ['),
-    'admin/settings_modules.php must derive configurable modules and labels from the central manifest.',
+    'admin/settings_modules.php must derive configurable modules, labels and setting keys from the central manifest.',
     $issues
 );
 

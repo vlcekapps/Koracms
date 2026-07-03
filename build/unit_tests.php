@@ -217,6 +217,8 @@ assert_true(knownModuleKey('blog'), 'known module key recognizes blog');
 assert_false(knownModuleKey('unknown_module'), 'known module key rejects unknown module');
 assert_equals('Blog', moduleDefinition('blog')['label'] ?? null, 'module definition returns blog metadata');
 assert_equals(null, moduleDefinition('unknown_module'), 'module definition returns null for unknown module');
+assert_equals('module_blog', moduleSettingKey('blog'), 'module setting key uses the shared module_ prefix');
+assert_equals('module_blog', moduleSettingKey(' blog '), 'module setting key trims accidental whitespace');
 assert_true(in_array('/blog/article.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog article route is declared as a public module entrypoint');
 assert_true(in_array('/blog/series.php', $modulePublicEntryPoints['blog'] ?? [], true), 'blog series route is declared as a public module entrypoint');
 assert_true(in_array('/board/subscribe.php', $modulePublicEntryPoints['board'] ?? [], true), 'board subscription route is declared as a public module entrypoint');

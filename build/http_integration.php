@@ -589,7 +589,7 @@ try {
 
     $publicModuleNavigationIssues = [];
     foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
-        saveSetting('module_' . $moduleKey, '0');
+        saveSetting(moduleSettingKey($moduleKey), '0');
     }
     clearSettingsCache();
     foreach (moduleNavigationDefaults() as $moduleKey => $moduleNavigation) {
@@ -606,7 +606,7 @@ try {
     }
 
     foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
-        saveSetting('module_' . $moduleKey, '1');
+        saveSetting(moduleSettingKey($moduleKey), '1');
     }
     clearSettingsCache();
     foreach (moduleNavigationDefaults() as $moduleKey => $moduleNavigation) {
@@ -634,7 +634,7 @@ try {
 
     $adminDisabledModuleIssues = [];
     foreach (moduleAdminEntryPoints() as $moduleKey => $adminPaths) {
-        saveSetting('module_' . $moduleKey, '0');
+        saveSetting(moduleSettingKey($moduleKey), '0');
         clearSettingsCache();
         foreach ($adminPaths as $adminPath) {
             $disabledAdminResponse = fetchUrl($baseUrl . BASE_URL . $adminPath, $adminSession['cookie'], 0);
@@ -646,7 +646,7 @@ try {
                 $adminDisabledModuleIssues[] = 'admin stránka vypnutého modulu ' . $moduleKey . ' neobsahuje srozumitelnou zprávu';
             }
         }
-        saveSetting('module_' . $moduleKey, '1');
+        saveSetting(moduleSettingKey($moduleKey), '1');
         clearSettingsCache();
     }
 
@@ -722,7 +722,7 @@ try {
     $createdPollIds[] = (int)$pdo->lastInsertId();
 
     foreach (['gallery', 'forms', 'polls'] as $disabledPickerModuleKey) {
-        saveSetting('module_' . $disabledPickerModuleKey, '0');
+        saveSetting(moduleSettingKey($disabledPickerModuleKey), '0');
     }
     saveSetting('module_news', '1');
     clearSettingsCache();
@@ -797,7 +797,7 @@ try {
     }
 
     foreach (['gallery', 'forms', 'polls'] as $disabledPickerModuleKey) {
-        saveSetting('module_' . $disabledPickerModuleKey, '1');
+        saveSetting(moduleSettingKey($disabledPickerModuleKey), '1');
     }
     clearSettingsCache();
 
@@ -1784,12 +1784,13 @@ try {
             : '90',
     ];
     foreach ($settingsModuleKeys as $moduleKey) {
-        $settingValue = getSetting('module_' . $moduleKey, '0');
+        $moduleSettingKey = moduleSettingKey($moduleKey);
+        $settingValue = getSetting($moduleSettingKey, '0');
         if ($moduleKey === 'forms') {
             $settingValue = '1';
         }
         if ($settingValue === '1') {
-            $settingsModulesFields['module_' . $moduleKey] = '1';
+            $settingsModulesFields[$moduleSettingKey] = '1';
         }
     }
     if (getSetting('visitor_tracking_enabled', '0') === '1') {

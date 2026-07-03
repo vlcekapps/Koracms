@@ -102,9 +102,14 @@ function saveSetting(string $key, string $value): void
     clearSettingsCache();
 }
 
+function moduleSettingKey(string $module): string
+{
+    return 'module_' . trim($module);
+}
+
 function isModuleEnabled(string $module): bool
 {
-    return getSetting('module_' . $module, '0') === '1';
+    return getSetting(moduleSettingKey($module), '0') === '1';
 }
 
 function publicRegistrationEnabled(): bool
