@@ -35,3 +35,4 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 - Pokud oprava mění chování CMS, doplní se test nebo audit guardrail.
 - Pokud oprava vyžaduje nová data, postupuje se end-to-end přes instalaci, migraci, export/import, schema parity a dokumentaci.
 - Pokud se rozhodne, že problém zůstává odpovědností autora obsahu, musí být jasně popsán v dokumentaci.
+- Nový modul nebo větší modulové rozšíření musí před implementací ověřit, zda nezhoršuje některou položku tohoto backlogu. Pokud přidává nový rizikový vzor, například média, captcha/auth flow, dialog, upload, tabulku, časový limit nebo autorem dodávaný obsah, doplní se nová položka backlogu nebo odpovídající řádek ve WCAG matici.

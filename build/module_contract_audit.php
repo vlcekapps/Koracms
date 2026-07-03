@@ -1514,6 +1514,9 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'Povinné integrační body',
             'Bezpečnostní pravidla',
             'WCAG 2.2 checklist',
+            'wcag-22-aa-conformance.md',
+            'a11y-remediation-backlog.md',
+            'manual-test-protocol.md',
             'Testy a guardrails',
             'Definition of done',
             'install.php',
@@ -1576,6 +1579,9 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'admin_disabled_modules_http',
             'content_reference_disabled_modules_http',
             'composer ci:module-ready',
+            'wcag-22-aa-conformance.md',
+            'a11y-remediation-backlog.md',
+            'manual-test-protocol.md',
         ],
         $issues
     );
@@ -1598,6 +1604,9 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'sitemap_sections',
             'stats_page_types',
             'composer ci:module-ready',
+            'wcag-22-aa-conformance.md',
+            'a11y-remediation-backlog.md',
+            'manual-test-protocol.md',
         ],
         $issues
     );

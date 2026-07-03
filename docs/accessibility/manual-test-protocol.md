@@ -16,6 +16,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 - U každého nálezu uložit URL, krok, očekávané chování, skutečné chování a dotčené WCAG kritérium.
 - Pokud je chyba v obsahu autora, označit ji jako author-content issue, ne jako core CMS defect.
 - Pokud chyba vzniká v core UI nebo default šabloně, založit opravnou položku v `a11y-remediation-backlog.md`.
+- Při návrhu nového modulu projít tento protokol ještě před implementací a označit scénáře, které modul rozšiřuje nebo které bude potřeba doplnit.
 
 ## Scénáře veřejného webu
 
@@ -42,6 +43,18 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 8. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
 9. Upload a editace média včetně alt textu, licence a kolekce.
 10. Nastavení webu, nastavení modulů, import/export a migrace.
+
+## Scénáře pro nové moduly
+
+Před větší implementací modulu zapsat, zda přidává nebo mění:
+
+- veřejný výpis, detail, filtr, widget, sitemapu, RSS/ICS/CSV/PDF export nebo tokenový endpoint;
+- administrační přehled, hromadné akce, dialog, picker, upload, rich text editor nebo dlouhý formulář;
+- autorem dodávaný obsah, média, embedy, přílohy, alt texty, titulky, transcript nebo vlastní HTML;
+- captcha/auth flow, časový limit, rate-limit, automatické přesměrování, live region nebo stavové hlášky;
+- tabulky, drag/drop, ovládání pouze myší, nové barvy, nové ikony nebo význam nesený vizuálním stylem.
+
+Každá kladná odpověď musí mít ruční testovací scénář, automatizovatelný guardrail nebo záznam v `a11y-remediation-backlog.md`.
 
 ## Kontrolní checklist
 

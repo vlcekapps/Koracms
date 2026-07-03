@@ -8,6 +8,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Vyberte nejbližší existující vzor: `Blog` pro komplexní obsah, `Novinky` pro jednoduchý obsahový modul, `Vývěska` pro přílohy a platnost, `Ankety` pro veřejnou interakci, `Rezervace` pro workflow s termíny.
 - Rozhodněte, které role smí modul spravovat, zda bude modul sdílený pro celý web nebo navázaný na konkrétní blog, a jak se bude chovat při vypnutém modulu.
 - Návrh musí počítat s WCAG 2.2 AA, bezpečností requestů, UTF-8 diakritikou a regresními testy ještě před psaním větší části kódu.
+- Před implementací porovnejte nový modul s `docs/accessibility/wcag-22-aa-conformance.md`, `docs/accessibility/a11y-remediation-backlog.md` a `docs/accessibility/manual-test-protocol.md`. Pokud modul přidává nové formuláře, dialogy, uploady, média, embedy, captcha/auth flow, časové limity, drag/drop, tabulky, veřejné widgety nebo autorem dodávaný obsah, zapište už v návrhu, jak ovlivní accessibility conformance report a které předpoklady zůstávají odpovědností CMS versus autora obsahu.
 
 ## Povinné integrační body
 
@@ -43,6 +44,9 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Odkazy do nového okna používají viditelný text plus `newWindowLinkSrOnlySuffix()`, `target="_blank"` a `rel="noopener noreferrer"`.
 - Tabulky mají `<caption>` nebo vazbu na skutečný nadpis; význam nesmí být nesen jen barvou, ikonou nebo pořadím.
 - Dynamické ovládací prvky musí mít viditelný focus stav, klávesnicový fallback a nesmí po akci nečekaně ztrácet focus.
+- Nový modul nesmí zhoršit žádný řádek v `wcag-22-aa-conformance.md`. Pokud se dotkne oblasti označené jako `Partially Supports`, například média a titulky, accessible authentication, kontrast, reflow, error suggestions, redundant entry nebo author content governance, doplňte rovnou opravu nebo položku do `a11y-remediation-backlog.md`.
+- U každého nového veřejného nebo administračního vzoru určete, zda vyžaduje ruční ověření v `manual-test-protocol.md`. Typicky jde o keyboard-only průchod, NVDA/Firefox, zoom 200-400 %, mobilní šířku, chybové stavy formulářů, focus trap dialogů a stavové/live region hlášky.
+- Pokud modul pracuje s autorským obsahem, médii, přílohami nebo vlastním HTML, dokumentace musí jasně oddělit odpovědnost CMS od odpovědnosti autora obsahu, aby budoucí ACR/VPAT nezaměňoval chybu šablony za chybějící ručně dodaný alt text, titulek, transcript nebo jazyk části textu.
 - Veřejné theme view šablony ověřte přes `build/theme_view_audit.php`, pokud modul přidává nové šablonové soubory.
 
 ## Testy a guardrails
@@ -62,4 +66,4 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 
 ## Definition of done
 
-Nový modul je připravený až tehdy, když má databázovou migraci i čistou instalaci, oprávnění, veřejné i administrační workflow, vypnutí přes moduly, dokumentaci, changelog, přístupnostní vazby, bezpečné hlavičky, regresní testy a zelený základní CI běh. Pokud některá část záměrně chybí, musí být v dokumentaci modulu uvedeno proč.
+Nový modul je připravený až tehdy, když má databázovou migraci i čistou instalaci, oprávnění, veřejné i administrační workflow, vypnutí přes moduly, dokumentaci, changelog, přístupnostní vazby, bezpečné hlavičky, regresní testy a zelený základní CI běh. Součástí hotovo je i kontrola dopadu na accessibility conformance report: buď aktualizovaná WCAG matice/backlog/protokol, nebo výslovné zdůvodnění, že nový modul nepřidává žádný nový přístupnostní vzor ani riziko. Pokud některá část záměrně chybí, musí být v dokumentaci modulu uvedeno proč.
