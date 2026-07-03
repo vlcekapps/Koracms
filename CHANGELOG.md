@@ -88,6 +88,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **Accessible authentication bez matematické CAPTCHA** – veřejná registrace a žádost o obnovu hesla už nevyžadují matematickou ověřovací otázku. Ochranu proti automatizovaným pokusům drží CSRF, rate limiting a honeypot a runtime audit hlídá, aby se kognitivní CAPTCHA do auth flow nevrátila.
 - **JSON import článků a štítků** – import nově obnovuje i vazby článků na štítky, které export už obsahoval, takže přesun obsahu mezi instalacemi neztrácí štítkování článků.
 - **Robustnější 404 u dynamických blogových URL** – `blog_router.php` si nově explicitně načítá sdílený helper veřejné 404 stránky, takže chybějící nebo starý blogový slug nemůže při částečném nasazení skončit fatální chybou kvůli nepřímo nenačtené šablonové vrstvě.
 - **Spamové odběry newsletteru přes widget** – veřejný newsletter widget už neobsahuje inline e-mailový formulář bez captchy a vede na zabezpečenou stránku `/subscribe.php`; starý widgetový POST endpoint jen přesměruje na tuto stránku, neukládá odběratele a neposílá tokenové e-maily. Samostatná stránka odběru navíc nově serverově ověřuje captchu a zobrazuje přístupné field-level chyby pro e-mail i ověřovací otázku.

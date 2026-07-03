@@ -28,6 +28,7 @@
       <?php else: ?>
         <form method="post" novalidate class="form-stack"<?php if (!empty($errors)): ?> aria-describedby="form-errors"<?php endif; ?>>
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+          <?= honeypotField() ?>
 
           <fieldset class="form-fieldset">
             <legend>Žádost o obnovení hesla</legend>
@@ -36,12 +37,6 @@
               <label for="email">Váš e-mail <span aria-hidden="true">*</span></label>
               <input type="email" id="email" name="email" class="form-control" required aria-required="true"
                      maxlength="255" value="<?= h($requestEmail) ?>" autocomplete="email">
-            </div>
-
-            <div class="field">
-              <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-              <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required aria-required="true"
-                     inputmode="numeric" autocomplete="off">
             </div>
 
             <div class="button-row">

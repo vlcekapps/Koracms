@@ -7,7 +7,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
 | Klávesnice a focus u JS dialogů | 2.1.1, 2.1.2, 2.4.3, 4.1.2 | Command centrum, widget dialog a media/content picker jsou funkčně silné, ale potřebují scénářový průchod bez myši a se čtečkou. | Ručně projít NVDA/Firefox + keyboard-only a doplnit regresní guardrails pro nalezené chyby. |
-| Accessible Authentication | 3.3.8 | WCAG 2.2 zpřísňuje autentizační procesy; je potřeba posoudit login, 2FA, reset hesla, registraci a captcha. | Sepsat autentizační flow, určit, kde je kognitivní test, a doplnit přístupnou alternativu, pokud chybí. |
+| Accessible Authentication | 3.3.8 | Registrace a žádost o obnovu hesla už nevyžadují matematickou CAPTCHA a runtime audit hlídá, aby se kognitivní CAPTCHA do těchto auth flow nevrátila. Zbývá ruční posouzení loginu, 2FA, správců hesel a tokenového resetu. | Projít celé auth flow ve Firefox/NVDA a Chrome keyboard-only, ověřit použití správce hesel, TOTP kódu, reset tokenu a chybových stavů bez kognitivního testu. |
 | Kontrast a focus appearance | 1.4.3, 1.4.11, 2.4.7 | Automat hlídá strukturu, ale kontrast musí být změřen pro stavy hover/focus/disabled a theme varianty. | Změřit admin i default theme a zavést kontrastní tokeny nebo auditní seznam barev. |
 | Reflow a mobilní administrace | 1.4.10, 2.4.11, 2.5.8 | Husté tabulky, row actions a dlouhé formuláře mohou být problematické na 320 px a při zoomu. | Projít hlavní admin tabulky při 320 px/400 % zoomu, prioritně media, widgets, statistics a form builder. |
 

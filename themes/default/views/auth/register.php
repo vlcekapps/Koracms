@@ -68,12 +68,6 @@
                    minlength="8" autocomplete="new-password">
           </div>
 
-          <div class="field">
-            <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
-            <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required aria-required="true"
-                   inputmode="numeric" autocomplete="off">
-          </div>
-
           <div class="button-row">
             <button type="submit" class="button-primary">Zaregistrovat se</button>
             <a class="button-secondary" href="<?= BASE_URL ?>/public_login.php">Přejít na přihlášení</a>

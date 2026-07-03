@@ -85,7 +85,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.2.4 Consistent Identification | Supports | Shared module manifests and labels support consistent naming. |
 | 3.3.3 Error Suggestion | Partially Supports | Many errors are specific; all validation copy needs review. |
 | 3.3.4 Error Prevention (Legal, Financial, Data) | Partially Supports | CSRF, confirmations, PRG and audit logs exist; critical workflows need mapping. |
-| 3.3.8 Accessible Authentication (Minimum) | Partially Supports | Login/2FA is standard; captcha and cognitive-test implications need manual review. |
+| 3.3.8 Accessible Authentication (Minimum) | Partially Supports | Registration and password reset request no longer require a math CAPTCHA; they use CSRF, rate limiting and honeypot protection, and runtime audit prevents returning a cognitive CAPTCHA to these auth flows. Login, 2FA and password-manager behavior still need manual verification. |
 | 4.1.3 Status Messages | Supports | Status and error messages use live region semantics and guarded roles. |
 
 ## Current Summary

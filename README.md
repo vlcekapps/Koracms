@@ -450,7 +450,7 @@ Kora CMS používá:
 - ochranu `.env` a `.git/`
 - audit log a kontrolu integrity souborů
 
-Přihlášení do administrace, veřejné přihlášení i obnovení hesla používají kombinovaný rate limiting. Systém hlídá počet pokusů podle IP adresy a zároveň podle hashovaného účtu nebo tokenu. Do databáze se neukládá e-mail ani token v čitelné podobě, pouze odvozený SHA-256 klíč. Výchozí 429 odpověď posílá `Retry-After`, explicitní HTML typ a necacheovací/noindex/no-referrer hlavičky, aby ji prohlížeč ani mezilehlá cache neukládaly a klient věděl, kdy má požadavek zkusit znovu. HTML odpověď má skutečný nadpis a kód požadavku pro podporu, stejně jako globální chybová stránka.
+Přihlášení do administrace, veřejné přihlášení i obnovení hesla používají kombinovaný rate limiting. Systém hlídá počet pokusů podle IP adresy a zároveň podle hashovaného účtu nebo tokenu. Do databáze se neukládá e-mail ani token v čitelné podobě, pouze odvozený SHA-256 klíč. Veřejná registrace a žádost o obnovu hesla nevyžadují matematickou CAPTCHA; proti automatizovaným pokusům zůstávají chráněné přes CSRF, rate limit a honeypot. Výchozí 429 odpověď posílá `Retry-After`, explicitní HTML typ a necacheovací/noindex/no-referrer hlavičky, aby ji prohlížeč ani mezilehlá cache neukládaly a klient věděl, kdy má požadavek zkusit znovu. HTML odpověď má skutečný nadpis a kód požadavku pro podporu, stejně jako globální chybová stránka.
 
 Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.
 

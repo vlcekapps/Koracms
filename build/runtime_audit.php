@@ -9941,6 +9941,7 @@ $adminLogin2faSource = (string)file_get_contents(dirname(__DIR__) . '/admin/logi
 $adminLoginCssPath = dirname(__DIR__) . '/admin/assets/login.css';
 $adminLoginCssSource = is_file($adminLoginCssPath) ? (string)file_get_contents($adminLoginCssPath) : '';
 $publicLoginSource = (string)file_get_contents(dirname(__DIR__) . '/public_login.php');
+$registerSource = (string)file_get_contents(dirname(__DIR__) . '/register.php');
 $resetPasswordSource = (string)file_get_contents(dirname(__DIR__) . '/reset_password.php');
 $adminHttpIntegrationSource = is_file(dirname(__DIR__) . '/build/http_integration.php')
     ? (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php')
@@ -10077,11 +10078,12 @@ foreach ([
     'admin/login.php' => [$adminLoginSource, "rateLimit('login', 5, 300)", "rateLimitSubject('login_email', \$inputEmail, 5, 900)"],
     'admin/login_2fa.php' => [$adminLogin2faSource, "rateLimit('login_2fa', 5, 300)", "rateLimitSubject('login_2fa_user', (string)\$userId, 5, 300)"],
     'public_login.php' => [$publicLoginSource, "rateLimit('public_login', 5, 300)", "rateLimitSubject('public_login_email', \$email, 5, 900)"],
+    'register.php' => [$registerSource, "rateLimit('register', 3, 300)", 'honeypotTriggered()'],
     'reset_password.php email' => [$resetPasswordSource, "rateLimit('password_reset', 3, 300)", "rateLimitSubject('password_reset_email', \$email, 3, 900)"],
     'reset_password.php token' => [$resetPasswordSource, "rateLimitSubject('password_reset_token', \$token, 5, 300)", "verifyCsrf()"],
 ] as $rateLimitSourceLabel => [$rateLimitSource, $ipFragment, $subjectFragment]) {
     if (!str_contains($rateLimitSource, $ipFragment) || !str_contains($rateLimitSource, $subjectFragment)) {
-        $authRateLimitIssues[] = $rateLimitSourceLabel . ' is missing combined IP and subject rate limiting';
+        $authRateLimitIssues[] = $rateLimitSourceLabel . ' is missing required auth abuse protection fragment';
     }
 }
 if (!str_contains($cspReportSource, "rateLimit('csp_report', 120, 60") || !str_contains($cspReportSource, 'function cspReportRateLimitExceeded')) {
@@ -17243,6 +17245,23 @@ foreach ([
         || !str_contains($authStatusSpec['source'], $authStatusSpec['text'])) {
         $themeLayoutIssues[] = 'auth ' . $authStatusLabel . ' message is missing text-backed status semantics';
     }
+}
+foreach ([
+    'register controller' => $registerSource,
+    'reset password controller' => $resetPasswordSource,
+    'register view' => $themeRegisterViewSource,
+    'reset password view' => $themeResetPasswordViewSource,
+] as $authCaptchaLabel => $authCaptchaSource) {
+    if (str_contains($authCaptchaSource, 'captchaGenerate(')
+        || str_contains($authCaptchaSource, 'captchaVerify(')
+        || str_contains($authCaptchaSource, 'name="captcha"')) {
+        $themeLayoutIssues[] = 'auth ' . $authCaptchaLabel . ' still requires a cognitive captcha challenge';
+    }
+}
+if (!str_contains($themeRegisterViewSource, 'honeypotField()')
+    || !str_contains($themeResetPasswordViewSource, 'honeypotField()')
+    || !str_contains($resetPasswordSource, 'honeypotTriggered()')) {
+    $themeLayoutIssues[] = 'auth registration and password reset request must keep honeypot protection without cognitive captcha';
 }
 foreach ([
     'login not confirmed alert' => [

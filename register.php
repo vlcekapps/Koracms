@@ -80,10 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($password !== $password2) {
             $errors[] = 'Hesla se neshodují.';
         }
-        if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $errors[] = 'Chybná odpověď na ověřovací otázku.';
-        }
-
         if (empty($errors)) {
             $pdo = db_connect();
 
@@ -139,8 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$captchaExpr = captchaGenerate();
-
 renderPublicPage([
     'title' => 'Registrace – ' . $siteName,
     'meta' => [
@@ -151,7 +145,6 @@ renderPublicPage([
         'errors' => $errors,
         'success' => $success,
         'resent' => $resent,
-        'captchaExpr' => $captchaExpr,
         'formData' => [
             'first_name' => trim($_POST['first_name'] ?? ''),
             'last_name' => trim($_POST['last_name'] ?? ''),
