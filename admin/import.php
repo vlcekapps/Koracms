@@ -1372,8 +1372,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_polls
-                         (id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                         (id, question, slug, description, vote_mode, max_choices, results_visibility,
+                          meta_title, meta_description, start_date, end_date, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['polls'] as $row) {
                         $question = trim((string)($row['question'] ?? ''));
@@ -1388,15 +1389,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
                         $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $voteMode = pollVoteMode((string)($row['vote_mode'] ?? 'single'));
+                        $maxChoices = !empty($row['max_choices']) ? max(2, min(10, (int)$row['max_choices'])) : null;
+                        if ($voteMode !== 'multiple') {
+                            $maxChoices = null;
+                        }
+                        $resultsVisibility = pollResultsVisibility((string)($row['results_visibility'] ?? 'after_vote'));
                         $ins->execute([
                             (int)$row['id'],
                             $question,
                             $slug,
                             $row['description'] ?? '',
+                            $voteMode,
+                            $maxChoices,
+                            $resultsVisibility,
                             trim((string)($row['meta_title'] ?? '')),
                             trim((string)($row['meta_description'] ?? '')),
-                            $row['start_date'] ?: null,
-                            $row['end_date'] ?: null,
+                            !empty($row['start_date']) ? (string)$row['start_date'] : null,
+                            !empty($row['end_date']) ? (string)$row['end_date'] : null,
                             in_array(($row['status'] ?? ''), ['active', 'closed'], true) ? $row['status'] : 'active',
                             $createdAt,
                             $updatedAt,

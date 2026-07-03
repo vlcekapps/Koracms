@@ -1221,6 +1221,136 @@ function pollSlug(string $value): string
     return slugify(trim($value));
 }
 
+/**
+ * @return array<string, string>
+ */
+function pollVoteModeOptions(): array
+{
+    return [
+        'single' => 'Jedna možnost',
+        'multiple' => 'Více možností',
+    ];
+}
+
+function pollVoteMode(string $value): string
+{
+    $value = strtolower(trim($value));
+    return array_key_exists($value, pollVoteModeOptions()) ? $value : 'single';
+}
+
+/**
+ * @return array<string, string>
+ */
+function pollResultsVisibilityOptions(): array
+{
+    return [
+        'after_vote' => 'Po hlasování',
+        'always' => 'Vždy',
+        'closed' => 'Až po uzavření',
+        'hidden' => 'Neveřejné',
+    ];
+}
+
+function pollResultsVisibility(string $value): string
+{
+    $value = strtolower(trim($value));
+    return array_key_exists($value, pollResultsVisibilityOptions()) ? $value : 'after_vote';
+}
+
+/**
+ * @param array<string, mixed> $poll
+ */
+function pollAllowsMultipleChoices(array $poll): bool
+{
+    return pollVoteMode((string)($poll['vote_mode'] ?? 'single')) === 'multiple';
+}
+
+/**
+ * @param array<string, mixed> $poll
+ */
+function pollConfiguredMaxChoices(array $poll, int $optionCount): int
+{
+    $optionCount = max(1, $optionCount);
+    if (!pollAllowsMultipleChoices($poll)) {
+        return 1;
+    }
+
+    $configured = (int)($poll['max_choices'] ?? 0);
+    if ($configured <= 0) {
+        $configured = min(2, $optionCount);
+    }
+
+    return max(1, min($configured, $optionCount));
+}
+
+/**
+ * @param mixed $rawValue
+ * @return list<int>
+ */
+function pollSelectedOptionIds(mixed $rawValue): array
+{
+    $values = is_array($rawValue) ? $rawValue : [$rawValue];
+    $ids = [];
+
+    foreach ($values as $value) {
+        $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($id === false) {
+            continue;
+        }
+
+        $ids[] = (int)$id;
+    }
+
+    return array_values(array_unique($ids));
+}
+
+function pollVoterHash(string $remoteAddress, int $pollId): string
+{
+    return hash('sha256', $remoteAddress . '|poll_' . $pollId);
+}
+
+/**
+ * @param array<string, mixed> $poll
+ */
+function pollResultsAreVisible(array $poll, bool $hasVoted = false, bool $justVoted = false): bool
+{
+    return match (pollResultsVisibility((string)($poll['results_visibility'] ?? 'after_vote'))) {
+        'always' => true,
+        'closed' => (string)($poll['state'] ?? '') === 'closed',
+        'hidden' => false,
+        default => $hasVoted || $justVoted || (string)($poll['state'] ?? '') === 'closed',
+    };
+}
+
+function pollResultPercentage(int $selections, int $voterCount): float
+{
+    if ($voterCount <= 0) {
+        return 0.0;
+    }
+
+    return round(($selections / $voterCount) * 100, 1);
+}
+
+function pollVoteSelectionLabel(int $count, bool $multiple): string
+{
+    $count = max(0, $count);
+    if (!$multiple) {
+        return $count === 1 ? '1 hlas' : $count . ' hlasů';
+    }
+
+    if ($count === 1) {
+        return '1 výběr';
+    }
+
+    $mod100 = $count % 100;
+    $mod10 = $count % 10;
+    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+        return $count . ' výběry';
+    }
+
+    return $count . ' výběrů';
+}
+
 function faqSlug(string $value): string
 {
     return slugify(trim($value));
@@ -1700,6 +1830,9 @@ function pollRevisionSnapshot(array $poll, array $options = []): array
         'question' => trim((string)($poll['question'] ?? '')),
         'slug' => pollSlug((string)($poll['slug'] ?? '')),
         'description' => (string)($poll['description'] ?? ''),
+        'vote_mode' => pollVoteMode((string)($poll['vote_mode'] ?? 'single')),
+        'max_choices' => (int)($poll['max_choices'] ?? 0),
+        'results_visibility' => pollResultsVisibility((string)($poll['results_visibility'] ?? 'after_vote')),
         'status' => trim((string)($poll['status'] ?? 'active')),
         'start_date' => trim((string)($poll['start_date'] ?? '')),
         'end_date' => trim((string)($poll['end_date'] ?? '')),
@@ -7727,6 +7860,13 @@ function hydratePollPresentation(array $poll): array
     $poll['excerpt'] = pollExcerpt($poll);
     $poll['meta_title'] = trim((string)($poll['meta_title'] ?? ''));
     $poll['meta_description'] = trim((string)($poll['meta_description'] ?? ''));
+    $poll['vote_mode'] = pollVoteMode((string)($poll['vote_mode'] ?? 'single'));
+    $poll['vote_mode_label'] = pollVoteModeOptions()[$poll['vote_mode']] ?? 'Jedna možnost';
+    $poll['max_choices'] = isset($poll['max_choices']) && $poll['max_choices'] !== ''
+        ? max(1, (int)$poll['max_choices'])
+        : null;
+    $poll['results_visibility'] = pollResultsVisibility((string)($poll['results_visibility'] ?? 'after_vote'));
+    $poll['results_visibility_label'] = pollResultsVisibilityOptions()[$poll['results_visibility']] ?? 'Po hlasování';
     $poll['public_path'] = pollPublicPath($poll);
     $poll['public_url'] = pollPublicUrl($poll);
 

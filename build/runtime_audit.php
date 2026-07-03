@@ -22,6 +22,7 @@ $baseUrl = rtrim($baseUrlInput, '/');
 $pdo     = db_connect();
 $cronSource = (string) file_get_contents(__DIR__ . '/../cron.php');
 $adminBackupSource = (string) file_get_contents(__DIR__ . '/../admin/backup.php');
+$adminPollResultsExportSource = is_file(__DIR__ . '/../admin/polls_results_export.php') ? (string) file_get_contents(__DIR__ . '/../admin/polls_results_export.php') : '';
 $backupHelperSource = (string) file_get_contents(__DIR__ . '/../lib/backup.php');
 $uiSource = (string) file_get_contents(__DIR__ . '/../lib/ui.php');
 $definitionsSource = (string) file_get_contents(__DIR__ . '/../lib/definitions.php');
@@ -3172,15 +3173,15 @@ foreach ($pages as $page) {
         'admin_faq_create_form' => ['Přidat otázku FAQ', 'Zrušit'],
         'admin_place_form' => ['Uložit změny', 'Zrušit'],
         'admin_place_create_form' => ['Přidat zajímavé místo', 'Zrušit'],
-        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
-        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'],
         'admin_podcast_show_form' => ['Uložit změny', 'Zrušit'],
         'admin_podcast_show_create_form' => ['Vytvořit podcast', 'Zrušit'],
         'admin_podcast_form' => ['Uložit změny', 'Zrušit'],
         'admin_podcast_create_form' => ['Přidat epizodu podcastu', 'Zrušit'],
     ];
-    $adminFormActionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
-    $adminFormActionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormActionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormActionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormActionExpectations[$page['label']])) {
         foreach ($adminFormActionExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -3250,8 +3251,8 @@ foreach ($pages as $page) {
         'admin_podcast_show_create_form' => ['Vyplňte základní údaje o podcastu.', 'Adresa se vyplní automaticky, dokud ji neupravíte ručně.', 'Počet epizod v RSS feedu', 'E-mail vlastníka feedu'],
         'admin_podcast_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
         'admin_podcast_create_form' => ['Vyplňte základní údaje o epizodě.', 'Adresa se vyplní automaticky podle názvu epizody.', 'Nechte prázdné, pokud se má epizoda zveřejnit hned po uložení nebo schválení.', 'Krátký podtitul pro katalogy', 'Skrýt epizodu z RSS feedu'],
-        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
-        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_form' => ['<legend>Anketa</legend>', '<legend>Nastaven? hlasov?n?</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
+        'admin_polls_create_form' => ['<legend>Anketa</legend>', '<legend>Nastaven? hlasov?n?</legend>', '<legend>?asov? omezen?</legend>', '<legend>Vyhled?va?e a sd?len?</legend>'],
         'admin_res_resource_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
         'admin_res_resource_create_form' => ['Vyplňte základní údaje o zdroji a pak nastavte způsob rezervací.', 'Například 24 znamená, že rezervaci je nutné vytvořit nejpozději den předem.'],
         'admin_gallery_album_form' => ['Adresa se vyplní automaticky podle názvu alba.'],
@@ -3261,8 +3262,8 @@ foreach ($pages as $page) {
         'admin_user_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
         'admin_user_create_form' => ['Adresa autora se vyplní automaticky podle jména nebo přezdívky.'],
     ];
-    $adminFormCopyExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
-    $adminFormCopyExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormCopyExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormCopyExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormCopyExpectations[$page['label']])) {
         foreach ($adminFormCopyExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -3476,8 +3477,8 @@ foreach ($pages as $page) {
         'admin_res_resource_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
         'admin_res_resource_create_form' => ['Lokality rezervací', 'Způsob rezervací', 'Časy k rezervaci', 'Hromadné přidání slotů'],
     ];
-    $adminFormSectionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
-    $adminFormSectionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormSectionExpectations['admin_polls_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
+    $adminFormSectionExpectations['admin_polls_create_form'] = ['<legend>Anketa</legend>', '<legend>Nastavení hlasování</legend>', '<legend>Časové omezení</legend>', '<legend>Vyhledávače a sdílení</legend>'];
     if (isset($adminFormSectionExpectations[$page['label']])) {
         foreach ($adminFormSectionExpectations[$page['label']] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -7557,6 +7558,7 @@ if (!empty($cleanup['audit_log_ids'])) {
 if (!empty($cleanup['poll_ids'])) {
     $placeholders = implode(',', array_fill(0, count($cleanup['poll_ids']), '?'));
     $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id IN ({$placeholders})")->execute($cleanup['poll_ids']);
+    $pdo->prepare("DELETE FROM cms_poll_vote_sessions WHERE poll_id IN ({$placeholders})")->execute($cleanup['poll_ids']);
     $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id IN ({$placeholders})")->execute($cleanup['poll_ids']);
     $pdo->prepare("DELETE FROM cms_polls WHERE id IN ({$placeholders})")->execute($cleanup['poll_ids']);
 }
@@ -7859,6 +7861,7 @@ $adminRouteModuleExpectations = [
     '/admin/download_save.php' => 'downloads',
     '/admin/food_delete.php' => 'food',
     '/admin/polls_save.php' => 'polls',
+    '/admin/polls_results_export.php' => 'polls',
     '/admin/faq_cat_delete.php' => 'faq',
     '/admin/board_clone.php' => 'board',
     '/admin/form_save.php' => 'forms',
@@ -8751,7 +8754,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/calendar.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_update.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -9069,7 +9072,9 @@ $foundationChecks = [
         && $adminFormSubmissionFileMethodGuardBeforeCapability
         && $adminFormSubmissionsMethodGuardBeforeCapability
         && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)'),
+        && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)')
+        && str_contains($adminPollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+        && str_contains($adminPollResultsExportSource, 'if ($isHeadRequest)'),
     'admin HTML responses send no-store headers' => str_contains($authSource, 'function isAdminRequestPath')
         && str_contains($authSource, "BASE_URL . '/admin/'")
         && str_contains($authSource, "BASE_URL . '/migrate.php'")
@@ -9141,6 +9146,7 @@ $foundationChecks = [
         && str_contains($adminFormSubmissionFileSource, 'sendAdminAttachmentHeaders(')
         && str_contains($adminFormSubmissionsSource, 'sendAdminAttachmentHeaders(')
         && str_contains($adminBackupSource, 'sendAdminAttachmentHeaders(')
+        && str_contains($adminPollResultsExportSource, 'sendAdminAttachmentHeaders(')
         && substr_count($adminGalleryExportZipSource, 'sendAdminAttachmentHeaders(') >= 2
         && str_contains($adminThemesSource, 'sendAdminAttachmentHeaders(')
         && !str_contains($adminExportSource, 'Content-Disposition: attachment; filename=')
@@ -9612,6 +9618,11 @@ $installSchemaChecks = [
     'cms_news contains meta_description' => $installTableContains('cms_news', 'meta_description'),
     'cms_polls contains meta_title' => $installTableContains('cms_polls', 'meta_title'),
     'cms_polls contains meta_description' => $installTableContains('cms_polls', 'meta_description'),
+    'cms_polls contains vote_mode' => $installTableContains('cms_polls', 'vote_mode'),
+    'cms_polls contains max_choices' => $installTableContains('cms_polls', 'max_choices'),
+    'cms_polls contains results_visibility' => $installTableContains('cms_polls', 'results_visibility'),
+    'cms_poll_vote_sessions contains voter_hash' => $installTableContains('cms_poll_vote_sessions', 'voter_hash'),
+    'cms_poll_votes contains vote_session_id' => $installTableContains('cms_poll_votes', 'vote_session_id'),
     'cms_media contains caption' => $installTableContains('cms_media', 'caption'),
     'cms_media contains collection_id' => $installTableContains('cms_media', 'collection_id'),
     'cms_media contains description' => $installTableContains('cms_media', 'description'),
@@ -9670,6 +9681,12 @@ $migrateSchemaChecks = [
     'cms_news.meta_description' => str_contains($migrateSource, 'cms_news.meta_description'),
     'cms_polls.meta_title' => str_contains($migrateSource, 'cms_polls.meta_title'),
     'cms_polls.meta_description' => str_contains($migrateSource, 'cms_polls.meta_description'),
+    'cms_polls.vote_mode' => str_contains($migrateSource, 'cms_polls.vote_mode'),
+    'cms_polls.max_choices' => str_contains($migrateSource, 'cms_polls.max_choices'),
+    'cms_polls.results_visibility' => str_contains($migrateSource, 'cms_polls.results_visibility'),
+    'cms_poll_vote_sessions' => str_contains($migrateSource, 'cms_poll_vote_sessions'),
+    'cms_poll_votes.vote_session_id' => str_contains($migrateSource, 'cms_poll_votes.vote_session_id'),
+    'uq_poll_vote_option_hash' => str_contains($migrateSource, 'uq_poll_vote_option_hash'),
     'cms_media.caption' => str_contains($migrateSource, 'cms_media.caption'),
     'cms_media.collection_id' => str_contains($migrateSource, 'cms_media.collection_id'),
     'cms_media.description' => str_contains($migrateSource, 'cms_media.description'),
@@ -13088,6 +13105,7 @@ $pollSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_sav
 $pollFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
 $pollListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls.php');
 $pollDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_delete.php');
+$pollResultsExportSource = $adminPollResultsExportSource;
 $pollIndexControllerSource = (string)file_get_contents(dirname(__DIR__) . '/polls/index.php');
 $pollIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/polls-index.php');
 $pollPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
@@ -13120,6 +13138,11 @@ if (!str_contains($pollFormSource, 'revisions.php?type=poll')) {
 if (!str_contains($pollFormSource, 'name="meta_title"') || !str_contains($pollFormSource, 'name="meta_description"')) {
     $pollSourceIssues[] = 'poll form is missing SEO fields';
 }
+foreach (['name="vote_mode"', 'name="max_choices"', 'name="results_visibility"', '<legend>Nastavení hlasování</legend>'] as $pollVotingFormFragment) {
+    if (!str_contains($pollFormSource, $pollVotingFormFragment)) {
+        $pollSourceIssues[] = 'poll form is missing voting settings fragment: ' . $pollVotingFormFragment;
+    }
+}
 if (str_contains($pollFormSource, 'onclick="removeOption(this)"') || str_contains($pollFormSource, 'onclick="addOption()"')) {
     $pollSourceIssues[] = 'poll form still uses inline option editor onclick handlers';
 }
@@ -13142,6 +13165,16 @@ if (!str_contains($pollListSource, 'name="status"') || !str_contains($pollListSo
 if (!str_contains($pollIndexControllerSource, 'pollPublicVisibilitySql(')) {
     $pollSourceIssues[] = 'poll index is missing shared visibility helper';
 }
+foreach ([
+    'pollSelectedOptionIds(',
+    'cms_poll_vote_sessions',
+    'vote_session_id',
+    'pollResultsAreVisible(',
+] as $pollVotingControllerFragment) {
+    if (!str_contains($pollIndexControllerSource, $pollVotingControllerFragment)) {
+        $pollSourceIssues[] = 'poll index is missing multi-vote controller fragment: ' . $pollVotingControllerFragment;
+    }
+}
 if (!str_contains($pollIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
     $pollSourceIssues[] = 'poll index is missing public search support';
 }
@@ -13153,6 +13186,16 @@ if (!str_contains($pollIndexViewSource, 'name="q"')) {
 }
 if (!str_contains($pollIndexViewSource, 'renderPager(')) {
     $pollSourceIssues[] = 'poll public view is missing pager output';
+}
+foreach ([
+    'name="<?= $multipleMode ? \'option_ids[]\' : \'option_id\' ?>"',
+    'poll-choice-limit',
+    'Výsledky nejsou veřejné',
+    '$resultsVisible',
+] as $pollVotingViewFragment) {
+    if (!str_contains($pollIndexViewSource, $pollVotingViewFragment)) {
+        $pollSourceIssues[] = 'poll public view is missing multi-vote fragment: ' . $pollVotingViewFragment;
+    }
 }
 if (str_contains($pollIndexViewSource, 'poll-result__fill') || str_contains($pollIndexViewSource, 'style="width:')) {
     $pollSourceIssues[] = 'poll public results still use inline-width result bars';
@@ -13197,6 +13240,21 @@ foreach (['meta_title', 'meta_description'] as $pollFieldFragment) {
     if (!str_contains($pollImportSource, $pollFieldFragment)) {
         $pollSourceIssues[] = 'poll import is missing field fragment: ' . $pollFieldFragment;
     }
+}
+foreach (['vote_mode', 'max_choices', 'results_visibility'] as $pollConfigFieldFragment) {
+    if (!str_contains($pollExportSource, $pollConfigFieldFragment) || !str_contains($pollImportSource, $pollConfigFieldFragment)) {
+        $pollSourceIssues[] = 'poll import/export is missing voting config field: ' . $pollConfigFieldFragment;
+    }
+}
+if (!str_contains($pollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($pollResultsExportSource, "sendAdminAttachmentHeaders('text/csv; charset=UTF-8'")
+    || !str_contains($pollResultsExportSource, 'Hlasujících')
+    || !str_contains($pollResultsExportSource, 'Vybraných odpovědí')) {
+    $pollSourceIssues[] = 'poll CSV export is missing read-only aggregate export guardrails';
+}
+if (str_contains($pollResultsExportSource, "fputcsv(\$output, ['ip_hash'")
+    || str_contains($pollResultsExportSource, "fputcsv(\$output, ['voter_hash'")) {
+    $pollSourceIssues[] = 'poll CSV export must not output raw hash fields';
 }
 if ($pollSourceIssues === []) {
     echo "OK\n";

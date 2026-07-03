@@ -31,6 +31,9 @@ $status = in_array((string)($_POST['status'] ?? ''), ['active', 'closed'], true)
     : 'active';
 $metaTitle = mb_substr(trim((string)($_POST['meta_title'] ?? '')), 0, 160);
 $metaDescription = trim((string)($_POST['meta_description'] ?? ''));
+$voteMode = pollVoteMode((string)($_POST['vote_mode'] ?? 'single'));
+$resultsVisibility = pollResultsVisibility((string)($_POST['results_visibility'] ?? 'after_vote'));
+$rawMaxChoices = trim((string)($_POST['max_choices'] ?? ''));
 $isValidDate = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('Y-m-d', $value);
     $errors = DateTime::getLastErrors();
@@ -111,6 +114,19 @@ if (count($validOptions) > 10) {
     $redirectToForm($id, 'max_options', $redirectTarget);
 }
 
+$maxChoices = null;
+if ($voteMode === 'multiple') {
+    if ($rawMaxChoices === '') {
+        $maxChoices = min(2, count($validOptions));
+    } else {
+        $parsedMaxChoices = filter_var($rawMaxChoices, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2]]);
+        if ($parsedMaxChoices === false || (int)$parsedMaxChoices > count($validOptions)) {
+            $redirectToForm($id, 'max_choices', $redirectTarget);
+        }
+        $maxChoices = (int)$parsedMaxChoices;
+    }
+}
+
 $existingPoll = null;
 $existingOptions = [];
 if ($id !== null) {
@@ -165,13 +181,17 @@ try {
     if ($existingPoll !== null) {
         $pdo->prepare(
             "UPDATE cms_polls
-             SET question = ?, slug = ?, description = ?, status = ?, start_date = ?, end_date = ?,
+             SET question = ?, slug = ?, description = ?, vote_mode = ?, max_choices = ?,
+                 results_visibility = ?, status = ?, start_date = ?, end_date = ?,
                  meta_title = ?, meta_description = ?
              WHERE id = ?"
         )->execute([
             $question,
             $slug,
             $description !== '' ? $description : null,
+            $voteMode,
+            $maxChoices,
+            $resultsVisibility,
             $status,
             $startDate,
             $endDate,
@@ -228,6 +248,9 @@ try {
                 'question' => $question,
                 'slug' => $slug,
                 'description' => $description,
+                'vote_mode' => $voteMode,
+                'max_choices' => $maxChoices,
+                'results_visibility' => $resultsVisibility,
                 'status' => $status,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
@@ -241,12 +264,16 @@ try {
     } else {
         $pdo->prepare(
             "INSERT INTO cms_polls (
-                question, slug, description, status, start_date, end_date, meta_title, meta_description
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                question, slug, description, vote_mode, max_choices, results_visibility,
+                status, start_date, end_date, meta_title, meta_description
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )->execute([
             $question,
             $slug,
             $description !== '' ? $description : null,
+            $voteMode,
+            $maxChoices,
+            $resultsVisibility,
             $status,
             $startDate,
             $endDate,

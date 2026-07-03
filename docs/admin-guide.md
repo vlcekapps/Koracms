@@ -1022,7 +1022,7 @@ Vývojové kontroly:
 - GitHub Actions drží dva oddělené workflow: `.github/workflows/ci.yml` pro běžné `push`/`pull_request` s `composer ci:basic` a `.github/workflows/full-ci.yml` pro ruční a noční běh plného `composer ci:full`; plný workflow si připraví MySQL, `config.php`, vestavěný PHP server a čerstvou instalaci CMS, takže runtime audit a HTTP integrace mají vzdálený guardrail bez zpomalení každého commitu
 - Oba GitHub Actions workflow používají minimální `contents: read` oprávnění, řízení souběhu a job timeouty, aby se kvalita hlídala s menším oprávněním a bez visících běhů
 - `composer format:fix` umí stejnou úzkou sadu helperů lokálně dorovnat do PSR-12 bez zásahu do širšího historického kódu; momentálně pokrývá lint/bootstrap helpery a první stabilní várku sdílených knihoven (`backup`, `comments`, `content`, `definitions`, `filedownloads`, `gallery`, `github`, `mail`, `media_library`, `messages`, `pagination`, `presentation`, `revisions`, `stats`, `theme`, `totp`, `ui`, `uploads`, `webhooks`, `widgets`)
-- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 221 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
+- `composer analyse:strict` už na levelu 6 vedle základních helperů pokrývá 242 stabilizovaných souborů napříč veřejnými entrypointy, sdílenými knihovnami, workflow auditem, redirect guardraily a rozšiřovanou sadou admin workflow pro blogy, stránky, média, formuláře, podcasty, FAQ, události, ankety, místa, rezervace, widgety, komentáře, kontakty, chat, novinky, soubory ke stažení, jídelní a nápojové lístky, kategorie, newsletter, uživatele, galerii, převod obsahu, reorder endpointy a jednoduché akční endpointy; ta část kódu proto nově drží přesnější array kontrakty i bez baseline a bez ignore pravidel
 - Veřejné i administrační požadavky dostávají `X-Request-ID`; globální neošetřené chyby a vybrané technické chyby se zapisují jako JSON záznamy se stejným `request_id`, metodou a cestou. Při dohledávání produkční chyby tak stačí porovnat ID z odpovědi nebo monitoringu s PHP logem; u neošetřené chyby se stejný kód zobrazí i na chybové stránce. Strukturovaný zápis se používá i pro dílčí obnovitelné chyby veřejného blogu, detailu článku, vyhledávání, sitemapy, veřejných formulářů, chatu, kontaktu, stažení souboru a newsletterových potvrzovacích akcí, kde má stránka pokračovat ve vykreslení, ale log musí ukázat selhaný zdroj nebo sekci. Stejný bezpečný zápis používají i vybrané administrační přehledy, například media picker/content reference search, formuláře a statistiky, bez ukládání hledaných výrazů, obsahu zpráv nebo tokenů do kontextu logu. Sdílené helpery pro zámky obsahu, revize, widgety, použití médií, formulářové webhooky, e-mailové notifikace, souborové operace a cron cleanup logují jen technický kontext typu operace, entity, zóny, interní tabulky, webhook eventu, hostu endpointu, HTTP stavu, domény příjemce, SMTP fáze, hashe cesty nebo přípony souboru; celé webhook URL, tělo odpovědi protistrany, celé e-mailové adresy, surové SMTP odpovědi ani fyzické cesty k souborům se do logu neukládají.
 - `health.php` kromě databáze, privátního úložiště a orientačního stavu záloh uvádí i čas poslední nalezené SQL zálohy a čerstvost posledního běhu cronu. Podporuje jen `GET` a `HEAD`; ostatní metody vrací sdílenou JSON `405` odpověď s `Allow: GET, HEAD`, bezpečnostními/no-store hlavičkami a `request_id`. Cron při každém běhu uloží `cron_last_run_at`; health check ho hlásí jako `ok`, `stale` nebo `unknown`, aniž by čerstvá instalace bez prvního cronu hned spadla do chyby. Monitoring odpověď dostává s `Cache-Control: no-store`, aby se nevyhodnocoval starý stav z cache.
 - CSP se na veřejných odpovědích posílá i v režimu `Content-Security-Policy-Report-Only`. Prohlížeče tak mohou hlásit podezřelé nebo chybějící zdroje na `csp-report.php`, aniž by se návštěvníkovi rozbil legitimní obsah; běžné inline styly jsou v politice výslovně povolené přes `style-src-elem` a `style-src-attr` a starší inline-style reporty endpoint přijme bez zápisu do JSONL, aby log neplnil očekávaný šum z historických admin šablon. Endpoint přijímá jen `POST`, nepovolené metody odmítá sdílenou JSON `405` odpovědí s `Allow: POST`, chybové JSON odpovědi doplňuje o `request_id`, neposílá cacheovatelný obsah, ukládá jen očištěné JSONL záznamy do privátního úložiště `logs/csp_reports-YYYY-MM-DD.jsonl`, má vlastní rate limit proti zahlcení logů a cron čistí report soubory starší než 30 dní.
@@ -1241,9 +1241,9 @@ Praktické poznámky:
 
 ---
 
-## Ankety – plánování, SEO a veřejný výpis
+## Ankety – režimy hlasování, výsledky, plánování a SEO
 
-Modul ankety je určený pro jednoduché hlasování s okamžitě veřejnými výsledky po odeslání hlasu. Tato vlna dotažení sjednotila veřejnou viditelnost modulu s ostatními částmi CMS, doplnila revize a přidala i základní SEO workflow.
+Modul ankety podporuje jednoduché hlasování jednou odpovědí i vícevýběrové ankety. Výsledky už nemusí být veřejné hned po hlasování; správce může rozhodnout, zda se ukážou vždy, po hlasování, až po uzavření nebo vůbec ne. Modul zároveň drží konzistentní veřejnou viditelnost s widgety, sitemapou a vyhledáváním, má revize a základní SEO workflow.
 
 ### Co se nastavuje u ankety
 
@@ -1253,6 +1253,9 @@ Každá anketa může mít:
 - volitelný popis
 - stav `Aktivní` nebo `Uzavřená`
 - časové okno `Začátek` a `Konec`
+- typ hlasování `Jedna možnost` nebo `Více možností`
+- limit vybraných odpovědí u vícevýběru
+- viditelnost výsledků `Po hlasování`, `Vždy`, `Až po uzavření` nebo `Neveřejné`
 - 2 až 10 odpovědí
 - volitelný `meta title`
 - volitelný `meta description`
@@ -1270,8 +1273,10 @@ Pokud SEO pole nevyplníte, veřejný detail použije fallback z otázky a krát
 
 - Přehled anket nově umí fulltext `q`, filtr podle stavu a stránkování.
 - Po uložení, smazání nebo hromadné akci se návrat drží ve stejném filtru a na stejné stránce přehledu.
+- Editor obsahuje fieldset `Nastavení hlasování`, kde se volí režim, limit vícevýběru a viditelnost výsledků.
 - Editor nově obsahuje SEO pole `Meta titulek` a `Meta popis`.
-- Revize zachycují otázku, slug, popis, stav, termíny, možnosti i SEO metadata.
+- Revize zachycují otázku, slug, popis, stav, termíny, režim hlasování, viditelnost výsledků, možnosti i SEO metadata.
+- Detail/editace ankety zobrazuje počet hlasujících, počet vybraných odpovědí a odkaz `Stáhnout výsledky CSV`. CSV export obsahuje jen agregované možnosti, počty a procenta, ne IP hashe ani voter hashe.
 
 ### Veřejný výpis a detail
 
@@ -1282,11 +1287,14 @@ Veřejná stránka anket nově podporuje:
 - stránkování i při aktivním dotazu
 - zachování filtru a vyhledávacího dotazu při listování
 
-Detail ankety dál zachovává stejné hlasovací chování:
+Detail ankety respektuje zvolený režim hlasování:
 
-- po hlasování se hned ukážou výsledky
+- u jedné možnosti vykreslí rádio tlačítka
+- u vícevýběru vykreslí checkboxy a jasně oznámí limit výběru
+- limit se ověřuje i serverově, takže podvržený formulář neuloží více možností
+- výsledky se zobrazí jen podle nastavené viditelnosti
 - neexportují se jednotlivé hlasy
-- ochrana proti opakovanému hlasování dál stojí na stávajícím IP hash modelu
+- ochrana proti opakovanému hlasování používá anonymní hlasovací session nad stávajícím hash modelem
 
 ### Export a import
 
@@ -1294,18 +1302,20 @@ Export/import anket přenáší:
 
 - samotnou anketu
 - její možnosti odpovědí
+- typ hlasování, limit vícevýběru a viditelnost výsledků
 - stav a časové okno
 - SEO pole
 
 Nepřenáší se:
 
 - jednotlivé hlasy
+- hlasovací sessions
 - agregované výsledky hlasování
 
 ### Co patří do README a co sem
 
-- [README.md](../README.md) stručně říká, že ankety podporují plánování, veřejné hledání, slug URL, SEO fallbacky a revize.
-- Tento dokument popisuje konkrétní redakční workflow, chování veřejné viditelnosti, časování a pravidla exportu/importu.
+- [README.md](../README.md) stručně říká, že ankety podporují jedno- i vícevýběrové hlasování, plánování, veřejné hledání, slug URL, SEO fallbacky, CSV export a revize.
+- Tento dokument popisuje konkrétní redakční workflow, chování výsledků, veřejnou viditelnost, časování a pravidla exportu/importu.
 
 ---
 

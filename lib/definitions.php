@@ -360,6 +360,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/polls.php',
+                '/admin/polls_results_export.php',
             ],
         ],
         'faq' => [

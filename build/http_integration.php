@@ -800,6 +800,184 @@ try {
 
     httpIntegrationPrintResult('content_reference_disabled_modules_http', $disabledContentReferenceIssues, $failures);
 
+    $pollVotingModeIssues = [];
+    saveSetting('module_polls', '1');
+    clearSettingsCache();
+
+    $pollMultipleSlug = 'http-multiple-poll-' . bin2hex(random_bytes(4));
+    $pollMultipleQuestion = 'HTTP vícevýběrová anketa ' . bin2hex(random_bytes(3));
+    $pollCreateResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/polls_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'question' => $pollMultipleQuestion,
+            'slug' => $pollMultipleSlug,
+            'description' => 'Dočasná vícevýběrová anketa pro HTTP integraci.',
+            'status' => 'active',
+            'vote_mode' => 'multiple',
+            'max_choices' => '2',
+            'results_visibility' => 'hidden',
+            'start_date' => '',
+            'start_time' => '',
+            'end_date' => '',
+            'end_time' => '',
+            'meta_title' => '',
+            'meta_description' => '',
+            'options' => ['První odpověď', 'Druhá odpověď', 'Třetí odpověď'],
+            'option_ids' => ['0', '0', '0'],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($pollCreateResponse) !== 302) {
+        $pollVotingModeIssues[] = 'uložení vícevýběrové ankety v administraci nevrátilo redirect';
+    }
+    $adminSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Integration Admin',
+        'cms_user_role' => 'admin',
+    ], $adminSession['id']);
+
+    $pollMultipleStmt = $pdo->prepare("SELECT * FROM cms_polls WHERE slug = ? LIMIT 1");
+    $pollMultipleStmt->execute([$pollMultipleSlug]);
+    $pollMultiple = $pollMultipleStmt->fetch();
+    $pollMultipleId = is_array($pollMultiple) ? (int)$pollMultiple['id'] : 0;
+    if ($pollMultipleId <= 0) {
+        $pollVotingModeIssues[] = 'uložená vícevýběrová anketa se nenašla v databázi';
+    } else {
+        $createdPollIds[] = $pollMultipleId;
+        if (($pollMultiple['vote_mode'] ?? '') !== 'multiple' || (int)($pollMultiple['max_choices'] ?? 0) !== 2 || ($pollMultiple['results_visibility'] ?? '') !== 'hidden') {
+            $pollVotingModeIssues[] = 'uložená anketa nemá očekávaný režim vícevýběru, limit a skryté výsledky';
+        }
+    }
+
+    $pollMultipleOptions = [];
+    if ($pollMultipleId > 0) {
+        $pollOptionsStmt = $pdo->prepare("SELECT id, option_text FROM cms_poll_options WHERE poll_id = ? ORDER BY sort_order, id");
+        $pollOptionsStmt->execute([$pollMultipleId]);
+        $pollMultipleOptions = $pollOptionsStmt->fetchAll();
+        if (count($pollMultipleOptions) !== 3) {
+            $pollVotingModeIssues[] = 'vícevýběrová anketa nemá očekávané tři možnosti';
+        }
+    }
+
+    $pollCanonicalPath = $pollMultipleId > 0 ? pollPublicPath(['id' => $pollMultipleId, 'slug' => $pollMultipleSlug]) : BASE_URL . '/polls/index.php';
+    $pollPublicPath = BASE_URL . '/polls/index.php?slug=' . rawurlencode($pollMultipleSlug);
+    $pollPublicUrl = $baseUrl . $pollPublicPath;
+    $pollLimitSession = koraPrimeTestSession([], 'kora-http-poll-limit-' . bin2hex(random_bytes(4)));
+    $pollLimitPage = fetchUrl($pollPublicUrl, $pollLimitSession['cookie'], 0);
+    if (httpIntegrationStatusCode($pollLimitPage) !== 200 || !str_contains($pollLimitPage['body'], 'type="checkbox"') || !str_contains($pollLimitPage['body'], 'Můžete vybrat nejvýše 2 možností.')) {
+        $pollVotingModeIssues[] = 'veřejný formulář vícevýběrové ankety nevykreslil checkboxy a limit výběru';
+    }
+    $pollLimitCsrf = extractHiddenInputValue($pollLimitPage['body'], 'csrf_token');
+    if ($pollLimitCsrf === '') {
+        $pollVotingModeIssues[] = 'veřejný formulář vícevýběrové ankety nevykreslil csrf_token';
+    }
+    if ($pollLimitCsrf !== '' && count($pollMultipleOptions) >= 3) {
+        $tooManyResponse = postUrl(
+            $pollPublicUrl,
+            [
+                'csrf_token' => $pollLimitCsrf,
+                'vote' => '1',
+                'option_ids' => [
+                    (string)$pollMultipleOptions[0]['id'],
+                    (string)$pollMultipleOptions[1]['id'],
+                    (string)$pollMultipleOptions[2]['id'],
+                ],
+            ],
+            $pollLimitSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($tooManyResponse) !== 200 || !str_contains($tooManyResponse['body'], 'Vybrali jste více možností')) {
+            $pollVotingModeIssues[] = 'překročení limitu vícevýběru nevrátilo přístupnou validační chybu';
+        }
+        $tooManyCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
+        $tooManyCountStmt->execute([$pollMultipleId]);
+        if ((int)$tooManyCountStmt->fetchColumn() !== 0) {
+            $pollVotingModeIssues[] = 'překročení limitu vícevýběru přesto uložilo hlas';
+        }
+    }
+
+    $pollVoteSession = koraPrimeTestSession([], 'kora-http-poll-valid-' . bin2hex(random_bytes(4)));
+    $pollVotePage = fetchUrl($pollPublicUrl, $pollVoteSession['cookie'], 0);
+    $pollVoteCsrf = extractHiddenInputValue($pollVotePage['body'], 'csrf_token');
+    if ($pollVoteCsrf === '') {
+        $pollVotingModeIssues[] = 'veřejný formulář vícevýběrové ankety pro platný hlas nevykreslil csrf_token';
+    }
+    if ($pollVoteCsrf !== '' && count($pollMultipleOptions) >= 2) {
+        $validVoteResponse = postUrl(
+            $pollPublicUrl,
+            [
+                'csrf_token' => $pollVoteCsrf,
+                'vote' => '1',
+                'option_ids' => [
+                    (string)$pollMultipleOptions[0]['id'],
+                    (string)$pollMultipleOptions[1]['id'],
+                ],
+            ],
+            $pollVoteSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($validVoteResponse) !== 302 || !responseHasLocationHeader($validVoteResponse['headers'], $pollCanonicalPath . '?voted=1', $baseUrl)) {
+            $pollVotingModeIssues[] = 'platný vícevýběrový hlas nepřesměroval na potvrzení hlasování';
+        }
+
+        $pollVotesStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
+        $pollVotesStmt->execute([$pollMultipleId]);
+        $pollVotesCount = (int)$pollVotesStmt->fetchColumn();
+        $pollSessionsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = ?");
+        $pollSessionsStmt->execute([$pollMultipleId]);
+        $pollSessionsCount = (int)$pollSessionsStmt->fetchColumn();
+        if ($pollVotesCount !== 2 || $pollSessionsCount !== 1) {
+            $pollVotingModeIssues[] = 'platný vícevýběrový hlas neuložil jednu session a dvě vybrané odpovědi';
+        }
+
+        $votedHiddenResultsPage = fetchUrl($baseUrl . $pollPublicPath . '&voted=1', $pollVoteSession['cookie'], 0);
+        if (!str_contains($votedHiddenResultsPage['body'], 'Výsledky nejsou veřejné') || str_contains($votedHiddenResultsPage['body'], 'poll-result__track')) {
+            $pollVotingModeIssues[] = 'skrytá viditelnost výsledků po hlasování stále zobrazuje číselné výsledky';
+        }
+
+        $duplicateVoteResponse = postUrl(
+            $pollPublicUrl,
+            [
+                'csrf_token' => $pollVoteCsrf,
+                'vote' => '1',
+                'option_ids' => [(string)$pollMultipleOptions[0]['id']],
+            ],
+            $pollVoteSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($duplicateVoteResponse) !== 200 || !str_contains($duplicateVoteResponse['body'], 'už bylo hlasováno')) {
+            $pollVotingModeIssues[] = 'opakované hlasování stejného anonymního návštěvníka nebylo odmítnuto srozumitelně';
+        }
+        $pollVotesStmt->execute([$pollMultipleId]);
+        if ((int)$pollVotesStmt->fetchColumn() !== 2) {
+            $pollVotingModeIssues[] = 'opakované hlasování změnilo počet uložených odpovědí';
+        }
+    }
+
+    if ($pollMultipleId > 0) {
+        $pollCsvResponse = fetchUrl($baseUrl . BASE_URL . '/admin/polls_results_export.php?id=' . $pollMultipleId, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($pollCsvResponse) !== 200 || !httpIntegrationHeaderContains($pollCsvResponse, 'Content-Type', 'text/csv')) {
+            $pollVotingModeIssues[] = 'CSV export výsledků ankety nevrátil text/csv odpověď';
+        }
+        if (
+            !str_contains($pollCsvResponse['body'], 'Vybraných odpovědí')
+            || !str_contains($pollCsvResponse['body'], 'První odpověď')
+            || str_contains($pollCsvResponse['body'], 'ip_hash')
+            || str_contains($pollCsvResponse['body'], 'voter_hash')
+        ) {
+            $pollVotingModeIssues[] = 'CSV export výsledků neobsahuje agregované výsledky nebo obsahuje raw hash údaje';
+        }
+        if (!httpIntegrationHeaderContains($pollCsvResponse, 'X-Content-Type-Options', 'nosniff') || !httpIntegrationHeaderContains($pollCsvResponse, 'Cache-Control', 'no-store')) {
+            $pollVotingModeIssues[] = 'CSV export výsledků nemá bezpečné no-store/nosniff hlavičky';
+        }
+    }
+
+    httpIntegrationPrintResult('poll_voting_modes_http', $pollVotingModeIssues, $failures);
+
     $discoveryEndpointIssues = [];
     saveSetting('module_events', '1');
     saveSetting('module_podcast', '1');
@@ -7931,6 +8109,7 @@ try {
     }
     foreach ($createdPollIds as $pollIdToDelete) {
         $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$pollIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_poll_vote_sessions WHERE poll_id = ?")->execute([$pollIdToDelete]);
         $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$pollIdToDelete]);
         $pdo->prepare("DELETE FROM cms_polls WHERE id = ?")->execute([$pollIdToDelete]);
     }

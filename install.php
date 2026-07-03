@@ -720,6 +720,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             description TEXT,
             meta_title  VARCHAR(160) NOT NULL DEFAULT '',
             meta_description TEXT,
+            vote_mode   ENUM('single','multiple') NOT NULL DEFAULT 'single',
+            max_choices INT          NULL DEFAULT NULL,
+            results_visibility ENUM('after_vote','always','closed','hidden') NOT NULL DEFAULT 'after_vote',
             status      ENUM('active','closed') NOT NULL DEFAULT 'active',
             start_date  DATETIME     NULL DEFAULT NULL,
             end_date    DATETIME     NULL DEFAULT NULL,
@@ -738,13 +741,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_poll_votes (
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_poll_vote_sessions (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             poll_id     INT          NOT NULL,
-            option_id   INT          NOT NULL,
-            ip_hash     VARCHAR(64)  NOT NULL,
+            voter_hash  VARCHAR(64)  NOT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uq_poll_ip (poll_id, ip_hash)
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_poll_vote_session (poll_id, voter_hash),
+            INDEX idx_poll_vote_sessions_poll (poll_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_poll_votes (
+            id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            poll_id         INT          NOT NULL,
+            option_id       INT          NOT NULL,
+            vote_session_id INT          NULL DEFAULT NULL,
+            ip_hash         VARCHAR(64)  NOT NULL,
+            created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_poll_vote_option_hash (poll_id, option_id, ip_hash),
+            INDEX idx_poll_votes_session (vote_session_id),
+            INDEX idx_poll_votes_poll_option (poll_id, option_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_faq_categories (

@@ -43,7 +43,8 @@ $pagination = paginate(
 
 $stmt = $pdo->prepare(
     "SELECT p.*,
-            (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+            (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count,
+            (SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = p.id) AS voter_count
      FROM cms_polls p
      {$whereSql}
      ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC
@@ -108,7 +109,9 @@ adminHeader('Ankety');
         <th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th>
         <th scope="col">Otázka</th>
         <th scope="col">Stav</th>
-        <th scope="col">Hlasy</th>
+        <th scope="col">Typ</th>
+        <th scope="col">Výsledky</th>
+        <th scope="col">Hlasující</th>
         <th scope="col">Začátek</th>
         <th scope="col">Konec</th>
         <th scope="col">Akce</th>
@@ -134,7 +137,9 @@ adminHeader('Ankety');
           <?php endif; ?>
         </td>
         <td><strong class="status-badge <?= h($stateBadgeClass) ?>"><?= h((string)$poll['state_label']) ?></strong></td>
-        <td><?= (int)($poll['vote_count'] ?? 0) ?></td>
+        <td><?= h((string)($poll['vote_mode_label'] ?? 'Jedna možnost')) ?></td>
+        <td><?= h((string)($poll['results_visibility_label'] ?? 'Po hlasování')) ?></td>
+        <td><?= (int)($poll['voter_count'] ?? $poll['vote_count'] ?? 0) ?></td>
         <td><?= !empty($poll['start_date']) ? h(formatCzechDate((string)$poll['start_date'])) : '–' ?></td>
         <td><?= !empty($poll['end_date']) ? h(formatCzechDate((string)$poll['end_date'])) : '–' ?></td>
         <td class="actions">

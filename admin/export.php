@@ -105,7 +105,9 @@ $tables = [
     'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, image_file, audio_url, subtitle,
                                duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
-    'polls'         => "SELECT id, question, slug, description, meta_title, meta_description, start_date, end_date, status, created_at, updated_at FROM cms_polls",
+    'polls'         => "SELECT id, question, slug, description, vote_mode, max_choices, results_visibility,
+                               meta_title, meta_description, start_date, end_date, status, created_at, updated_at
+                        FROM cms_polls",
     'poll_options'  => "SELECT id, poll_id, option_text, sort_order FROM cms_poll_options",
     'faq_categories' => "SELECT id, name, slug, description, meta_title, meta_description, parent_id, sort_order, created_at, updated_at FROM cms_faq_categories",
     'faqs'          => "SELECT id, question, slug, excerpt, answer, category_id, meta_title, meta_description,

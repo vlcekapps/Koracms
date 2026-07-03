@@ -716,6 +716,9 @@ $tables = [
         question    VARCHAR(500) NOT NULL,
         slug        VARCHAR(255) NOT NULL,
         description TEXT,
+        vote_mode   ENUM('single','multiple') NOT NULL DEFAULT 'single',
+        max_choices INT          NULL DEFAULT NULL,
+        results_visibility ENUM('after_vote','always','closed','hidden') NOT NULL DEFAULT 'after_vote',
         status      ENUM('active','closed') NOT NULL DEFAULT 'active',
         start_date  DATETIME     NULL DEFAULT NULL,
         end_date    DATETIME     NULL DEFAULT NULL,
@@ -733,13 +736,26 @@ $tables = [
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
-    'cms_poll_votes' => "CREATE TABLE IF NOT EXISTS cms_poll_votes (
+    'cms_poll_vote_sessions' => "CREATE TABLE IF NOT EXISTS cms_poll_vote_sessions (
         id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         poll_id     INT          NOT NULL,
-        option_id   INT          NOT NULL,
-        ip_hash     VARCHAR(64)  NOT NULL,
+        voter_hash  VARCHAR(64)  NOT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_poll_ip (poll_id, ip_hash)
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_poll_vote_session (poll_id, voter_hash),
+        INDEX idx_poll_vote_sessions_poll (poll_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_poll_votes' => "CREATE TABLE IF NOT EXISTS cms_poll_votes (
+        id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        poll_id         INT          NOT NULL,
+        option_id       INT          NOT NULL,
+        vote_session_id INT          NULL DEFAULT NULL,
+        ip_hash         VARCHAR(64)  NOT NULL,
+        created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_poll_vote_option_hash (poll_id, option_id, ip_hash),
+        INDEX idx_poll_votes_session (vote_session_id),
+        INDEX idx_poll_votes_poll_option (poll_id, option_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_faq_categories' => "CREATE TABLE IF NOT EXISTS cms_faq_categories (
@@ -1254,6 +1270,10 @@ $addColumns = [
     // cms_polls
     'cms_polls.meta_title'           => "ALTER TABLE cms_polls ADD COLUMN meta_title VARCHAR(160) NOT NULL DEFAULT ''",
     'cms_polls.meta_description'     => "ALTER TABLE cms_polls ADD COLUMN meta_description TEXT",
+    'cms_polls.vote_mode'            => "ALTER TABLE cms_polls ADD COLUMN vote_mode ENUM('single','multiple') NOT NULL DEFAULT 'single'",
+    'cms_polls.max_choices'          => "ALTER TABLE cms_polls ADD COLUMN max_choices INT NULL DEFAULT NULL",
+    'cms_polls.results_visibility'   => "ALTER TABLE cms_polls ADD COLUMN results_visibility ENUM('after_vote','always','closed','hidden') NOT NULL DEFAULT 'after_vote'",
+    'cms_poll_votes.vote_session_id' => "ALTER TABLE cms_poll_votes ADD COLUMN vote_session_id INT NULL DEFAULT NULL AFTER option_id",
     // cms_chat
     'cms_chat.status'                => "ALTER TABLE cms_chat ADD COLUMN status ENUM('new','read','handled') NOT NULL DEFAULT 'new'",
     'cms_chat.public_visibility'     => "ALTER TABLE cms_chat ADD COLUMN public_visibility ENUM('pending','approved','hidden') NOT NULL DEFAULT 'pending'",
@@ -3440,6 +3460,52 @@ $indexExists = static function (string $tableName, string $indexName) use ($pdo)
     $stmt->execute([$tableName, $indexName]);
     return (int)$stmt->fetchColumn() > 0;
 };
+
+try {
+    if ($columnExists('cms_poll_votes', 'vote_session_id')) {
+        $pdo->exec(
+            "INSERT IGNORE INTO cms_poll_vote_sessions (poll_id, voter_hash, created_at, updated_at)
+             SELECT poll_id, ip_hash, MIN(created_at), MAX(created_at)
+             FROM cms_poll_votes
+             WHERE ip_hash <> ''
+             GROUP BY poll_id, ip_hash"
+        );
+        $pdo->exec(
+            "UPDATE cms_poll_votes v
+             INNER JOIN cms_poll_vote_sessions s
+                ON s.poll_id = v.poll_id AND s.voter_hash = v.ip_hash
+             SET v.vote_session_id = s.id
+             WHERE v.vote_session_id IS NULL"
+        );
+        $log[] = "✓ Hlasování anket převedeno na hlasovací relace – OK";
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Převod hlasování anket na hlasovací relace – CHYBA: " . h($e->getMessage());
+}
+
+try {
+    if ($indexExists('cms_poll_votes', 'uq_poll_ip')) {
+        $pdo->exec("ALTER TABLE cms_poll_votes DROP INDEX uq_poll_ip");
+        $log[] = "✓ Staré unikátní omezení anket <code>uq_poll_ip</code> odstraněno – OK";
+    }
+
+    foreach ([
+        ['cms_poll_vote_sessions', 'uq_poll_vote_session', 'UNIQUE KEY uq_poll_vote_session (poll_id, voter_hash)'],
+        ['cms_poll_vote_sessions', 'idx_poll_vote_sessions_poll', 'INDEX idx_poll_vote_sessions_poll (poll_id, created_at)'],
+        ['cms_poll_votes', 'idx_poll_votes_session', 'INDEX idx_poll_votes_session (vote_session_id)'],
+        ['cms_poll_votes', 'idx_poll_votes_poll_option', 'INDEX idx_poll_votes_poll_option (poll_id, option_id)'],
+        ['cms_poll_votes', 'uq_poll_vote_option_hash', 'UNIQUE KEY uq_poll_vote_option_hash (poll_id, option_id, ip_hash)'],
+    ] as [$pollIndexTable, $pollIndexName, $pollIndexDefinition]) {
+        if (!$indexExists($pollIndexTable, $pollIndexName)) {
+            $pdo->exec("ALTER TABLE {$pollIndexTable} ADD {$pollIndexDefinition}");
+            $log[] = "✓ Index <code>{$pollIndexName}</code> pro vícevýběrové ankety přidán – OK";
+        } else {
+            $log[] = "· Index <code>{$pollIndexName}</code> pro vícevýběrové ankety již existuje – přeskočeno";
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = "✗ Indexy vícevýběrových anket – CHYBA: " . h($e->getMessage());
+}
 
 try {
     if (!$indexExists('cms_media', 'idx_media_visibility')) {

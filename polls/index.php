@@ -10,7 +10,7 @@ if (!isModuleEnabled('polls')) {
 
 function pollIpHash(int $pollId): string
 {
-    return hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0') . '|poll_' . $pollId);
+    return pollVoterHash((string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), $pollId);
 }
 
 $pdo = db_connect();
@@ -27,10 +27,13 @@ $fetchPoll = static function (string $scope = 'all') use ($pdo, $pollId, $pollSl
     }
 
     $whereSql = pollPublicVisibilitySql('p', $scope);
+    $selectSql = "SELECT p.*,
+                         (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count,
+                         (SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = p.id) AS voter_count
+                  FROM cms_polls p";
     if ($pollSlugValue !== '') {
         $stmt = $pdo->prepare(
-            "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
-             FROM cms_polls p
+            "{$selectSql}
              WHERE p.slug = ? AND {$whereSql}
              LIMIT 1"
         );
@@ -39,8 +42,7 @@ $fetchPoll = static function (string $scope = 'all') use ($pdo, $pollId, $pollSl
     }
 
     $stmt = $pdo->prepare(
-        "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
-         FROM cms_polls p
+        "{$selectSql}
          WHERE p.id = ? AND {$whereSql}
          LIMIT 1"
     );
@@ -59,6 +61,8 @@ $page = 1;
 $isActive = false;
 $showForm = false;
 $totalVotes = 0;
+$voterCount = 0;
+$resultsVisible = false;
 $detailRequested = $pollId !== null || $pollSlugValue !== '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['vote'])) {
@@ -83,32 +87,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $detailRequested && isset($_POST['v
     }
 
     rateLimit('poll_vote', 5, 60);
-    $optionId = inputInt('post', 'option_id');
+    $selectedOptionIds = [];
+    $maxChoices = 1;
 
     if ($votePoll === null) {
         $voteError = 'closed';
-    } elseif ($optionId === null) {
+    } else {
+        $multipleMode = pollAllowsMultipleChoices($votePoll);
+        $selectedOptionIds = pollSelectedOptionIds($multipleMode ? ($_POST['option_ids'] ?? []) : ($_POST['option_id'] ?? null));
+        $optionCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_options WHERE poll_id = ?");
+        $optionCountStmt->execute([(int)$votePoll['id']]);
+        $maxChoices = pollConfiguredMaxChoices($votePoll, (int)$optionCountStmt->fetchColumn());
+    }
+
+    if ($votePoll !== null && $selectedOptionIds === []) {
         $voteError = 'no_option';
         $poll = $votePoll;
-    } else {
-        $optionStmt = $pdo->prepare("SELECT id FROM cms_poll_options WHERE id = ? AND poll_id = ?");
-        $optionStmt->execute([$optionId, (int)$votePoll['id']]);
-        if (!$optionStmt->fetch()) {
+    } elseif ($votePoll !== null && count($selectedOptionIds) > $maxChoices) {
+        $voteError = 'too_many_options';
+        $poll = $votePoll;
+    } elseif ($votePoll !== null) {
+        $placeholders = implode(',', array_fill(0, count($selectedOptionIds), '?'));
+        $optionStmt = $pdo->prepare("SELECT id FROM cms_poll_options WHERE poll_id = ? AND id IN ({$placeholders})");
+        $optionStmt->execute(array_merge([(int)$votePoll['id']], $selectedOptionIds));
+        $validOptionIds = array_map('intval', $optionStmt->fetchAll(PDO::FETCH_COLUMN));
+        sort($validOptionIds);
+        $expectedOptionIds = $selectedOptionIds;
+        sort($expectedOptionIds);
+        if ($validOptionIds !== $expectedOptionIds) {
             $voteError = 'invalid_option';
             $poll = $votePoll;
         } else {
             $ipHash = pollIpHash((int)$votePoll['id']);
             try {
-                $pdo->prepare(
-                    "INSERT INTO cms_poll_votes (poll_id, option_id, ip_hash) VALUES (?, ?, ?)"
-                )->execute([(int)$votePoll['id'], $optionId, $ipHash]);
-                $redirectQuery = ['voted' => '1'];
-                if ($isEmbedded) {
-                    $redirectQuery['embed'] = '1';
+                $pdo->beginTransaction();
+
+                $sessionStmt = $pdo->prepare("SELECT id FROM cms_poll_vote_sessions WHERE poll_id = ? AND voter_hash = ? LIMIT 1");
+                $sessionStmt->execute([(int)$votePoll['id'], $ipHash]);
+                if ($sessionStmt->fetchColumn()) {
+                    $pdo->rollBack();
+                    $voteError = 'already_voted';
+                    $poll = $votePoll;
+                } else {
+                    $pdo->prepare(
+                        "INSERT INTO cms_poll_vote_sessions (poll_id, voter_hash) VALUES (?, ?)"
+                    )->execute([(int)$votePoll['id'], $ipHash]);
+                    $sessionId = (int)$pdo->lastInsertId();
+
+                    $insertVoteStmt = $pdo->prepare(
+                        "INSERT INTO cms_poll_votes (poll_id, option_id, vote_session_id, ip_hash) VALUES (?, ?, ?, ?)"
+                    );
+                    foreach ($selectedOptionIds as $selectedOptionId) {
+                        $insertVoteStmt->execute([(int)$votePoll['id'], $selectedOptionId, $sessionId, $ipHash]);
+                    }
+
+                    $pdo->commit();
                 }
-                header('Location: ' . pollPublicPath($votePoll, $redirectQuery));
-                exit;
+
+                if ($voteError === 'already_voted') {
+                    // Fall through to render the friendly message without losing the page context.
+                } else {
+                    $redirectQuery = ['voted' => '1'];
+                    if ($isEmbedded) {
+                        $redirectQuery['embed'] = '1';
+                    }
+                    header('Location: ' . pollPublicPath($votePoll, $redirectQuery));
+                    exit;
+                }
             } catch (\PDOException) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 $voteError = 'already_voted';
                 $poll = $votePoll;
             }
@@ -171,16 +220,28 @@ if ($detailRequested) {
     $options = $optionsStmt->fetchAll();
 
     $ipHash = pollIpHash((int)$poll['id']);
-    $hasVotedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ? AND ip_hash = ?");
+    $hasVotedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = ? AND voter_hash = ?");
     $hasVotedStmt->execute([(int)$poll['id'], $ipHash]);
     $hasVoted = (int)$hasVotedStmt->fetchColumn() > 0;
+    if (!$hasVoted) {
+        $hasVotedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ? AND ip_hash = ?");
+        $hasVotedStmt->execute([(int)$poll['id'], $ipHash]);
+        $hasVoted = (int)$hasVotedStmt->fetchColumn() > 0;
+    }
 
     foreach ($options as $option) {
         $totalVotes += (int)$option['vote_count'];
     }
+    $voterCount = (int)($poll['voter_count'] ?? 0);
+    if ($voterCount === 0 && $totalVotes > 0) {
+        $voterCountStmt = $pdo->prepare("SELECT COUNT(DISTINCT ip_hash) FROM cms_poll_votes WHERE poll_id = ?");
+        $voterCountStmt->execute([(int)$poll['id']]);
+        $voterCount = (int)$voterCountStmt->fetchColumn();
+    }
 
     $isActive = (string)($poll['state'] ?? '') === 'active';
     $showForm = $isActive && !$hasVoted && !$voted;
+    $resultsVisible = pollResultsAreVisible($poll, $hasVoted, $voted);
 
     if (!isset($_SESSION['cms_user_id'])) {
         trackPageView('poll', (int)$poll['id']);
@@ -215,7 +276,9 @@ if ($detailRequested) {
     ['totalPages' => $totalPages, 'page' => $page, 'offset' => $offset] = $pag;
 
     $listStmt = $pdo->prepare(
-        "SELECT p.*, (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count
+        "SELECT p.*,
+                (SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = p.id) AS vote_count,
+                (SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = p.id) AS voter_count
          FROM cms_polls p
          {$whereSql}
          ORDER BY COALESCE(p.start_date, p.created_at) DESC, p.id DESC
@@ -237,8 +300,8 @@ if ($detailRequested) {
         $voteLookup = [];
         $voteLookupStmt = $pdo->prepare(
             "SELECT poll_id
-             FROM cms_poll_votes
-             WHERE ip_hash IN ({$placeholders})"
+             FROM cms_poll_vote_sessions
+             WHERE voter_hash IN ({$placeholders})"
         );
         $voteLookupStmt->execute(array_values($pollHashes));
         foreach ($voteLookupStmt->fetchAll(PDO::FETCH_COLUMN) as $votedPollId) {
@@ -256,6 +319,7 @@ $voteErrorMessages = [
     'too_many' => 'Příliš mnoho pokusů, zkuste to prosím později.',
     'closed' => 'Tato anketa už není aktivní.',
     'no_option' => 'Vyberte prosím jednu z možností.',
+    'too_many_options' => 'Vybrali jste více možností, než tato anketa dovoluje.',
     'invalid_option' => 'Neplatná možnost hlasování.',
     'already_voted' => 'Z této IP adresy už bylo hlasováno.',
 ];
@@ -290,7 +354,9 @@ $pageData = [
         'archiv' => $archiv,
         'isActive' => $isActive,
         'showForm' => $showForm,
+        'resultsVisible' => $resultsVisible,
         'totalVotes' => $totalVotes,
+        'voterCount' => $voterCount,
         'isEmbedded' => $isEmbedded,
         'q' => $q,
     ],

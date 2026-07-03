@@ -285,6 +285,24 @@ CREATE TABLE IF NOT EXISTS cms_faq_feedback (
   vote VARCHAR(20),
   visitor_hash VARCHAR(64)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_polls (
+  id INT,
+  question VARCHAR(500),
+  vote_mode VARCHAR(20),
+  max_choices INT,
+  results_visibility VARCHAR(20)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_poll_vote_sessions (
+  id INT,
+  poll_id INT,
+  voter_hash VARCHAR(64)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_poll_votes (
+  id INT,
+  poll_id INT,
+  option_id INT,
+  vote_session_id INT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_cards (
   id INT,
   orders_enabled TINYINT(1),
@@ -479,6 +497,17 @@ PHP,
 // cms_faq_feedback
 // uq_cms_faq_feedback_visitor
 // idx_cms_faq_feedback_faq_vote
+// cms_polls.vote_mode
+// cms_polls.max_choices
+// cms_polls.results_visibility
+// cms_poll_vote_sessions
+// uq_poll_vote_session
+// idx_poll_vote_sessions_poll
+// cms_poll_votes.vote_session_id
+// idx_poll_votes_session
+// idx_poll_votes_poll_option
+// uq_poll_vote_option_hash
+// DROP INDEX uq_poll_ip
 // cms_food_cards.orders_enabled
 // cms_food_cards.order_email
 // cms_food_cards.order_instructions

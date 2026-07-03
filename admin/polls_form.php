@@ -31,6 +31,9 @@ $poll = $poll ?: [
     'question' => '',
     'slug' => '',
     'description' => '',
+    'vote_mode' => 'single',
+    'max_choices' => null,
+    'results_visibility' => 'after_vote',
     'status' => 'active',
     'start_date' => null,
     'end_date' => null,
@@ -39,17 +42,28 @@ $poll = $poll ?: [
 ];
 $poll = hydratePollPresentation($poll);
 
-$totalVotes = 0;
+$selectionCount = 0;
+$voterCount = 0;
 if ($id !== null) {
     $stmtVotes = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
     $stmtVotes->execute([$id]);
-    $totalVotes = (int)$stmtVotes->fetchColumn();
+    $selectionCount = (int)$stmtVotes->fetchColumn();
+
+    $stmtVoters = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_vote_sessions WHERE poll_id = ?");
+    $stmtVoters->execute([$id]);
+    $voterCount = (int)$stmtVoters->fetchColumn();
+    if ($voterCount === 0 && $selectionCount > 0) {
+        $stmtVoters = $pdo->prepare("SELECT COUNT(DISTINCT ip_hash) FROM cms_poll_votes WHERE poll_id = ?");
+        $stmtVoters->execute([$id]);
+        $voterCount = (int)$stmtVoters->fetchColumn();
+    }
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
 $formError = match ($err) {
     'required' => 'Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.',
     'max_options' => 'Maximální počet možností je 10.',
+    'max_choices' => 'U vícevýběrové ankety zadejte limit od 2 do počtu možností.',
     'has_votes' => 'Nelze odebrat možnosti, které už mají hlasy.',
     'slug' => 'Slug ankety je povinný a musí být unikátní.',
     'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
@@ -60,6 +74,7 @@ $formError = match ($err) {
 $fieldErrorMap = [
     'required' => ['question', 'options'],
     'max_options' => ['options'],
+    'max_choices' => ['max_choices'],
     'has_votes' => ['options'],
     'slug' => ['slug'],
     'dates' => ['start_date', 'start_time', 'end_date', 'end_time'],
@@ -68,6 +83,7 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'question' => 'Otázka ankety je povinná.',
     'slug' => 'Slug ankety je povinný a musí být unikátní.',
+    'max_choices' => 'Limit musí být alespoň 2 a nejvýše tolik, kolik má anketa možností.',
     'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
     'range' => 'Konec ankety musí být později než začátek.',
 ];
@@ -142,6 +158,40 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       <option value="active"<?= (string)$poll['status'] === 'active' ? ' selected' : '' ?>>Aktivní</option>
       <option value="closed"<?= (string)$poll['status'] === 'closed' ? ' selected' : '' ?>>Uzavřená</option>
     </select>
+  </fieldset>
+
+  <fieldset class="admin-fieldset-card admin-action-row">
+    <legend>Nastavení hlasování</legend>
+    <small id="poll-voting-help" class="field-help field-help--flush">Stávající jednoduché ankety používejte jako jednu možnost. Vícevýběr dovolí jednomu hlasujícímu vybrat více odpovědí najednou.</small>
+
+    <label for="vote_mode">Typ hlasování</label>
+    <select id="vote_mode" name="vote_mode" aria-describedby="poll-voting-help">
+      <?php foreach (pollVoteModeOptions() as $modeValue => $modeLabel): ?>
+        <option value="<?= h($modeValue) ?>"<?= (string)$poll['vote_mode'] === $modeValue ? ' selected' : '' ?>><?= h($modeLabel) ?></option>
+      <?php endforeach; ?>
+    </select>
+
+    <label for="max_choices">Maximální počet vybraných možností</label>
+    <input
+      type="number"
+      id="max_choices"
+      name="max_choices"
+      min="2"
+      max="10"
+      step="1"
+      value="<?= $poll['max_choices'] !== null ? h((string)$poll['max_choices']) : '' ?>"
+      <?= adminFieldAttributes('max_choices', $err, $fieldErrorMap, ['poll-max-choices-help']) ?>
+    >
+    <small id="poll-max-choices-help" class="field-help">Použije se jen u vícevýběrové ankety. Prázdná hodnota znamená bezpečný výchozí limit 2 možnosti.</small>
+    <?php adminRenderFieldError('max_choices', $err, $fieldErrorMap, $fieldErrorMessages['max_choices']); ?>
+
+    <label for="results_visibility">Viditelnost výsledků</label>
+    <select id="results_visibility" name="results_visibility" aria-describedby="poll-results-visibility-help">
+      <?php foreach (pollResultsVisibilityOptions() as $visibilityValue => $visibilityLabel): ?>
+        <option value="<?= h($visibilityValue) ?>"<?= (string)$poll['results_visibility'] === $visibilityValue ? ' selected' : '' ?>><?= h($visibilityLabel) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <small id="poll-results-visibility-help" class="field-help">Určuje, kdy veřejná stránka ankety ukáže číselné výsledky. Administrace výsledky vidí vždy.</small>
   </fieldset>
 
   <fieldset class="admin-fieldset-card admin-action-row">
@@ -289,19 +339,31 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
     <?php if ($id !== null && (string)$poll['slug'] !== '' && (string)($poll['state'] ?? '') !== 'scheduled'): ?>
       <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
+    <?php if ($id !== null): ?>
+      <a href="polls_results_export.php?id=<?= (int)$id ?>">Stáhnout výsledky CSV</a>
+    <?php endif; ?>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
   </div>
 </form>
 
-<?php if ($id !== null && $totalVotes > 0): ?>
-  <h2 id="poll-results-heading" class="admin-section-heading">Výsledky <small>(celkem <?= $totalVotes ?> hlasů)</small></h2>
+<?php if ($id !== null && $selectionCount > 0): ?>
+  <?php
+    $multipleMode = pollAllowsMultipleChoices($poll);
+    $percentageDenominator = $multipleMode ? max(1, $voterCount) : max(1, $selectionCount);
+    ?>
+  <h2 id="poll-results-heading" class="admin-section-heading">Výsledky</h2>
+  <p class="table-meta">
+    Hlasujících: <?= (int)$voterCount ?>.
+    Vybraných odpovědí: <?= (int)$selectionCount ?>.
+    Režim: <?= h((string)($poll['vote_mode_label'] ?? 'Jedna možnost')) ?>.
+  </p>
   <div role="list" class="admin-result-list" aria-labelledby="poll-results-heading">
     <?php foreach ($options as $option): ?>
-      <?php $percentage = round((int)$option['vote_count'] / $totalVotes * 100, 1); ?>
+      <?php $percentage = pollResultPercentage((int)$option['vote_count'], $percentageDenominator); ?>
       <div role="listitem" class="admin-result-item">
         <div class="admin-result-row">
           <span><?= h((string)$option['option_text']) ?></span>
-          <span><?= $percentage ?> % (<?= (int)$option['vote_count'] ?> hlasů)</span>
+          <span><?= h((string)$percentage) ?> % (<?= h(pollVoteSelectionLabel((int)$option['vote_count'], $multipleMode)) ?>)</span>
         </div>
         <progress class="admin-progress" value="<?= h((string)$percentage) ?>" max="100" aria-hidden="true"><?= h((string)$percentage) ?> %</progress>
       </div>

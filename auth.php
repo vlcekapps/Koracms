@@ -849,7 +849,7 @@ function adminRouteModuleRequirements(): array
         ],
         'polls' => [
             'message' => adminRouteModuleDisabledMessage('polls'),
-            'files' => ['polls.php', 'polls_form.php', 'polls_save.php', 'polls_delete.php'],
+            'files' => ['polls.php', 'polls_form.php', 'polls_save.php', 'polls_delete.php', 'polls_results_export.php'],
         ],
         'faq' => [
             'message' => adminRouteModuleDisabledMessage('faq'),

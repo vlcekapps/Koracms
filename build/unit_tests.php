@@ -363,6 +363,31 @@ assert_equals(
     'event recurrence shifts monthly dates'
 );
 
+test_section('poll voting helpers');
+
+assert_equals('single', pollVoteMode(''), 'empty poll vote mode falls back to single');
+assert_equals('multiple', pollVoteMode('multiple'), 'multiple poll vote mode accepted');
+assert_equals('after_vote', pollResultsVisibility('bad-value'), 'invalid poll result visibility falls back');
+assert_equals('closed', pollResultsVisibility('closed'), 'closed poll result visibility accepted');
+assert_false(pollAllowsMultipleChoices(['vote_mode' => 'single']), 'single poll does not allow multiple choices');
+assert_true(pollAllowsMultipleChoices(['vote_mode' => 'multiple']), 'multiple poll allows multiple choices');
+assert_equals(1, pollConfiguredMaxChoices(['vote_mode' => 'single', 'max_choices' => 5], 8), 'single poll max choices is one');
+assert_equals(3, pollConfiguredMaxChoices(['vote_mode' => 'multiple', 'max_choices' => 3], 8), 'multiple poll uses configured max choices');
+assert_equals(2, pollConfiguredMaxChoices(['vote_mode' => 'multiple', 'max_choices' => null], 5), 'multiple poll empty max choices defaults to two');
+assert_equals(4, pollConfiguredMaxChoices(['vote_mode' => 'multiple', 'max_choices' => 10], 4), 'multiple poll max choices is capped by options');
+assert_equals([2, 4], pollSelectedOptionIds(['2', 'bad', 4, '2', '0']), 'selected poll option ids normalize and deduplicate');
+assert_equals(hash('sha256', '127.0.0.1|poll_7'), pollVoterHash('127.0.0.1', 7), 'poll voter hash preserves legacy format');
+assert_false(pollResultsAreVisible(['results_visibility' => 'hidden', 'state' => 'closed'], true, true), 'hidden poll results stay hidden');
+assert_true(pollResultsAreVisible(['results_visibility' => 'always', 'state' => 'active'], false, false), 'always-visible poll results are public');
+assert_true(pollResultsAreVisible(['results_visibility' => 'closed', 'state' => 'closed'], false, false), 'closed visibility shows closed poll results');
+assert_false(pollResultsAreVisible(['results_visibility' => 'closed', 'state' => 'active'], true, true), 'closed visibility hides active poll results');
+assert_true(pollResultsAreVisible(['results_visibility' => 'after_vote', 'state' => 'active'], true, false), 'after-vote visibility shows results to voter');
+assert_equals(33.3, pollResultPercentage(1, 3), 'poll result percentage rounds to one decimal');
+assert_equals(0.0, pollResultPercentage(1, 0), 'poll result percentage handles zero voters');
+assert_equals('1 výběr', pollVoteSelectionLabel(1, true), 'poll multi selection singular label');
+assert_equals('3 výběry', pollVoteSelectionLabel(3, true), 'poll multi selection Czech plural label');
+assert_equals('5 hlasů', pollVoteSelectionLabel(5, false), 'poll single vote label');
+
 test_section('reservation reminders and calendar');
 
 $reservationTestBooking = [

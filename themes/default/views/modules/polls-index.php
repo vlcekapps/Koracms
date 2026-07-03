@@ -4,6 +4,12 @@ $q = trim((string)($q ?? ''));
 ?>
 <div class="<?= $isEmbedded ? 'listing-shell listing-shell--embed' : 'listing-shell' ?>">
   <?php if ($poll !== null): ?>
+    <?php
+      $multipleMode = pollAllowsMultipleChoices($poll);
+      $maxChoices = pollConfiguredMaxChoices($poll, count($options));
+      $resultDenominator = $multipleMode ? (int)($voterCount ?? 0) : (int)($totalVotes ?? 0);
+      $resultsVisible = !empty($resultsVisible);
+    ?>
     <section class="surface<?= $isEmbedded ? ' surface--embed' : '' ?>" aria-labelledby="poll-title">
       <div class="section-heading">
         <div>
@@ -35,18 +41,21 @@ $q = trim((string)($q ?? ''));
           <?= honeypotField() ?>
 
           <fieldset class="form-fieldset">
-            <legend>Vyberte jednu možnost</legend>
+            <legend><?= $multipleMode ? 'Vyberte jednu nebo více možností' : 'Vyberte jednu možnost' ?></legend>
+            <?php if ($multipleMode): ?>
+              <p id="poll-choice-limit" class="field-help">Můžete vybrat nejvýše <?= (int)$maxChoices ?> možností.</p>
+            <?php endif; ?>
 
             <div class="stack-list">
               <?php foreach ($options as $index => $option): ?>
                 <label class="choice-card" for="poll-option-<?= (int)$option['id'] ?>">
                   <input
-                    type="radio"
+                    type="<?= $multipleMode ? 'checkbox' : 'radio' ?>"
                     id="poll-option-<?= (int)$option['id'] ?>"
-                    name="option_id"
+                    name="<?= $multipleMode ? 'option_ids[]' : 'option_id' ?>"
                     value="<?= (int)$option['id'] ?>"
-                    <?= $index === 0 ? ' aria-required="true"' : '' ?>
-                    required
+                    <?= !$multipleMode && $index === 0 ? ' aria-required="true"' : '' ?>
+                    <?= $multipleMode ? ' aria-describedby="poll-choice-limit"' : ' required' ?>
                   >
                   <span><?= h((string)$option['option_text']) ?></span>
                 </label>
@@ -58,21 +67,21 @@ $q = trim((string)($q ?? ''));
             </div>
           </fieldset>
         </form>
-      <?php else: ?>
+      <?php elseif ($resultsVisible): ?>
         <section aria-labelledby="poll-results-title">
           <h2 id="poll-results-title" class="section-title section-title--compact">Výsledky</h2>
 
           <div class="poll-results" role="list" aria-labelledby="poll-results-title">
             <?php foreach ($options as $option): ?>
               <?php
-              $percentage = $totalVotes > 0 ? round(((int)$option['vote_count']) / $totalVotes * 100, 1) : 0;
+              $percentage = pollResultPercentage((int)$option['vote_count'], $resultDenominator);
               $optionLabelId = 'poll-result-option-' . (int)$option['id'];
               $optionValueId = 'poll-result-value-' . (int)$option['id'];
               ?>
               <div class="poll-result" role="listitem">
                 <div class="poll-result__header">
                   <span id="<?= h($optionLabelId) ?>"><?= h((string)$option['option_text']) ?></span>
-                  <span id="<?= h($optionValueId) ?>"><?= $percentage ?>&nbsp;% (<?= (int)$option['vote_count'] ?>&nbsp;hlasů)</span>
+                  <span id="<?= h($optionValueId) ?>"><?= h((string)$percentage) ?>&nbsp;% (<?= h(pollVoteSelectionLabel((int)$option['vote_count'], $multipleMode)) ?>)</span>
                 </div>
                 <progress
                   class="poll-result__track"
@@ -84,12 +93,27 @@ $q = trim((string)($q ?? ''));
             <?php endforeach; ?>
           </div>
 
-          <p><strong>Celkem hlasů: <?= $totalVotes ?></strong></p>
+          <?php if ($multipleMode): ?>
+            <p><strong>Hlasujících: <?= (int)$voterCount ?>. Vybraných odpovědí: <?= (int)$totalVotes ?>.</strong></p>
+          <?php else: ?>
+            <p><strong>Celkem hlasů: <?= (int)$totalVotes ?></strong></p>
+          <?php endif; ?>
 
           <?php if (!$isActive): ?>
             <p class="poll-note">Tato anketa je uzavřena.</p>
           <?php elseif ($hasVoted || $voted): ?>
             <p class="poll-note">U této ankety už jste hlasoval/a.</p>
+          <?php endif; ?>
+        </section>
+      <?php else: ?>
+        <section aria-labelledby="poll-results-hidden-title">
+          <h2 id="poll-results-hidden-title" class="section-title section-title--compact">Výsledky nejsou veřejné</h2>
+          <?php if ($voted || $hasVoted): ?>
+            <p class="poll-note">Váš hlas byl zaznamenán, ale výsledky této ankety se veřejně nezobrazují.</p>
+          <?php elseif (!$isActive): ?>
+            <p class="poll-note">Výsledky této ankety nejsou veřejně dostupné.</p>
+          <?php else: ?>
+            <p class="poll-note">Výsledky se zobrazí podle nastavení ankety.</p>
           <?php endif; ?>
         </section>
       <?php endif; ?>
@@ -179,7 +203,8 @@ $q = trim((string)($q ?? ''));
 
                 <p class="meta-row meta-row--tight">
                   <span><?= h((string)($listPoll['state_label'] ?? 'Anketa')) ?></span>
-                  <span><?= (int)$listPoll['vote_count'] ?> hlasů</span>
+                  <span><?= (int)($listPoll['voter_count'] ?? $listPoll['vote_count'] ?? 0) ?> hlasujících</span>
+                  <span><?= h((string)($listPoll['vote_mode_label'] ?? 'Jedna možnost')) ?></span>
                   <time datetime="<?= h(str_replace(' ', 'T', (string)$listPoll['created_at'])) ?>"><?= formatCzechDate((string)$listPoll['created_at']) ?></time>
                   <?php if (!empty($listPoll['end_date'])): ?>
                     <span>Konec: <?= formatCzechDate((string)$listPoll['end_date']) ?></span>
