@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Accessibility conformance report draft** – projekt má novou dokumentační sadu `docs/accessibility/` pro dlouhodobé vyhodnocování WCAG 2.2 AA a VPAT/ACR: matici kritérií, ACR draft, remediation backlog a ruční testovací protokol.
 - **Admin command centrum a osobní zkratky** – administrace má na každé stránce viditelné hledání, přístupnou klávesovou paletu `Ctrl+K`, fallback stránku výsledků a osobní připínání položek na dashboard. Výsledky zahrnují administrační obrazovky, bezpečné navigační rychlé akce i editovatelný obsah, vždy jen podle oprávnění uživatele a zapnutých modulů.
 - **Bezpečnější zapojení nových modulů do command centra** – modulový manifest nově obsahuje `admin_capability` a command centrum z něj umí vytvořit základní administrační zkratku pro moduly, které nemají bohatší ručně přidanou položku. Modulový audit hlídá, aby se capability ani fallback zkratka při přípravě dalšího modulu neztratily.
 - **Fallback navigace pro nové moduly** – hlavní layout administrace nově z `coreModuleDefinitions()` doplní sekci `Další moduly` pro zapnuté moduly, jejichž první `admin_paths` ještě není ručně uvedený v navigaci. Oprávnění bere z manifestového `admin_capability`, takže nový modul nezůstane po zapnutí skrytý.

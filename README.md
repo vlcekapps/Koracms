@@ -528,6 +528,8 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - klávesnicová ovladatelnost i tam, kde je drag & drop
 - průběžný audit přes `build/runtime_audit.php`
 
+Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](docs/accessibility/): WCAG 2.2 AA matice, VPAT/ACR draft, backlog oprav a ruční testovací protokol. Report hodnotí Kora CMS jako produkt a odděluje odpovědnost CMS od ručně vloženého obsahu autora, například titulků médií, alt textů nebo vlastního HTML v editoru.
+
 ---
 
 ## Zálohování a údržba
@@ -807,4 +809,6 @@ Nový modul v Kora CMS je zatím součást jádra, ne samostatný balíček. Př
 - [CHANGELOG.md](CHANGELOG.md) – historie verzí
 - [docs/admin-guide.md](docs/admin-guide.md) – detailní práce v administraci: Form Builder, podcasty, multiblog, widgety a content picker
 - [docs/developer-modules.md](docs/developer-modules.md) – checklist pro návrh a implementaci nového modulu
+- [docs/accessibility/wcag-22-aa-conformance.md](docs/accessibility/wcag-22-aa-conformance.md) – draft WCAG 2.2 AA conformance matice pro Kora CMS
+- [docs/accessibility/acr-vpat-wcag-draft.md](docs/accessibility/acr-vpat-wcag-draft.md) – VPAT/ACR draft odvozený z WCAG matice
 - [docs/ux-audit-framework.md](docs/ux-audit-framework.md) – framework pro UX a přístupnostní audit
