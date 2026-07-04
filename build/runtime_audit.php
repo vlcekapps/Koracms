@@ -16488,6 +16488,103 @@ foreach ([
         }
     }
 }
+foreach ([
+    'page scheduling error suggestion' => [
+        'source' => $pageFormSource,
+        'required' => [
+            '$pageUnpublishAtErrorMessage',
+            'Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Plánované zrušení publikace má neplatný formát data a času.',
+        ],
+    ],
+    'blog scheduling error suggestion' => [
+        'source' => $blogFormSource,
+        'required' => [
+            '$blogPublishAtErrorMessage',
+            '$blogUnpublishAtErrorMessage',
+            '$blogPublishRangeErrorMessage',
+            'Upravte jeden z časů nebo zrušení publikace nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Plánované publikování má neplatný formát data a času.',
+            'Plánované zrušení publikace má neplatný formát data a času.',
+        ],
+    ],
+    'news scheduling error suggestion' => [
+        'source' => $newsFormSource,
+        'required' => [
+            '$newsUnpublishAtErrorMessage',
+            'Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Plánované zrušení publikace musí být ve správném formátu.',
+        ],
+    ],
+    'event scheduling error suggestion' => [
+        'source' => $eventFormSource,
+        'required' => [
+            '$eventPublishAtErrorMessage',
+            '$eventUnpublishAtErrorMessage',
+            'Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.',
+        ],
+        'forbidden' => [
+            'Plánované zrušení publikace nemá platný formát data a času.',
+            'Plánované publikování nemá platný formát data a času.',
+        ],
+    ],
+    'poll timing error suggestion' => [
+        'source' => $pollFormValidationSource,
+        'required' => [
+            '$pollTimingErrorMessage',
+            '$pollRangeErrorMessage',
+            'Vyplňte datum a čas v příslušných polích, nebo časové omezení nechte prázdné.',
+            'Upravte datum nebo čas začátku či konce.',
+        ],
+        'forbidden' => [
+            'Začátek a konec ankety musí mít platný formát data a času.',
+        ],
+    ],
+    'reservation resource timing error suggestion' => [
+        'source' => $reservationFormSource,
+        'required' => [
+            '$resourceHoursErrorMessage',
+            '$resourceSlotsErrorMessage',
+            '$resourceBlockedDateErrorMessage',
+            'Vyberte čas v příslušných polích a nastavte konec později než začátek.',
+            'prázdný slot odstraňte.',
+            'Vyberte datum v poli blokace nebo prázdný řádek odstraňte.',
+        ],
+        'forbidden' => [
+            'Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.',
+            'Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.',
+            'Blokované datum musí být ve správném formátu.',
+        ],
+    ],
+    'podcast episode scheduling error suggestion' => [
+        'source' => $podcastEpisodeFormSource,
+        'required' => [
+            '$podcastEpisodePublishAtErrorMessage',
+            'pole nechte prázdné pro zveřejnění po uložení či schválení.',
+        ],
+        'forbidden' => [
+            'Plánované zveřejnění má neplatný formát data a času.',
+        ],
+    ],
+] as $adminDateTimeSuggestionLabel => $adminDateTimeSuggestionSpec) {
+    $adminDateTimeSuggestionSource = (string)$adminDateTimeSuggestionSpec['source'];
+    foreach ($adminDateTimeSuggestionSpec['required'] as $adminDateTimeRequiredFragment) {
+        if (!str_contains($adminDateTimeSuggestionSource, $adminDateTimeRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminDateTimeSuggestionLabel . ' is missing actionable date/time fragment: ' . $adminDateTimeRequiredFragment;
+        }
+    }
+    foreach ($adminDateTimeSuggestionSpec['forbidden'] as $adminDateTimeForbiddenFragment) {
+        if (str_contains($adminDateTimeSuggestionSource, $adminDateTimeForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminDateTimeSuggestionLabel . ' still contains generic date/time validation copy';
+        }
+    }
+}
 if (str_contains($pageFormSource, 'title="Pouze malá písmena, číslice a pomlčky"')) {
     $adminFieldErrorIssues[] = 'page slug field still relies on title tooltip for pattern help';
 }

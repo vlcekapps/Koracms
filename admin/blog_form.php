@@ -311,13 +311,16 @@ $fieldErrorMap = [
     'missing_tags_action' => ['missing_tags_action'],
     'image_upload' => ['image'],
 ];
+$blogPublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.';
+$blogUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
+$blogPublishRangeErrorMessage = 'Plánované zrušení publikace musí být později než plánované publikování. Upravte jeden z časů nebo zrušení publikace nechte prázdné.';
 $fieldErrorMessages = [
     'title' => 'Vyplňte prosím název článku.',
     'content' => 'Vyplňte prosím obsah článku.',
     'slug' => 'Slug článku je povinný a musí být unikátní.',
-    'publish_at' => 'Plánované publikování má neplatný formát data a času.',
-    'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
-    'publish_range' => 'Plánované zrušení publikace musí být později než plánované publikování.',
+    'publish_at' => $blogPublishAtErrorMessage,
+    'unpublish_at' => $blogUnpublishAtErrorMessage,
+    'publish_range' => $blogPublishRangeErrorMessage,
     'category_target' => 'Vybraná kategorie nepatří do cílového blogu.',
     'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
     'related_articles_target' => 'Vybrané související články nepatří do cílového blogu.',
@@ -395,11 +398,11 @@ adminHeader($pageTitle);
 <?php elseif ($err === 'required'): ?>
   <p role="alert" class="error" id="form-error">Vyplňte prosím název článku i jeho obsah.</p>
 <?php elseif ($err === 'publish_at'): ?>
-  <p role="alert" class="error" id="form-error">Plánované publikování má neplatný formát data a času.</p>
+  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['publish_at']) ?></p>
 <?php elseif ($err === 'unpublish_at'): ?>
-  <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
+  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['unpublish_at']) ?></p>
 <?php elseif ($err === 'publish_range'): ?>
-  <p role="alert" class="error" id="form-error">Plánované zrušení publikace musí být později než plánované publikování.</p>
+  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['publish_range']) ?></p>
 <?php elseif ($err === 'category_target'): ?>
   <p role="alert" class="error" id="form-error">Vybraná kategorie nepatří do cílového blogu.</p>
 <?php elseif ($err === 'tags_target'): ?>

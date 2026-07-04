@@ -84,6 +84,8 @@ foreach ($eventTypes as $eventType) {
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
+$eventPublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.';
+$eventUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole. Událost musí mít název a datum začátku.',
     'slug' => 'Slug události je povinný a musí být unikátní.',
@@ -91,8 +93,8 @@ $formError = match ($err) {
     'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
     'organizer_email' => 'E-mail pořadatele musí být platná e-mailová adresa.',
     'image' => 'Obrázek události se nepodařilo uložit.',
-    'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
-    'publish_at' => 'Plánované publikování nemá platný formát data a času.',
+    'unpublish_at' => $eventUnpublishAtErrorMessage,
+    'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Vyberte platný typ akce.',
     'place' => 'Vybrané místo neexistuje nebo není dostupné.',
     'recurrence' => 'Opakování musí mít platný typ, interval a počet termínů od 2 do 52.',
@@ -119,8 +121,8 @@ $fieldErrorMessages = [
     'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
     'organizer_email' => 'E-mail pořadatele musí být platná e-mailová adresa.',
     'image' => 'Obrázek události se nepodařilo uložit.',
-    'unpublish_at' => 'Plánované zrušení publikace nemá platný formát data a času.',
-    'publish_at' => 'Plánované publikování nemá platný formát data a času.',
+    'unpublish_at' => $eventUnpublishAtErrorMessage,
+    'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Vyberte platný typ akce.',
     'place' => 'Vybrané místo neexistuje nebo není dostupné.',
     'recurrence' => 'Zkontrolujte typ opakování, interval a počet termínů.',

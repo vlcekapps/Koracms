@@ -29,10 +29,11 @@ if ($item) {
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
+$newsUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Titulek a text novinky jsou povinné.',
     'slug' => 'Slug novinky je povinný a musí být unikátní.',
-    'unpublish_at' => 'Plánované zrušení publikace musí být ve správném formátu.',
+    'unpublish_at' => $newsUnpublishAtErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
@@ -44,7 +45,7 @@ $fieldErrorMessages = [
     'title' => 'Titulek novinky je povinný.',
     'content' => 'Text novinky je povinný.',
     'slug' => 'Slug novinky je povinný a musí být unikátní.',
-    'unpublish_at' => 'Plánované zrušení publikace musí být ve správném formátu.',
+    'unpublish_at' => $newsUnpublishAtErrorMessage,
 ];
 
 $authorName = '';

@@ -69,13 +69,16 @@ $fieldErrorMap = [
     'blocked_date' => ['blocked_dates'],
     'reminder_hours' => ['reminder_hours_before'],
 ];
+$resourceHoursErrorMessage = 'Časy dostupnosti musí mít platný začátek i konec. Vyberte čas v příslušných polích a nastavte konec později než začátek.';
+$resourceSlotsErrorMessage = 'Předdefinované sloty musí mít platný čas začátku i konce. Vyberte čas v příslušných polích, nastavte konec později než začátek nebo prázdný slot odstraňte.';
+$resourceBlockedDateErrorMessage = 'Blokované datum musí být platné kalendářní datum. Vyberte datum v poli blokace nebo prázdný řádek odstraňte.';
 $fieldErrorMessages = [
     'name' => 'Název zdroje je povinný.',
     'slug' => 'Slug je povinný a musí být unikátní.',
     'capacity' => 'Kapacita musí být alespoň 1.',
-    'hours' => 'Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.',
-    'slots' => 'Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.',
-    'blocked_date' => 'Blokované datum musí být ve správném formátu.',
+    'hours' => $resourceHoursErrorMessage,
+    'slots' => $resourceSlotsErrorMessage,
+    'blocked_date' => $resourceBlockedDateErrorMessage,
     'reminder_hours' => 'Předstih připomínky musí být alespoň 1 hodina.',
 ];
 ?>
@@ -87,11 +90,11 @@ $fieldErrorMessages = [
 <?php elseif ($err === 'capacity'): ?>
   <p role="alert" class="error" id="form-error">Kapacita musí být alespoň 1.</p>
 <?php elseif ($err === 'hours'): ?>
-  <p role="alert" class="error" id="form-error">Časy dostupnosti musí být ve správném formátu a konec musí být později než začátek.</p>
+  <p role="alert" class="error" id="form-error"><?= h($resourceHoursErrorMessage) ?></p>
 <?php elseif ($err === 'slots'): ?>
-  <p role="alert" class="error" id="form-error">Předdefinované sloty musí mít platný čas začátku i konce a konec musí být později než začátek.</p>
+  <p role="alert" class="error" id="form-error"><?= h($resourceSlotsErrorMessage) ?></p>
 <?php elseif ($err === 'blocked_date'): ?>
-  <p role="alert" class="error" id="form-error">Blokované datum musí být ve správném formátu.</p>
+  <p role="alert" class="error" id="form-error"><?= h($resourceBlockedDateErrorMessage) ?></p>
 <?php elseif ($err === 'reminder_hours'): ?>
   <p role="alert" class="error" id="form-error">Předstih připomínky musí být alespoň 1 hodina.</p>
 <?php elseif ($err === 'save'): ?>

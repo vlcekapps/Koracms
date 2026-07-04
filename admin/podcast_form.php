@@ -72,6 +72,7 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $publishInput = !empty($episode['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$episode['publish_at'])) : '';
 $err = trim((string)($_GET['err'] ?? ''));
 $podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
+$podcastEpisodePublishAtErrorMessage = 'Plánované zveřejnění musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro zveřejnění po uložení či schválení.';
 $formError = match ($err) {
     'required' => 'Název epizody je povinný.',
     'slug' => 'Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.',
@@ -79,7 +80,7 @@ $formError = match ($err) {
     'url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio' => 'Audio soubor se nepodařilo uložit.',
     'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
-    'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
+    'publish_at' => $podcastEpisodePublishAtErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
@@ -97,7 +98,7 @@ $fieldErrorMessages = [
     'audio_url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio_file' => 'Audio soubor se nepodařilo uložit.',
     'image_file' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.',
-    'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
+    'publish_at' => $podcastEpisodePublishAtErrorMessage,
 ];
 $imageHelpIds = (string)$episode['image_url'] !== ''
     ? 'podcast-episode-image-current podcast-episode-image-help'

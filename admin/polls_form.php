@@ -60,14 +60,16 @@ if ($id !== null) {
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
+$pollTimingErrorMessage = 'Začátek a konec ankety musí být platné datum a čas. Vyplňte datum a čas v příslušných polích, nebo časové omezení nechte prázdné.';
+$pollRangeErrorMessage = 'Konec ankety musí být později než začátek. Upravte datum nebo čas začátku či konce.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.',
     'max_options' => 'Maximální počet možností je 10.',
     'max_choices' => 'U vícevýběrové ankety zadejte limit od 2 do počtu možností.',
     'has_votes' => 'Nelze odebrat možnosti, které už mají hlasy.',
     'slug' => 'Slug ankety je povinný a musí být unikátní.',
-    'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
-    'range' => 'Konec ankety musí být později než začátek.',
+    'dates' => $pollTimingErrorMessage,
+    'range' => $pollRangeErrorMessage,
     'save' => 'Anketu se nepodařilo uložit. Zkuste to prosím znovu.',
     default => '',
 };
@@ -84,8 +86,8 @@ $fieldErrorMessages = [
     'question' => 'Otázka ankety je povinná.',
     'slug' => 'Slug ankety je povinný a musí být unikátní.',
     'max_choices' => 'Limit musí být alespoň 2 a nejvýše tolik, kolik má anketa možností.',
-    'dates' => 'Začátek a konec ankety musí mít platný formát data a času.',
-    'range' => 'Konec ankety musí být později než začátek.',
+    'dates' => $pollTimingErrorMessage,
+    'range' => $pollRangeErrorMessage,
 ];
 $optionsErrorMessage = match ($err) {
     'required' => 'Doplňte alespoň 2 možnosti odpovědi.',

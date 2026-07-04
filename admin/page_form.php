@@ -63,6 +63,7 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $pageTitle = $id ? 'Upravit statickou stránku' : 'Nová statická stránka';
 $err = trim($_GET['err'] ?? '');
 $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
+$pageUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $fieldErrorMap = [
     'required' => ['title'],
     'slug' => ['slug'],
@@ -73,7 +74,7 @@ $fieldErrorMessages = [
     'title' => 'Název stránky je povinný.',
     'slug' => 'Slug stránky je už obsazený. Zvolte prosím jiný.',
     'blog' => 'Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.',
-    'unpublish_at' => 'Plánované zrušení publikace má neplatný formát data a času.',
+    'unpublish_at' => $pageUnpublishAtErrorMessage,
 ];
 
 adminHeader($pageTitle);
@@ -108,7 +109,7 @@ adminHeader($pageTitle);
 <?php elseif ($err === 'blog'): ?>
   <p role="alert" class="error" id="form-error">Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.</p>
 <?php elseif ($err === 'unpublish_at'): ?>
-  <p role="alert" class="error" id="form-error">Plánované zrušení publikace má neplatný formát data a času.</p>
+  <p role="alert" class="error" id="form-error"><?= h($pageUnpublishAtErrorMessage) ?></p>
 <?php endif; ?>
 
 <p class="button-row button-row--start">
