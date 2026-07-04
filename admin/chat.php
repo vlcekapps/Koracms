@@ -274,6 +274,7 @@ adminHeader('Chat');
     </fieldset>
   </form>
 
+  <div class="table-responsive">
   <table>
     <caption>Chat zprávy</caption>
     <thead>
@@ -379,6 +380,7 @@ adminHeader('Chat');
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 
   <?= renderPager(
       (int)$pagination['page'],

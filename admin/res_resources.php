@@ -87,6 +87,7 @@ adminHeader('Zdroje rezervací');
     <?php endif; ?>
   </p>
 <?php else: ?>
+  <div class="table-responsive">
   <table>
     <caption>Přehled zdrojů rezervací</caption>
     <thead>
@@ -139,6 +140,7 @@ adminHeader('Zdroje rezervací');
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

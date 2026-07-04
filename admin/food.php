@@ -147,6 +147,7 @@ adminHeader('Jídelní a nápojový lístek');
         $rows = $groups[$type];
         ?>
   <h2 class="admin-section-heading"><?= h($labels[$type]) ?></h2>
+  <div class="table-responsive">
   <table>
     <caption><?= h($captions[$type]) ?></caption>
     <thead>
@@ -191,9 +192,9 @@ adminHeader('Jídelní a nápojový lístek');
         <td class="actions">
           <a href="food_form.php?id=<?= (int)$card['id'] ?>" class="btn">Upravit</a>
           <a href="food_items.php?card=<?= (int)$card['id'] ?>" class="btn">Položky lístku</a>
-          <a href="revisions.php?type=food&amp;id=<?= (int)$card['id'] ?>">Historie revizí</a>
+          <a href="revisions.php?type=food&amp;id=<?= (int)$card['id'] ?>" class="btn">Historie revizí</a>
           <?php if ($card['is_publicly_visible']): ?>
-            <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+            <a href="<?= h((string)$card['public_path']) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($card['status'] === 'pending' && $canApprove): ?>
             <form action="approve.php" method="post">
@@ -215,6 +216,7 @@ adminHeader('Jídelní a nápojový lístek');
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <?php endforeach; ?>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>

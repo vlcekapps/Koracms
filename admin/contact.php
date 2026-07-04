@@ -184,6 +184,7 @@ adminHeader('Kontakt');
     </fieldset>
   </form>
 
+  <div class="table-responsive">
   <table>
     <caption>Kontaktní zprávy</caption>
     <thead>
@@ -270,6 +271,7 @@ adminHeader('Kontakt');
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <div class="table-note" aria-hidden="true">Po výběru zpráv můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= cspNonce() ?>">

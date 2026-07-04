@@ -328,6 +328,7 @@ th { background: var(--admin-th-bg); }
 .button-row--between { justify-content:space-between; }
 .button-row--top { align-items:flex-start; }
 .button-row--baseline { align-items:baseline; }
+.button-row > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }
 .admin-stack-sm { margin-bottom:1rem; }
 .admin-stack-md { margin-bottom:1.5rem; }
 .admin-stack-lg { margin-bottom:2rem; }
@@ -488,6 +489,7 @@ label { display: block; margin-top: 1rem; font-weight: bold; }
 input[type=text], input[type=email], input[type=password], input[type=number], textarea, select {
   width: 100%; padding: .35rem; margin-top: .2rem; background: var(--admin-input-bg); color: var(--admin-text); border: 1px solid var(--admin-input-border); }
 textarea { min-height: 200px; }
+.actions > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }
 .actions form { display: inline; }
 .table-row--scheduled { background:var(--admin-scheduled-bg); }
 .badge { display:inline-block; min-width:1.4rem; padding:.1rem .45rem; border-radius:999px; background:var(--admin-badge-bg); color:#fff; font-size:.75rem; text-align:center; }

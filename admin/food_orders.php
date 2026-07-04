@@ -65,6 +65,7 @@ adminHeader('Objednávkové poptávky z lístků');
 <?php if ($orders === []): ?>
   <p>Pro zvolený filtr tu nejsou žádné objednávkové poptávky.</p>
 <?php else: ?>
+  <div class="table-responsive">
   <table>
     <caption>Přehled objednávkových poptávek z jídelních a nápojových lístků</caption>
     <thead>
@@ -103,6 +104,7 @@ adminHeader('Objednávkové poptávky z lístků');
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

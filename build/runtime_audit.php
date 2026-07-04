@@ -14466,6 +14466,16 @@ $adminMobileWidgetsSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $adminMobileStatisticsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/statistics.php');
 $adminMobileFormBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
 $adminMobileFormsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
+$adminMobileCommentsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
+$adminMobileContactSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
+$adminMobileChatSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
+$adminMobileReservationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_bookings.php');
+$adminMobileReservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
+$adminMobileFoodSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
+$adminMobileFoodOrdersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_orders.php');
+$adminMobileDownloadsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
+$adminMobileGalleryAlbumsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
+$adminMobileGalleryPhotosSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 foreach ([
     '@media (max-width: 720px) { html { overflow-x:hidden; } body { display:block; min-height:100vh; overflow-x:hidden; }',
     'nav { width:100%; padding:.75rem; }',
@@ -14477,6 +14487,8 @@ foreach ([
     'contain:layout paint inline-size;',
     '.table-responsive > table:not(.sr-only) { min-width:40rem; }',
     '.btn { display:inline-flex; align-items:center; justify-content:center;',
+    '.button-row > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }',
+    '.actions > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }',
     '.admin-sort-control { display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem; min-height:1.5rem;',
     '.button-row > .btn, .button-row > form { flex:1 1 12rem; }',
     '.button-row > form > .btn { width:100%; }',
@@ -14518,6 +14530,46 @@ foreach ([
     'forms overview reflow anchors' => [
         $adminMobileFormsOverviewSource,
         ['<div class="table-responsive">', '<caption>Přehled formulářů</caption>', 'class="actions"'],
+    ],
+    'comments admin reflow anchors' => [
+        $adminMobileCommentsSource,
+        ['<div class="table-responsive">', '<caption>Komentáře</caption>', 'class="actions"'],
+    ],
+    'contact admin reflow anchors' => [
+        $adminMobileContactSource,
+        ['<div class="table-responsive">', '<caption>Kontaktní zprávy</caption>', 'class="actions"'],
+    ],
+    'chat admin reflow anchors' => [
+        $adminMobileChatSource,
+        ['<div class="table-responsive">', '<caption>Chat zprávy</caption>', 'class="actions"'],
+    ],
+    'reservations admin reflow anchors' => [
+        $adminMobileReservationsSource,
+        ['<div class="table-responsive">', '<caption>Přehled rezervací', 'class="actions"'],
+    ],
+    'reservation resources admin reflow anchors' => [
+        $adminMobileReservationResourcesSource,
+        ['<div class="table-responsive">', '<caption>Přehled zdrojů rezervací</caption>', 'class="actions"'],
+    ],
+    'food admin reflow anchors' => [
+        $adminMobileFoodSource,
+        ['<div class="table-responsive">', '<caption><?= h($captions[$type]) ?></caption>', 'class="actions"', 'class="btn">Historie revizí</a>'],
+    ],
+    'food orders admin reflow anchors' => [
+        $adminMobileFoodOrdersSource,
+        ['<div class="table-responsive">', '<caption>Přehled objednávkových poptávek z jídelních a nápojových lístků</caption>', 'class="actions"'],
+    ],
+    'downloads admin reflow anchors' => [
+        $adminMobileDownloadsSource,
+        ['<div class="table-responsive">', '<caption>Přehled položek ke stažení</caption>', 'class="actions"', 'class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu'],
+    ],
+    'gallery albums admin reflow anchors' => [
+        $adminMobileGalleryAlbumsSource,
+        ['<div class="table-responsive">', '<caption>Přehled alb</caption>', 'class="actions"', 'class="btn">Spravovat fotografie</a>'],
+    ],
+    'gallery photos admin reflow anchors' => [
+        $adminMobileGalleryPhotosSource,
+        ['<div class="table-responsive">', '<caption>Fotografie v albu', 'class="actions"'],
     ],
 ] as $adminMobileSourceLabel => [$adminMobileSource, $adminMobileFragments]) {
     foreach ($adminMobileFragments as $adminMobileFragment) {

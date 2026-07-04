@@ -127,6 +127,7 @@ $reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí
   </p>
 <?php else: ?>
   <?= bulkActions('gallery_photos', BASE_URL . '/admin/gallery_photos.php?album_id=' . (int)$album['id'], 'Hromadné akce s fotografiemi', 'fotografie') ?>
+  <div class="table-responsive">
   <table>
     <caption>Fotografie v albu „<?= h($album['name']) ?>”</caption>
     <thead>
@@ -209,6 +210,7 @@ $reorderDisabledReason = 'Rychlé přesuny fungují při řazení podle pořadí
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

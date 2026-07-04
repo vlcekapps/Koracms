@@ -199,6 +199,7 @@ adminHeader('Ke stažení');
   </p>
 <?php else: ?>
   <?= bulkActions('downloads', $currentListUrl, 'Hromadné akce s položkami ke stažení', 'položka') ?>
+  <div class="table-responsive">
   <table>
     <caption>Přehled položek ke stažení</caption>
     <thead>
@@ -285,7 +286,7 @@ adminHeader('Ke stažení');
         <td class="actions">
           <a href="download_form.php?id=<?= (int)$download['id'] ?>" class="btn">Upravit</a>
           <?php if ((string)$download['status'] === 'published' && (int)$download['is_published'] === 1): ?>
-            <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+            <a href="<?= h(downloadPublicPath($download)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
           <?php if ($download['status'] === 'pending' && currentUserHasCapability('content_approve_shared')): ?>
             <form action="approve.php" method="post">
@@ -307,6 +308,7 @@ adminHeader('Ke stažení');
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <?= bulkCheckboxJs() ?>
 <?php endif; ?>
 

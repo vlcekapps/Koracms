@@ -192,6 +192,7 @@ adminHeader('Rezervace');
 <?php if ($bookings === []): ?>
   <p><?= $filterParams !== [] ? 'Pro zvolený filtr tu teď nejsou žádné rezervace.' : 'Zatím tu nejsou žádné rezervace.' ?></p>
 <?php else: ?>
+  <div class="table-responsive">
   <table>
     <caption>Přehled rezervací (celkem <?= $total ?>)</caption>
     <thead>
@@ -279,6 +280,7 @@ adminHeader('Rezervace');
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 
   <?php if ($pages > 1): ?>
   <nav aria-labelledby="reservation-bookings-pager-heading">

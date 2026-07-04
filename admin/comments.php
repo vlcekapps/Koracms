@@ -182,73 +182,75 @@ adminHeader('Komentáře');
     </fieldset>
   </form>
 
-  <table>
-    <caption>Komentáře</caption>
-    <thead>
-      <tr>
-        <th scope="col"><label for="check-all" class="sr-only">Vybrat všechny komentáře</label><input type="checkbox" id="check-all" form="bulk-form"></th>
-        <th scope="col">Autor</th>
-        <th scope="col">Článek</th>
-        <th scope="col">Komentář</th>
-        <th scope="col">Datum</th>
-        <th scope="col">Stav</th>
-        <th scope="col">Akce</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($commentRows as $comment): ?>
+  <div class="table-responsive">
+    <table>
+      <caption>Komentáře</caption>
+      <thead>
         <tr>
-          <td>
-            <label for="comment-select-<?= (int)$comment['id'] ?>" class="sr-only">Vybrat komentář od <?= h($comment['author_name']) ?></label>
-            <input type="checkbox" id="comment-select-<?= (int)$comment['id'] ?>" name="ids[]" value="<?= (int)$comment['id'] ?>" form="bulk-form">
-          </td>
-          <td>
-            <strong><?= h($comment['author_name']) ?></strong>
-            <?php if ($comment['author_email'] !== ''): ?>
-              <br><a href="mailto:<?= h($comment['author_email']) ?>"><?= h($comment['author_email']) ?></a>
-            <?php endif; ?>
-          </td>
-          <td>
-            <?php if (!empty($comment['article_id'])): ?>
-              <a href="<?= h(articlePublicPath(['id' => (int)$comment['article_id'], 'slug' => (string)($comment['article_slug'] ?? '')])) ?>">
+          <th scope="col"><label for="check-all" class="sr-only">Vybrat všechny komentáře</label><input type="checkbox" id="check-all" form="bulk-form"></th>
+          <th scope="col">Autor</th>
+          <th scope="col">Článek</th>
+          <th scope="col">Komentář</th>
+          <th scope="col">Datum</th>
+          <th scope="col">Stav</th>
+          <th scope="col">Akce</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($commentRows as $comment): ?>
+          <tr>
+            <td>
+              <label for="comment-select-<?= (int)$comment['id'] ?>" class="sr-only">Vybrat komentář od <?= h($comment['author_name']) ?></label>
+              <input type="checkbox" id="comment-select-<?= (int)$comment['id'] ?>" name="ids[]" value="<?= (int)$comment['id'] ?>" form="bulk-form">
+            </td>
+            <td>
+              <strong><?= h($comment['author_name']) ?></strong>
+              <?php if ($comment['author_email'] !== ''): ?>
+                <br><a href="mailto:<?= h($comment['author_email']) ?>"><?= h($comment['author_email']) ?></a>
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if (!empty($comment['article_id'])): ?>
+                <a href="<?= h(articlePublicPath(['id' => (int)$comment['article_id'], 'slug' => (string)($comment['article_slug'] ?? '')])) ?>">
+                  <?= h((string)$comment['article_title_display']) ?>
+                </a>
+              <?php else: ?>
                 <?= h((string)$comment['article_title_display']) ?>
-              </a>
-            <?php else: ?>
-              <?= h((string)$comment['article_title_display']) ?>
-            <?php endif; ?>
-          </td>
-          <td>
-            <div class="table-cell--prewrap"><?= h($comment['content']) ?></div>
-          </td>
-          <td>
-            <time datetime="<?= h(str_replace(' ', 'T', (string)$comment['created_at'])) ?>">
-              <?= formatCzechDate((string)$comment['created_at']) ?>
-            </time>
-          </td>
-          <td><?= h(commentStatusLabel((string)$comment['normalized_status'])) ?></td>
-          <td class="actions">
-            <?php foreach ($comment['row_actions'] as $actionKey => $actionLabel): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php">
+              <?php endif; ?>
+            </td>
+            <td>
+              <div class="table-cell--prewrap"><?= h($comment['content']) ?></div>
+            </td>
+            <td>
+              <time datetime="<?= h(str_replace(' ', 'T', (string)$comment['created_at'])) ?>">
+                <?= formatCzechDate((string)$comment['created_at']) ?>
+              </time>
+            </td>
+            <td><?= h(commentStatusLabel((string)$comment['normalized_status'])) ?></td>
+            <td class="actions">
+              <?php foreach ($comment['row_actions'] as $actionKey => $actionLabel): ?>
+                <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php">
+                  <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                  <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
+                  <input type="hidden" name="filter" value="<?= h($filter) ?>">
+                  <input type="hidden" name="action" value="<?= h($actionKey) ?>">
+                  <button type="submit" class="btn"><?= h($actionLabel) ?></button>
+                </form>
+              <?php endforeach; ?>
+              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php"
+                    data-confirm="Smazat tento komentář trvale?">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
                 <input type="hidden" name="filter" value="<?= h($filter) ?>">
-                <input type="hidden" name="action" value="<?= h($actionKey) ?>">
-                <button type="submit" class="btn"><?= h($actionLabel) ?></button>
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" class="btn btn-danger">Smazat trvale</button>
               </form>
-            <?php endforeach; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php"
-                  data-confirm="Smazat tento komentář trvale?">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
-              <input type="hidden" name="filter" value="<?= h($filter) ?>">
-              <input type="hidden" name="action" value="delete">
-              <button type="submit" class="btn btn-danger">Smazat trvale</button>
-            </form>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
   <div class="table-note" aria-hidden="true">Po výběru komentářů můžete použít hromadné akce nahoře.</div>
 
   <script nonce="<?= cspNonce() ?>">
