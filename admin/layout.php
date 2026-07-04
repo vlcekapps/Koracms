@@ -416,6 +416,7 @@ function adminHeader(string $pageTitle): void
     }
 
     $bottomItems = [
+        ['url' => $baseUrl . '/admin/help.php', 'label' => 'Nápověda a podpora'],
         ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'],
         ['url' => $baseUrl . '/admin/logout.php', 'label' => 'Odhlásit se'],
     ];

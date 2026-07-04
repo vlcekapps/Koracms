@@ -1297,6 +1297,7 @@ try {
         '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
         '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
         '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
+        '/admin/help.php' => 'admin/help.php',
     ];
     foreach ($adminReadOnlyEndpointUrls as $adminReadOnlyEndpointUrl => $adminReadOnlyEndpointLabel) {
         $adminReadOnlyEndpointResponse = postRawUrl($baseUrl . BASE_URL . $adminReadOnlyEndpointUrl, '', 'text/plain', $adminSession['cookie'], 0);
@@ -1327,6 +1328,43 @@ try {
         $adminReadOnlyEndpointIssues[] = 'admin/content_reference_search.php neposlal bezpečné sdílené JSON hlavičky';
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
+
+    $adminConsistentHelpIssues = [];
+    $adminDashboardForHelp = fetchUrl($baseUrl . BASE_URL . '/admin/index.php', $adminSession['cookie'], 0);
+    $adminHelpPage = fetchUrl($baseUrl . BASE_URL . '/admin/help.php', $adminSession['cookie'], 0);
+    $adminHelpHref = 'href="' . BASE_URL . '/admin/help.php"';
+    $adminWebHref = 'href="' . BASE_URL . '/index.php"';
+    $adminLogoutHref = 'href="' . BASE_URL . '/admin/logout.php"';
+    $adminHelpNavPosition = strpos($adminDashboardForHelp['body'], $adminHelpHref);
+    $adminWebNavPosition = strpos($adminDashboardForHelp['body'], $adminWebHref);
+    $adminLogoutNavPosition = strpos($adminDashboardForHelp['body'], $adminLogoutHref);
+    if (
+        httpIntegrationStatusCode($adminDashboardForHelp) !== 200
+        || $adminHelpNavPosition === false
+        || $adminWebNavPosition === false
+        || $adminLogoutNavPosition === false
+        || !($adminHelpNavPosition < $adminWebNavPosition && $adminWebNavPosition < $adminLogoutNavPosition)
+    ) {
+        $adminConsistentHelpIssues[] = 'admin navigace nemá stabilní spodní pořadí nápověda, web, odhlášení';
+    }
+    foreach ([
+        'Nápověda a podpora',
+        'aria-labelledby="admin-help-start-heading"',
+        'role="list" aria-labelledby="admin-help-start-heading"',
+        'aria-labelledby="admin-help-contact-heading"',
+        'aria-labelledby="admin-help-docs-heading"',
+        'docs/accessibility/author-content-checklist.md',
+        'docs/accessibility/wcag-22-aa-conformance.md',
+        'docs/accessibility/manual-test-protocol.md',
+        'docs/developer-modules.md',
+        'href="' . BASE_URL . '/admin/command.php"',
+        'href="' . BASE_URL . '/admin/profile.php"',
+    ] as $adminHelpNeedle) {
+        if (httpIntegrationStatusCode($adminHelpPage) !== 200 || !str_contains($adminHelpPage['body'], $adminHelpNeedle)) {
+            $adminConsistentHelpIssues[] = 'admin nápověda neobsahuje očekávaný fragment: ' . $adminHelpNeedle;
+        }
+    }
+    httpIntegrationPrintResult('admin_consistent_help_http', $adminConsistentHelpIssues, $failures);
 
     $adminCommandIssues = [];
     $adminCommandUserId = 900000 + random_int(1, 99999);

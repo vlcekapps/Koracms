@@ -12,6 +12,7 @@ Aktuální ruční evidence:
 - 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
+- 2026-07-05: administrace má jednotnou stránku `Nápověda a podpora` ve stabilní spodní navigaci. Runtime `admin_consistent_help_guardrails` a HTTP `admin_consistent_help_http` hlídají link order, read-only route guard, nadpisové sekce a inventář podpory; ručně zbývá potvrdit průchod s klávesnicí/NVDA a veřejné/theme help mechanismy.
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 - 2026-07-04: automatizovaný guardrail pro WCAG 2.2 `3.3.7 Redundant Entry` pokrývá veřejný kontakt a Food objednávku: `currentUserContactDefaults()` čte jméno, e-mail a telefon z profilu, HTTP integrace ověřuje předvyplnění v renderu a POST chybové stavy dál zachovávají ručně upravené hodnoty. Ručně zbývá projít širší auth/rezervační/objednávková/custom flow a potvrdit, že předvyplnění není matoucí na sdíleném zařízení.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
@@ -78,23 +79,24 @@ p {
 1. Přihlášení, registrace, 2FA, tokenový reset hesla a odhlášení bez myši; registrace a žádost o reset nesmí vyžadovat matematickou CAPTCHA ani jiný kognitivní test.
 2. Dashboard: Moje zkratky, fronta ke schválení, poslední aktivita a statistiky.
 3. Levá navigace a command centrum přes `Ctrl+K`.
-4. Media/content picker: otevření, hledání, změna typu výsledku, vložení a zavření; v čistém HTML editoru vybrat cizojazyčný text, použít helper `Jazyk části textu`, ověřit vložení `<span lang="en">…</span>`, live oznámení a zachování fokusu.
-5. Widget dialog: otevření, změna typu widgetu, focus trap, uložení, návrat fokusu.
-6. Editor blogového článku: dlouhá editace, content lock heartbeat, uložení a chybové stavy.
-7. Form Builder: přidání pole, změna typu pole, chybové stavy a náhled.
-8. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
-9. Upload a editace média včetně alt textu, licence a kolekce.
-10. Nastavení webu, nastavení modulů, import/export a migrace.
-11. U míst a podcastů zadat neplatnou URL do volitelného URL pole a ověřit, že field-level chyba vysvětluje povolený http/https nebo doménový tvar a možnost pole vynechat.
-12. U administračních e-mailových polí zadat neúplnou hodnotu bez domény nebo zavináče a ověřit, že chyba radí úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
-13. U běžných datumových polí ve vývěsce, jídelních lístcích a downloadech zadat neplatné datum a ověřit, že chyba radí kalendářní datum, prázdné volitelné pole nebo opravu pořadí od/do; u data vydání ověřit i field-level chybu a `aria-describedby`.
-14. U položek ke stažení ověřit chybějící zdroj, neplatný externí odkaz, neplatnou domovskou stránku projektu, neplatný SHA-256 checksum a nepovolený upload. Každá chyba musí mít srozumitelný form-level alert i field-level text, `aria-describedby` na existující prvek, zachovanou hodnotu pole a konkrétní opravu: lokální soubor nebo externí URL, http/https nebo doména bez schématu, prázdné volitelné URL pole, případně přesně 64 znaků `0-9` a `a-f`.
-15. U obrazových uploadů v článku, vývěsce, události, místě a downloadu zkusit nepovolený formát včetně SVG. Ověřit form-level alert i field-level text, zachované hodnoty, existující `aria-describedby`, radu JPEG/PNG/GIF/WebP, výslovné odmítnutí SVG a možnost volitelné pole nechat prázdné; u download náhledu ověřit i novou lokální chybu u pole.
-16. U přílohy vývěsky a audio souboru podcastové epizody zkusit nepovolený formát. Ověřit form-level alert i field-level text, existující `aria-describedby`, radu povolených formátů, zachované hodnoty a možnost nechat volitelné pole prázdné; u podcastu ověřit i srozumitelnou alternativu externího audio odkazu.
-17. V knihovně médií odeslat prázdný hromadný upload, SVG nebo nepodporovaný soubor a ověřit, že po redirectu existuje form-level alert i field-level chyba u `media_files` s `aria-invalid` a `aria-describedby` na existující text. V detailu média zkusit náhradu souborem mimo MIME rodinu nebo s jinou příponou veřejného souboru a ověřit stejný pattern u `replacement_file`.
-18. U importů odeslat prázdný JSON import, prázdný WordPress WXR import, prázdný eStránky XML import a u downloaderu fotek kombinaci prázdného XML/neplatné URL. Ověřit `role="alert"`, field-level text u konkrétního pole, existující `aria-describedby`, zachování zadané URL u downloaderu a srozumitelnou opravu: exportní soubor, platné UTF-8 nebo http/https/doménový tvar URL.
-19. U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů zadat neplatnou datum/čas hodnotu a ověřit, že chyba radí použít ovladač datum/čas, nechat volitelné pole prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
-20. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
+4. Otevřít `Nápověda a podpora` ze spodní části administrační navigace, ověřit stabilní pořadí před odkazy `Web` a `Odhlásit se`, dosažitelnost jen klávesnicí, smysluplné nadpisy sekcí a odkazy na command centrum, profil, kontaktní workflow, nastavení a dokumentaci.
+5. Media/content picker: otevření, hledání, změna typu výsledku, vložení a zavření; v čistém HTML editoru vybrat cizojazyčný text, použít helper `Jazyk části textu`, ověřit vložení `<span lang="en">…</span>`, live oznámení a zachování fokusu.
+6. Widget dialog: otevření, změna typu widgetu, focus trap, uložení, návrat fokusu.
+7. Editor blogového článku: dlouhá editace, content lock heartbeat, uložení a chybové stavy.
+8. Form Builder: přidání pole, změna typu pole, chybové stavy a náhled.
+9. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
+10. Upload a editace média včetně alt textu, licence a kolekce.
+11. Nastavení webu, nastavení modulů, import/export a migrace.
+12. U míst a podcastů zadat neplatnou URL do volitelného URL pole a ověřit, že field-level chyba vysvětluje povolený http/https nebo doménový tvar a možnost pole vynechat.
+13. U administračních e-mailových polí zadat neúplnou hodnotu bez domény nebo zavináče a ověřit, že chyba radí úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
+14. U běžných datumových polí ve vývěsce, jídelních lístcích a downloadech zadat neplatné datum a ověřit, že chyba radí kalendářní datum, prázdné volitelné pole nebo opravu pořadí od/do; u data vydání ověřit i field-level chybu a `aria-describedby`.
+15. U položek ke stažení ověřit chybějící zdroj, neplatný externí odkaz, neplatnou domovskou stránku projektu, neplatný SHA-256 checksum a nepovolený upload. Každá chyba musí mít srozumitelný form-level alert i field-level text, `aria-describedby` na existující prvek, zachovanou hodnotu pole a konkrétní opravu: lokální soubor nebo externí URL, http/https nebo doména bez schématu, prázdné volitelné URL pole, případně přesně 64 znaků `0-9` a `a-f`.
+16. U obrazových uploadů v článku, vývěsce, události, místě a downloadu zkusit nepovolený formát včetně SVG. Ověřit form-level alert i field-level text, zachované hodnoty, existující `aria-describedby`, radu JPEG/PNG/GIF/WebP, výslovné odmítnutí SVG a možnost volitelné pole nechat prázdné; u download náhledu ověřit i novou lokální chybu u pole.
+17. U přílohy vývěsky a audio souboru podcastové epizody zkusit nepovolený formát. Ověřit form-level alert i field-level text, existující `aria-describedby`, radu povolených formátů, zachované hodnoty a možnost nechat volitelné pole prázdné; u podcastu ověřit i srozumitelnou alternativu externího audio odkazu.
+18. V knihovně médií odeslat prázdný hromadný upload, SVG nebo nepodporovaný soubor a ověřit, že po redirectu existuje form-level alert i field-level chyba u `media_files` s `aria-invalid` a `aria-describedby` na existující text. V detailu média zkusit náhradu souborem mimo MIME rodinu nebo s jinou příponou veřejného souboru a ověřit stejný pattern u `replacement_file`.
+19. U importů odeslat prázdný JSON import, prázdný WordPress WXR import, prázdný eStránky XML import a u downloaderu fotek kombinaci prázdného XML/neplatné URL. Ověřit `role="alert"`, field-level text u konkrétního pole, existující `aria-describedby`, zachování zadané URL u downloaderu a srozumitelnou opravu: exportní soubor, platné UTF-8 nebo http/https/doménový tvar URL.
+20. U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů zadat neplatnou datum/čas hodnotu a ověřit, že chyba radí použít ovladač datum/čas, nechat volitelné pole prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
+21. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
 
 ## Scénáře pro nové moduly
 
@@ -125,6 +127,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Veřejný kontakt a Food objednávka nepřinutí přihlášeného veřejného uživatele znovu zadat kontaktní údaje, které CMS bezpečně zná z profilu, a po ruční úpravě nezahodí zadanou hodnotu při validační chybě.
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
+- Admin nápověda je dostupná ze stabilního místa v navigaci, má smysluplné nadpisy a nevyžaduje hledání odlišné podpory na každé obrazovce.
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.

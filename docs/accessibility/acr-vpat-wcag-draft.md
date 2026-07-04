@@ -53,7 +53,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.1.1 Language of Page | Supports | CMS pages use Czech page language in shared layouts. |
 | 3.2.1 On Focus | Supports | Focus does not intentionally trigger unexpected context changes. |
 | 3.2.2 On Input | Supports | Inputs generally require explicit submit/action for context changes. |
-| 3.2.6 Consistent Help | Partially Supports | Help text and contact options exist; repeated help mechanisms need an inventory pass. |
+| 3.2.6 Consistent Help | Partially Supports | The admin UI now exposes a stable `Nápověda a podpora` help entrypoint in the bottom navigation. Runtime and HTTP integration guardrails cover the admin link order, read-only route guard, heading-backed sections, support destinations and documentation inventory. Public/theme help and contact patterns still need a full inventory and manual keyboard/screen-reader confirmation. |
 | 3.3.1 Error Identification | Supports | Field-level and form-level error messaging is guarded. |
 | 3.3.2 Labels or Instructions | Supports | Forms use labels, fieldsets, legends and helper text. |
 | 3.3.7 Redundant Entry | Partially Supports | Public profile contact details are reused through `currentUserContactDefaults()`: the public contact form and Food order form prefill known name/e-mail/phone values and keep submitted values after validation errors. Runtime `redundant_entry_guardrails` and HTTP integration cover that baseline, but admin/custom workflow coverage still needs manual redundant-entry testing. |

@@ -398,6 +398,8 @@ main > p > a:not(.btn) { display:inline-flex; align-items:center; min-height:2re
 .admin-summary-card__heading { margin:.1rem 0 .35rem; font-size:1rem; }
 .admin-summary-card__value { margin:.2rem 0 .75rem; font-size:1.8rem; font-weight:700; }
 .admin-summary-card__footer { margin-bottom:0; }
+.admin-help-list { margin:.75rem 0 0; padding-left:1.25rem; }
+.admin-help-list li + li { margin-top:.5rem; }
 .admin-stat-chart { margin:0 0 1.5rem; }
 .admin-stat-chart--compact { margin-bottom:1rem; }
 .admin-stat-bars { list-style:none; padding:0; margin:.75rem 0; display:grid; gap:.55rem; max-width:58rem; }

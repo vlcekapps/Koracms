@@ -48,6 +48,7 @@ $errorPageCssSource = is_file(__DIR__ . '/../assets/error.css') ? (string) file_
 $publicCoreCssSource = is_file(__DIR__ . '/../themes/default/assets/public-core.css') ? (string) file_get_contents(__DIR__ . '/../themes/default/assets/public-core.css') : '';
 $adminLayoutStylesheetSource = is_file(__DIR__ . '/../admin/assets/layout.css') ? (string) file_get_contents(__DIR__ . '/../admin/assets/layout.css') : '';
 $adminLayoutSource = is_file(__DIR__ . '/../admin/layout.php') ? (string) file_get_contents(__DIR__ . '/../admin/layout.php') : '';
+$adminHelpSource = is_file(__DIR__ . '/../admin/help.php') ? (string) file_get_contents(__DIR__ . '/../admin/help.php') : '';
 $adminCommandAssetSource = is_file(__DIR__ . '/../admin/assets/command.js') ? (string) file_get_contents(__DIR__ . '/../admin/assets/command.js') : '';
 $adminCommandPageSource = is_file(__DIR__ . '/../admin/command.php') ? (string) file_get_contents(__DIR__ . '/../admin/command.php') : '';
 $adminCommandSearchSource = is_file(__DIR__ . '/../admin/command_search.php') ? (string) file_get_contents(__DIR__ . '/../admin/command_search.php') : '';
@@ -8677,7 +8678,7 @@ $foundationChecks = [
         && str_contains($composerSource, '@format:check:admin-overview')
         && str_contains($composerSource, 'admin/index.php admin/audit_log.php admin/backup.php admin/blog.php admin/blogs.php admin/board.php')
         && str_contains($composerSource, 'admin/downloads.php admin/events.php admin/faq.php admin/food.php admin/forms.php')
-        && str_contains($composerSource, 'admin/gallery_albums.php admin/gallery_photos.php admin/integrity.php admin/media.php admin/menu.php')
+        && str_contains($composerSource, 'admin/gallery_albums.php admin/gallery_photos.php admin/help.php admin/integrity.php admin/media.php admin/menu.php')
         && str_contains($composerSource, 'admin/news.php admin/newsletter.php admin/pages.php admin/places.php admin/podcast.php')
         && str_contains($composerSource, 'admin/podcast_shows.php admin/polls.php admin/redirects.php admin/res_bookings.php admin/res_resources.php')
         && str_contains($composerSource, 'admin/review_queue.php admin/trash.php admin/users.php'),
@@ -8856,7 +8857,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/calendar.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php admin/chat_topics.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php admin/chat_topics.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/help.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -15352,6 +15353,7 @@ foreach ([
     '.admin-summary-card__heading',
     '.admin-summary-card__value',
     '.admin-summary-card__footer',
+    '.admin-help-list',
     '.admin-stat-chart',
     '.admin-stat-chart--compact',
     '.admin-stat-bars',
@@ -19215,6 +19217,85 @@ if ($adminCommandIssues === []) {
     $failures++;
     foreach ($adminCommandIssues as $adminCommandIssue) {
         echo '- ' . $adminCommandIssue . "\n";
+    }
+}
+
+echo "=== admin_consistent_help_guardrails ===\n";
+$adminHelpIssues = [];
+foreach ([
+    'layout exposes stable help entrypoint' => [
+        'source' => $adminLayoutSource,
+        'fragments' => [
+            "'url' => \$baseUrl . '/admin/help.php'",
+            "'label' => 'Nápověda a podpora'",
+            '$bottomItems',
+        ],
+    ],
+    'help page is guarded and read-only' => [
+        'source' => $adminHelpSource,
+        'fragments' => [
+            "requireLogin(BASE_URL . '/admin/login.php')",
+            "requireHttpMethods(['GET', 'HEAD'])",
+            "adminHeader('Nápověda a podpora')",
+        ],
+    ],
+    'help page uses heading-backed sections and list semantics' => [
+        'source' => $adminHelpSource,
+        'fragments' => [
+            'aria-labelledby="admin-help-start-heading"',
+            'aria-labelledby="admin-help-contact-heading"',
+            'aria-labelledby="admin-help-docs-heading"',
+            'role="list" aria-labelledby="admin-help-start-heading"',
+            'role="listitem" aria-labelledby="admin-help-command-heading"',
+            'role="listitem" aria-labelledby="admin-help-profile-heading"',
+        ],
+    ],
+    'help page inventories admin support destinations' => [
+        'source' => $adminHelpSource,
+        'fragments' => [
+            "currentUserHasCapability('messages_manage')",
+            "currentUserHasCapability('settings_manage')",
+            "isModuleEnabled('contact')",
+            "isModuleEnabled('chat')",
+            "isModuleEnabled('forms')",
+            "BASE_URL . '/admin/command.php'",
+            "BASE_URL . '/admin/profile.php'",
+            "BASE_URL . '/admin/contact.php'",
+            "BASE_URL . '/admin/chat.php'",
+            "BASE_URL . '/admin/forms.php'",
+            "BASE_URL . '/admin/settings.php'",
+        ],
+    ],
+    'help page links conformance documentation' => [
+        'source' => $adminHelpSource,
+        'fragments' => [
+            'docs/admin-guide.md',
+            'docs/accessibility/author-content-checklist.md',
+            'docs/accessibility/wcag-22-aa-conformance.md',
+            'docs/accessibility/manual-test-protocol.md',
+            'docs/developer-modules.md',
+        ],
+    ],
+    'help page has shared list styling' => [
+        'source' => $adminLayoutStylesheetSource,
+        'fragments' => [
+            '.admin-help-list',
+            '.admin-help-list li + li',
+        ],
+    ],
+] as $adminHelpGuardrailLabel => $adminHelpGuardrail) {
+    foreach ($adminHelpGuardrail['fragments'] as $adminHelpFragment) {
+        if (!str_contains($adminHelpGuardrail['source'], $adminHelpFragment)) {
+            $adminHelpIssues[] = $adminHelpGuardrailLabel . ' is missing fragment: ' . $adminHelpFragment;
+        }
+    }
+}
+if ($adminHelpIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminHelpIssues as $adminHelpIssue) {
+        echo '- ' . $adminHelpIssue . "\n";
     }
 }
 
