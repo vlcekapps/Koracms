@@ -35,7 +35,7 @@ $errors = [];
 $errorFields = [];
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Zadejte platnou e-mailovou adresu.';
+    $errors[] = 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
     $errorFields[] = 'email';
 }
 if ($accountId === null && ($newPass === '' || strlen($newPass) < 8)) {

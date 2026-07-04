@@ -53,6 +53,7 @@ foreach (boardTypeDefinitions() as $typeKey => $typeMeta) {
     $boardTypeHelpMap[$typeKey] = (string)$typeMeta['help'];
 }
 $err = trim($_GET['err'] ?? '');
+$boardContactEmailErrorMessage = 'Kontaktní e-mail musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
     'posted_date' => 'Zadejte platné datum vyvěšení.',
@@ -60,7 +61,7 @@ $formError = match ($err) {
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'category' => 'Vybraná kategorie neexistuje.',
-    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'contact_email' => $boardContactEmailErrorMessage,
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
     default => '',
@@ -84,7 +85,7 @@ $fieldErrorMessages = [
     'dates' => 'Datum sejmutí nesmí být dříve než datum vyvěšení.',
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'category' => 'Vybraná kategorie neexistuje.',
-    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'contact_email' => $boardContactEmailErrorMessage,
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
 ];

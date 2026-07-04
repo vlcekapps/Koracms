@@ -36,6 +36,7 @@ if ($id !== null) {
 
 $err = trim($_GET['err'] ?? '');
 $successMessage = trim((string)($flash['success'] ?? ''));
+$formNotificationEmailErrorMessage = 'Zadejte úplnou e-mailovou adresu pro notifikaci ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $fieldErrorMap = [
     'required' => ['title'],
     'slug' => ['slug'],
@@ -46,7 +47,7 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'title' => 'Název formuláře je povinný.',
     'slug' => 'Slug formuláře je už obsazený.',
-    'notification_email' => 'Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.',
+    'notification_email' => $formNotificationEmailErrorMessage,
     'submitter_email_field' => 'Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.',
     'webhook_url' => 'Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.',
 ];
@@ -129,7 +130,7 @@ adminHeader($pageTitle);
 <?php elseif ($err === 'slug'): ?>
   <p role="alert" class="error" id="form-error">Slug formuláře je už obsazený.</p>
 <?php elseif ($err === 'notification_email'): ?>
-  <p role="alert" class="error" id="form-error">Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.</p>
+  <p role="alert" class="error" id="form-error"><?= h($formNotificationEmailErrorMessage) ?></p>
 <?php elseif ($err === 'submitter_email_field'): ?>
   <p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>
 <?php elseif ($err === 'webhook_url'): ?>

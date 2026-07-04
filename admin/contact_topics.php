@@ -16,6 +16,7 @@ $formState = [
     'is_active' => '1',
     'sort_order' => '0',
 ];
+$contactTopicRecipientEmailErrorMessage = 'Zadejte úplný cílový e-mail ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -47,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fieldErrors['name'] = 'Název tématu je povinný.';
         }
         if ($formState['recipient_email'] !== '' && !filter_var($formState['recipient_email'], FILTER_VALIDATE_EMAIL)) {
-            $fieldErrors['recipient_email'] = 'Zadejte platný cílový e-mail nebo pole nechte prázdné.';
+            $fieldErrors['recipient_email'] = $contactTopicRecipientEmailErrorMessage;
         }
 
         $submittedSlug = contactTopicSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['name']);

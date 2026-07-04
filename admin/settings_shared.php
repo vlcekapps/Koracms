@@ -86,10 +86,10 @@ function settingsFieldErrorMessages(): array
 {
     return [
         'site_name' => 'Název webu je povinný.',
-        'contact_email' => 'Zadejte platnou e-mailovou adresu pro kontakt.',
+        'contact_email' => 'Zadejte úplnou kontaktní e-mailovou adresu ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
         'board_public_label' => 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.',
         'github_issues_repository' => 'Výchozí repozitář musí být ve formátu owner/repo.',
-        'comment_notify_email' => 'Zadejte platnou e-mailovou adresu pro upozornění na komentáře.',
+        'comment_notify_email' => 'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
         'site_favicon' => 'Nahrajte faviconu ve formátu ICO nebo PNG o velikosti nejvýše 256 KB.',
         'site_logo' => 'Nahrajte logo ve formátu JPEG, PNG, GIF nebo WebP o velikosti nejvýše 2 MB.',
     ];

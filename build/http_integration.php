@@ -1703,7 +1703,7 @@ try {
         $settingsIssues[] = 'neplatný contact_email způsobil částečné uložení site_name';
     }
     $invalidEmailPage = fetchUrl($settingsPageUrl, $adminSession['cookie'], 0);
-    if (!str_contains($invalidEmailPage['body'], 'Neplatná e-mailová adresa pro kontakt.')) {
+    if (!str_contains($invalidEmailPage['body'], 'Kontaktní e-mail musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.')) {
         $settingsIssues[] = 'neplatný contact_email nezobrazil chybovou zprávu';
     }
     if (!httpIntegrationFieldHasAriaInvalid($invalidEmailPage['body'], 'contact_email')) {

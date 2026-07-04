@@ -458,6 +458,8 @@ Veřejné formuláře, které stále používají matematickou ověřovací otá
 
 Administrace postupně zpřesňuje validační texty tak, aby vedle identifikace chyby nabízely i opravu. URL pole u zajímavých míst a podcastů například vysvětlují, že lze zadat `http://`/`https://` adresu nebo doménu bez schématu, kterou CMS uloží jako `https://`, případně volitelné pole nechat prázdné.
 
+E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů radí zadat úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí připomínají možnost nechat pole prázdné a u přihlašovacího e-mailu jedinečnost adresy.
+
 Stejný princip platí pro plánování publikace a časové rozsahy. U článků, stránek, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod chybové hlášky vysvětlují, že má správce vybrat platnou hodnotu v poli datum/čas, volitelné plánování nechat prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
 
 Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.

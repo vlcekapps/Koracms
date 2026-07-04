@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $totpSetupSecret = trim($_POST['totp_secret'] ?? '');
 
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Zadejte platnou e-mailovou adresu.';
+        $errors[] = 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
         $fieldErrors[] = 'email';
     }
     if ($newPass !== '' && strlen($newPass) < 8) {
@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $authorProfileUrl = (string)($currentRow['author_public_path'] ?? '');
 $fieldErrors = array_values(array_unique($fieldErrors));
 $fieldErrorMessages = [
-    'email' => 'Zadejte platnou a jedinečnou e-mailovou adresu.',
+    'email' => 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz. Adresa musí být jedinečná, protože slouží k přihlášení.',
     'new_pass' => 'Nové heslo musí mít alespoň 8 znaků.',
     'new_pass2' => 'Kontrolní heslo se musí shodovat s novým heslem.',
     'author_slug' => 'Zadejte jedinečný slug veřejného autora.',

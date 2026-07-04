@@ -47,11 +47,12 @@ $categories = $pdo->query(
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));
 $placeUrlErrorMessage = 'Webový odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud odkaz nechcete vyplnit, nechte pole prázdné.';
+$placeContactEmailErrorMessage = 'Kontaktní e-mail místa musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím povinné pole názvu místa.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
     'url' => $placeUrlErrorMessage,
-    'email' => 'Kontaktní e-mail nemá platný formát.',
+    'email' => $placeContactEmailErrorMessage,
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
     default => '',
@@ -68,7 +69,7 @@ $fieldErrorMessages = [
     'name' => 'Název místa je povinný.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
     'url' => $placeUrlErrorMessage,
-    'contact_email' => 'Kontaktní e-mail nemá platný formát.',
+    'contact_email' => $placeContactEmailErrorMessage,
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
 ];

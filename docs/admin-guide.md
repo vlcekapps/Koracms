@@ -1043,6 +1043,8 @@ Veřejné formuláře s matematickou ověřovací otázkou mají u chybné odpov
 
 Validační hlášky v administraci mají u známých oprav říkat, jak pokračovat. URL pole u zajímavých míst a podcastů proto vysvětlují povolený `http://`/`https://` tvar, doménu bez schématu s automatickým uložením jako `https://` a kdy je bezpečné volitelné pole nechat prázdné.
 
+E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
+
 U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů CMS nepředpokládá ruční znalost formátu. Pokud prohlížeč pošle neplatnou hodnotu, chyba má správci poradit, aby znovu vybral datum a čas v ovládacím prvku, volitelné plánování nechal prázdné, odstranil prázdný řádek nebo opravil pořadí začátku a konce.
 
 Vývojové kontroly:

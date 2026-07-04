@@ -14774,6 +14774,8 @@ $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/
 $podcastShowsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $menuOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
 $settingsDisplaySource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_display.php');
+$settingsSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_save.php');
+$settingsSharedValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/settings_shared.php');
 $trashAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
 $usersOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/users.php');
 $newsletterFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_form.php');
@@ -16485,6 +16487,128 @@ foreach ([
     foreach ($adminErrorSuggestionSpec['forbidden'] as $adminErrorSuggestionForbiddenFragment) {
         if (str_contains($adminErrorSuggestionSource, $adminErrorSuggestionForbiddenFragment)) {
             $adminFieldErrorIssues[] = $adminErrorSuggestionLabel . ' still contains generic URL validation copy';
+        }
+    }
+}
+foreach ([
+    'board contact email error suggestion' => [
+        'source' => $boardFormSource,
+        'required' => [
+            '$boardContactEmailErrorMessage',
+            'úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Kontaktní e-mail nemá platný formát.',
+        ],
+    ],
+    'event organizer email error suggestion' => [
+        'source' => $eventFormSource,
+        'required' => [
+            '$eventOrganizerEmailErrorMessage',
+            'E-mail pořadatele musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'E-mail pořadatele musí být platná e-mailová adresa.',
+        ],
+    ],
+    'food order email error suggestion' => [
+        'source' => $foodFormSource,
+        'required' => [
+            '$foodOrderEmailErrorMessage',
+            'E-mail pro objednávky musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'E-mail pro objednávky musí být platná e-mailová adresa.',
+            'Zadejte platnou e-mailovou adresu pro objednávkové poptávky, nebo pole nechte prázdné.',
+        ],
+    ],
+    'form builder notification email error suggestion' => [
+        'source' => $formBuilderSource,
+        'required' => [
+            '$formNotificationEmailErrorMessage',
+            'Zadejte úplnou e-mailovou adresu pro notifikaci ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Zadejte platnou e-mailovou adresu pro notifikaci, nebo pole nechte prázdné.',
+        ],
+    ],
+    'contact topic recipient email error suggestion' => [
+        'source' => $contactTopicsSource,
+        'required' => [
+            '$contactTopicRecipientEmailErrorMessage',
+            'Zadejte úplný cílový e-mail ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Zadejte platný cílový e-mail nebo pole nechte prázdné.',
+        ],
+    ],
+    'place contact email error suggestion' => [
+        'source' => $placeFormSource,
+        'required' => [
+            '$placeContactEmailErrorMessage',
+            'Kontaktní e-mail místa musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Kontaktní e-mail nemá platný formát.',
+        ],
+    ],
+    'podcast show owner email error suggestion' => [
+        'source' => $podcastShowFormSource,
+        'required' => [
+            '$podcastShowOwnerEmailErrorMessage',
+            'E-mail vlastníka feedu musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'E-mail vlastníka feedu musí mít platný formát.',
+        ],
+    ],
+    'settings email error suggestion' => [
+        'source' => $settingsSaveValidationSource . "\n" . $settingsSharedValidationSource,
+        'required' => [
+            'Kontaktní e-mail musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+            'Zadejte úplnou kontaktní e-mailovou adresu ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+            'E-mail pro upozornění na komentáře musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+            'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Neplatná e-mailová adresa pro kontakt.',
+            'Neplatná e-mailová adresa pro upozornění na komentáře.',
+            'Zadejte platnou e-mailovou adresu pro kontakt.',
+            'Zadejte platnou e-mailovou adresu pro upozornění na komentáře.',
+        ],
+    ],
+    'user account email error suggestion' => [
+        'source' => $userFormValidationSource . "\n" . $userSaveValidationSource,
+        'required' => [
+            'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
+            'Adresa musí být jedinečná, protože slouží k přihlášení.',
+        ],
+        'forbidden' => [
+            'Zadejte platnou e-mailovou adresu.',
+            'Zadejte platnou a jedinečnou e-mailovou adresu.',
+        ],
+    ],
+    'profile email error suggestion' => [
+        'source' => $profileFormValidationSource,
+        'required' => [
+            'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
+            'Adresa musí být jedinečná, protože slouží k přihlášení.',
+        ],
+        'forbidden' => [
+            'Zadejte platnou e-mailovou adresu.',
+            'Zadejte platnou a jedinečnou e-mailovou adresu.',
+        ],
+    ],
+] as $adminEmailSuggestionLabel => $adminEmailSuggestionSpec) {
+    $adminEmailSuggestionSource = (string)$adminEmailSuggestionSpec['source'];
+    foreach ($adminEmailSuggestionSpec['required'] as $adminEmailRequiredFragment) {
+        if (!str_contains($adminEmailSuggestionSource, $adminEmailRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminEmailSuggestionLabel . ' is missing actionable email fragment: ' . $adminEmailRequiredFragment;
+        }
+    }
+    foreach ($adminEmailSuggestionSpec['forbidden'] as $adminEmailForbiddenFragment) {
+        if (str_contains($adminEmailSuggestionSource, $adminEmailForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminEmailSuggestionLabel . ' still contains generic email validation copy';
         }
     }
 }

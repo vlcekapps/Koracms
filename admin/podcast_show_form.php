@@ -45,12 +45,13 @@ $categories = $pdo->query(
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));
 $podcastShowWebsiteUrlErrorMessage = 'Web pořadu musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud web pořadu nechcete vyplnit, nechte pole prázdné.';
+$podcastShowOwnerEmailErrorMessage = 'E-mail vlastníka feedu musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Název pořadu je povinný.',
     'slug' => 'Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiný pořad.',
     'url' => $podcastShowWebsiteUrlErrorMessage,
-    'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
+    'owner_email' => $podcastShowOwnerEmailErrorMessage,
     'feed_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
     'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     default => '',
@@ -68,7 +69,7 @@ $fieldErrorMessages = [
     'title' => 'Název pořadu je povinný.',
     'slug' => 'Slug pořadu musí zůstat jedinečný.',
     'website_url' => $podcastShowWebsiteUrlErrorMessage,
-    'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
+    'owner_email' => $podcastShowOwnerEmailErrorMessage,
     'feed_episode_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
     'cover_image' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
 ];

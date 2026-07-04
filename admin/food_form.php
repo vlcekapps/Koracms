@@ -36,13 +36,14 @@ $card = $card ?: [
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
+$foodOrderEmailErrorMessage = 'E-mail pro objednávky musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím název lístku.',
     'slug' => 'Slug lístku je povinný a musí být unikátní.',
     'valid_from' => 'Datum „Platí od“ má neplatný formát.',
     'valid_to' => 'Datum „Platí do“ má neplatný formát.',
     'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
-    'order_email' => 'E-mail pro objednávky musí být platná e-mailová adresa.',
+    'order_email' => $foodOrderEmailErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
@@ -59,7 +60,7 @@ $fieldErrorMessages = [
     'valid_from' => 'Datum „Platí od“ má neplatný formát.',
     'valid_to' => 'Datum „Platí do“ má neplatný formát.',
     'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
-    'order_email' => 'Zadejte platnou e-mailovou adresu pro objednávkové poptávky, nebo pole nechte prázdné.',
+    'order_email' => $foodOrderEmailErrorMessage,
 ];
 
 $card = hydrateFoodCardPresentation($card);

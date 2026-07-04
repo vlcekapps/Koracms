@@ -92,9 +92,9 @@ if (mb_strlen($formState['board_public_label'], 'UTF-8') > 60) {
 }
 
 if ($formState['contact_email'] !== '' && !filter_var($formState['contact_email'], FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Neplatná e-mailová adresa pro kontakt.';
+    $errors[] = 'Kontaktní e-mail musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
     $fieldErrors[] = 'contact_email';
-    $fieldErrorMessages['contact_email'] = 'Neplatná e-mailová adresa pro kontakt.';
+    $fieldErrorMessages['contact_email'] = 'Zadejte úplnou kontaktní e-mailovou adresu ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 }
 
 if (
@@ -102,9 +102,9 @@ if (
     && $formState['comment_notify_email'] !== ''
     && !filter_var($formState['comment_notify_email'], FILTER_VALIDATE_EMAIL)
 ) {
-    $errors[] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
+    $errors[] = 'E-mail pro upozornění na komentáře musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
     $fieldErrors[] = 'comment_notify_email';
-    $fieldErrorMessages['comment_notify_email'] = 'Neplatná e-mailová adresa pro upozornění na komentáře.';
+    $fieldErrorMessages['comment_notify_email'] = 'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 }
 
 $faviconUpload = null;

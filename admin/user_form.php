@@ -56,7 +56,7 @@ $account = hydrateAuthorPresentation($account);
 $authorFieldsetAvailable = $accountRole !== 'public';
 $roleOptions = staffRoleOptions($accountRole);
 $fieldErrorMessages = [
-    'email' => 'Zadejte platnou a jedinečnou e-mailovou adresu.',
+    'email' => 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz. Adresa musí být jedinečná, protože slouží k přihlášení.',
     'new_pass' => $accountId !== null
         ? 'Nové heslo musí mít alespoň 8 znaků.'
         : 'Zadejte heslo dlouhé alespoň 8 znaků.',
