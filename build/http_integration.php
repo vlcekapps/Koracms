@@ -7564,6 +7564,33 @@ try {
         $createdMediaCollectionIds[] = $mediaCollectionId;
     }
 
+    $emptyMediaUploadResponse = postUrl(
+        $mediaAdminUrl,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'upload',
+            'upload_visibility' => 'public',
+            'return_to' => $mediaReturnPath,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($emptyMediaUploadResponse) !== 302) {
+        $mediaIssues[] = 'prázdný upload média nevrátil 302 redirect';
+    }
+    $emptyMediaUploadPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
+    foreach ([
+        'Vyberte alespoň jeden podporovaný soubor do 10 MB',
+        'aria-invalid="true"',
+        'aria-describedby="media-upload-help media-upload-error"',
+        'id="media-upload-error"',
+        'SVG knihovna z bezpečnostních důvodů nepřijímá',
+    ] as $emptyMediaUploadFragment) {
+        if (!str_contains($emptyMediaUploadPage['body'], $emptyMediaUploadFragment)) {
+            $mediaIssues[] = 'prázdný upload média nezobrazil field-level fragment: ' . $emptyMediaUploadFragment;
+        }
+    }
+
     $validMediaOriginalName = 'http-media-upload-' . bin2hex(random_bytes(4)) . '.png';
     $validMediaPath = httpIntegrationCreatePngFixtureFile('kora-media-png-', $createdTempFiles);
     $validMediaUploadResponse = postMultipartUrl(
@@ -7689,6 +7716,16 @@ try {
     $invalidSvgPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
     if (!str_contains($invalidSvgPage['body'], 'SVG soubory už knihovna médií nepřijímá')) {
         $mediaIssues[] = 'SVG upload média nezobrazil validační chybu';
+    }
+    foreach ([
+        'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát',
+        'aria-invalid="true"',
+        'aria-describedby="media-upload-help media-upload-error"',
+        'id="media-upload-error"',
+    ] as $invalidMediaUploadFragment) {
+        if (!str_contains($invalidSvgPage['body'], $invalidMediaUploadFragment)) {
+            $mediaIssues[] = 'SVG upload média nezobrazil field-level fragment: ' . $invalidMediaUploadFragment;
+        }
     }
     if (httpIntegrationFetchMediaByOriginalName($pdo, $invalidSvgOriginalName) !== null) {
         $mediaIssues[] = 'SVG upload média přesto vytvořil záznam v cms_media';
@@ -7898,6 +7935,17 @@ try {
         $invalidReplacePage = fetchUrl($baseUrl . $uploadedEditPath, $adminSession['cookie'], 0);
         if (!str_contains($invalidReplacePage['body'], 'Náhradní soubor musí zůstat ve stejné rodině typu jako původní médium.')) {
             $mediaIssues[] = 'replace média jiné MIME rodiny nezobrazil validační chybu';
+        }
+        foreach ([
+            'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině',
+            'aria-invalid="true"',
+            'aria-describedby="replacement-file-help replacement-file-error"',
+            'id="replacement-file-error"',
+            'zachovejte stejnou příponu',
+        ] as $invalidMediaReplacementFragment) {
+            if (!str_contains($invalidReplacePage['body'], $invalidMediaReplacementFragment)) {
+                $mediaIssues[] = 'replace média jiné MIME rodiny nezobrazil field-level fragment: ' . $invalidMediaReplacementFragment;
+            }
         }
         $afterInvalidReplace = httpIntegrationFetchMediaById($pdo, $uploadedMediaId);
         if ($beforeInvalidReplace !== null && $afterInvalidReplace !== null) {

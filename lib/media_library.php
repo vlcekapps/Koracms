@@ -1107,6 +1107,43 @@ function mediaFlashSet(string $type, string $message): void
     $_SESSION['media_library_flash'][$type][] = $message;
 }
 
+function mediaFlashSetFieldError(string $fieldName, string $message): void
+{
+    $fieldName = trim($fieldName);
+    if ($fieldName === '' || $message === '') {
+        return;
+    }
+
+    if (!isset($_SESSION['media_library_field_errors']) || !is_array($_SESSION['media_library_field_errors'])) {
+        $_SESSION['media_library_field_errors'] = [];
+    }
+
+    $_SESSION['media_library_field_errors'][$fieldName] = $message;
+}
+
+/**
+ * @return array<string,string>
+ */
+function mediaFlashPullFieldErrors(): array
+{
+    $fieldErrors = $_SESSION['media_library_field_errors'] ?? [];
+    unset($_SESSION['media_library_field_errors']);
+    if (!is_array($fieldErrors)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($fieldErrors as $fieldName => $message) {
+        $fieldName = trim((string)$fieldName);
+        $message = trim((string)$message);
+        if ($fieldName !== '' && $message !== '') {
+            $result[$fieldName] = $message;
+        }
+    }
+
+    return $result;
+}
+
 /**
  * @return array<string,list<string>>
  */

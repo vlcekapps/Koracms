@@ -470,6 +470,8 @@ Vybrané obrazové uploady v administraci článků, vývěsky, událostí, mís
 
 Vybrané neobrazové uploady pokračují stejným směrem: příloha vývěsky radí povolené dokumentové a archivní formáty a podcastová epizoda radí MP3/OGG/WAV/M4A/AAC i možnost použít místo uploadu externí audio odkaz. Runtime audit hlídá, aby se tyto chyby nevrátily k obecnému „nepodařilo se uložit“.
 
+Knihovna médií navazuje field-level chybou i vlastní upload a náhradu souboru. Po PRG redirectu zůstává form-level alert, ale file input má zároveň `aria-invalid`, `aria-describedby` na existující chybový text a návrh opravy: podporovaný formát do 10 MB, zákaz SVG, u náhrady stejná MIME rodina a u veřejných souborů stejná přípona.
+
 Stejný princip platí pro plánování publikace a časové rozsahy. U článků, stránek, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod chybové hlášky vysvětlují, že má správce vybrat platnou hodnotu v poli datum/čas, volitelné plánování nechat prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
 
 Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.

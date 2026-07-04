@@ -5,6 +5,9 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 $pdo = db_connect();
 $perPage = 24;
 $mediaDeleteDisabledReason = 'Použité médium nelze smazat.';
+$mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do 10 MB: JPEG, PNG, GIF, WebP, audio, video nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
+$mediaUploadFileErrorMessage = 'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát, není SVG a nepřekračuje 10 MB.';
+$mediaReplacementFileErrorMessage = 'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině jako původní médium; u veřejného souboru zachovejte stejnou příponu. SVG knihovna nepřijímá.';
 
 /**
  * @return array<string, string>
@@ -394,7 +397,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors = [];
 
         if (!is_array($files) || !isset($files['name']) || !is_array($files['name'])) {
-            mediaFlashSet('error', 'Nebyl vybrán žádný soubor.');
+            mediaFlashSet('error', $mediaUploadNoFileErrorMessage);
+            mediaFlashSetFieldError('media_files', $mediaUploadNoFileErrorMessage);
             mediaAdminRedirectWithFlash($target);
         }
 
@@ -438,6 +442,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $uploadedCount++;
         }
 
+        if ($uploadedCount === 0 && $errors === []) {
+            mediaFlashSet('error', $mediaUploadNoFileErrorMessage);
+            mediaFlashSetFieldError('media_files', $mediaUploadNoFileErrorMessage);
+            mediaAdminRedirectWithFlash($target);
+        }
+
         if ($uploadedCount > 0) {
             $altHint = $uploadedCount === 1
                 ? 'Nahráno. Nezapomeňte vyplnit alt text u obrázků.'
@@ -446,7 +456,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('media_upload', 'count=' . $uploadedCount . ';visibility=' . $uploadVisibility);
         }
         if ($errors !== []) {
-            mediaFlashSet('error', implode(' ', $errors));
+            mediaFlashSet('error', $mediaUploadFileErrorMessage . ' Detaily: ' . implode(' ', $errors));
+            mediaFlashSetFieldError('media_files', $mediaUploadFileErrorMessage);
         }
 
         mediaAdminRedirectWithFlash($target);
@@ -522,7 +533,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $media
         );
         if (!$stored['ok']) {
-            mediaFlashSet('error', (string)$stored['error']);
+            mediaFlashSet('error', $mediaReplacementFileErrorMessage . ' Detail: ' . (string)$stored['error']);
+            mediaFlashSetFieldError('replacement_file', $mediaReplacementFileErrorMessage);
             mediaAdminRedirectWithFlash($target);
         }
 
@@ -685,6 +697,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $flash = mediaFlashPull();
+$mediaFieldErrors = mediaFlashPullFieldErrors();
+$mediaFieldErrorNames = array_keys($mediaFieldErrors);
 $successMessages = array_values(array_filter((array)($flash['success'] ?? []), 'is_string'));
 $errorMessages = array_values(array_filter((array)($flash['error'] ?? []), 'is_string'));
 
@@ -728,8 +742,9 @@ adminHeader('Knihovna médií');
     <label for="media_files">Vyberte soubory <span aria-hidden="true">*</span></label>
     <input type="file" id="media_files" name="media_files[]" multiple required aria-required="true"
            accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
-           aria-describedby="media-upload-help">
+           <?= adminFieldAttributes('media_files', $mediaFieldErrorNames, [], ['media-upload-help'], 'media-upload-error') ?>>
     <small id="media-upload-help" class="field-help">Obrázky, audio, video a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max 10 MB na soubor.</small>
+    <?php adminRenderFieldError('media_files', $mediaFieldErrorNames, [], $mediaFieldErrors['media_files'] ?? '', 'media-upload-error'); ?>
 
     <label for="upload_collection_id">Kolekce médií</label>
     <select id="upload_collection_id" name="upload_collection_id" aria-describedby="upload-collection-help">
@@ -1120,8 +1135,10 @@ adminHeader('Knihovna médií');
             <legend>Nahradit soubor</legend>
             <label for="replacement_file">Nový soubor</label>
             <input type="file" id="replacement_file" name="replacement_file" required aria-required="true"
-                   accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt">
-            <small class="field-help">Náhradní soubor musí zůstat ve stejné MIME rodině. U veřejných souborů se zachovává i přípona, aby staré odkazy zůstaly funkční.</small>
+                   accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                   <?= adminFieldAttributes('replacement_file', $mediaFieldErrorNames, [], ['replacement-file-help'], 'replacement-file-error') ?>>
+            <small id="replacement-file-help" class="field-help">Náhradní soubor musí zůstat ve stejné MIME rodině. U veřejných souborů se zachovává i přípona, aby staré odkazy zůstaly funkční.</small>
+            <?php adminRenderFieldError('replacement_file', $mediaFieldErrorNames, [], $mediaFieldErrors['replacement_file'] ?? '', 'replacement-file-error'); ?>
             <button type="submit" class="btn media-replace-submit">Nahradit soubor</button>
           </fieldset>
         </form>

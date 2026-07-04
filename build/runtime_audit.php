@@ -13546,6 +13546,63 @@ if (!str_contains($mediaAdminSource, '$mediaDeleteDisabledReason = \'Použité m
 if (str_contains($mediaAdminSource, 'title="Použité médium nelze smazat."')) {
     $mediaLibraryIssues[] = 'media admin delete disabled button still uses title instead of hidden button text';
 }
+foreach ([
+    'media flash field error helper' => [
+        'source' => $mediaHelperSource,
+        'required' => [
+            'function mediaFlashSetFieldError(',
+            'function mediaFlashPullFieldErrors(',
+            'media_library_field_errors',
+        ],
+        'forbidden' => [],
+    ],
+    'media upload field-level error suggestion' => [
+        'source' => $mediaAdminSource,
+        'required' => [
+            '$mediaUploadNoFileErrorMessage',
+            '$mediaUploadFileErrorMessage',
+            '$uploadedCount === 0 && $errors === []',
+            "mediaFlashSetFieldError('media_files', \$mediaUploadNoFileErrorMessage)",
+            "mediaFlashSetFieldError('media_files', \$mediaUploadFileErrorMessage)",
+            "adminFieldAttributes('media_files', \$mediaFieldErrorNames, [], ['media-upload-help'], 'media-upload-error')",
+            "adminRenderFieldError('media_files', \$mediaFieldErrorNames, [], \$mediaFieldErrors['media_files'] ?? '', 'media-upload-error')",
+            'id="media-upload-help"',
+            '10 MB',
+            'SVG knihovna z bezpečnostních důvodů nepřijímá',
+        ],
+        'forbidden' => [
+            "mediaFlashSet('error', 'Nebyl vybrán žádný soubor.');",
+            "mediaFlashSet('error', implode(' ', \$errors));",
+        ],
+    ],
+    'media replacement field-level error suggestion' => [
+        'source' => $mediaAdminSource,
+        'required' => [
+            '$mediaReplacementFileErrorMessage',
+            "mediaFlashSetFieldError('replacement_file', \$mediaReplacementFileErrorMessage)",
+            "adminFieldAttributes('replacement_file', \$mediaFieldErrorNames, [], ['replacement-file-help'], 'replacement-file-error')",
+            "adminRenderFieldError('replacement_file', \$mediaFieldErrorNames, [], \$mediaFieldErrors['replacement_file'] ?? '', 'replacement-file-error')",
+            'id="replacement-file-help"',
+            'stejné MIME rodině',
+            'zachovejte stejnou příponu',
+        ],
+        'forbidden' => [
+            "mediaFlashSet('error', (string)\$stored['error']);",
+        ],
+    ],
+] as $mediaFieldErrorLabel => $mediaFieldErrorSpec) {
+    $mediaFieldErrorSource = (string)$mediaFieldErrorSpec['source'];
+    foreach ($mediaFieldErrorSpec['required'] as $mediaFieldErrorRequiredFragment) {
+        if (!str_contains($mediaFieldErrorSource, $mediaFieldErrorRequiredFragment)) {
+            $mediaLibraryIssues[] = $mediaFieldErrorLabel . ' is missing fragment: ' . $mediaFieldErrorRequiredFragment;
+        }
+    }
+    foreach ($mediaFieldErrorSpec['forbidden'] as $mediaFieldErrorForbiddenFragment) {
+        if (str_contains($mediaFieldErrorSource, $mediaFieldErrorForbiddenFragment)) {
+            $mediaLibraryIssues[] = $mediaFieldErrorLabel . ' still contains generic flash-only validation copy';
+        }
+    }
+}
 if (!str_contains($mediaHelperSource, 'SVG soubory už knihovna médií nepřijímá')) {
     $mediaLibraryIssues[] = 'media helper is missing explicit SVG upload rejection';
 }
@@ -13624,6 +13681,9 @@ if ($mediaHttpIntegrationSource === '') {
         "'action' => 'bulk'",
         "'bulk_action' => 'make_private'",
         "'bulk_action' => 'delete_unused'",
+        'Vyberte alespoň jeden podporovaný soubor do 10 MB',
+        'media-upload-error',
+        'replacement-file-error',
         'Použité médium nelze přepnout do soukromého režimu',
         'Použité médium nelze smazat',
         '/media/preview.php?id=',
