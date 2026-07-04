@@ -55,27 +55,46 @@ $downloadSeriesOptions = $pdo->query(
 $downloadTypes = downloadTypeDefinitions();
 $editorMode = getSetting('content_editor', 'html');
 $err = trim((string)($_GET['err'] ?? ''));
+$downloadSourceErrorMessage = 'Nahrajte soubor nebo vyplňte externí odkaz ke stažení. U externího odkazu lze zadat http/https adresu nebo doménu bez schématu, kterou CMS uloží jako https://.';
+$downloadExternalUrlErrorMessage = 'Externí odkaz ke stažení musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://.';
+$downloadProjectUrlErrorMessage = 'Domovská stránka projektu musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud odkaz nechcete vyplnit, nechte pole prázdné.';
 $downloadReleaseDateErrorMessage = 'Datum vydání musí být platné kalendářní datum. Vyberte datum v poli Datum vydání nebo pole nechte prázdné.';
+$downloadChecksumErrorMessage = 'SHA-256 checksum musí mít přesně 64 znaků 0-9 a a-f. Mezery CMS ignoruje; u lokálního souboru můžete pole nechat prázdné a CMS checksum dopočítá.';
+$downloadFileErrorMessage = 'Nahrajte soubor v povoleném formátu dokumentu, archivu nebo instalačního balíčku, případně místo uploadu vyplňte externí odkaz.';
 $errorMessage = match ($err) {
     'required' => 'Název položky je povinný.',
     'slug' => 'Slug položky musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiná položka ke stažení.',
-    'source' => 'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.',
-    'url' => 'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
-    'project_url' => 'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
+    'source' => $downloadSourceErrorMessage,
+    'url' => $downloadExternalUrlErrorMessage,
+    'project_url' => $downloadProjectUrlErrorMessage,
     'release_date' => $downloadReleaseDateErrorMessage,
     'series' => 'Vybraná série ke stažení neexistuje.',
-    'checksum' => 'SHA-256 checksum musí obsahovat 64 hexadecimálních znaků.',
+    'checksum' => $downloadChecksumErrorMessage,
     'image' => 'Náhledový obrázek se nepodařilo uložit.',
-    'file' => 'Soubor se nepodařilo uložit nebo má nepovolený formát.',
+    'file' => $downloadFileErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
+    'source' => ['file', 'external_url'],
+    'url' => ['external_url'],
+    'project_url' => ['project_url'],
     'release_date' => ['release_date'],
+    'checksum' => ['checksum_sha256'],
+    'file' => ['file'],
 ];
 $fieldErrorMessages = [
+    'source' => $downloadSourceErrorMessage,
+    'external_url' => $downloadExternalUrlErrorMessage,
+    'project_url' => $downloadProjectUrlErrorMessage,
     'release_date' => $downloadReleaseDateErrorMessage,
+    'checksum_sha256' => $downloadChecksumErrorMessage,
+    'file' => $downloadFileErrorMessage,
 ];
+$downloadFileHelpIds = ['download-file-help'];
+if ((string)$download['original_name'] !== '') {
+    $downloadFileHelpIds[] = 'download-file-current';
+}
 
 adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení');
 ?>
@@ -153,11 +172,12 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <label for="file">Soubor ke stažení, volitelné</label>
     <input type="file" id="file" name="file"
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.7z,.tar,.gz,.bz2,.txt,.exe,.msi,.apk,.jar,.dmg,.pkg,.deb,.rpm,.appimage"
-           aria-describedby="download-file-help<?= (string)$download['original_name'] !== '' ? ' download-file-current' : '' ?>">
+           <?= adminFieldAttributes('file', $err, $fieldErrorMap, $downloadFileHelpIds, 'download-file-error') ?>>
     <small id="download-file-help" class="field-help">Můžete nahrát dokument, archiv nebo instalační balíček. Pokud software hostujete jinde, stačí místo uploadu vyplnit externí odkaz. U lokálního souboru se SHA-256 checksum dopočítá automaticky.</small>
     <?php if ((string)$download['original_name'] !== ''): ?>
       <small id="download-file-current" class="field-help">Aktuální soubor: <strong><?= h((string)$download['original_name']) ?></strong><?php if ((int)$download['file_size'] > 0): ?> (<?= h(formatFileSize((int)$download['file_size'])) ?>)<?php endif; ?>. Nahrajte nový, pokud ho chcete nahradit.</small>
     <?php endif; ?>
+    <?php adminRenderFieldError('file', $err, $fieldErrorMap, $err === 'source' ? $fieldErrorMessages['source'] : $fieldErrorMessages['file'], 'download-file-error'); ?>
     <?php if ((string)$download['filename'] !== ''): ?>
       <div class="admin-field-row">
         <label class="admin-checkbox-label">
@@ -168,16 +188,20 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <?php endif; ?>
 
     <label for="external_url">Externí odkaz ke stažení</label>
-    <input type="url" id="external_url" name="external_url" maxlength="255" aria-describedby="download-external-url-help"
+    <input type="url" id="external_url" name="external_url" maxlength="255"
+           <?= adminFieldAttributes('external_url', $err, $fieldErrorMap, ['download-external-url-help'], 'download-external-url-error') ?>
            placeholder="https://example.com/download"
            value="<?= h((string)$download['external_url']) ?>">
     <small id="download-external-url-help" class="field-help">Externí odkaz může být použit místo uploadu souboru, například pro GitHub Releases, App Store nebo veřejnou stránku balíčku.</small>
+    <?php adminRenderFieldError('external_url', $err, $fieldErrorMap, $err === 'source' ? $fieldErrorMessages['source'] : $fieldErrorMessages['external_url'], 'download-external-url-error'); ?>
 
     <label for="project_url">Domovská stránka projektu</label>
-    <input type="url" id="project_url" name="project_url" maxlength="255" aria-describedby="download-project-url-help"
+    <input type="url" id="project_url" name="project_url" maxlength="255"
+           <?= adminFieldAttributes('project_url', $err, $fieldErrorMap, ['download-project-url-help'], 'download-project-url-error') ?>
            placeholder="https://example.com"
            value="<?= h((string)$download['project_url']) ?>">
     <small id="download-project-url-help" class="field-help">Volitelný odkaz na web projektu, dokumentaci nebo produktovou stránku.</small>
+    <?php adminRenderFieldError('project_url', $err, $fieldErrorMap, $fieldErrorMessages['project_url'], 'download-project-url-error'); ?>
   </fieldset>
 
   <fieldset>
@@ -206,10 +230,12 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
            value="<?= h((string)$download['license_label']) ?>">
 
     <label for="checksum_sha256">SHA-256 checksum</label>
-    <input type="text" id="checksum_sha256" name="checksum_sha256" maxlength="64" aria-describedby="download-checksum-help"
+    <input type="text" id="checksum_sha256" name="checksum_sha256" maxlength="64"
+           <?= adminFieldAttributes('checksum_sha256', $err, $fieldErrorMap, ['download-checksum-help'], 'download-checksum-error') ?>
            placeholder="64 hexadecimálních znaků"
            value="<?= h((string)$download['checksum_sha256']) ?>">
     <small id="download-checksum-help" class="field-help">Pro lokální soubor se vyplní automaticky při nahrání. U externího odkazu ho můžete doplnit ručně.</small>
+    <?php adminRenderFieldError('checksum_sha256', $err, $fieldErrorMap, $fieldErrorMessages['checksum_sha256'], 'download-checksum-error'); ?>
 
     <label for="download_series_id">Série / řada verzí</label>
     <select id="download_series_id" name="download_series_id" aria-describedby="download-series-help">

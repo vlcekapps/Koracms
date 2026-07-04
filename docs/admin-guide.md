@@ -814,7 +814,7 @@ Každá položka může mít:
 - příznak `Doporučená položka`
 - zveřejnění na webu
 
-Upload souboru není povinný, pokud je vyplněný bezpečný externí odkaz začínající na `http://` nebo `https://`. Hodí se to pro software a dokumenty hostované mimo CMS, například na GitHub Releases nebo jiné oficiální stránce projektu. Pokud vyplníte lokální soubor i externí odkaz, veřejný výpis i detail nabídnou obě akce.
+Upload souboru není povinný, pokud je vyplněný bezpečný externí odkaz ve tvaru `http://`/`https://` adresy nebo domény bez schématu, kterou CMS uloží jako `https://`. Hodí se to pro software a dokumenty hostované mimo CMS, například na GitHub Releases nebo jiné oficiální stránce projektu. Pokud vyplníte lokální soubor i externí odkaz, veřejný výpis i detail nabídnou obě akce.
 
 ### Co je nové v admin workflow
 
@@ -1048,6 +1048,8 @@ Validační hlášky v administraci mají u známých oprav říkat, jak pokrač
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
 
 Běžná datumová pole ve vývěsce, jídelních lístcích a položkách ke stažení nepředpokládají ruční znalost formátu. Chyba má správci poradit výběr kalendářního data, prázdné volitelné pole nebo opravu pořadí od/do; datum vydání u downloadů má field-level chybu napojenou přes `aria-describedby`.
+
+Položky ke stažení mají stejný field-level pattern i pro zdroj a metadata souboru. Pokud chybí lokální soubor i externí odkaz, formulář vysvětlí obě použitelné cesty. Neplatná externí URL nebo domovská stránka projektu radí `http://`/`https://` adresu nebo doménu bez schématu a u volitelné domovské stránky i možnost nechat pole prázdné. SHA-256 checksum radí přesných 64 znaků `0-9` a `a-f`, připomíná ignorování mezer a automatický dopočet u lokálního souboru.
 
 U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů CMS nepředpokládá ruční znalost formátu. Pokud prohlížeč pošle neplatnou hodnotu, chyba má správci poradit, aby znovu vybral datum a čas v ovládacím prvku, volitelné plánování nechal prázdné, odstranil prázdný řádek nebo opravil pořadí začátku a konce.
 

@@ -12973,7 +12973,7 @@ if (!str_contains($downloadFormSourceForGuard, 'name="download_series_id"')
 }
 if (!str_contains($downloadFormSourceForGuard, 'Soubor ke stažení, volitelné')
     || !str_contains($downloadFormSourceForGuard, 'Externí odkaz může být použit místo uploadu souboru')
-    || !str_contains($downloadFormSourceForGuard, 'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.')) {
+    || !str_contains($downloadFormSourceForGuard, 'Nahrajte soubor nebo vyplňte externí odkaz ke stažení.')) {
     $downloadsSourceIssues[] = 'download form must clearly communicate that a local file or an external URL can be used as the source';
 }
 if (!str_contains($downloadSaveSource, 'download_series_id')
@@ -16422,7 +16422,7 @@ $adminFieldErrorForms = [
     'poll form' => [$pollFormValidationSource, "adminFieldAttributes('question'", "adminFieldAttributes('start_date'", "poll-options-error"],
     'form builder' => [$formBuilderSource, "adminFieldAttributes('title'", "adminFieldAttributes('notification_email'", "adminFieldAttributes('webhook_url'"],
     'board form' => [$boardFormSource, "adminFieldAttributes('posted_date'", "adminFieldAttributes('board_image'", "adminFieldAttributes('file'"],
-    'download form' => [$downloadFormSource, "adminFieldAttributes('release_date'", "adminRenderFieldError('release_date'", 'download-release-date-help'],
+    'download form' => [$downloadFormSource, "adminFieldAttributes('file'", "adminFieldAttributes('external_url'", "adminFieldAttributes('project_url'", "adminFieldAttributes('release_date'", "adminFieldAttributes('checksum_sha256'"],
     'event form' => [$eventFormSource, "adminFieldAttributes('event_date'", "adminFieldAttributes('registration_url'", "adminFieldAttributes('unpublish_at'"],
     'place form' => [$placeFormSource, "adminFieldAttributes('latitude'", "adminFieldAttributes('contact_email'", "adminFieldAttributes('place_image'"],
     'podcast episode form' => [$podcastEpisodeFormSource, "adminFieldAttributes('audio_url'", "adminFieldAttributes('image_file'", "adminFieldAttributes('publish_at'"],
@@ -16490,6 +16490,48 @@ foreach ([
     foreach ($adminErrorSuggestionSpec['forbidden'] as $adminErrorSuggestionForbiddenFragment) {
         if (str_contains($adminErrorSuggestionSource, $adminErrorSuggestionForbiddenFragment)) {
             $adminFieldErrorIssues[] = $adminErrorSuggestionLabel . ' still contains generic URL validation copy';
+        }
+    }
+}
+foreach ([
+    'download source and URL error suggestion' => [
+        'source' => $downloadFormSource,
+        'required' => [
+            '$downloadSourceErrorMessage',
+            '$downloadExternalUrlErrorMessage',
+            '$downloadProjectUrlErrorMessage',
+            '$downloadChecksumErrorMessage',
+            '$downloadFileErrorMessage',
+            "adminFieldAttributes('file', \$err, \$fieldErrorMap, \$downloadFileHelpIds, 'download-file-error')",
+            "adminFieldAttributes('external_url', \$err, \$fieldErrorMap, ['download-external-url-help'], 'download-external-url-error')",
+            "adminFieldAttributes('project_url', \$err, \$fieldErrorMap, ['download-project-url-help'], 'download-project-url-error')",
+            "adminFieldAttributes('checksum_sha256', \$err, \$fieldErrorMap, ['download-checksum-help'], 'download-checksum-error')",
+            "adminRenderFieldError('file'",
+            "adminRenderFieldError('external_url'",
+            "adminRenderFieldError('project_url'",
+            "adminRenderFieldError('checksum_sha256'",
+            'doménu bez schématu; CMS ji uloží jako https://',
+            'Mezery CMS ignoruje; u lokálního souboru můžete pole nechat prázdné',
+            'Nahrajte soubor v povoleném formátu dokumentu, archivu nebo instalačního balíčku',
+        ],
+        'forbidden' => [
+            'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.',
+            'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
+            'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
+            'SHA-256 checksum musí obsahovat 64 hexadecimálních znaků.',
+            'Soubor se nepodařilo uložit nebo má nepovolený formát.',
+        ],
+    ],
+] as $adminDownloadSuggestionLabel => $adminDownloadSuggestionSpec) {
+    $adminDownloadSuggestionSource = (string)$adminDownloadSuggestionSpec['source'];
+    foreach ($adminDownloadSuggestionSpec['required'] as $adminDownloadRequiredFragment) {
+        if (!str_contains($adminDownloadSuggestionSource, $adminDownloadRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminDownloadSuggestionLabel . ' is missing actionable download fragment: ' . $adminDownloadRequiredFragment;
+        }
+    }
+    foreach ($adminDownloadSuggestionSpec['forbidden'] as $adminDownloadForbiddenFragment) {
+        if (str_contains($adminDownloadSuggestionSource, $adminDownloadForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminDownloadSuggestionLabel . ' still contains generic download validation copy';
         }
     }
 }
