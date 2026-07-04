@@ -14097,6 +14097,7 @@ $publicErrorSuggestionSources = [
     'Form Builder controller' => (string)file_get_contents(dirname(__DIR__) . '/forms/index.php'),
     'newsletter subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/subscribe.php'),
     'board subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/board/subscribe.php'),
+    'reservation booking controller' => (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php'),
     'newsletter subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php'),
     'board subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-subscribe.php'),
 ];
@@ -14116,6 +14117,14 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, '$publicCaptchaErrorSuggestion = publicCaptchaErrorMessage();')
     || !str_contains($httpIntegrationSource, 'nezobrazil validační chybu s návrhem opravy')) {
     $publicErrorSuggestionIssues[] = 'HTTP integration must assert the rendered public captcha error suggestion';
+}
+foreach ([
+    'guest rezervační formulář nezobrazil přístupnou chybu s návrhem opravy',
+    'reservation-book-captcha-error',
+] as $reservationCaptchaHttpFragment) {
+    if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, $reservationCaptchaHttpFragment)) {
+        $publicErrorSuggestionIssues[] = 'HTTP integration must assert reservation captcha field-level error: ' . $reservationCaptchaHttpFragment;
+    }
 }
 if ($unitTestsSource === ''
     || !str_contains($unitTestsSource, 'publicCaptchaErrorMessage()')
@@ -18635,6 +18644,21 @@ foreach ([
 ] as $publicInputPurposeLabel => [$publicInputPurposeSource, $publicInputPurposeFragment]) {
     if (!str_contains((string)$publicInputPurposeSource, (string)$publicInputPurposeFragment)) {
         $themeLayoutIssues[] = 'public input purpose guardrail is missing ' . $publicInputPurposeLabel;
+    }
+}
+foreach ([
+    'reservation field error id helper' => [$themeReservationsBookViewSource, "'reservation-book-' . str_replace('_', '-', \$key) . '-error'"],
+    'reservation slot field attributes' => [$themeReservationsBookViewSource, 'role="radiogroup" aria-labelledby="reservation-time-legend"<?= $fieldAttributes(\'slot\') ?>'],
+    'reservation start time field attributes' => [$themeReservationsBookViewSource, 'name="start_time" class="form-control" required aria-required="true"<?= $fieldAttributes(\'start_time\') ?>'],
+    'reservation end time field attributes' => [$themeReservationsBookViewSource, 'name="end_time" class="form-control" required aria-required="true"<?= $fieldAttributes(\'end_time\') ?>'],
+    'reservation guest name field attributes' => [$themeReservationsBookViewSource, 'autocomplete="name"<?= $fieldAttributes(\'guest_name\') ?>'],
+    'reservation guest email field attributes' => [$themeReservationsBookViewSource, 'autocomplete="email"<?= $fieldAttributes(\'guest_email\') ?>'],
+    'reservation guest phone field attributes' => [$themeReservationsBookViewSource, 'autocomplete="tel"<?= $fieldAttributes(\'guest_phone\') ?>'],
+    'reservation party size field attributes' => [$themeReservationsBookViewSource, 'required aria-required="true"<?= $fieldAttributes(\'party_size\') ?>'],
+    'reservation captcha field attributes' => [$themeReservationsBookViewSource, 'inputmode="numeric"<?= $fieldAttributes(\'captcha\') ?>'],
+] as $reservationFieldErrorLabel => [$reservationFieldErrorSource, $reservationFieldErrorFragment]) {
+    if (!str_contains((string)$reservationFieldErrorSource, (string)$reservationFieldErrorFragment)) {
+        $themeLayoutIssues[] = 'reservation booking view is missing field-level error fragment: ' . $reservationFieldErrorLabel;
     }
 }
 foreach ([

@@ -167,6 +167,7 @@ if ($slotMode === 'slots') {
 }
 
 $errors = [];
+$fieldErrors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -193,27 +194,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $guestEmailPost = trim($_POST['guest_email'] ?? '');
         $guestPhonePost = trim($_POST['guest_phone'] ?? '');
         if ($guestNamePost === '') {
-            $errors[] = 'Vyplňte prosím jméno a příjmení.';
+            $message = 'Vyplňte prosím jméno a příjmení.';
+            $errors[] = $message;
+            $fieldErrors['guest_name'] = $message;
         }
         if ($guestEmailPost === '' || !filter_var($guestEmailPost, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Vyplňte prosím platný e-mail.';
+            $message = 'Vyplňte prosím úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
+            $errors[] = $message;
+            $fieldErrors['guest_email'] = $message;
         }
         if ($guestPhonePost === '') {
-            $errors[] = 'Vyplňte prosím telefonní číslo.';
+            $message = 'Vyplňte prosím telefonní číslo pro upřesnění rezervace.';
+            $errors[] = $message;
+            $fieldErrors['guest_phone'] = $message;
         }
         if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $errors[] = 'Chybný výsledek ověřovacího příkladu.';
+            $captchaError = publicCaptchaErrorMessage();
+            $errors[] = $captchaError;
+            $fieldErrors['captcha'] = $captchaError;
         }
     }
 
     if ($capacity > 0 && $partySize > $capacity) {
-        $errors[] = 'Maximální počet osob je ' . $capacity . '.';
+        $message = 'Počet osob nesmí být vyšší než kapacita zdroje: ' . $capacity . '.';
+        $errors[] = $message;
+        $fieldErrors['party_size'] = $message;
     }
 
     if ($slotMode === 'slots') {
         $selectedSlot = $_POST['slot'] ?? '';
         if ($selectedSlot === '' || !preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2})$/', $selectedSlot, $matches)) {
-            $errors[] = 'Vyberte prosím časový slot.';
+            $message = 'Vyberte prosím jeden z dostupných časových slotů.';
+            $errors[] = $message;
+            $fieldErrors['slot'] = $message;
             $startTime = null;
             $endTime = null;
         } else {
@@ -224,14 +237,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startTime = ($_POST['start_time'] ?? '') . ':00';
         $endTime = ($_POST['end_time'] ?? '') . ':00';
         if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', $startTime) || !preg_match('/^\d{2}:\d{2}:\d{2}$/', $endTime)) {
-            $errors[] = 'Zadejte platný začátek a konec.';
+            $message = 'Vyberte prosím platný začátek a konec rezervace z nabízených časů.';
+            $errors[] = $message;
+            $fieldErrors['start_time'] = $message;
+            $fieldErrors['end_time'] = $message;
         } elseif ($startTime >= $endTime) {
-            $errors[] = 'Čas konce musí být po začátku.';
+            $message = 'Čas konce musí být po začátku. Vyberte pozdější konec rezervace.';
+            $errors[] = $message;
+            $fieldErrors['end_time'] = $message;
         }
     } else {
         $selectedStart = $_POST['start_time'] ?? '';
         if (!preg_match('/^\d{2}:\d{2}$/', $selectedStart)) {
-            $errors[] = 'Vyberte prosím čas začátku.';
+            $message = 'Vyberte prosím čas začátku z nabízených možností.';
+            $errors[] = $message;
+            $fieldErrors['start_time'] = $message;
             $startTime = null;
             $endTime = null;
         } else {
@@ -245,7 +265,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bookingDateTime = new DateTime($dateStr . ' ' . substr($startTime, 0, 5));
         $diffHours = ($bookingDateTime->getTimestamp() - $now->getTimestamp()) / 3600;
         if ($diffHours < (int)$resource['min_advance_hours']) {
-            $errors[] = 'Rezervace musí být provedena nejméně ' . (int)$resource['min_advance_hours'] . ' hodin předem.';
+            $message = 'Rezervace musí být provedena nejméně ' . (int)$resource['min_advance_hours'] . ' hodin předem. Vyberte pozdější termín.';
+            $errors[] = $message;
+            $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
         }
     }
 
@@ -276,7 +298,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($overlapCount >= $maxAllowed) {
                 $pdo->rollBack();
-                $errors[] = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
+                $message = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
+                $errors[] = $message;
+                $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
             } else {
                 $status = (int)$resource['requires_approval'] ? 'pending' : 'confirmed';
                 $token = bin2hex(random_bytes(16));
@@ -330,7 +354,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($finalCount > $maxAllowed) {
                     $pdo->rollBack();
-                    $errors[] = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
+                    $message = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
+                    $errors[] = $message;
+                    $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
                 } else {
                     $pdo->commit();
 
@@ -474,6 +500,7 @@ renderPublicPage([
         'slots' => $slots,
         'slotsEmpty' => empty($slots),
         'errors' => $errors,
+        'fieldErrors' => $fieldErrors,
         'isGuest' => $isGuest,
         'existingBookings' => $existingBookings,
         'maxPartySize' => (int)$resource['capacity'] ?: 100,

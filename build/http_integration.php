@@ -5076,6 +5076,15 @@ try {
     $calendarToken = reservationCalendarToken();
     $confirmationToken = bin2hex(random_bytes(16));
     $bookingDate = (new DateTimeImmutable('+3 days'))->format('Y-m-d');
+    $bookingDayOfWeek = ((int)(new DateTimeImmutable($bookingDate))->format('N')) - 1;
+    $pdo->prepare(
+        "INSERT INTO cms_res_hours (resource_id, day_of_week, open_time, close_time, is_closed)
+         VALUES (?, ?, '09:00:00', '17:00:00', 0)"
+    )->execute([$resourceId, $bookingDayOfWeek]);
+    $pdo->prepare(
+        "INSERT INTO cms_res_slots (resource_id, day_of_week, start_time, end_time, max_bookings)
+         VALUES (?, ?, '09:00:00', '10:00:00', 2)"
+    )->execute([$resourceId, $bookingDayOfWeek]);
     $pdo->prepare(
         "INSERT INTO cms_res_bookings
          (resource_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
@@ -5144,6 +5153,41 @@ try {
     );
     if (!str_contains($bookingDetailResponse['body'], 'Historie rezervace') || !str_contains($bookingDetailResponse['body'], 'Odeslání připomínky')) {
         $reservationIssues[] = 'admin detail rezervace nezobrazuje historii změn a připomínek';
+    }
+
+    $guestBookingUrl = $baseUrl . BASE_URL . '/reservations/book.php?slug=' . rawurlencode($resourceSlug) . '&date=' . rawurlencode($bookingDate);
+    $guestBookingSession = koraPrimeTestSession([], 'kora-http-reservation-invalid-captcha-' . bin2hex(random_bytes(3)));
+    $guestBookingPage = fetchUrl($guestBookingUrl, $guestBookingSession['cookie'], 0);
+    $guestBookingCsrf = extractHiddenInputValue($guestBookingPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($guestBookingPage) !== 200 || $guestBookingCsrf === '') {
+        $reservationIssues[] = 'veřejný guest rezervační formulář nevrátil 200 nebo nevykreslil CSRF token';
+    }
+    $invalidReservationEmail = 'http-reservation-invalid-' . bin2hex(random_bytes(4)) . '@example.test';
+    $invalidReservationResponse = postUrl(
+        $guestBookingUrl,
+        [
+            'csrf_token' => $guestBookingCsrf,
+            'slot' => '09:00-10:00',
+            'guest_name' => 'HTTP Rezervační Host',
+            'guest_email' => $invalidReservationEmail,
+            'guest_phone' => '+420777654321',
+            'party_size' => '1',
+            'notes' => '',
+            'captcha' => '0',
+        ],
+        $guestBookingSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidReservationResponse) !== 200
+        || !str_contains($invalidReservationResponse['body'], $publicCaptchaErrorSuggestion)
+        || !httpIntegrationFieldHasAriaInvalid($invalidReservationResponse['body'], 'captcha')
+        || !str_contains($invalidReservationResponse['body'], 'id="reservation-book-captcha-error"')) {
+        $reservationIssues[] = 'guest rezervační formulář nezobrazil přístupnou chybu s návrhem opravy pro chybnou captchu';
+    }
+    $invalidReservationCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_res_bookings WHERE guest_email = ?");
+    $invalidReservationCountStmt->execute([$invalidReservationEmail]);
+    if ((int)$invalidReservationCountStmt->fetchColumn() !== 0) {
+        $reservationIssues[] = 'guest rezervační formulář uložil rezervaci i po chybné captche';
     }
 
     httpIntegrationPrintResult('reservations_http', $reservationIssues, $failures);

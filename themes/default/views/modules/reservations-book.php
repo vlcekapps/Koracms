@@ -1,3 +1,26 @@
+<?php
+$fieldErrors = is_array($fieldErrors ?? null) ? $fieldErrors : [];
+$fieldErrorId = static fn (string $key): string => 'reservation-book-' . str_replace('_', '-', $key) . '-error';
+$fieldAttributes = static function (string $key, array $extraDescriptions = []) use ($fieldErrors, $fieldErrorId): string {
+    $descriptions = [];
+    foreach ($extraDescriptions as $descriptionId) {
+        $descriptionId = trim((string)$descriptionId);
+        if ($descriptionId !== '') {
+            $descriptions[] = $descriptionId;
+        }
+    }
+    if (isset($fieldErrors[$key])) {
+        $descriptions[] = $fieldErrorId($key);
+    }
+
+    $attributes = isset($fieldErrors[$key]) ? ' aria-invalid="true"' : '';
+    if ($descriptions !== []) {
+        $attributes .= ' aria-describedby="' . h(implode(' ', array_unique($descriptions))) . '"';
+    }
+
+    return $attributes;
+};
+?>
 <div class="listing-shell">
   <section class="surface surface--accent" aria-labelledby="reservation-book-title">
     <div class="button-row button-row--start">
@@ -49,7 +72,8 @@
           <legend id="reservation-time-legend">Výběr času</legend>
 
           <?php if ($slotMode === 'slots'): ?>
-            <div class="stack-list" role="radiogroup" aria-labelledby="reservation-time-legend">
+            <?php if (isset($fieldErrors['slot'])): ?><small id="<?= h($fieldErrorId('slot')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['slot']) ?></small><?php endif; ?>
+            <div class="stack-list" role="radiogroup" aria-labelledby="reservation-time-legend"<?= $fieldAttributes('slot') ?>>
               <?php foreach ($slots as $index => $slot): ?>
                 <label class="choice-card" for="slot-<?= $index ?>">
                   <input type="radio" id="slot-<?= $index ?>" name="slot"
@@ -66,33 +90,36 @@
           <?php elseif ($slotMode === 'range'): ?>
             <div class="field">
               <label for="reservation-start-time-range">Začátek <span aria-hidden="true">*</span></label>
-              <select id="reservation-start-time-range" name="start_time" class="form-control" required aria-required="true">
+              <select id="reservation-start-time-range" name="start_time" class="form-control" required aria-required="true"<?= $fieldAttributes('start_time') ?>>
                 <option value="">-- vyberte --</option>
                 <?php foreach ($slots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['start_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>
                 <?php endforeach; ?>
               </select>
+              <?php if (isset($fieldErrors['start_time'])): ?><small id="<?= h($fieldErrorId('start_time')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['start_time']) ?></small><?php endif; ?>
             </div>
             <div class="field">
               <label for="end_time">Konec <span aria-hidden="true">*</span></label>
-              <select id="end_time" name="end_time" class="form-control" required aria-required="true">
+              <select id="end_time" name="end_time" class="form-control" required aria-required="true"<?= $fieldAttributes('end_time') ?>>
                 <option value="">-- vyberte --</option>
                 <?php foreach ($slots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['end_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>
                 <?php endforeach; ?>
               </select>
+              <?php if (isset($fieldErrors['end_time'])): ?><small id="<?= h($fieldErrorId('end_time')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['end_time']) ?></small><?php endif; ?>
             </div>
             <p class="help-text">Aktuální vytížení: <?= count($existingBookings) ?>/<?= (int)$resource['max_concurrent'] ?> souběžných rezervací.</p>
           <?php elseif ($slotMode === 'duration'): ?>
             <p class="help-text">Délka rezervace: <?= (int)$resource['slot_duration_min'] ?> minut.</p>
             <div class="field">
               <label for="reservation-start-time-duration">Čas začátku <span aria-hidden="true">*</span></label>
-              <select id="reservation-start-time-duration" name="start_time" class="form-control" required aria-required="true">
+              <select id="reservation-start-time-duration" name="start_time" class="form-control" required aria-required="true"<?= $fieldAttributes('start_time') ?>>
                 <option value="">-- vyberte --</option>
                 <?php foreach ($slots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['start_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>
                 <?php endforeach; ?>
               </select>
+              <?php if (isset($fieldErrors['start_time'])): ?><small id="<?= h($fieldErrorId('start_time')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['start_time']) ?></small><?php endif; ?>
             </div>
           <?php endif; ?>
         </fieldset>
@@ -104,19 +131,22 @@
             <div class="field">
               <label for="guest_name">Jméno a příjmení <span aria-hidden="true">*</span></label>
               <input type="text" id="guest_name" name="guest_name" class="form-control" required aria-required="true"
-                     maxlength="255" value="<?= h($formData['guest_name']) ?>" autocomplete="name">
+                     maxlength="255" value="<?= h($formData['guest_name']) ?>" autocomplete="name"<?= $fieldAttributes('guest_name') ?>>
+              <?php if (isset($fieldErrors['guest_name'])): ?><small id="<?= h($fieldErrorId('guest_name')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['guest_name']) ?></small><?php endif; ?>
             </div>
 
             <div class="field">
               <label for="guest_email">E-mail <span aria-hidden="true">*</span></label>
               <input type="email" id="guest_email" name="guest_email" class="form-control" required aria-required="true"
-                     maxlength="255" value="<?= h($formData['guest_email']) ?>" autocomplete="email">
+                     maxlength="255" value="<?= h($formData['guest_email']) ?>" autocomplete="email"<?= $fieldAttributes('guest_email') ?>>
+              <?php if (isset($fieldErrors['guest_email'])): ?><small id="<?= h($fieldErrorId('guest_email')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['guest_email']) ?></small><?php endif; ?>
             </div>
 
             <div class="field">
               <label for="guest_phone">Telefon <span aria-hidden="true">*</span></label>
               <input type="tel" id="guest_phone" name="guest_phone" class="form-control" required aria-required="true"
-                     maxlength="30" value="<?= h($formData['guest_phone']) ?>" autocomplete="tel">
+                     maxlength="30" value="<?= h($formData['guest_phone']) ?>" autocomplete="tel"<?= $fieldAttributes('guest_phone') ?>>
+              <?php if (isset($fieldErrors['guest_phone'])): ?><small id="<?= h($fieldErrorId('guest_phone')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['guest_phone']) ?></small><?php endif; ?>
             </div>
           </fieldset>
         <?php endif; ?>
@@ -127,7 +157,8 @@
           <div class="field">
             <label for="party_size">Počet osob <span aria-hidden="true">*</span></label>
             <input type="number" id="party_size" name="party_size" class="form-control form-control--compact"
-                   value="<?= (int)$formData['party_size'] ?>" min="1" max="<?= $maxPartySize ?>" required aria-required="true">
+                   value="<?= (int)$formData['party_size'] ?>" min="1" max="<?= $maxPartySize ?>" required aria-required="true"<?= $fieldAttributes('party_size') ?>>
+            <?php if (isset($fieldErrors['party_size'])): ?><small id="<?= h($fieldErrorId('party_size')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['party_size']) ?></small><?php endif; ?>
           </div>
 
           <div class="field">
@@ -143,7 +174,8 @@
             <div class="field">
               <label for="captcha">Kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
               <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
-                     aria-required="true" autocomplete="off" inputmode="numeric">
+                     aria-required="true" autocomplete="off" inputmode="numeric"<?= $fieldAttributes('captcha') ?>>
+              <?php if (isset($fieldErrors['captcha'])): ?><small id="<?= h($fieldErrorId('captcha')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['captcha']) ?></small><?php endif; ?>
             </div>
           </fieldset>
         <?php endif; ?>

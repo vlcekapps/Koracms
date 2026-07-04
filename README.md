@@ -457,7 +457,7 @@ Přihlášení do administrace, veřejné přihlášení i obnovení hesla použ
 
 Veřejný kontakt, food objednávkové poptávky, guest rezervace a Form Builder formuláře poskytují `autocomplete` metadata pro běžná osobní pole. Form Builder používá sdílený helper pro `email`, `tel`, `url`, zjevné jmenné textové pole a organizaci; runtime audit a HTTP integrace hlídají, aby se tato input-purpose metadata z veřejných formulářů neztratila.
 
-Veřejné formuláře, které stále používají matematickou ověřovací otázku proti spamu, zobrazují u chybné odpovědi field-level text s konkrétní opravou: přepočítat příklad a zadat jen číslo. Runtime audit i HTTP integrace hlídají kontakt, newsletter subscribe, odběr vývěsky, Food objednávky a Form Builder.
+Veřejné formuláře, které stále používají matematickou ověřovací otázku proti spamu, zobrazují u chybné odpovědi field-level text s konkrétní opravou: přepočítat příklad a zadat jen číslo. Runtime audit i HTTP integrace hlídají kontakt, newsletter subscribe, odběr vývěsky, Food objednávky, guest rezervace a Form Builder.
 
 Form Builder má stejný pattern i pro vlastní veřejná pole. Povinná textová, výběrová, souhlasová a souborová pole radí konkrétní akci; e-mail radí úplnou adresu ve tvaru `jmeno@example.cz`, URL radí http/https bez přihlašovacích údajů, výběrová pole radí použít jen nabídnutou možnost a upload připomíná povolený typ a velikost u pole. HTTP integrace hlídá required, e-mail, URL, select i upload chybové stavy.
 
