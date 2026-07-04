@@ -1349,6 +1349,17 @@ try {
             $adminCommandIssues[] = 'fallback stránka command centra neobsahuje očekávaný fragment: ' . $adminCommandPageNeedle;
         }
     }
+    $adminCommandLayoutPage = fetchUrl($baseUrl . BASE_URL . '/admin/index.php', $adminCommandSession['cookie'], 0);
+    foreach ([
+        'id="admin-command-open" aria-haspopup="dialog" aria-controls="admin-command-dialog" aria-expanded="false"',
+        'id="admin-command-dialog"',
+        'role="dialog" aria-modal="true" aria-labelledby="admin-command-dialog-title" aria-describedby="admin-command-dialog-description"',
+        'id="admin-command-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"',
+    ] as $adminCommandLayoutNeedle) {
+        if (httpIntegrationStatusCode($adminCommandLayoutPage) !== 200 || !str_contains($adminCommandLayoutPage['body'], $adminCommandLayoutNeedle)) {
+            $adminCommandIssues[] = 'admin layout command dialog neobsahuje očekávaný fragment: ' . $adminCommandLayoutNeedle;
+        }
+    }
 
     $adminCommandJson = fetchUrlWithHeaders(
         $baseUrl . BASE_URL . '/admin/command_search.php?q=blog&limit=10',

@@ -445,7 +445,7 @@ function adminHeader(string $pageTitle): void
        . '    <input type="search" id="admin-command-nav-q" name="q" placeholder="Hledat v administraci" autocomplete="off">' . "\n"
        . '    <div class="admin-command-nav-actions">' . "\n"
        . '      <button type="submit" class="btn btn-muted">Hledat</button>' . "\n"
-       . '      <button type="button" class="btn btn-muted" id="admin-command-open" aria-haspopup="dialog" aria-controls="admin-command-dialog">Paleta <span class="admin-command-shortcut" aria-hidden="true">Ctrl+K</span></button>' . "\n"
+       . '      <button type="button" class="btn btn-muted" id="admin-command-open" aria-haspopup="dialog" aria-controls="admin-command-dialog" aria-expanded="false">Paleta <span class="admin-command-shortcut" aria-hidden="true">Ctrl+K</span></button>' . "\n"
        . '    </div>' . "\n"
        . '  </form>' . "\n";
 

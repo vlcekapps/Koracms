@@ -139,6 +139,7 @@
     lastFocused = document.activeElement;
     overlay.hidden = false;
     dialog.hidden = false;
+    openButton.setAttribute('aria-expanded', 'true');
     document.body.classList.add('admin-command-open');
     if (typeof seed === 'string') {
       input.value = seed;
@@ -151,6 +152,7 @@
   function closeDialog() {
     overlay.hidden = true;
     dialog.hidden = true;
+    openButton.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('admin-command-open');
     status.textContent = '';
     if (activeRequest) {

@@ -12,7 +12,7 @@ Stejný checklist nově odkazuje i na accessibility conformance report v `docs/a
 
 ## Command centrum administrace
 
-Na každé administrační stránce je v hlavní navigaci pole **Hledat v administraci**. Po odeslání otevře běžnou stránku výsledků, takže funguje i bez JavaScriptu. Klávesová zkratka `Ctrl+K` otevře command paletu jako přístupný dialog s vlastním nadpisem, focus trapem, klávesou `Esc` pro zavření a nerušivým live regionem, který oznamuje až stav výsledků, ne každý napsaný znak.
+Na každé administrační stránce je v hlavní navigaci pole **Hledat v administraci**. Po odeslání otevře běžnou stránku výsledků, takže funguje i bez JavaScriptu. Klávesová zkratka `Ctrl+K` otevře command paletu jako přístupný dialog s vlastním nadpisem, stavem `aria-expanded`, focus trapem, klávesou `Esc` pro zavření a nerušivým live regionem, který oznamuje až stav výsledků, ne každý napsaný znak.
 
 Command centrum hledá v administračních obrazovkách, bezpečných rychlých akcích typu `Nový článek`, `Nová stránka`, `Nahrát média` nebo `Nastavení webu` a ve vybraném editovatelném obsahu. Výsledky se vždy filtrují podle role, capability a zapnutých modulů. Vypnutý modul ani obsah mimo oprávnění uživatele se v paletě ani ve fallback výsledcích nezobrazí.
 
