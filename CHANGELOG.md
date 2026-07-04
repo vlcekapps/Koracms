@@ -88,6 +88,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **ACR evidence pro accessible authentication** – po ručním potvrzení auth flow je WCAG/ACR řádek `3.3.8 Accessible Authentication (Minimum)` vedený jako `Supports`; backlog už nechává auth jen jako regresní scénář při budoucích změnách loginu, 2FA, resetu hesla nebo session timeoutů.
 - **Accessible authentication bez matematické CAPTCHA** – veřejná registrace a žádost o obnovu hesla už nevyžadují matematickou ověřovací otázku. Ochranu proti automatizovaným pokusům drží CSRF, rate limiting a honeypot a runtime audit hlídá, aby se kognitivní CAPTCHA do auth flow nevrátila.
 - **Auth autocomplete a textové alerty** – veřejné i administrační přihlášení používá správná `autocomplete` metadata pro správce hesel, nové heslo má `new-password`, 2FA kód `one-time-code` s numeric patternem a standalone admin login/2FA chyby mají text-backed alerty ověřené runtime a HTTP integrací.
 - **JSON import článků a štítků** – import nově obnovuje i vazby článků na štítky, které export už obsahoval, takže přesun obsahu mezi instalacemi neztrácí štítkování článků.

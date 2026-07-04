@@ -7,7 +7,6 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
 | Klávesnice a focus u JS dialogů | 2.1.1, 2.1.2, 2.4.3, 4.1.2 | Command centrum, widget dialog a media/content picker jsou funkčně silné, ale potřebují scénářový průchod bez myši a se čtečkou. | Ručně projít NVDA/Firefox + keyboard-only a doplnit regresní guardrails pro nalezené chyby. |
-| Accessible Authentication | 3.3.8 | Automatizace už hlídá auth bez kognitivní CAPTCHA, honeypot u registrace/reset requestu, `username`/`current-password`/`new-password`, 2FA `one-time-code` s numeric patternem a text-backed admin/2FA alerty. Zbývá ruční posouzení skutečného chování správců hesel, TOTP nabídky, tokenového resetu a screen reader oznámení. | Projít celé auth flow ve Firefox/NVDA a Chrome keyboard-only, ověřit použití správce hesel, TOTP kódu, reset tokenu a chybových stavů bez kognitivního testu. |
 | Kontrast a focus appearance | 1.4.3, 1.4.11, 2.4.7 | Automat hlídá strukturu, ale kontrast musí být změřen pro stavy hover/focus/disabled a theme varianty. | Změřit admin i default theme a zavést kontrastní tokeny nebo auditní seznam barev. |
 | Reflow a mobilní administrace | 1.4.10, 2.4.11, 2.5.8 | Husté tabulky, row actions a dlouhé formuláře mohou být problematické na 320 px a při zoomu. | Projít hlavní admin tabulky při 320 px/400 % zoomu, prioritně media, widgets, statistics a form builder. |
 
@@ -36,3 +35,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 - Pokud oprava vyžaduje nová data, postupuje se end-to-end přes instalaci, migraci, export/import, schema parity a dokumentaci.
 - Pokud se rozhodne, že problém zůstává odpovědností autora obsahu, musí být jasně popsán v dokumentaci.
 - Nový modul nebo větší modulové rozšíření musí před implementací ověřit, zda nezhoršuje některou položku tohoto backlogu. Pokud přidává nový rizikový vzor, například média, captcha/auth flow, dialog, upload, tabulku, časový limit nebo autorem dodávaný obsah, doplní se nová položka backlogu nebo odpovídající řádek ve WCAG matici.
+
+## Uzavřená evidence
+
+- 2026-07-04: `3.3.8 Accessible Authentication (Minimum)` je po automatizovaných guardrailech a ručním potvrzení auth flow vedené jako `Supports`; při změnách loginu, registrace, 2FA, tokenového resetu nebo session timeoutů se ruční scénář z `manual-test-protocol.md` opakuje.
