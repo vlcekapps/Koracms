@@ -500,14 +500,14 @@ adminHeader($pageTitle);
         </p>
         <div>
           <input type="radio" id="missing-category-action-drop" name="missing_category_action" value="drop"
-                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                 <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-description', 'blog-missing-category-help']) ?>
                  <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
           <label for="missing-category-action-drop" class="admin-checkbox-label">Bez kategorie</label>
         </div>
         <?php if ($canCreateTaxonomiesAnywhere): ?>
           <div id="blog-missing-category-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
             <input type="radio" id="missing-category-action-create" name="missing_category_action" value="create"
-                   <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-help']) ?>
+                   <?= adminFieldAttributes('missing_category_action', $err, $fieldErrorMap, ['blog-missing-category-description', 'blog-missing-category-help']) ?>
                    <?= $err === 'missing_category_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
             <label for="missing-category-action-create" class="admin-checkbox-label">Vytvořit chybějící kategorii v cílovém blogu</label>
           </div>
@@ -544,14 +544,14 @@ adminHeader($pageTitle);
         </p>
         <div>
           <input type="radio" id="missing-tags-action-drop" name="missing_tags_action" value="drop"
-                 <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
+                 <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-description', 'blog-missing-tags-help']) ?>
                  <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? '' : ' checked' ?>>
           <label for="missing-tags-action-drop" class="admin-checkbox-label">Bez chybějících štítků</label>
         </div>
         <?php if ($canCreateTaxonomiesAnywhere): ?>
           <div id="blog-missing-tags-create-option"<?= $initialCanCreateTargetTaxonomies ? '' : ' hidden' ?>>
             <input type="radio" id="missing-tags-action-create" name="missing_tags_action" value="create"
-                   <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-help']) ?>
+                   <?= adminFieldAttributes('missing_tags_action', $err, $fieldErrorMap, ['blog-missing-tags-description', 'blog-missing-tags-help']) ?>
                    <?= $err === 'missing_tags_action' && $initialCanCreateTargetTaxonomies ? ' checked' : '' ?>>
             <label for="missing-tags-action-create" class="admin-checkbox-label">Vytvořit chybějící štítky v cílovém blogu</label>
           </div>

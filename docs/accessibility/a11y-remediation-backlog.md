@@ -6,7 +6,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
-| Ruční reflow průchod administrace | 1.4.10, 2.4.11, 2.5.8 | Runtime audit hlídá sdílený mobilní baseline pro admin layout, datové tabulky a komplexní gridy, ale reálný 320 px / 400 % průchod nad daty ještě není potvrzený. | Projít hlavní admin workflow při 320 px/400 % zoomu, prioritně media, widgets, statistics, Form Builder a řádkové akce v tabulkách. |
+| Aktuálně bez otevřeného kritického nálezu | — | Prioritní 320 px reflow průchod hlavních admin obrazovek byl provedený 2026-07-04 a potvrzený browser měřením. | Další kritické nálezy sem přesunout až po ručním průchodu zbylých modulů nebo po regresi. |
 
 ## Střední priorita
 
@@ -14,6 +14,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 |---|---|---|---|
 | Média a titulky | 1.2.1 až 1.2.5 | CMS podporuje embedy, ale neumí systematicky vést autora k přepisům, titulkům a audio description. | Doplnit dokumentaci pro autory a zvážit metadata pro transcript/caption u vlastních video/audio médií. |
 | Kontrast custom/hover/disabled stavů | 1.4.3, 1.4.11, 2.4.7 | Runtime audit měří default/admin/login text, focus, input border a button border tokeny, ale ne všechny custom theme settings, hover/disabled stavy, ikony a progress bary v reálném prohlížeči. | Ručně změřit default i aktivní theme varianty ve Firefox/Chrome a při nálezu doplnit konkrétní CSS token nebo nový auditní pár. |
+| Reflow zbylých hustých admin modulů | 1.4.10, 2.4.11, 2.5.8 | Browser průchod 2026-07-04 pokryl media, widgets, statistics, Form Builder a přehled formulářů. Zbylé dlouhé moduly a méně časté tabulkové obrazovky mohou mít specifické řádkové akce nebo vlastní obsah. | Rozšířit 320 px / 400 % průchod na comments, contact, chat, reservations, food, downloads, gallery, import/export a picker dialogy. |
 | Autocomplete a input purpose | 1.3.5 | Auth flow má automatizovaný guardrail, ale ne všechna další osobní pole mají ověřené `autocomplete`. | Projít kontakt, rezervace, food objednávky a Form Builder šablony. |
 | Text spacing | 1.4.12 | CSS pravděpodobně neblokuje spacing, ale není doložené ručním testem. | Projít veřejné a admin šablony s text spacing bookmarkletem nebo ekvivalentním CSS testem. |
 | Error suggestions | 3.3.3 | Některé validace jen řeknou, že hodnota je chybná, ale nemusí poradit opravu. | Udělat copy pass nad chybami formulářů a doplnit konkrétní návrhy. |
@@ -37,7 +38,8 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 ## Uzavřená evidence
 
-- 2026-07-04: `1.4.10 Reflow`, `2.4.11 Focus Not Obscured` a `2.5.8 Target Size` mají nový runtime `admin_mobile_reflow_guardrails`, který hlídá stackování admin navigace na mobilní šířce, lokální scroll datových tabulek, one-column collapse media/Form Builder/statistics gridů, flexibilní action rows a minimální rozměr řadicích ovladačů; zbylá práce je ruční průchod 320 px / 400 % s reálnými daty.
+- 2026-07-04: Prioritní browser průchod admin reflow při 320 px ověřil media, widgets, statistics, Form Builder a přehled formulářů. Nalezený globální horizontální scroll ve statistikách a přehledu formulářů byl opraven přes `.table-responsive`, posílené CSS containment, cache-busting `admin/assets/layout.css` a wrapper skrytých datových tabulek grafů; runtime `admin_mobile_reflow_guardrails` teď hlídá i forms overview a cache-busting.
+- 2026-07-04: `1.4.10 Reflow`, `2.4.11 Focus Not Obscured` a `2.5.8 Target Size` mají runtime `admin_mobile_reflow_guardrails`, který hlídá stackování admin navigace na mobilní šířce, lokální scroll datových tabulek, one-column collapse media/Form Builder/statistics gridů, flexibilní action rows a minimální rozměr řadicích ovladačů; po browser průchodu prioritních stránek zůstává práce na širším průchodu dalších hustých modulů.
 - 2026-07-04: `1.4.3 Contrast (Minimum)`, `1.4.11 Non-text Contrast` a `2.4.7 Focus Visible` mají nový runtime `contrast_focus_guardrails`, který měří default/admin/login textové páry, stavové hlášky, focus tokeny, skip link a hranice inputů/tlačítek; zbylá práce je ruční měření custom theme, hover/disabled, ikon a progress stavů.
 - 2026-07-04: `3.3.8 Accessible Authentication (Minimum)` je po automatizovaných guardrailech a ručním potvrzení auth flow vedené jako `Supports`; při změnách loginu, registrace, 2FA, tokenového resetu nebo session timeoutů se ruční scénář z `manual-test-protocol.md` opakuje.
 - 2026-07-04: command centrum, widget dialog a content/media picker prošly ručním NVDA/keyboard-only ověřením bez regrese; při změnách JS dialogů se znovu ověřuje Escape, Tab focus smyčka, návrat fokusu a oznamovaný stav ovládacích prvků.

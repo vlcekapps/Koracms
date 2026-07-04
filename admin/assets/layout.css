@@ -480,7 +480,7 @@ th { background: var(--admin-th-bg); }
 .admin-input-wide { max-width:600px; }
 .field-help--flush { margin-top:0; }
 .table-note { margin-top:.75rem; color:var(--admin-field-help); }
-.table-responsive { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.table-responsive { width:100%; min-width:0; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; contain:layout paint inline-size; }
 .text-pending { color:var(--admin-pending-text); }
 .error { color: var(--admin-error); }
 .success { color: var(--admin-success); }
@@ -523,6 +523,7 @@ textarea { min-height: 200px; }
 .field-help code { font-size:.95em; }
 input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border:2px solid var(--admin-invalid-border); }
 .sr-only, .visually-hidden { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
+table.sr-only { table-layout:fixed; min-width:0!important; max-width:1px; }
 .honeypot-field { position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden; }
 :focus-visible { outline: 3px solid var(--admin-focus); outline-offset: 2px; }
 nav a:focus-visible { outline-color: var(--admin-focus-nav); }
@@ -566,6 +567,6 @@ nav a:focus-visible { outline-color: var(--admin-focus-nav); }
 .seo-preview__desc { font-size:.85rem; color:var(--admin-text-muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .seo-preview__counts { color:var(--admin-text-muted); margin-top:.4rem; display:block; }
 .admin-footer { text-align:center; padding:.5rem; font-size:.75rem; color:var(--admin-footer-text); }
-@media (max-width: 720px) { body { display:block; min-height:100vh; } nav { width:100%; padding:.75rem; } nav a, nav summary, nav .nav-summary { min-height:2.75rem; padding:.6rem .45rem; } main { min-width:0; padding:1rem; overflow-x:auto; -webkit-overflow-scrolling:touch; } table:not(.sr-only) { min-width:40rem; } .table-responsive > table:not(.sr-only) { min-width:40rem; } .button-row { align-items:stretch; } .button-row > .btn, .button-row > form { flex:1 1 12rem; } .button-row > form { display:flex; } .button-row > form > .btn { width:100%; } .media-edit-grid, .form-builder-action-grid, .form-builder-field-grid, .form-builder-field-grid--secondary, .form-builder-condition-grid, .form-submission-grid { grid-template-columns:1fr; } .media-info-list { grid-template-columns:1fr; } .settings-input-short, .admin-input-sm, .admin-input-compact, .admin-select-sm, .admin-select-md, .admin-select-lg, .res-booking-input-auto, .res-resource-inline-control { width:100%; min-width:0; max-width:100%; } .widget-sort-item__body, .admin-sort-item__body { min-width:0; } .admin-stat-bar { grid-template-columns:1fr; gap:.25rem; } .admin-stat-bar__value { text-align:left; } }
+@media (max-width: 720px) { html { overflow-x:hidden; } body { display:block; min-height:100vh; overflow-x:hidden; } nav { width:100%; padding:.75rem; } nav a, nav summary, nav .nav-summary { min-height:2.75rem; padding:.6rem .45rem; } main { min-width:0; padding:1rem; overflow-x:auto; -webkit-overflow-scrolling:touch; } table:not(.sr-only) { min-width:40rem; } .table-responsive > table:not(.sr-only) { min-width:40rem; } .button-row { align-items:stretch; } .button-row > .btn, .button-row > form { flex:1 1 12rem; } .button-row > form { display:flex; } .button-row > form > .btn { width:100%; } .media-edit-grid, .form-builder-action-grid, .form-builder-field-grid, .form-builder-field-grid--secondary, .form-builder-condition-grid, .form-submission-grid { grid-template-columns:1fr; } .media-info-list { grid-template-columns:1fr; } .settings-input-short, .admin-input-sm, .admin-input-compact, .admin-select-sm, .admin-select-md, .admin-select-lg, .res-booking-input-auto, .res-resource-inline-control { width:100%; min-width:0; max-width:100%; } .widget-sort-item__body, .admin-sort-item__body { min-width:0; } .admin-stat-bar { grid-template-columns:1fr; gap:.25rem; } .admin-stat-bar__value { text-align:left; } }
 @media (max-width: 720px) { .admin-command-dialog { top:1rem; max-height:calc(100vh - 2rem); } .admin-command-dialog__header, .admin-command-result { flex-direction:column; } .admin-command-dialog__search { grid-template-columns:1fr; } .admin-command-result__pin { align-self:flex-start; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important; } }

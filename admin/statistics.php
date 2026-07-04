@@ -467,15 +467,17 @@ adminHeader('Statistiky');
         </li>
       <?php endforeach; ?>
     </ol>
-    <table class="sr-only">
-      <caption>Denní návštěvnost za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-      <thead><tr><th scope="col">Den</th><th scope="col">Zobrazení</th><th scope="col">Unikátní</th></tr></thead>
-      <tbody>
-      <?php foreach ($chartDays as $d): ?>
-        <tr><td><?= h($d['label']) ?></td><td><?= $d['views'] ?></td><td><?= $d['uv'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="sr-only">
+      <table>
+        <caption>Denní návštěvnost za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+        <thead><tr><th scope="col">Den</th><th scope="col">Zobrazení</th><th scope="col">Unikátní</th></tr></thead>
+        <tbody>
+        <?php foreach ($chartDays as $d): ?>
+          <tr><td><?= h($d['label']) ?></td><td><?= $d['views'] ?></td><td><?= $d['uv'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </figure>
   <?php endif; ?>
 
@@ -486,27 +488,29 @@ adminHeader('Statistiky');
   <?php if ($topReferrers === []): ?>
     <p>Za zvolené období nejsou k dispozici žádné externí odkazující stránky.</p>
   <?php else: ?>
-    <table aria-labelledby="sec-referrers">
-      <caption class="sr-only">Externí odkazující stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-      <thead>
-        <tr>
-          <th scope="col">Odkazující stránka</th>
-          <th scope="col">Návštěvy</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($topReferrers as $referrer): ?>
+    <div class="table-responsive">
+      <table aria-labelledby="sec-referrers">
+        <caption class="sr-only">Externí odkazující stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+        <thead>
           <tr>
-            <td>
-              <a href="<?= h($referrer['url']) ?>" target="_blank" rel="noopener noreferrer">
-                <?= h($referrer['label']) ?><?= newWindowLinkSrOnlySuffix() ?>
-              </a>
-            </td>
-            <td><?= $fmt((int)$referrer['visits']) ?></td>
+            <th scope="col">Odkazující stránka</th>
+            <th scope="col">Návštěvy</th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php foreach ($topReferrers as $referrer): ?>
+            <tr>
+              <td>
+                <a href="<?= h($referrer['url']) ?>" target="_blank" rel="noopener noreferrer">
+                  <?= h($referrer['label']) ?><?= newWindowLinkSrOnlySuffix() ?>
+                </a>
+              </td>
+              <td><?= $fmt((int)$referrer['visits']) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   <?php endif; ?>
 </section>
 
@@ -525,85 +529,91 @@ adminHeader('Statistiky');
     <p>Za zvolené období nejsou k dispozici obsahové trendy.</p>
   <?php else: ?>
     <h3 id="sec-content-modules">Výkon podle modulů</h3>
-    <table aria-labelledby="sec-content-modules">
-      <caption class="sr-only">Souhrn výkonu obsahu podle modulů za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-      <thead>
-        <tr>
-          <th scope="col">Modul</th>
-          <th scope="col">Obsahů</th>
-          <th scope="col">Zobrazení</th>
-          <th scope="col">Unikátní návštěvníci</th>
-          <th scope="col">Podíl zobrazení</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($contentModuleSummary as $moduleSummary): ?>
+    <div class="table-responsive">
+      <table aria-labelledby="sec-content-modules">
+        <caption class="sr-only">Souhrn výkonu obsahu podle modulů za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+        <thead>
           <tr>
-            <td><?= h((string)$moduleSummary['module_label']) ?></td>
-            <td><?= $fmt((int)$moduleSummary['items']) ?></td>
-            <td><?= $fmt((int)$moduleSummary['views']) ?></td>
-            <td><?= $fmt((int)$moduleSummary['unique_visitors']) ?></td>
-            <td><?= $contentTotalTrendViews > 0 ? h(number_format(((int)$moduleSummary['views'] / $contentTotalTrendViews) * 100, 1, ',', "\u{00a0}") . "\u{00a0}%") : '0&nbsp;%' ?></td>
+            <th scope="col">Modul</th>
+            <th scope="col">Obsahů</th>
+            <th scope="col">Zobrazení</th>
+            <th scope="col">Unikátní návštěvníci</th>
+            <th scope="col">Podíl zobrazení</th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php foreach ($contentModuleSummary as $moduleSummary): ?>
+            <tr>
+              <td><?= h((string)$moduleSummary['module_label']) ?></td>
+              <td><?= $fmt((int)$moduleSummary['items']) ?></td>
+              <td><?= $fmt((int)$moduleSummary['views']) ?></td>
+              <td><?= $fmt((int)$moduleSummary['unique_visitors']) ?></td>
+              <td><?= $contentTotalTrendViews > 0 ? h(number_format(((int)$moduleSummary['views'] / $contentTotalTrendViews) * 100, 1, ',', "\u{00a0}") . "\u{00a0}%") : '0&nbsp;%' ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
 
     <h3 id="sec-content-top">Nejčtenější obsah za období</h3>
-    <table aria-labelledby="sec-content-top">
-      <caption class="sr-only">Nejčtenější obsah za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Obsah</th>
-          <th scope="col">Modul</th>
-          <th scope="col">Zobrazení</th>
-          <th scope="col">Unikátní</th>
-          <th scope="col">Proti předchozímu období</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($contentTopRows as $contentIndex => $trendRow): ?>
+    <div class="table-responsive">
+      <table aria-labelledby="sec-content-top">
+        <caption class="sr-only">Nejčtenější obsah za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+        <thead>
           <tr>
-            <td><?= $contentIndex + 1 ?></td>
-            <td><a href="<?= h((string)$trendRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$trendRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
-            <td><?= h((string)$trendRow['module_label']) ?></td>
-            <td><?= $fmt((int)$trendRow['views']) ?></td>
-            <td><?= $fmt((int)$trendRow['unique_visitors']) ?></td>
-            <td>
-              <?= ((int)$trendRow['delta_views'] >= 0 ? '+' : '') . $fmt((int)$trendRow['delta_views']) ?>
-              <span class="field-help">(dříve <?= $fmt((int)$trendRow['previous_views']) ?>)</span>
-            </td>
+            <th scope="col">#</th>
+            <th scope="col">Obsah</th>
+            <th scope="col">Modul</th>
+            <th scope="col">Zobrazení</th>
+            <th scope="col">Unikátní</th>
+            <th scope="col">Proti předchozímu období</th>
           </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <?php foreach ($contentTopRows as $contentIndex => $trendRow): ?>
+            <tr>
+              <td><?= $contentIndex + 1 ?></td>
+              <td><a href="<?= h((string)$trendRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$trendRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
+              <td><?= h((string)$trendRow['module_label']) ?></td>
+              <td><?= $fmt((int)$trendRow['views']) ?></td>
+              <td><?= $fmt((int)$trendRow['unique_visitors']) ?></td>
+              <td>
+                <?= ((int)$trendRow['delta_views'] >= 0 ? '+' : '') . $fmt((int)$trendRow['delta_views']) ?>
+                <span class="field-help">(dříve <?= $fmt((int)$trendRow['previous_views']) ?>)</span>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
 
     <h3 id="sec-content-growth">Největší nárůsty</h3>
     <?php if ($contentGrowthRows === []): ?>
       <p>Za zvolené období žádný obsah nerostl proti předchozímu stejně dlouhému období.</p>
     <?php else: ?>
-      <table aria-labelledby="sec-content-growth">
-        <caption class="sr-only">Obsah s největším nárůstem za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-        <thead>
-          <tr>
-            <th scope="col">Obsah</th>
-            <th scope="col">Modul</th>
-            <th scope="col">Zobrazení</th>
-            <th scope="col">Nárůst</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($contentGrowthRows as $growthRow): ?>
+      <div class="table-responsive">
+        <table aria-labelledby="sec-content-growth">
+          <caption class="sr-only">Obsah s největším nárůstem za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+          <thead>
             <tr>
-              <td><a href="<?= h((string)$growthRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$growthRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
-              <td><?= h((string)$growthRow['module_label']) ?></td>
-              <td><?= $fmt((int)$growthRow['views']) ?></td>
-              <td>+<?= $fmt((int)$growthRow['delta_views']) ?></td>
+              <th scope="col">Obsah</th>
+              <th scope="col">Modul</th>
+              <th scope="col">Zobrazení</th>
+              <th scope="col">Nárůst</th>
             </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <?php foreach ($contentGrowthRows as $growthRow): ?>
+              <tr>
+                <td><a href="<?= h((string)$growthRow['path']) ?>" target="_blank" rel="noopener noreferrer"><?= h((string)$growthRow['title']) ?><?= newWindowLinkSrOnlySuffix() ?></a></td>
+                <td><?= h((string)$growthRow['module_label']) ?></td>
+                <td><?= $fmt((int)$growthRow['views']) ?></td>
+                <td>+<?= $fmt((int)$growthRow['delta_views']) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
     <?php endif; ?>
   <?php endif; ?>
 </section>
@@ -612,20 +622,22 @@ adminHeader('Statistiky');
 <?php if (isModuleEnabled('blog') && !empty($topArticles)): ?>
 <section aria-labelledby="sec-articles">
   <h2 id="sec-articles">Nejčtenější články</h2>
-  <table>
-    <thead>
-      <tr><th scope="col">#</th><th scope="col">Článek</th><th scope="col">Zobrazení</th></tr>
-    </thead>
-    <tbody>
-    <?php foreach ($topArticles as $i => $a): ?>
-      <tr>
-        <td><?= $i + 1 ?></td>
-        <td><a href="blog_form.php?id=<?= (int)$a['id'] ?>"><?= h($a['title']) ?></a></td>
-        <td><?= $fmt((int)$a['view_count']) ?></td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr><th scope="col">#</th><th scope="col">Článek</th><th scope="col">Zobrazení</th></tr>
+      </thead>
+      <tbody>
+      <?php foreach ($topArticles as $i => $a): ?>
+        <tr>
+          <td><?= $i + 1 ?></td>
+          <td><a href="blog_form.php?id=<?= (int)$a['id'] ?>"><?= h($a['title']) ?></a></td>
+          <td><?= $fmt((int)$a['view_count']) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </section>
 <?php endif; ?>
 
@@ -634,36 +646,38 @@ adminHeader('Statistiky');
 <section aria-labelledby="sec-pages">
   <h2 id="sec-pages">Nejčtenější statické stránky</h2>
   <p class="field-help">Součet vychází ze zobrazení za zvolené období. Zahrnuje globální statické stránky i statické stránky přiřazené ke konkrétním blogům.</p>
-  <table>
-    <caption class="sr-only">Nejčtenější statické stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
-    <thead>
-      <tr>
-        <th scope="col">#</th>
-        <th scope="col">Stránka</th>
-        <th scope="col">Zařazení</th>
-        <th scope="col">Zobrazení</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($topPages as $pageIndex => $pageRow):
-        $isBlogPage = !empty($pageRow['blog_id']);
-        $pageContext = $isBlogPage
-            ? 'Stránka blogu: ' . (string)($pageRow['blog_name'] ?? '')
-            : 'Globální stránka';
-        $publicPath = pagePublicPath($pageRow);
-        ?>
-      <tr>
-        <td><?= $pageIndex + 1 ?></td>
-        <td>
-          <a href="page_form.php?id=<?= (int)$pageRow['id'] ?>"><?= h((string)$pageRow['title']) ?></a>
-          <br><small><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejně<?= newWindowLinkSrOnlySuffix() ?></a></small>
-        </td>
-        <td><?= h($pageContext) ?></td>
-        <td><?= $fmt((int)$pageRow['views']) ?></td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table>
+      <caption class="sr-only">Nejčtenější statické stránky za období <?= h($dateFrom) ?> – <?= h($dateTo) ?></caption>
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Stránka</th>
+          <th scope="col">Zařazení</th>
+          <th scope="col">Zobrazení</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($topPages as $pageIndex => $pageRow):
+          $isBlogPage = !empty($pageRow['blog_id']);
+          $pageContext = $isBlogPage
+              ? 'Stránka blogu: ' . (string)($pageRow['blog_name'] ?? '')
+              : 'Globální stránka';
+          $publicPath = pagePublicPath($pageRow);
+          ?>
+        <tr>
+          <td><?= $pageIndex + 1 ?></td>
+          <td>
+            <a href="page_form.php?id=<?= (int)$pageRow['id'] ?>"><?= h((string)$pageRow['title']) ?></a>
+            <br><small><a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejně<?= newWindowLinkSrOnlySuffix() ?></a></small>
+          </td>
+          <td><?= h($pageContext) ?></td>
+          <td><?= $fmt((int)$pageRow['views']) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </section>
 <?php endif; ?>
 
@@ -674,14 +688,16 @@ adminHeader('Statistiky');
 
   <?php if (!empty($resStatus)): ?>
   <h3>Stav rezervací</h3>
-  <table>
-    <thead><tr><th scope="col">Stav</th><th scope="col">Počet</th></tr></thead>
-    <tbody>
-    <?php foreach ($resStatus as $r): ?>
-      <tr><td><?= h($statusLabels[$r['status']] ?? $r['status']) ?></td><td><?= $fmt((int)$r['cnt']) ?></td></tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table>
+      <thead><tr><th scope="col">Stav</th><th scope="col">Počet</th></tr></thead>
+      <tbody>
+      <?php foreach ($resStatus as $r): ?>
+        <tr><td><?= h($statusLabels[$r['status']] ?? $r['status']) ?></td><td><?= $fmt((int)$r['cnt']) ?></td></tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
   <?php endif; ?>
 
   <?php if (!empty($resMonthly)):
@@ -710,28 +726,32 @@ adminHeader('Statistiky');
         </li>
       <?php endforeach; ?>
     </ol>
-    <table class="sr-only">
-      <caption>Rezervace za posledních 6 měsíců</caption>
-      <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
-      <tbody>
-      <?php foreach ($resMonthly as $r): ?>
-        <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="sr-only">
+      <table>
+        <caption>Rezervace za posledních 6 měsíců</caption>
+        <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
+        <tbody>
+        <?php foreach ($resMonthly as $r): ?>
+          <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </figure>
   <?php endif; ?>
 
   <?php if (!empty($resTopRes)): ?>
   <h3>Nejžádanější zdroje</h3>
-  <table>
-    <thead><tr><th scope="col">Zdroj</th><th scope="col">Rezervací</th></tr></thead>
-    <tbody>
-    <?php foreach ($resTopRes as $r): ?>
-      <tr><td><?= h($r['name']) ?></td><td><?= $fmt((int)$r['cnt']) ?></td></tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table>
+      <thead><tr><th scope="col">Zdroj</th><th scope="col">Rezervací</th></tr></thead>
+      <tbody>
+      <?php foreach ($resTopRes as $r): ?>
+        <tr><td><?= h($r['name']) ?></td><td><?= $fmt((int)$r['cnt']) ?></td></tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
   <?php endif; ?>
 </section>
 <?php endif; ?>
@@ -769,15 +789,17 @@ adminHeader('Statistiky');
         </li>
       <?php endforeach; ?>
     </ol>
-    <table class="sr-only">
-      <caption>Noví odběratelé za posledních 6 měsíců</caption>
-      <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
-      <tbody>
-      <?php foreach ($nlMonthly as $r): ?>
-        <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="sr-only">
+      <table>
+        <caption>Noví odběratelé za posledních 6 měsíců</caption>
+        <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
+        <tbody>
+        <?php foreach ($nlMonthly as $r): ?>
+          <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </figure>
   <?php endif; ?>
 </section>
@@ -816,15 +838,17 @@ adminHeader('Statistiky');
         </li>
       <?php endforeach; ?>
     </ol>
-    <table class="sr-only">
-      <caption>Komentáře za posledních 6 měsíců</caption>
-      <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
-      <tbody>
-      <?php foreach ($commentStats as $r): ?>
-        <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="sr-only">
+      <table>
+        <caption>Komentáře za posledních 6 měsíců</caption>
+        <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
+        <tbody>
+        <?php foreach ($commentStats as $r): ?>
+          <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </figure>
   <?php endif; ?>
 </section>
@@ -859,15 +883,17 @@ adminHeader('Statistiky');
         </li>
       <?php endforeach; ?>
     </ol>
-    <table class="sr-only">
-      <caption>Kontaktní zprávy za posledních 6 měsíců</caption>
-      <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
-      <tbody>
-      <?php foreach ($contactStats as $r): ?>
-        <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
+    <div class="sr-only">
+      <table>
+        <caption>Kontaktní zprávy za posledních 6 měsíců</caption>
+        <thead><tr><th scope="col">Měsíc</th><th scope="col">Počet</th></tr></thead>
+        <tbody>
+        <?php foreach ($contactStats as $r): ?>
+          <tr><td><?= h($fmtMonth($r['m'])) ?></td><td><?= $r['cnt'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
   </figure>
 </section>
 <?php endif; ?>

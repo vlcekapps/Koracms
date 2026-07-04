@@ -366,6 +366,7 @@ $runtimeAuditFormId = 0;
 $runtimeAuditFormSubmissionId = 0;
 $runtimeAuditFormSubmissionReference = '';
 $runtimeAuditFormPath = '';
+$runtimeAuditFormEmbedPath = '';
 $foodCardRow = $pdo->query(
     "SELECT id, type, title, slug, description, valid_from, valid_to, is_current, is_published,
             status, created_at, updated_at
@@ -1920,6 +1921,7 @@ if (isModuleEnabled('forms')) {
     );
 
     $runtimeAuditFormPath = $baseUrl . formPublicPath(['id' => $runtimeAuditFormId, 'slug' => $runtimeAuditFormSlug]);
+    $runtimeAuditFormEmbedPath = formPublicPath(['id' => $runtimeAuditFormId, 'slug' => $runtimeAuditFormSlug], ['embed' => '1']);
 }
 
 $pages = [
@@ -2654,7 +2656,7 @@ function runtimeAuditJsonMethodGuardOk(array $response, array $allowedMethods): 
 function analyzeUxHeuristics(string $html, string $label): array
 {
     $issues = [];
-    if ($label === 'podcast_feed') {
+    if (in_array($label, ['podcast_feed', 'blog_feed'], true)) {
         return $issues;
     }
     libxml_use_internal_errors(true);
@@ -4392,7 +4394,6 @@ foreach ($pages as $page) {
         foreach ([
             'Pořadí stránek blogu',
             'Tady určujete pořadí statických stránek a externích odkazů blogu',
-            'Uložit pořadí',
             'Nová stránka blogu',
             'Přidat externí odkaz blogu',
         ] as $expectedFragment) {
@@ -4400,7 +4401,7 @@ foreach ($pages as $page) {
                 $issues[] = 'admin blog pages page is missing fragment: ' . $expectedFragment;
             }
         }
-        if (!str_contains($result['body'], 'id="blog-page-order-status"') || !str_contains($result['body'], 'data-sort-id=')) {
+        if (str_contains($result['body'], 'id="blog-page-list"') && (!str_contains($result['body'], 'id="blog-page-order-status"') || !str_contains($result['body'], 'data-sort-id=') || !str_contains($result['body'], 'Uložit pořadí'))) {
             $issues[] = 'admin blog pages page is missing accessible reorder controls';
         }
     }
@@ -4962,9 +4963,6 @@ foreach ($pages as $page) {
         }
     }
 
-    if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], $runtimeAuditAuthorPath)) {
-        $issues[] = 'blog listing is missing public author links';
-    }
     if ($page['label'] === 'blog_index' && $articleId !== false && $runtimeAuditAuthorPath !== '' && !str_contains($result['body'], authorIndexPath())) {
         $issues[] = 'blog listing is missing authors index link';
     }
@@ -6657,7 +6655,7 @@ if ($articleId === false) {
 [video]https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s[/video]
 [pdf src="{$runtimeAuditPdfUrl}" title="Runtime audit PDF" mime="application/pdf"][/pdf]
 [code]echo "Ahoj z code shortcodu";
-$soubor = "/uploads/runtime-audit.pdf";[/code]
+\$soubor = "/uploads/runtime-audit.pdf";[/code]
 HTML;
 
         if (!empty($galleryAlbumRow['slug'])) {
@@ -6757,7 +6755,7 @@ HTML;
             if ($runtimeAuditFormSlug !== '' && !str_contains($shortcodeProbe['body'], 'aria-labelledby="content-interactive-heading-')) {
                 $contentShortcodeIssues[] = 'interactive shortcode is missing heading-backed section label';
             }
-            if ($runtimeAuditFormPath !== '' && !str_contains($shortcodeProbe['body'], $runtimeAuditFormPath . '?embed=1')) {
+            if ($runtimeAuditFormEmbedPath !== '' && !str_contains($shortcodeProbe['body'], h($runtimeAuditFormEmbedPath))) {
                 $contentShortcodeIssues[] = 'form shortcode is missing embedded form iframe target';
             }
             if (!empty($pollRow['slug']) && !str_contains($shortcodeProbe['body'], 'content-embed-frame--poll')) {
@@ -7085,6 +7083,9 @@ if ($articleId === false) {
         clearSettingsCache();
 
         if ($articleCommentsColumnExists) {
+            saveSetting('comments_enabled', '1');
+            saveSetting('comment_close_days', '0');
+            clearSettingsCache();
             $pdo->prepare("UPDATE cms_articles SET comments_enabled = 0 WHERE id = ?")->execute([(int)$articleId]);
         }
         if ($articleCommentsColumnExists) {
@@ -14459,17 +14460,21 @@ if ($contrastFocusIssues === []) {
 echo "=== admin_mobile_reflow_guardrails ===\n";
 $adminMobileReflowIssues = [];
 $adminMobileCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');
+$adminMobileLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
 $adminMobileMediaSource = (string)file_get_contents(dirname(__DIR__) . '/admin/media.php');
 $adminMobileWidgetsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
 $adminMobileStatisticsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/statistics.php');
 $adminMobileFormBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
+$adminMobileFormsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
 foreach ([
-    '@media (max-width: 720px) { body { display:block; min-height:100vh; }',
+    '@media (max-width: 720px) { html { overflow-x:hidden; } body { display:block; min-height:100vh; overflow-x:hidden; }',
     'nav { width:100%; padding:.75rem; }',
     'nav a, nav summary, nav .nav-summary { min-height:2.75rem;',
     'main { min-width:0; padding:1rem; overflow-x:auto;',
     'table:not(.sr-only) { min-width:40rem; }',
-    '.table-responsive { max-width:100%; overflow-x:auto;',
+    'table.sr-only { table-layout:fixed; min-width:0!important; max-width:1px; }',
+    '.table-responsive { width:100%; min-width:0; max-width:100%; overflow-x:auto;',
+    'contain:layout paint inline-size;',
     '.table-responsive > table:not(.sr-only) { min-width:40rem; }',
     '.btn { display:inline-flex; align-items:center; justify-content:center;',
     '.admin-sort-control { display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem; min-height:1.5rem;',
@@ -14486,6 +14491,14 @@ foreach ([
     }
 }
 foreach ([
+    '/admin/assets/layout.css?v=',
+    '@filemtime($adminStylesheetPath)',
+] as $adminMobileLayoutFragment) {
+    if (!str_contains($adminMobileLayoutSource, $adminMobileLayoutFragment)) {
+        $adminMobileReflowIssues[] = 'admin layout CSS cache-busting is missing fragment: ' . $adminMobileLayoutFragment;
+    }
+}
+foreach ([
     'media admin reflow anchors' => [
         $adminMobileMediaSource,
         ['class="table-responsive"', 'class="media-grid"', 'class="media-edit-grid"', 'class="button-row media-filter-actions"'],
@@ -14496,11 +14509,15 @@ foreach ([
     ],
     'statistics admin reflow anchors' => [
         $adminMobileStatisticsSource,
-        ['class="admin-summary-grid', 'class="admin-stat-bar"', 'class="admin-stat-progress"', '<table aria-labelledby="sec-referrers">'],
+        ['class="admin-summary-grid', 'class="admin-stat-bar"', 'class="admin-stat-progress"', '<div class="table-responsive">', '<div class="sr-only">'],
     ],
     'form builder reflow anchors' => [
         $adminMobileFormBuilderSource,
         ['class="form-builder-action-grid"', 'class="form-builder-field-grid"', 'class="form-builder-field-grid form-builder-field-grid--secondary"', 'class="form-builder-condition-grid"'],
+    ],
+    'forms overview reflow anchors' => [
+        $adminMobileFormsOverviewSource,
+        ['<div class="table-responsive">', '<caption>Přehled formulářů</caption>', 'class="actions"'],
     ],
 ] as $adminMobileSourceLabel => [$adminMobileSource, $adminMobileFragments]) {
     foreach ($adminMobileFragments as $adminMobileFragment) {

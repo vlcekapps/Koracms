@@ -87,59 +87,61 @@ adminHeader('Formuláře');
     <p>Zatím tu nejsou žádné formuláře. <a href="form_form.php">Vytvořit první formulář</a>, <a href="form_form.php?preset=issue_report">připravit formulář pro nahlášení chyby</a> nebo sáhnout po některé z připravených šablon.</p>
   <?php endif; ?>
 <?php else: ?>
-  <table>
-    <caption>Přehled formulářů</caption>
-    <thead>
-      <tr>
-        <th scope="col">Název</th>
-        <th scope="col">Pole</th>
-        <th scope="col">Odpovědi</th>
-        <th scope="col">Otevřené</th>
-        <th scope="col">Stav</th>
-        <th scope="col">Akce</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($forms as $form): ?>
-      <tr>
-        <td>
-          <strong><?= h((string)$form['title']) ?></strong><br>
-          <small class="table-meta">/forms/<?= h((string)$form['slug']) ?></small>
-        </td>
-        <td><?= (int)$form['field_count'] ?></td>
-        <td><?= (int)$form['submission_count'] ?></td>
-        <td>
-          <?php if ((int)$form['open_submission_count'] > 0): ?>
-            <strong><?= (int)$form['open_submission_count'] ?></strong>
-            <?php if ((int)$form['new_submission_count'] > 0): ?>
-              <br><small class="text-pending">nové: <?= (int)$form['new_submission_count'] ?></small>
+  <div class="table-responsive">
+    <table>
+      <caption>Přehled formulářů</caption>
+      <thead>
+        <tr>
+          <th scope="col">Název</th>
+          <th scope="col">Pole</th>
+          <th scope="col">Odpovědi</th>
+          <th scope="col">Otevřené</th>
+          <th scope="col">Stav</th>
+          <th scope="col">Akce</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($forms as $form): ?>
+        <tr>
+          <td>
+            <strong><?= h((string)$form['title']) ?></strong><br>
+            <small class="table-meta">/forms/<?= h((string)$form['slug']) ?></small>
+          </td>
+          <td><?= (int)$form['field_count'] ?></td>
+          <td><?= (int)$form['submission_count'] ?></td>
+          <td>
+            <?php if ((int)$form['open_submission_count'] > 0): ?>
+              <strong><?= (int)$form['open_submission_count'] ?></strong>
+              <?php if ((int)$form['new_submission_count'] > 0): ?>
+                <br><small class="text-pending">nové: <?= (int)$form['new_submission_count'] ?></small>
+              <?php endif; ?>
+            <?php else: ?>
+              0
             <?php endif; ?>
-          <?php else: ?>
-            0
-          <?php endif; ?>
-        </td>
-        <td>
-          <?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
-          <br><small class="table-meta"><?= (int)($form['show_in_nav'] ?? 0) === 1 ? 'v navigaci webu' : 'mimo navigaci' ?></small>
-        </td>
-        <td class="actions">
-          <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>
-          <?php if ((int)$form['submission_count'] > 0): ?>
-            <a href="form_submissions.php?id=<?= (int)$form['id'] ?>">Odpovědi (<?= (int)$form['submission_count'] ?>)</a>
-          <?php endif; ?>
-          <a href="<?= h(formPublicPath($form)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
-          <form action="form_delete.php" method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
-            <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat formulář včetně všech odpovědí?">Smazat</button>
-          </form>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
+          </td>
+          <td>
+            <?= (int)$form['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
+            <br><small class="table-meta"><?= (int)($form['show_in_nav'] ?? 0) === 1 ? 'v navigaci webu' : 'mimo navigaci' ?></small>
+          </td>
+          <td class="actions">
+            <a href="form_form.php?id=<?= (int)$form['id'] ?>" class="btn">Upravit</a>
+            <?php if ((int)$form['submission_count'] > 0): ?>
+              <a href="form_submissions.php?id=<?= (int)$form['id'] ?>">Odpovědi (<?= (int)$form['submission_count'] ?>)</a>
+            <?php endif; ?>
+            <a href="<?= h(formPublicPath($form)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+            <form action="form_delete.php" method="post">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
+              <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat formulář včetně všech odpovědí?">Smazat</button>
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 <?php endif; ?>
 
 <?php adminFooter(); ?>

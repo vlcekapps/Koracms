@@ -90,6 +90,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **Browser ověřený reflow administrace** – 320px průchod media, widgets, statistics, Form Builderu a přehledu formulářů odhalil globální horizontální scroll ve statistikách a formulářích; tabulky těchto obrazovek teď používají responzivní `.table-responsive` wrappery, skryté datové tabulky grafů jsou schované přes wrapper a sdílený admin stylesheet používá silnější containment i cache-busting přes `filemtime()`.
+- **ARIA popisy v blog formuláři** – radio volby pro ztracené kategorie a štítky při přesunu článku teď přes `aria-describedby` odkazují i na existující situační popis, takže audit ověřuje textové napojení chybových a pomocných stavů bez prázdných referencí.
 - **ACR evidence pro dialog focus** – command centrum, widget dialog a content/media picker jsou po ručním keyboard-only/NVDA potvrzení vedené jako ověřené bez regrese; backlog už nechává dialogy jen jako regresní scénář při budoucích změnách JS.
 - **Dialog focus guardrails** – command centrum oznamuje otevřený stav přes `aria-expanded` a runtime/HTTP audity nově hlídají Escape, Tab focus smyčku a návrat fokusu u command centra, widget dialogu a content/media pickeru.
 - **ACR evidence pro accessible authentication** – po ručním potvrzení auth flow je WCAG/ACR řádek `3.3.8 Accessible Authentication (Minimum)` vedený jako `Supports`; backlog už nechává auth jen jako regresní scénář při budoucích změnách loginu, 2FA, resetu hesla nebo session timeoutů.

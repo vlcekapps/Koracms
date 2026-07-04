@@ -419,6 +419,9 @@ function adminHeader(string $pageTitle): void
         ['url' => $baseUrl . '/index.php', 'label' => '<span aria-hidden="true">←</span> Web'],
         ['url' => $baseUrl . '/admin/logout.php', 'label' => 'Odhlásit se'],
     ];
+    $adminStylesheetPath = __DIR__ . '/assets/layout.css';
+    $adminStylesheetVersion = (string)((int)@filemtime($adminStylesheetPath) ?: KORA_VERSION);
+    $adminStylesheetUrl = BASE_URL . '/admin/assets/layout.css?v=' . rawurlencode($adminStylesheetVersion);
 
     echo '<!DOCTYPE html>' . "\n"
        . '<html lang="cs">' . "\n"
@@ -426,7 +429,7 @@ function adminHeader(string $pageTitle): void
        . '  <meta charset="utf-8">' . "\n"
        . '  <meta name="viewport" content="width=device-width, initial-scale=1">' . "\n"
        . '  <title>' . $pageTitle . ' – ' . $siteName . ' Admin</title>' . "\n"
-       . '  <link rel="stylesheet" href="' . h(BASE_URL . '/admin/assets/layout.css') . '">' . "\n"
+       . '  <link rel="stylesheet" href="' . h($adminStylesheetUrl) . '">' . "\n"
        . '</head>' . "\n"
        . '<body>' . "\n"
        . '<a href="#obsah" class="skip-link">Přeskočit na obsah</a>' . "\n"
