@@ -6658,9 +6658,9 @@ if ($articleId === false) {
 
         $shortcodeContent = <<<HTML
 <p>Runtime audit shortcode test.</p>
-[audio src="/downloads/file.php?id=123" mime="audio/mpeg"][/audio]
-[video src="/downloads/file.php?id=321" mime="video/mp4"][/video]
-[video]https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s[/video]
+[audio src="/downloads/file.php?id=123" mime="audio/mpeg" transcript="/uploads/runtime-audio-prepis.html" transcript_label="Přepis audia"][/audio]
+[video src="/downloads/file.php?id=321" mime="video/mp4" captions="/uploads/runtime-video.cs.vtt" srclang="cs" caption_label="České titulky" transcript="/uploads/runtime-video-prepis.html"][/video]
+[video transcript="/uploads/runtime-youtube-prepis.html"]https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s[/video]
 [pdf src="{$runtimeAuditPdfUrl}" title="Runtime audit PDF" mime="application/pdf"][/pdf]
 [code]echo "Ahoj z code shortcodu";
 \$soubor = "/uploads/runtime-audit.pdf";[/code]
@@ -6709,11 +6709,20 @@ HTML;
             if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=123" type="audio/mpeg"')) {
                 $contentShortcodeIssues[] = 'audio shortcode with safe download endpoint and mime attribute was not rendered';
             }
+            if (!str_contains($shortcodeProbe['body'], '<a href="/uploads/runtime-audio-prepis.html">Přepis audia</a>')) {
+                $contentShortcodeIssues[] = 'audio shortcode is missing transcript link';
+            }
             if (!str_contains($shortcodeProbe['body'], '<video class="video-player" controls preload="metadata">')) {
                 $contentShortcodeIssues[] = 'video shortcode was not rendered as html5 player';
             }
             if (!str_contains($shortcodeProbe['body'], 'src="/downloads/file.php?id=321" type="video/mp4"')) {
                 $contentShortcodeIssues[] = 'video shortcode with safe download endpoint and mime attribute was not rendered';
+            }
+            if (!str_contains($shortcodeProbe['body'], '<track kind="captions" src="/uploads/runtime-video.cs.vtt" srclang="cs" label="České titulky" default>')) {
+                $contentShortcodeIssues[] = 'video shortcode is missing WebVTT captions track';
+            }
+            if (!str_contains($shortcodeProbe['body'], '<a href="/uploads/runtime-video-prepis.html">Přepis videa</a>')) {
+                $contentShortcodeIssues[] = 'video shortcode is missing transcript link';
             }
             if (!str_contains($shortcodeProbe['body'], 'https://www.youtube-nocookie.com/embed/yIdGMYUmfgg?start=26')) {
                 $contentShortcodeIssues[] = 'youtube video shortcode was not rendered as privacy-friendly iframe';
@@ -6723,6 +6732,9 @@ HTML;
             }
             if (!str_contains($shortcodeProbe['body'], 'Otevřít video samostatně')) {
                 $contentShortcodeIssues[] = 'youtube video shortcode is missing standalone fallback link';
+            }
+            if (!str_contains($shortcodeProbe['body'], '<a class="button-secondary" href="/uploads/runtime-youtube-prepis.html">Přepis videa</a>')) {
+                $contentShortcodeIssues[] = 'youtube video shortcode is missing transcript fallback link';
             }
             if (!str_contains($shortcodeProbe['body'], 'content-embed-card--pdf')) {
                 $contentShortcodeIssues[] = 'pdf shortcode was not rendered as embedded pdf card';
@@ -6960,6 +6972,16 @@ if (!str_contains($contentSearchSource, 'function contentReferencePdfShortcode(s
 }
 if (!str_contains($contentLibrarySource, 'function renderContentPdfShortcode(string $url, string $title = \'\', string $preferredMimeType = \'\', int $mediaId = 0): ?string')) {
     $contentSnippetIssues[] = 'content renderer is missing pdf shortcode helper';
+}
+if (!str_contains($contentLibrarySource, 'function renderContentVideoCaptionTrack(string $url, string $language = \'cs\', string $label = \'\'): string')
+    || !str_contains($contentLibrarySource, '<track kind="captions"')
+    || !str_contains($contentLibrarySource, 'function renderContentMediaTranscriptLink(')) {
+    $contentSnippetIssues[] = 'content renderer is missing media captions/transcript helpers';
+}
+if (!str_contains($contentLibrarySource, "'captions', 'caption', 'subtitles', 'track'")
+    || !str_contains($contentLibrarySource, "'transcript', 'transcript_url'")
+    || !str_contains($contentLibrarySource, "'transcript_label', 'transcript_title'")) {
+    $contentSnippetIssues[] = 'content renderer is missing media accessibility shortcode attributes';
 }
 if (!str_contains($contentLibrarySource, 'function contentResolvePdfMedia(int $mediaId, string $url): ?array')) {
     $contentSnippetIssues[] = 'content renderer is missing pdf media resolver helper';
@@ -13530,6 +13552,12 @@ if (!str_contains($mediaAdminSource, 'window.prompt(')) {
 }
 if (str_contains($mediaAdminSource, 'image/svg+xml,image/svg')) {
     $mediaLibraryIssues[] = 'media admin upload accept still allows SVG';
+}
+if (!str_contains($mediaHelperSource, "'text/vtt' => 'vtt'")) {
+    $mediaLibraryIssues[] = 'media helper is missing WebVTT caption MIME support';
+}
+if (!str_contains($mediaAdminSource, '.vtt,text/vtt') || !str_contains($mediaAdminSource, 'WebVTT titulky')) {
+    $mediaLibraryIssues[] = 'media admin is missing WebVTT caption upload guidance';
 }
 if (str_contains($mediaAdminSource, '<style') || str_contains($mediaAdminSource, 'style=') || str_contains($mediaAdminSource, '.style')) {
     $mediaLibraryIssues[] = 'media admin still contains local style blocks, inline style markup or JS style mutations';

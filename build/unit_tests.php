@@ -993,6 +993,7 @@ assert_true(koraUploadHasFile(['name' => 'soubor.txt', 'error' => UPLOAD_ERR_OK]
 assert_equals('jpg', koraUploadSanitizeExtension('fotka.JPG'), 'safe extension normalized');
 assert_equals('', koraUploadSanitizeExtension('soubor.bad-ext'), 'unsafe extension rejected');
 assert_true(koraUploadMimeIsSvg('image/svg+xml'), 'SVG MIME detected');
+assert_equals('vtt', mediaAllowedMimeMap()['text/vtt'] ?? '', 'media library accepts WebVTT caption files');
 
 $uploadTmp = tempnam(sys_get_temp_dir(), 'kora-upload-test-');
 file_put_contents($uploadTmp, 'hello');
@@ -1575,6 +1576,28 @@ assert_contains(
     $youtubeShortcodeHtml,
     'YouTube video shortcode renders privacy-friendly iframe'
 );
+$audioTranscriptShortcodeHtml = renderContentShortcodes('[audio src="/uploads/audio.mp3" mime="audio/mpeg" transcript="/uploads/audio-prepis.html" transcript_label="Přepis rozhovoru"][/audio]');
+assert_contains(
+    '<p class="embedded-media__transcript"><a href="/uploads/audio-prepis.html">Přepis rozhovoru</a></p>',
+    $audioTranscriptShortcodeHtml,
+    'audio shortcode can render a transcript link'
+);
+$videoCaptionShortcodeHtml = renderContentShortcodes('[video src="/uploads/video.mp4" mime="video/mp4" captions="/uploads/video.cs.vtt" srclang="cs" caption_label="České titulky" transcript="/uploads/video-prepis.html"][/video]');
+assert_contains(
+    '<track kind="captions" src="/uploads/video.cs.vtt" srclang="cs" label="České titulky" default>',
+    $videoCaptionShortcodeHtml,
+    'video shortcode can render a WebVTT captions track'
+);
+assert_contains(
+    '<p class="embedded-media__transcript"><a href="/uploads/video-prepis.html">Přepis videa</a></p>',
+    $videoCaptionShortcodeHtml,
+    'video shortcode can render a transcript link'
+);
+$invalidVideoCaptionHtml = renderContentVideoShortcode('/uploads/video.mp4', 'video/mp4', '', '/uploads/video.txt');
+assert_true($invalidVideoCaptionHtml !== null, 'video shortcode still renders when optional caption URL is not WebVTT');
+assert_false(str_contains((string)$invalidVideoCaptionHtml, '<track'), 'video shortcode ignores non-WebVTT caption URLs');
+$youtubeTranscriptHtml = renderContentShortcodes('[video transcript="/uploads/youtube-prepis.html" transcript_label="Přepis záznamu"]https://www.youtube.com/watch?v=yIdGMYUmfgg[/video]');
+assert_contains('Přepis záznamu', $youtubeTranscriptHtml, 'YouTube video shortcode can render a separate transcript link');
 
 test_section('content shortcode heading semantics');
 

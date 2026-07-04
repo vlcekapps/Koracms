@@ -160,6 +160,7 @@ function mediaAllowedMimeMap(): array
         'video/quicktime' => 'mov',
         'application/pdf' => 'pdf',
         'application/zip' => 'zip',
+        'text/vtt' => 'vtt',
         'text/plain' => 'txt',
         'text/csv' => 'csv',
         'application/msword' => 'doc',

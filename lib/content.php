@@ -123,6 +123,46 @@ function contentEmbedMediaMimeType(string $url, string $type, string $preferredM
     };
 }
 
+function normalizeContentTrackLanguage(string $value): string
+{
+    $value = strtolower(trim($value));
+    if ($value === '') {
+        return 'cs';
+    }
+
+    return preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i', $value) === 1 ? $value : 'cs';
+}
+
+function renderContentMediaTranscriptLink(string $url, string $defaultLabel, string $preferredLabel = '', string $className = 'embedded-media__transcript'): string
+{
+    $normalizedUrl = normalizeContentEmbedUrl($url);
+    if ($normalizedUrl === '') {
+        return '';
+    }
+
+    $label = trim($preferredLabel) !== '' ? trim($preferredLabel) : $defaultLabel;
+
+    return '<p class="' . h($className) . '"><a href="' . h($normalizedUrl) . '">' . h($label) . '</a></p>';
+}
+
+function renderContentVideoCaptionTrack(string $url, string $language = 'cs', string $label = ''): string
+{
+    $normalizedUrl = normalizeContentEmbedUrl($url);
+    if ($normalizedUrl === '') {
+        return '';
+    }
+
+    $path = (string)(parse_url($normalizedUrl, PHP_URL_PATH) ?? '');
+    if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'vtt') {
+        return '';
+    }
+
+    $resolvedLanguage = normalizeContentTrackLanguage($language);
+    $resolvedLabel = trim($label) !== '' ? trim($label) : 'Titulky';
+
+    return '<track kind="captions" src="' . h($normalizedUrl) . '" srclang="' . h($resolvedLanguage) . '" label="' . h($resolvedLabel) . '" default>';
+}
+
 function contentYouTubeHost(string $url): string
 {
     $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?? ''));
@@ -312,7 +352,7 @@ function renderContentCodeShortcode(string $body): ?string
         . "\n\n";
 }
 
-function renderContentAudioShortcode(string $url, string $preferredMimeType = ''): ?string
+function renderContentAudioShortcode(string $url, string $preferredMimeType = '', string $transcriptUrl = '', string $transcriptLabel = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
     $mimeType = contentEmbedMediaMimeType($normalizedUrl, 'audio', $preferredMimeType);
@@ -322,6 +362,7 @@ function renderContentAudioShortcode(string $url, string $preferredMimeType = ''
     }
 
     $escapedUrl = h($normalizedUrl);
+    $transcriptHtml = renderContentMediaTranscriptLink($transcriptUrl, 'Přepis audia', $transcriptLabel);
 
     return "\n\n"
         . '<div class="embedded-media embedded-media--audio">'
@@ -329,11 +370,12 @@ function renderContentAudioShortcode(string $url, string $preferredMimeType = ''
         . '<source src="' . $escapedUrl . '" type="' . h($mimeType) . '">'
         . 'Váš prohlížeč nepodporuje přehrávání audia. <a href="' . $escapedUrl . '">Otevřít audio soubor</a>.'
         . '</audio>'
+        . $transcriptHtml
         . '</div>'
         . "\n\n";
 }
 
-function renderContentYouTubeVideoShortcode(string $url, string $title = ''): ?string
+function renderContentYouTubeVideoShortcode(string $url, string $title = '', string $transcriptUrl = '', string $transcriptLabel = ''): ?string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
     $embedUrl = $normalizedUrl !== '' ? contentYouTubeEmbedUrl($normalizedUrl) : '';
@@ -345,6 +387,8 @@ function renderContentYouTubeVideoShortcode(string $url, string $title = ''): ?s
     $escapedTitle = h($resolvedTitle);
     $headingLabel = 'Video: ' . $resolvedTitle;
     $headingId = contentSectionHeadingId('content-video-heading', $headingLabel);
+    $normalizedTranscriptUrl = normalizeContentEmbedUrl($transcriptUrl);
+    $resolvedTranscriptLabel = trim($transcriptLabel) !== '' ? trim($transcriptLabel) : 'Přepis videa';
 
     return "\n\n"
         . '<section class="content-embed-card content-embed-card--interactive content-embed-card--video" aria-labelledby="' . h($headingId) . '">'
@@ -358,16 +402,25 @@ function renderContentYouTubeVideoShortcode(string $url, string $title = ''): ?s
         . '</div>'
         . '<div class="content-embed-card__actions">'
         . '<a class="button-secondary" href="' . h($normalizedUrl) . '">Otevřít video samostatně</a>'
+        . ($normalizedTranscriptUrl !== '' ? '<a class="button-secondary" href="' . h($normalizedTranscriptUrl) . '">' . h($resolvedTranscriptLabel) . '</a>' : '')
         . '</div>'
         . '</div>'
         . '</section>'
         . "\n\n";
 }
 
-function renderContentVideoShortcode(string $url, string $preferredMimeType = '', string $title = ''): ?string
-{
+function renderContentVideoShortcode(
+    string $url,
+    string $preferredMimeType = '',
+    string $title = '',
+    string $captionsUrl = '',
+    string $captionLanguage = 'cs',
+    string $captionLabel = '',
+    string $transcriptUrl = '',
+    string $transcriptLabel = ''
+): ?string {
     $normalizedUrl = normalizeContentEmbedUrl($url);
-    $youtubeVideo = renderContentYouTubeVideoShortcode($normalizedUrl, $title);
+    $youtubeVideo = renderContentYouTubeVideoShortcode($normalizedUrl, $title, $transcriptUrl, $transcriptLabel);
     if ($youtubeVideo !== null) {
         return $youtubeVideo;
     }
@@ -379,13 +432,17 @@ function renderContentVideoShortcode(string $url, string $preferredMimeType = ''
     }
 
     $escapedUrl = h($normalizedUrl);
+    $captionTrackHtml = renderContentVideoCaptionTrack($captionsUrl, $captionLanguage, $captionLabel);
+    $transcriptHtml = renderContentMediaTranscriptLink($transcriptUrl, 'Přepis videa', $transcriptLabel);
 
     return "\n\n"
         . '<div class="embedded-media embedded-media--video">'
         . '<video class="video-player" controls preload="metadata">'
         . '<source src="' . $escapedUrl . '" type="' . h($mimeType) . '">'
+        . $captionTrackHtml
         . 'Váš prohlížeč nepodporuje přehrávání videa. <a href="' . $escapedUrl . '">Otevřít video soubor</a>.'
         . '</video>'
+        . $transcriptHtml
         . '</div>'
         . "\n\n";
 }
@@ -507,13 +564,27 @@ function renderContentGalleryShortcode(string $slug): ?string
  * @param array<string, string> $attributes
  * @param list<string> $attributeKeys
  */
-function contentShortcodeResolvedValue(array $attributes, string $body, array $attributeKeys = ['slug']): string
+function contentShortcodeAttributeValue(array $attributes, array $attributeKeys): string
 {
     foreach ($attributeKeys as $attributeKey) {
         $attributeValue = trim((string)($attributes[$attributeKey] ?? ''));
         if ($attributeValue !== '') {
             return $attributeValue;
         }
+    }
+
+    return '';
+}
+
+/**
+ * @param array<string, string> $attributes
+ * @param list<string> $attributeKeys
+ */
+function contentShortcodeResolvedValue(array $attributes, string $body, array $attributeKeys = ['slug']): string
+{
+    $attributeValue = contentShortcodeAttributeValue($attributes, $attributeKeys);
+    if ($attributeValue !== '') {
+        return $attributeValue;
     }
 
     return trim($body);
@@ -1072,8 +1143,10 @@ function renderContentShortcodes(string $text): string
             }
 
             $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'audio');
+            $transcriptUrl = contentShortcodeAttributeValue($attributes, ['transcript', 'transcript_url']);
+            $transcriptLabel = contentShortcodeAttributeValue($attributes, ['transcript_label', 'transcript_title']);
 
-            return renderContentAudioShortcode($source, $mimeType) ?? $matches[0];
+            return renderContentAudioShortcode($source, $mimeType, $transcriptUrl, $transcriptLabel) ?? $matches[0];
         },
         $text
     ) ?? $text;
@@ -1095,8 +1168,13 @@ function renderContentShortcodes(string $text): string
 
             $mimeType = normalizeContentEmbedMimeType((string)($attributes['mime'] ?? $attributes['type'] ?? ''), 'video');
             $title = trim((string)($attributes['title'] ?? $attributes['label'] ?? ''));
+            $captionsUrl = contentShortcodeAttributeValue($attributes, ['captions', 'caption', 'subtitles', 'track']);
+            $captionLanguage = contentShortcodeAttributeValue($attributes, ['srclang', 'lang', 'caption_lang']);
+            $captionLabel = contentShortcodeAttributeValue($attributes, ['caption_label', 'captions_label', 'track_label']);
+            $transcriptUrl = contentShortcodeAttributeValue($attributes, ['transcript', 'transcript_url']);
+            $transcriptLabel = contentShortcodeAttributeValue($attributes, ['transcript_label', 'transcript_title']);
 
-            return renderContentVideoShortcode($source, $mimeType, $title) ?? $matches[0];
+            return renderContentVideoShortcode($source, $mimeType, $title, $captionsUrl, $captionLanguage, $captionLabel, $transcriptUrl, $transcriptLabel) ?? $matches[0];
         },
         $text
     ) ?? $text;

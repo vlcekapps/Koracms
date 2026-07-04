@@ -28,9 +28,9 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | Criteria | Conformance | Remarks and Explanations |
 |---|---|---|
 | 1.1.1 Non-text Content | Supports | CMS provides alt text fields, decorative-image support and theme audit coverage. Author-supplied media still needs editorial review. |
-| 1.2.1 Audio-only and Video-only | Partially Supports | Podcast episodes now include a dedicated transcript field that renders as a public text alternative for CMS-hosted audio episodes and is covered by schema, migration, export/import, revision, unit and runtime evidence. Author-supplied transcript quality and non-podcast audio/video alternatives still require editorial review. |
-| 1.2.2 Captions (Prerecorded) | Partially Supports | Video embed support exists; captions depend on uploaded/external media. |
-| 1.2.3 Audio Description or Media Alternative | Partially Supports | Podcast transcripts provide a media alternative for CMS podcast audio. Dedicated audio-description and caption workflows for other media are not yet modeled. |
+| 1.2.1 Audio-only and Video-only | Partially Supports | Podcast episodes include a dedicated transcript field that renders as a public text alternative for CMS-hosted audio. Audio/video shortcodes also support a guarded `transcript` link. Transcript quality and coverage for author-supplied media still require editorial review. |
+| 1.2.2 Captions (Prerecorded) | Partially Supports | Direct video shortcodes support WebVTT caption tracks through the `captions` attribute and media uploads allow `.vtt` files. Caption quality, timing and external platform captions still require editorial review. |
+| 1.2.3 Audio Description or Media Alternative | Partially Supports | Podcast transcripts and audio/video shortcode transcript links provide media alternatives for CMS-authored media. Dedicated audio-description workflows for prerecorded video are not yet modeled. |
 | 1.3.1 Info and Relationships | Supports | Forms, landmarks, tables and sections are covered by runtime and theme guardrails. |
 | 1.3.2 Meaningful Sequence | Supports | Shared layouts preserve meaningful DOM sequence; mobile order still needs manual regression testing. |
 | 1.3.3 Sensory Characteristics | Supports | Instructions are text-based and do not rely only on color, shape or position. |
@@ -64,7 +64,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | Criteria | Conformance | Remarks and Explanations |
 |---|---|---|
 | 1.2.4 Captions (Live) | Not Applicable | Core CMS does not provide live audio/video streaming. |
-| 1.2.5 Audio Description (Prerecorded) | Partially Supports | Podcast transcripts can be provided for audio episodes, but dedicated audio-description metadata for prerecorded video is not yet modeled. |
+| 1.2.5 Audio Description (Prerecorded) | Partially Supports | Podcast transcripts and video transcript links can be provided, but dedicated audio-description metadata or alternate audio tracks for prerecorded video are not yet modeled. |
 | 1.3.4 Orientation | Supports | CMS does not restrict screen orientation. |
 | 1.3.5 Identify Input Purpose | Partially Supports | Authentication fields are covered for `username`, `current-password`, `new-password` and 2FA `one-time-code` metadata. Public contact, food order, guest reservation and generated Form Builder forms now expose guarded autocomplete metadata for name, email, phone, URL and obvious organization/name text fields. Browser autofill behavior and specialized address/payment custom fields still need manual verification. |
 | 1.4.3 Contrast (Minimum) | Partially Supports | Runtime `contrast_focus_guardrails` now measures default theme, admin layout and standalone login text/status color pairs against AA thresholds. Custom theme settings, hover/disabled states and author-supplied colors still need manual measurement. |

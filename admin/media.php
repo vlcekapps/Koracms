@@ -5,7 +5,7 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 $pdo = db_connect();
 $perPage = 24;
 $mediaDeleteDisabledReason = 'Použité médium nelze smazat.';
-$mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do 10 MB: JPEG, PNG, GIF, WebP, audio, video nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
+$mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do 10 MB: JPEG, PNG, GIF, WebP, audio, video, WebVTT titulky nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
 $mediaUploadFileErrorMessage = 'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát, není SVG a nepřekračuje 10 MB.';
 $mediaReplacementFileErrorMessage = 'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině jako původní médium; u veřejného souboru zachovejte stejnou příponu. SVG knihovna nepřijímá.';
 
@@ -741,9 +741,9 @@ adminHeader('Knihovna médií');
     <legend>Nahrát soubory do knihovny</legend>
     <label for="media_files">Vyberte soubory <span aria-hidden="true">*</span></label>
     <input type="file" id="media_files" name="media_files[]" multiple required aria-required="true"
-           accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
+           accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.vtt,text/vtt,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
            <?= adminFieldAttributes('media_files', $mediaFieldErrorNames, [], ['media-upload-help'], 'media-upload-error') ?>>
-    <small id="media-upload-help" class="field-help">Obrázky, audio, video a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max 10 MB na soubor.</small>
+    <small id="media-upload-help" class="field-help">Obrázky, audio, video, WebVTT titulky a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max 10 MB na soubor.</small>
     <?php adminRenderFieldError('media_files', $mediaFieldErrorNames, [], $mediaFieldErrors['media_files'] ?? '', 'media-upload-error'); ?>
 
     <label for="upload_collection_id">Kolekce médií</label>
@@ -1135,7 +1135,7 @@ adminHeader('Knihovna médií');
             <legend>Nahradit soubor</legend>
             <label for="replacement_file">Nový soubor</label>
             <input type="file" id="replacement_file" name="replacement_file" required aria-required="true"
-                   accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                   accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.vtt,text/vtt,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
                    <?= adminFieldAttributes('replacement_file', $mediaFieldErrorNames, [], ['replacement-file-help'], 'replacement-file-error') ?>>
             <small id="replacement-file-help" class="field-help">Náhradní soubor musí zůstat ve stejné MIME rodině. U veřejných souborů se zachovává i přípona, aby staré odkazy zůstaly funkční.</small>
             <?php adminRenderFieldError('replacement_file', $mediaFieldErrorNames, [], $mediaFieldErrors['replacement_file'] ?? '', 'replacement-file-error'); ?>
