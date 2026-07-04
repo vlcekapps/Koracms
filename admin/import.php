@@ -3,8 +3,11 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 
 $errors  = [];
+$fieldErrors = [];
 $success = false;
 $summary = [];
+$jsonImportFileRequiredErrorMessage = 'Vyberte JSON export z Kora CMS. Soubor má mít příponu .json a musí pocházet z administrace Export dat.';
+$jsonImportFileInvalidErrorMessage = 'Nahrajte neupravený JSON export z Kora CMS v platném UTF-8. Poškozený soubor, jiný formát nebo ručně změněné kódování import odmítne.';
 
 /**
  * @param list<string> $errors
@@ -41,15 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     if (empty($_FILES['import_file']['name'])) {
-        $errors[] = 'Vyberte soubor pro import.';
+        $errors[] = $jsonImportFileRequiredErrorMessage;
+        $fieldErrors['import_file'] = $jsonImportFileRequiredErrorMessage;
     } else {
         $tmp = $_FILES['import_file']['tmp_name'];
         $data = importDecodeJsonUpload($tmp, $errors);
 
         if ($data === null) {
             // Přesná validační chyba už byla zapsaná do $errors v importDecodeJsonUpload().
+            $fieldErrors['import_file'] = $jsonImportFileInvalidErrorMessage;
         } elseif (($data['site'] ?? '') !== 'cms') {
             $errors[] = 'Neplatný nebo poškozený exportní soubor.';
+            $fieldErrors['import_file'] = $jsonImportFileInvalidErrorMessage;
         } else {
             $pdo = db_connect();
             $pdo->beginTransaction();
@@ -1820,8 +1826,14 @@ adminHeader('Import / Export dat');
 
 <form method="post" enctype="multipart/form-data" novalidate>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <label for="import_file">JSON soubor (export z tohoto CMS)</label>
-  <input type="file" id="import_file" name="import_file" accept=".json,application/json" required aria-required="true">
+  <fieldset>
+    <legend>Zdroj importu</legend>
+    <label for="import_file">JSON soubor (export z tohoto CMS) <span aria-hidden="true">*</span></label>
+    <input type="file" id="import_file" name="import_file" accept=".json,application/json" required aria-required="true"
+           <?= adminFieldAttributes('import_file', array_keys($fieldErrors), [], ['import-file-help'], 'import-file-error') ?>>
+    <small id="import-file-help" class="field-help">Nahrajte neupravený JSON soubor stažený přes Export dat v této administraci.</small>
+    <?php adminRenderFieldError('import_file', array_keys($fieldErrors), [], $fieldErrors['import_file'] ?? '', 'import-file-error'); ?>
+  </fieldset>
   <button type="submit" class="btn admin-action-row">Importovat</button>
 </form>
 

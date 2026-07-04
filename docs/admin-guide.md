@@ -130,6 +130,8 @@ Obrazovka **Import / Export** pracuje s JSON soubory v UTF-8.
 
 Samostatné importy z WordPressu a eStránek pracují s XML/WXR soubory. Před parsováním používají sdílenou upload validaci pro stav PHP uploadu, ověření dočasného souboru a odmítnutí prázdného souboru; WordPress náhled si dočasnou kopii ukládá přes stejný bezpečný helper do `uploads/tmp`. Downloader fotografií z eStránek zároveň normalizuje základní URL webu přes sdílený http/https helper, takže se při importu nepoužijí protocol-relative adresy, přihlašovací údaje v URL ani nebezpečná schémata.
 
+Chyby importních formulářů se mají ozvat nahoře jako alert a současně u konkrétního pole. JSON import radí neupravený export z Kora CMS v platném UTF-8, WordPress import radí WXR/XML export z administrace WordPressu, eStránky import radí XML zálohu z eStránek a downloader fotek odděleně označí XML soubor i základní URL webu.
+
 Platí tato pravidla:
 
 - export z Kora CMS zapisuje JSON s českou diakritikou v UTF-8

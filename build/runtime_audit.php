@@ -8265,7 +8265,8 @@ $foundationChecks = [
         && str_contains($widgetsSource, 'return normalizeHttpExternalUrl($value);')
         && str_contains($migrateSourceForUrlGuard, 'normalizeWidgetExternalUrl($rawSocialUrl)')
         && !str_contains($migrateSourceForUrlGuard, '$validatedSocialUrl = filter_var($rawSocialUrl, FILTER_VALIDATE_URL)')
-        && str_contains($estrankyPhotoSourceForUrlGuard, 'normalizeHttpExternalUrl((string)($_POST[\'site_url\'] ?? \'\'))')
+        && str_contains($estrankyPhotoSourceForUrlGuard, '$siteUrlRaw = trim((string)($_POST[\'site_url\'] ?? \'\'));')
+        && str_contains($estrankyPhotoSourceForUrlGuard, 'normalizeHttpExternalUrl($siteUrlRaw)')
         && !str_contains($estrankyPhotoSourceForUrlGuard, "'https://' . \$siteUrl")
         && str_contains($webhooksSource, 'normalizeHttpExternalUrl($url, false)')
         && str_contains($webhooksSource, 'formWebhookHostAllowed($host)')
@@ -15896,7 +15897,8 @@ foreach ([
     'WordPress import' => [
         'source' => $wpImportSource,
         'fragments' => [
-            'class="admin-panel admin-panel--success"',
+            'admin-panel--success',
+            'admin-panel--danger',
             'class="admin-panel admin-panel--warning"',
             'class="admin-panel admin-panel--warning admin-panel--spaced"',
             'class="admin-panel__heading"',
@@ -15913,7 +15915,8 @@ foreach ([
     'eStranky import' => [
         'source' => $estrankyImportSource,
         'fragments' => [
-            'class="admin-panel admin-panel--success"',
+            'admin-panel--success',
+            'admin-panel--danger',
             'class="admin-panel admin-panel--warning admin-panel--spaced"',
             'class="admin-panel__heading"',
             'class="admin-panel__list"',
@@ -15927,7 +15930,8 @@ foreach ([
         'source' => $estrankyPhotoDownloadSource,
         'fragments' => [
             'class="admin-panel admin-panel--info"',
-            'class="admin-panel admin-panel--success"',
+            'admin-panel--success',
+            'admin-panel--danger',
             'class="admin-panel admin-panel--warning admin-panel--spaced"',
             'class="admin-panel__heading"',
             'class="admin-panel__list"',
@@ -16502,6 +16506,93 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
             $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
         }
     }
+}
+foreach ([
+    'JSON import upload error suggestion' => [
+        'source' => $importAdminSource,
+        'required' => [
+            '$jsonImportFileRequiredErrorMessage',
+            '$jsonImportFileInvalidErrorMessage',
+            "adminFieldAttributes('import_file'",
+            "adminRenderFieldError('import_file'",
+            'id="import-file-help"',
+            '<legend>Zdroj importu</legend>',
+        ],
+        'forbidden' => [
+            '$errors[] = \'Vyberte soubor pro import.\';',
+            '<input type="file" id="import_file" name="import_file" accept=".json,application/json" required aria-required="true">',
+        ],
+    ],
+    'WordPress WXR import upload error suggestion' => [
+        'source' => $wpImportSource,
+        'required' => [
+            '$wpWxrRequiredErrorMessage',
+            '$wpWxrInvalidErrorMessage',
+            '$_SESSION[\'wp_import_field_errors\']',
+            '$_SERVER[\'REQUEST_METHOD\'] === \'POST\' && !isset($_POST[\'do_import\'])',
+            "adminFieldAttributes('wxr_file'",
+            "adminRenderFieldError('wxr_file'",
+            'admin-panel--danger',
+            'role="alert"',
+        ],
+        'forbidden' => [
+            '!empty($_FILES[\'wxr_file\'][\'tmp_name\']) && !isset($_POST[\'do_import\'])',
+            '<h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>',
+        ],
+    ],
+    'eStránky XML import upload error suggestion' => [
+        'source' => $estrankyImportSource,
+        'required' => [
+            '$estrankyXmlRequiredErrorMessage',
+            '$estrankyXmlInvalidErrorMessage',
+            '$_SESSION[\'estranky_import_field_errors\']',
+            '$_SERVER[\'REQUEST_METHOD\'] === \'POST\'',
+            "adminFieldAttributes('xml_file'",
+            "adminRenderFieldError('xml_file'",
+            'admin-panel--danger',
+            'role="alert"',
+        ],
+        'forbidden' => [
+            '$_SERVER[\'REQUEST_METHOD\'] === \'POST\' && !empty($_FILES[\'xml_file\'][\'tmp_name\'])',
+            '<h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>',
+        ],
+    ],
+    'eStránky photo download import field suggestions' => [
+        'source' => $estrankyPhotoDownloadSource,
+        'required' => [
+            '$estrankyPhotoXmlRequiredErrorMessage',
+            '$estrankyPhotoXmlInvalidErrorMessage',
+            '$estrankyPhotoSiteUrlErrorMessage',
+            '$_SESSION[\'estranky_photo_field_errors\']',
+            '$_SERVER[\'REQUEST_METHOD\'] === \'POST\'',
+            "adminFieldAttributes('xml_file'",
+            "adminRenderFieldError('xml_file'",
+            "adminFieldAttributes('site_url'",
+            "adminRenderFieldError('site_url'",
+            'admin-panel--danger',
+            'role="alert"',
+        ],
+        'forbidden' => [
+            'Zadejte XML soubor a platnou URL webu.',
+            '$_SERVER[\'REQUEST_METHOD\'] === \'POST\' && !empty($_FILES[\'xml_file\'][\'tmp_name\'])',
+            '<h2 id="dl-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Stahování dokončeno</h2>',
+        ],
+    ],
+] as $adminImportSuggestionLabel => $adminImportSuggestionSpec) {
+    $adminImportSuggestionSource = (string)$adminImportSuggestionSpec['source'];
+    foreach ($adminImportSuggestionSpec['required'] as $adminImportRequiredFragment) {
+        if (!str_contains($adminImportSuggestionSource, $adminImportRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminImportSuggestionLabel . ' is missing import field-level fragment: ' . $adminImportRequiredFragment;
+        }
+    }
+    foreach ($adminImportSuggestionSpec['forbidden'] as $adminImportForbiddenFragment) {
+        if (str_contains($adminImportSuggestionSource, $adminImportForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminImportSuggestionLabel . ' still contains generic or file-present-only import validation copy';
+        }
+    }
+}
+if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('admin_import_error_suggestions_http'")) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing admin import error suggestion coverage';
 }
 foreach ([
     'blog article image upload error suggestion' => [

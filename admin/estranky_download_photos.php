@@ -140,29 +140,51 @@ function estrankyFetchRemotePhoto(string $url): string|false
 $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
+$estrankyPhotoFieldErrors = $_SESSION['estranky_photo_field_errors'] ?? [];
+unset($_SESSION['estranky_photo_field_errors']);
+if (!is_array($estrankyPhotoFieldErrors)) {
+    $estrankyPhotoFieldErrors = [];
+}
+$estrankyPhotoFieldErrors = array_filter(array_map('strval', $estrankyPhotoFieldErrors));
+$estrankyPhotoFieldErrorNames = array_keys($estrankyPhotoFieldErrors);
+$estrankyPhotoFormState = $_SESSION['estranky_photo_form_state'] ?? [];
+unset($_SESSION['estranky_photo_form_state']);
+if (!is_array($estrankyPhotoFormState)) {
+    $estrankyPhotoFormState = [];
+}
+$estrankyPhotoSiteUrlInput = (string)($estrankyPhotoFormState['site_url'] ?? '');
+$estrankyPhotoXmlRequiredErrorMessage = 'Vyberte XML zálohu z eStránek, ze které se má sestavit seznam fotografií ke stažení.';
+$estrankyPhotoXmlInvalidErrorMessage = 'XML zálohu se nepodařilo načíst. Nahrajte stejný platný neprázdný XML soubor, který jste použili pro import obsahu z eStránek.';
+$estrankyPhotoSiteUrlErrorMessage = 'Zadejte hlavní URL webu na eStránkách jako http/https adresu nebo doménu bez schématu. URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.';
 $batchSize = 20;
 
 // ── Krok 1: Upload XML a příprava ────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_name'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
-    $siteUrl = rtrim(normalizeHttpExternalUrl((string)($_POST['site_url'] ?? '')), '/');
+    $siteUrlRaw = trim((string)($_POST['site_url'] ?? ''));
+    $siteUrl = rtrim(normalizeHttpExternalUrl($siteUrlRaw), '/');
     $parentAlbumId = inputInt('post', 'parent_album_id');
 
     /** @var array<string,mixed> $xmlFile */
-    $xmlFile = $_FILES['xml_file'];
+    $xmlFile = is_array($_FILES['xml_file'] ?? null) ? $_FILES['xml_file'] : [];
     $upload = koraInspectUploadedFile($xmlFile, [
-        'invalid_upload_error' => 'Nahraný XML soubor se nepodařilo ověřit.',
-        'empty_file_error' => 'Vybraný XML soubor je prázdný.',
+        'no_file_error' => $estrankyPhotoXmlRequiredErrorMessage,
+        'invalid_upload_error' => $estrankyPhotoXmlInvalidErrorMessage,
+        'empty_file_error' => $estrankyPhotoXmlInvalidErrorMessage,
     ]);
 
+    $postedFieldErrors = [];
     if ($siteUrl === '') {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Zadejte XML soubor a platnou URL webu.'];
-        header('Location: estranky_download_photos.php');
-        exit;
+        $postedFieldErrors['site_url'] = $estrankyPhotoSiteUrlErrorMessage;
     }
     if (empty($upload['ok'])) {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Neplatný XML soubor.'))];
+        $postedFieldErrors['xml_file'] = (string)($upload['error'] ?? $estrankyPhotoXmlInvalidErrorMessage);
+    }
+    if ($postedFieldErrors !== []) {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Opravte prosím označená pole a spusťte stahování znovu.'];
+        $_SESSION['estranky_photo_field_errors'] = $postedFieldErrors;
+        $_SESSION['estranky_photo_form_state'] = ['site_url' => $siteUrlRaw];
         header('Location: estranky_download_photos.php');
         exit;
     }
@@ -170,7 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
 
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se načíst XML soubor.'];
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h($estrankyPhotoXmlInvalidErrorMessage)];
+        $_SESSION['estranky_photo_field_errors'] = ['xml_file' => $estrankyPhotoXmlInvalidErrorMessage];
+        $_SESSION['estranky_photo_form_state'] = ['site_url' => $siteUrlRaw];
         header('Location: estranky_download_photos.php');
         exit;
     }
@@ -410,8 +434,19 @@ adminHeader('Stažení fotografií z eStránek');
 <?php endif; ?>
 
 <?php if ($log !== null): ?>
-  <section class="admin-panel admin-panel--success" aria-labelledby="dl-result-heading">
-    <h2 id="dl-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Stahování dokončeno</h2>
+  <?php
+    $estrankyPhotoLogHasError = false;
+    $estrankyPhotoLogHasWarning = false;
+    foreach ((array)$log as $line) {
+        $estrankyPhotoLogHasError = $estrankyPhotoLogHasError || str_contains((string)$line, '✗');
+        $estrankyPhotoLogHasWarning = $estrankyPhotoLogHasWarning || str_contains((string)$line, '⚠');
+    }
+    $estrankyPhotoPanelClass = $estrankyPhotoLogHasError ? 'admin-panel--danger' : ($estrankyPhotoLogHasWarning ? 'admin-panel--warning' : 'admin-panel--success');
+    $estrankyPhotoHeadingIcon = $estrankyPhotoLogHasError ? '✗' : ($estrankyPhotoLogHasWarning ? '⚠' : '✓');
+    $estrankyPhotoHeadingText = $estrankyPhotoLogHasError ? 'Stahování se nepodařilo připravit' : ($estrankyPhotoLogHasWarning ? 'Stahování vyžaduje pozornost' : 'Stahování dokončeno');
+    ?>
+  <section class="admin-panel <?= h($estrankyPhotoPanelClass) ?>" aria-labelledby="dl-result-heading"<?= $estrankyPhotoLogHasError ? ' role="alert"' : ' role="status"' ?>>
+    <h2 id="dl-result-heading" class="admin-panel__heading"><span aria-hidden="true"><?= h($estrankyPhotoHeadingIcon) ?></span> <?= h($estrankyPhotoHeadingText) ?></h2>
     <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
@@ -434,8 +469,9 @@ adminHeader('Stažení fotografií z eStránek');
       <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
       <input type="file" id="xml_file" name="xml_file" required aria-required="true"
              accept=".xml,application/xml,text/xml"
-             aria-describedby="xml-help">
+             <?= adminFieldAttributes('xml_file', $estrankyPhotoFieldErrorNames, [], ['xml-help'], 'xml-error') ?>>
       <small id="xml-help">Stejný XML soubor zálohy, který jste použili pro import obsahu.</small>
+      <?php adminRenderFieldError('xml_file', $estrankyPhotoFieldErrorNames, [], $estrankyPhotoFieldErrors['xml_file'] ?? '', 'xml-error'); ?>
     </div>
 
     <div class="admin-field-row">
@@ -443,8 +479,10 @@ adminHeader('Stažení fotografií z eStránek');
       <input type="url" id="site_url" name="site_url" required aria-required="true"
              class="admin-input-wide"
              placeholder="https://www.example.cz"
-             aria-describedby="url-help">
+             value="<?= h($estrankyPhotoSiteUrlInput) ?>"
+             <?= adminFieldAttributes('site_url', $estrankyPhotoFieldErrorNames, [], ['url-help'], 'site-url-error') ?>>
       <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky; URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.</small>
+      <?php adminRenderFieldError('site_url', $estrankyPhotoFieldErrorNames, [], $estrankyPhotoFieldErrors['site_url'] ?? '', 'site-url-error'); ?>
     </div>
 
     <div class="admin-field-row">

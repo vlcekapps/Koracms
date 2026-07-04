@@ -9,6 +9,15 @@ requireCapability('import_export_manage', 'Přístup odepřen. Pro import z Word
 $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
+$wpImportFieldErrors = $_SESSION['wp_import_field_errors'] ?? [];
+unset($_SESSION['wp_import_field_errors']);
+if (!is_array($wpImportFieldErrors)) {
+    $wpImportFieldErrors = [];
+}
+$wpImportFieldErrors = array_filter(array_map('strval', $wpImportFieldErrors));
+$wpImportFieldErrorNames = array_keys($wpImportFieldErrors);
+$wpWxrRequiredErrorMessage = 'Vyberte WordPress XML export ve formátu WXR (.xml), stažený z administrace WordPressu přes Nástroje → Export → Veškerý obsah.';
+$wpWxrInvalidErrorMessage = 'WordPress XML export se nepodařilo načíst. Nahrajte platný WXR/XML soubor exportovaný z WordPressu; prázdný nebo poškozený soubor import nepřijme.';
 
 /**
  * Parsuje WXR soubor a vrátí strukturovaná data.
@@ -341,13 +350,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
 // ── Krok 1: Náhled po uploadu ──
 $preview = null;
 $cachedPath = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_name']) && !isset($_POST['do_import'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['do_import'])) {
     verifyCsrf();
     /** @var array<string,mixed> $wxrFile */
-    $wxrFile = $_FILES['wxr_file'];
+    $wxrFile = is_array($_FILES['wxr_file'] ?? null) ? $_FILES['wxr_file'] : [];
     $upload = koraInspectUploadedFile($wxrFile, [
-        'invalid_upload_error' => 'Nahraný WXR soubor se nepodařilo ověřit.',
-        'empty_file_error' => 'Vybraný WXR soubor je prázdný.',
+        'no_file_error' => $wpWxrRequiredErrorMessage,
+        'invalid_upload_error' => $wpWxrInvalidErrorMessage,
+        'empty_file_error' => $wpWxrInvalidErrorMessage,
     ]);
     if (!empty($upload['ok'])) {
         // Uložíme do uploads/tmp (spolehlivější než sys temp na Windows)
@@ -366,9 +376,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['wxr_file']['tmp_nam
         if ($preview === null) {
             @unlink($cachedPath);
             $cachedPath = '';
+            $wpImportFieldErrors['wxr_file'] = $wpWxrInvalidErrorMessage;
+            $wpImportFieldErrorNames = array_keys($wpImportFieldErrors);
+            $log = ['<span aria-hidden="true">✗</span> ' . h($wpWxrInvalidErrorMessage)];
         }
     } else {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Nahraný WXR soubor se nepodařilo ověřit.'))];
+        $uploadErrorMessage = (string)($upload['error'] ?? $wpWxrInvalidErrorMessage);
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h($uploadErrorMessage)];
+        $_SESSION['wp_import_field_errors'] = ['wxr_file' => $uploadErrorMessage];
         header('Location: wp_import.php');
         exit;
     }
@@ -378,8 +393,19 @@ adminHeader('Import z WordPressu');
 ?>
 
 <?php if ($log !== null): ?>
-  <section class="admin-panel admin-panel--success" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>
+  <?php
+    $wpImportLogHasError = false;
+    $wpImportLogHasWarning = false;
+    foreach ((array)$log as $line) {
+        $wpImportLogHasError = $wpImportLogHasError || str_contains((string)$line, '✗');
+        $wpImportLogHasWarning = $wpImportLogHasWarning || str_contains((string)$line, '⚠');
+    }
+    $wpImportPanelClass = $wpImportLogHasError ? 'admin-panel--danger' : ($wpImportLogHasWarning ? 'admin-panel--warning' : 'admin-panel--success');
+    $wpImportHeadingIcon = $wpImportLogHasError ? '✗' : ($wpImportLogHasWarning ? '⚠' : '✓');
+    $wpImportHeadingText = $wpImportLogHasError ? 'Import se nepodařilo připravit' : ($wpImportLogHasWarning ? 'Import vyžaduje pozornost' : 'Import dokončen');
+    ?>
+  <section class="admin-panel <?= h($wpImportPanelClass) ?>" aria-labelledby="import-result-heading"<?= $wpImportLogHasError ? ' role="alert"' : ' role="status"' ?>>
+    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true"><?= h($wpImportHeadingIcon) ?></span> <?= h($wpImportHeadingText) ?></h2>
     <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
@@ -488,8 +514,9 @@ adminHeader('Import z WordPressu');
         <label for="wxr_file">WordPress XML export (WXR) <span aria-hidden="true">*</span></label>
         <input type="file" id="wxr_file" name="wxr_file" required aria-required="true"
                accept=".xml,application/xml,text/xml"
-               aria-describedby="wxr-help">
+               <?= adminFieldAttributes('wxr_file', $wpImportFieldErrorNames, [], ['wxr-help'], 'wxr-error') ?>>
         <small id="wxr-help">XML soubor exportovaný z WordPress admin → Nástroje → Export.</small>
+        <?php adminRenderFieldError('wxr_file', $wpImportFieldErrorNames, [], $wpImportFieldErrors['wxr_file'] ?? '', 'wxr-error'); ?>
       </div>
     </fieldset>
 

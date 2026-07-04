@@ -22,19 +22,31 @@ function esDecodeValue(string $value): string
 $pdo = db_connect();
 $log = $_SESSION['import_log'] ?? null;
 unset($_SESSION['import_log']);
+$estrankyImportFieldErrors = $_SESSION['estranky_import_field_errors'] ?? [];
+unset($_SESSION['estranky_import_field_errors']);
+if (!is_array($estrankyImportFieldErrors)) {
+    $estrankyImportFieldErrors = [];
+}
+$estrankyImportFieldErrors = array_filter(array_map('strval', $estrankyImportFieldErrors));
+$estrankyImportFieldErrorNames = array_keys($estrankyImportFieldErrors);
+$estrankyXmlRequiredErrorMessage = 'Vyberte XML zálohu z eStránek. Soubor má mít příponu .xml a pocházet z exportu webu eStránky.cz.';
+$estrankyXmlInvalidErrorMessage = 'XML zálohu z eStránek se nepodařilo načíst. Nahrajte platný neprázdný XML soubor z exportu eStránek.';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_name'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     set_time_limit(300);
 
     /** @var array<string,mixed> $xmlFile */
-    $xmlFile = $_FILES['xml_file'];
+    $xmlFile = is_array($_FILES['xml_file'] ?? null) ? $_FILES['xml_file'] : [];
     $upload = koraInspectUploadedFile($xmlFile, [
-        'invalid_upload_error' => 'Nahraný XML soubor se nepodařilo ověřit.',
-        'empty_file_error' => 'Vybraný XML soubor je prázdný.',
+        'no_file_error' => $estrankyXmlRequiredErrorMessage,
+        'invalid_upload_error' => $estrankyXmlInvalidErrorMessage,
+        'empty_file_error' => $estrankyXmlInvalidErrorMessage,
     ]);
     if (empty($upload['ok'])) {
-        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h((string)($upload['error'] ?? 'Neplatný soubor.'))];
+        $uploadErrorMessage = (string)($upload['error'] ?? $estrankyXmlInvalidErrorMessage);
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h($uploadErrorMessage)];
+        $_SESSION['estranky_import_field_errors'] = ['xml_file' => $uploadErrorMessage];
         header('Location: estranky_import.php');
         exit;
     }
@@ -44,7 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['xml_file']['tmp_nam
     $log = [];
     $xml = @simplexml_load_file($xmlPath);
     if ($xml === false) {
-        $log[] = '<span aria-hidden="true">✗</span> Nepodařilo se načíst XML soubor.';
+        $log[] = '<span aria-hidden="true">✗</span> ' . h($estrankyXmlInvalidErrorMessage);
+        $_SESSION['estranky_import_field_errors'] = ['xml_file' => $estrankyXmlInvalidErrorMessage];
         $_SESSION['import_log'] = $log;
         header('Location: estranky_import.php');
         exit;
@@ -304,8 +317,19 @@ adminHeader('Import z eStránek');
 ?>
 
 <?php if ($log !== null): ?>
-  <section class="admin-panel admin-panel--success" aria-labelledby="import-result-heading">
-    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true">✓</span> Import dokončen</h2>
+  <?php
+    $estrankyImportLogHasError = false;
+    $estrankyImportLogHasWarning = false;
+    foreach ((array)$log as $line) {
+        $estrankyImportLogHasError = $estrankyImportLogHasError || str_contains((string)$line, '✗');
+        $estrankyImportLogHasWarning = $estrankyImportLogHasWarning || str_contains((string)$line, '⚠');
+    }
+    $estrankyImportPanelClass = $estrankyImportLogHasError ? 'admin-panel--danger' : ($estrankyImportLogHasWarning ? 'admin-panel--warning' : 'admin-panel--success');
+    $estrankyImportHeadingIcon = $estrankyImportLogHasError ? '✗' : ($estrankyImportLogHasWarning ? '⚠' : '✓');
+    $estrankyImportHeadingText = $estrankyImportLogHasError ? 'Import se nepodařilo připravit' : ($estrankyImportLogHasWarning ? 'Import vyžaduje pozornost' : 'Import dokončen');
+    ?>
+  <section class="admin-panel <?= h($estrankyImportPanelClass) ?>" aria-labelledby="import-result-heading"<?= $estrankyImportLogHasError ? ' role="alert"' : ' role="status"' ?>>
+    <h2 id="import-result-heading" class="admin-panel__heading"><span aria-hidden="true"><?= h($estrankyImportHeadingIcon) ?></span> <?= h($estrankyImportHeadingText) ?></h2>
     <ul class="admin-panel__list">
       <?php foreach ($log as $line): ?>
         <li><?= $line ?></li>
@@ -326,8 +350,9 @@ adminHeader('Import z eStránek');
       <label for="xml_file">XML záloha z eStránek <span aria-hidden="true">*</span></label>
       <input type="file" id="xml_file" name="xml_file" required aria-required="true"
              accept=".xml,application/xml,text/xml"
-             aria-describedby="xml-help">
+             <?= adminFieldAttributes('xml_file', $estrankyImportFieldErrorNames, [], ['xml-help'], 'xml-error') ?>>
       <small id="xml-help">Vyberte XML soubor zálohy exportovaný z eStránek.</small>
+      <?php adminRenderFieldError('xml_file', $estrankyImportFieldErrorNames, [], $estrankyImportFieldErrors['xml_file'] ?? '', 'xml-error'); ?>
     </div>
     <div class="admin-field-row">
       <label for="es_target_blog">Importovat články do blogu:</label>

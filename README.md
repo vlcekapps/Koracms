@@ -490,6 +490,8 @@ Dlouho běžící administrační formuláře, například import z WordPressu n
 
 XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílenou upload validaci jako ostatní citlivější nahrávání. CMS ověří stav PHP uploadu, dočasný soubor a prázdný soubor dřív, než ho předá parseru; WordPress náhled se navíc ukládá do `uploads/tmp` přes bezpečný upload helper. Základní URL pro stahování fotografií z eStránek prochází stejným http/https normalizátorem jako ostatní externí adresy, takže nepřijme protocol-relative URL, přihlašovací údaje ani nebezpečná schémata.
 
+Importní formuláře navazují tyto chyby i na konkrétní pole. JSON import, WordPress WXR, XML import z eStránek a downloader fotografií z eStránek používají field-level chyby přes `aria-describedby`; chybový panel má `role="alert"` a text radí správný exportní soubor, platné UTF-8 nebo http/https/doménovou URL webu.
+
 Tokenové odkazy, které mění stav přes tajný `GET` odkaz, jsou metodově omezené. Potvrzení e-mailu, potvrzení nebo odhlášení newsletteru a veřejné i administrační odhlášení odmítají `POST`, `HEAD` a další nečekané metody pomocí `405` a `Allow: GET`, takže kontrolní nebo chybné HTTP požadavky nemají měnit účet, odběr ani session.
 
 Editor anket v administraci používá pro přidávání a odebírání možností odpovědi datové atributy a delegovaný listener v nonce skriptu formuláře, ne inline `onclick` handlery.

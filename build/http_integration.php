@@ -2224,6 +2224,26 @@ try {
         $jsonImportIssues[] = 'import dat nevykreslil csrf_token';
     }
 
+    $emptyJsonImportResponse = postUrl(
+        $importUrl,
+        ['csrf_token' => $importCsrf],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($emptyJsonImportResponse) !== 200) {
+        $jsonImportIssues[] = 'prázdný JSON import nevrátil 200 s chybou formuláře';
+    }
+    foreach ([
+        'Vyberte JSON export z Kora CMS',
+        'aria-invalid="true"',
+        'aria-describedby="import-file-help import-file-error"',
+        'id="import-file-error"',
+    ] as $emptyJsonImportFragment) {
+        if (!str_contains($emptyJsonImportResponse['body'], $emptyJsonImportFragment)) {
+            $jsonImportIssues[] = 'prázdný JSON import nezobrazil field-level fragment: ' . $emptyJsonImportFragment;
+        }
+    }
+
     $originalImportSettings = [
         'site_name' => httpIntegrationSettingValue($pdo, 'site_name'),
     ];
@@ -2393,6 +2413,87 @@ try {
     }
 
     httpIntegrationPrintResult('json_import_utf8_http', $jsonImportIssues, $failures);
+
+    $adminImportA11yIssues = [];
+    foreach ([
+        'wp_import' => [
+            'url' => $baseUrl . BASE_URL . '/admin/wp_import.php',
+            'post' => [],
+            'expected_script' => 'wp_import.php',
+            'fragments' => [
+                'Vyberte WordPress XML export ve formátu WXR',
+                'role="alert"',
+                'aria-invalid="true"',
+                'aria-describedby="wxr-help wxr-error"',
+                'id="wxr-error"',
+                'Import se nepodařilo připravit',
+            ],
+        ],
+        'estranky_import' => [
+            'url' => $baseUrl . BASE_URL . '/admin/estranky_import.php',
+            'post' => [],
+            'expected_script' => 'estranky_import.php',
+            'fragments' => [
+                'Vyberte XML zálohu z eStránek',
+                'role="alert"',
+                'aria-invalid="true"',
+                'aria-describedby="xml-help xml-error"',
+                'id="xml-error"',
+                'Import se nepodařilo připravit',
+            ],
+        ],
+        'estranky_photos' => [
+            'url' => $baseUrl . BASE_URL . '/admin/estranky_download_photos.php',
+            'post' => ['site_url' => 'javascript:alert(1)'],
+            'expected_script' => 'estranky_download_photos.php',
+            'fragments' => [
+                'Opravte prosím označená pole',
+                'role="alert"',
+                'aria-describedby="xml-help xml-error"',
+                'id="xml-error"',
+                'aria-describedby="url-help site-url-error"',
+                'id="site-url-error"',
+                'Zadejte hlavní URL webu na eStránkách',
+            ],
+        ],
+    ] as $adminImportLabel => $adminImportSpec) {
+        $adminImportPage = fetchUrl((string)$adminImportSpec['url'], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($adminImportPage) !== 200) {
+            $adminImportA11yIssues[] = $adminImportLabel . ' nevykreslil formulář';
+            continue;
+        }
+        $adminImportCsrf = extractHiddenInputValue($adminImportPage['body'], 'csrf_token');
+        if ($adminImportCsrf === '') {
+            $adminImportA11yIssues[] = $adminImportLabel . ' nevykreslil csrf_token';
+            continue;
+        }
+
+        $adminImportPostFields = array_merge(['csrf_token' => $adminImportCsrf], (array)$adminImportSpec['post']);
+        $adminImportErrorResponse = postUrl(
+            (string)$adminImportSpec['url'],
+            $adminImportPostFields,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($adminImportErrorResponse) !== 302) {
+            $adminImportA11yIssues[] = $adminImportLabel . ' prázdný/chybný POST nevrátil 302 redirect';
+            continue;
+        }
+        $adminImportLocation = responseLocationHeaderValue($adminImportErrorResponse['headers']);
+        $adminImportLocationPath = (string)(parse_url($adminImportLocation, PHP_URL_PATH) ?? '');
+        if (basename($adminImportLocationPath) !== (string)$adminImportSpec['expected_script']) {
+            $adminImportA11yIssues[] = $adminImportLabel . ' prázdný/chybný POST nemíří zpět na formulář';
+        }
+
+        $adminImportErrorPage = fetchUrl((string)$adminImportSpec['url'], $adminSession['cookie'], 0);
+        foreach ((array)$adminImportSpec['fragments'] as $adminImportFragment) {
+            if (!str_contains($adminImportErrorPage['body'], (string)$adminImportFragment)) {
+                $adminImportA11yIssues[] = $adminImportLabel . ' nezobrazil field-level fragment: ' . (string)$adminImportFragment;
+            }
+        }
+    }
+
+    httpIntegrationPrintResult('admin_import_error_suggestions_http', $adminImportA11yIssues, $failures);
 
     $visitorStatsWidgetIssues = [];
     saveSetting('module_statistics', '1');
