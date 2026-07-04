@@ -51,8 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fieldErrors['message'] = 'Zpráva je povinná.';
         }
         if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $errors[] = 'Chybná odpověď na ověřovací otázku.';
-            $fieldErrors['captcha'] = 'Chybná odpověď na ověřovací otázku.';
+            $captchaError = publicCaptchaErrorMessage();
+            $errors[] = $captchaError;
+            $fieldErrors['captcha'] = $captchaError;
         }
 
         if (empty($errors)) {

@@ -237,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         verifyCsrf();
 
         if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $addFieldError('captcha', 'Chybná odpověď na ověřovací otázku.');
+            $addFieldError('captcha', publicCaptchaErrorMessage());
         }
 
         $previewData = [];

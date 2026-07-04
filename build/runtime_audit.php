@@ -12820,6 +12820,7 @@ if (!str_contains($boardCatsSource, 'uniqueBoardCategorySlug(')
 }
 if (!str_contains($boardSubscribeSource, "captchaVerify((string)(\$_POST['captcha'] ?? ''))")
     || !str_contains($boardSubscribeSource, 'sendBoardSubscriptionConfirmation(')
+    || !str_contains($boardSubscribeSource, 'publicCaptchaErrorMessage()')
     || !str_contains($boardSubscribeViewSource, 'aria-invalid="true"')) {
     $boardSourceIssues[] = 'board subscription flow is missing captcha, double opt-in, or field-level errors';
 }
@@ -13885,7 +13886,7 @@ if ($httpIntegrationSource === '') {
     foreach ([
         "httpIntegrationPrintResult('public_form_submit_http'",
         'formPublicPath([',
-        'Chybná odpověď na ověřovací otázku.',
+        '$publicCaptchaErrorSuggestion = publicCaptchaErrorMessage();',
         'Vybraný typ souboru není v tomto poli povolený.',
         'httpIntegrationExtractCaptchaAnswer(',
         'httpIntegrationListStoredFormUploads(',
@@ -13942,6 +13943,49 @@ if ($publicFormsHttpIssues === []) {
     $failures++;
     foreach ($publicFormsHttpIssues as $publicFormsHttpIssue) {
         echo '- ' . $publicFormsHttpIssue . "\n";
+    }
+}
+
+echo "=== public_error_suggestion_guardrails ===\n";
+$publicErrorSuggestionIssues = [];
+$publicCaptchaErrorSuggestion = 'Chybná odpověď na ověřovací otázku. Zkuste výpočet znovu a zadejte jen číslo.';
+$publicErrorSuggestionSources = [
+    'contact controller' => (string)file_get_contents(dirname(__DIR__) . '/contact/index.php'),
+    'food order controller' => (string)file_get_contents(dirname(__DIR__) . '/food/order.php'),
+    'Form Builder controller' => (string)file_get_contents(dirname(__DIR__) . '/forms/index.php'),
+    'newsletter subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/subscribe.php'),
+    'board subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/board/subscribe.php'),
+    'newsletter subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php'),
+    'board subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-subscribe.php'),
+];
+if (!str_contains($authSource, 'function publicCaptchaErrorMessage(): string')
+    || !str_contains($authSource, $publicCaptchaErrorSuggestion)) {
+    $publicErrorSuggestionIssues[] = 'shared public captcha error helper is missing actionable suggestion text';
+}
+foreach ($publicErrorSuggestionSources as $publicErrorSuggestionLabel => $publicErrorSuggestionSource) {
+    if (!str_contains($publicErrorSuggestionSource, 'publicCaptchaErrorMessage()')) {
+        $publicErrorSuggestionIssues[] = $publicErrorSuggestionLabel . ' does not use the shared public captcha error suggestion';
+    }
+    if (preg_match("/Chybná odpověď na ověřovací otázku\\.'/", $publicErrorSuggestionSource) === 1) {
+        $publicErrorSuggestionIssues[] = $publicErrorSuggestionLabel . ' still contains the legacy non-actionable captcha error text';
+    }
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, '$publicCaptchaErrorSuggestion = publicCaptchaErrorMessage();')
+    || !str_contains($httpIntegrationSource, 'nezobrazil validační chybu s návrhem opravy')) {
+    $publicErrorSuggestionIssues[] = 'HTTP integration must assert the rendered public captcha error suggestion';
+}
+if ($unitTestsSource === ''
+    || !str_contains($unitTestsSource, 'publicCaptchaErrorMessage()')
+    || !str_contains($unitTestsSource, 'Zkuste výpočet znovu a zadejte jen číslo.')) {
+    $publicErrorSuggestionIssues[] = 'unit tests must cover the shared public captcha error suggestion helper';
+}
+if ($publicErrorSuggestionIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($publicErrorSuggestionIssues as $publicErrorSuggestionIssue) {
+        echo '- ' . $publicErrorSuggestionIssue . "\n";
     }
 }
 
@@ -17615,7 +17659,7 @@ foreach ([
     'id="newsletter-email-error"',
     'id="newsletter-captcha-error"',
     'aria-invalid="true"',
-    'Chybná odpověď na ověřovací otázku.',
+    'publicCaptchaErrorMessage()',
 ] as $newsletterSubscribeFieldErrorFragment) {
     if (!str_contains($themeNewsletterSubscribeViewSource, $newsletterSubscribeFieldErrorFragment)) {
         $themeLayoutIssues[] = 'newsletter subscribe view is missing field-level error fragment: ' . $newsletterSubscribeFieldErrorFragment;

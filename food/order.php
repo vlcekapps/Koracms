@@ -87,8 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fieldErrors['customer_phone'] = 'Zadejte telefon pro upřesnění poptávky.';
         }
         if (!captchaVerify((string)($_POST['captcha'] ?? ''))) {
-            $errors[] = 'Chybná odpověď na ověřovací otázku.';
-            $fieldErrors['captcha'] = 'Chybná odpověď na ověřovací otázku.';
+            $captchaError = publicCaptchaErrorMessage();
+            $errors[] = $captchaError;
+            $fieldErrors['captcha'] = $captchaError;
         }
 
         $rawQuantities = is_array($_POST['qty'] ?? null) ? (array)$_POST['qty'] : [];

@@ -1259,6 +1259,14 @@ function captchaVerify(string $input): bool
 }
 
 /**
+ * Sdílený field-level text pro veřejné matematické ověření proti spamu.
+ */
+function publicCaptchaErrorMessage(): string
+{
+    return 'Chybná odpověď na ověřovací otázku. Zkuste výpočet znovu a zadejte jen číslo.';
+}
+
+/**
  * Rate limiting – přeruší požadavek s HTTP 429, pokud IP překročí limit.
  * $action  – identifikátor akce (login, comment, contact, chat)
  * $max     – maximální počet pokusů v časovém okně

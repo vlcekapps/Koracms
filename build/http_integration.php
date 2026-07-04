@@ -22,6 +22,7 @@ if (!is_string($baseUrlInput) || $baseUrlInput === '') {
 $baseUrl = rtrim($baseUrlInput, '/');
 $pdo = db_connect();
 $failures = 0;
+$publicCaptchaErrorSuggestion = publicCaptchaErrorMessage();
 $createdUsers = [];
 $createdBlogs = [];
 $createdCategories = [];
@@ -2941,7 +2942,7 @@ try {
         0
     );
     if (httpIntegrationStatusCode($subscribeInvalidCaptchaResponse) !== 200
-        || !str_contains($subscribeInvalidCaptchaResponse['body'], 'Chybná odpověď na ověřovací otázku.')
+        || !str_contains($subscribeInvalidCaptchaResponse['body'], $publicCaptchaErrorSuggestion)
         || !httpIntegrationFieldHasAriaInvalid($subscribeInvalidCaptchaResponse['body'], 'captcha')) {
         $footerDiscoveryWidgetIssues[] = 'subscribe.php nezobrazil přístupnou chybu pro chybnou captchu';
     }
@@ -3084,8 +3085,8 @@ try {
     if (httpIntegrationStatusCode($invalidContactResponse) !== 200) {
         $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nevrátil 200';
     }
-    if (!str_contains($invalidContactResponse['body'], 'Chybná odpověď na ověřovací otázku.')) {
-        $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nezobrazil validační chybu';
+    if (!str_contains($invalidContactResponse['body'], $publicCaptchaErrorSuggestion)) {
+        $contactCenterIssues[] = 'kontaktní formulář s chybnou captchou nezobrazil validační chybu s návrhem opravy';
     }
     if (!httpIntegrationFieldHasAriaInvalid($invalidContactResponse['body'], 'captcha')
         || !str_contains($invalidContactResponse['body'], 'id="contact-captcha-error"')) {
@@ -5202,7 +5203,7 @@ try {
             0
         );
         if (httpIntegrationStatusCode($invalidBoardSubscribeResponse) !== 200
-            || !str_contains($invalidBoardSubscribeResponse['body'], 'Chybná odpověď na ověřovací otázku.')
+            || !str_contains($invalidBoardSubscribeResponse['body'], $publicCaptchaErrorSuggestion)
             || !httpIntegrationFieldHasAriaInvalid($invalidBoardSubscribeResponse['body'], 'board-subscribe-captcha')) {
             $boardIssues[] = 'odběr vývěsky se špatnou captchou nezobrazil přístupnou chybu';
         }
@@ -6320,7 +6321,7 @@ try {
             0
         );
         if (httpIntegrationStatusCode($invalidFoodOrderResponse) !== 200
-            || !str_contains($invalidFoodOrderResponse['body'], 'Chybná odpověď na ověřovací otázku.')
+            || !str_contains($invalidFoodOrderResponse['body'], $publicCaptchaErrorSuggestion)
             || !httpIntegrationFieldHasAriaInvalid($invalidFoodOrderResponse['body'], 'captcha')) {
             $foodStructuredIssues[] = 'objednávkový formulář nezobrazil přístupnou chybu pro chybnou captchu';
         }
@@ -8179,8 +8180,8 @@ try {
     if (httpIntegrationStatusCode($invalidCaptchaResponse) !== 200) {
         $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nevrátil 200';
     }
-    if (!str_contains($invalidCaptchaResponse['body'], 'Chybná odpověď na ověřovací otázku.')) {
-        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nezobrazil validační chybu';
+    if (!str_contains($invalidCaptchaResponse['body'], $publicCaptchaErrorSuggestion)) {
+        $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou nezobrazil validační chybu s návrhem opravy';
     }
     if (!httpIntegrationFieldHasAriaInvalid($invalidCaptchaResponse['body'], 'captcha')) {
         $publicFormIssues[] = 'submit veřejného formuláře s chybnou CAPTCHou neoznačil pole captcha jako aria-invalid';

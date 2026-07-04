@@ -52,7 +52,7 @@
                    inputmode="numeric" autocomplete="off"
                    <?php if ($captchaHasError): ?>aria-invalid="true" aria-describedby="newsletter-captcha-error"<?php endif; ?>>
             <?php if ($captchaHasError): ?>
-              <small id="newsletter-captcha-error" class="field-error">Chybná odpověď na ověřovací otázku.</small>
+              <small id="newsletter-captcha-error" class="field-error"><?= h(publicCaptchaErrorMessage()) ?></small>
             <?php endif; ?>
           </div>
 

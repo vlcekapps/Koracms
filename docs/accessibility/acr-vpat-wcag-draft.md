@@ -83,7 +83,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.1.2 Language of Parts | Partially Supports | Authors can add HTML language attributes, but CMS does not enforce them. |
 | 3.2.3 Consistent Navigation | Supports | Shared public/admin layouts keep navigation consistent. |
 | 3.2.4 Consistent Identification | Supports | Shared module manifests and labels support consistent naming. |
-| 3.3.3 Error Suggestion | Partially Supports | Many errors are specific; all validation copy needs review. |
+| 3.3.3 Error Suggestion | Partially Supports | Public math verification errors in contact, newsletter, board subscription, Food orders and Form Builder now use a shared actionable suggestion and are covered by runtime/HTTP guardrails. A full validation-copy review for admin, custom and less common errors is still pending. |
 | 3.3.4 Error Prevention (Legal, Financial, Data) | Partially Supports | CSRF, confirmations, PRG and audit logs exist; critical workflows need mapping. |
 | 3.3.8 Accessible Authentication (Minimum) | Supports | Registration and password reset request do not require a math CAPTCHA; they use CSRF, rate limiting and honeypot protection. Runtime and HTTP integration guardrails cover no-CAPTCHA auth rendering, password-manager autocomplete metadata, 2FA one-time-code/numeric metadata and text-backed admin/2FA error alerts. Manual password-manager, TOTP, token reset and error-state behavior was confirmed on 2026-07-04. |
 | 4.1.3 Status Messages | Supports | Status and error messages use live region semantics and guarded roles. |

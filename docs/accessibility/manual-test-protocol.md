@@ -10,6 +10,7 @@ Aktuální ruční evidence:
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
+- 2026-07-04: runtime `public_error_suggestion_guardrails` a HTTP integrace hlídají, že veřejná matematická ověřovací otázka v kontaktu, newsletteru, odběru vývěsky, Food objednávkách a Form Builderu vrací field-level chybu s konkrétním návrhem opravy. Ručně zbývá širší copy pass administračních a custom validačních hlášek.
 
 ## Prostředí
 
@@ -47,7 +48,7 @@ p {
 2. Projít hlavní navigaci, vyhledávání, footer widgety a sociální odkazy jen klávesnicí.
 3. Otevřít blog index, článek s osnovou, kategorii, štítek a sérii.
 4. Odeslat komentář se správnými i chybnými hodnotami.
-5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill.
+5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U chybné ověřovací otázky ověřit, že čtečka oznámí text s návrhem přepočítat příklad a zadat jen číslo.
 6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů.
 8. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
@@ -88,6 +89,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Čtečka hlásí název, roli, stav a hodnotu ovládacích prvků.
 - Stavové hlášky se oznámí jednou a neruší při každém napsaném znaku.
 - Každé pole má srozumitelný label a chyba je spojena s polem.
+- Chybové hlášky, kde je známý opravný krok, neříkají jen „chybná hodnota“, ale stručně radí, jak pokračovat.
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
 - Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
 - Autofill u veřejného kontaktu, objednávkové poptávky, guest rezervace a Form Builder formuláře nenabízí zavádějící hodnoty a u běžných osobních polí rozpozná jméno, e-mail, telefon, URL nebo organizaci.

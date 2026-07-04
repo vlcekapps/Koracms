@@ -75,7 +75,7 @@ $postedEmail = (string)($postedEmail ?? '');
                    inputmode="numeric" autocomplete="off"
                    <?php if ($captchaHasError): ?>aria-invalid="true" aria-describedby="board-subscribe-captcha-error"<?php endif; ?>>
             <?php if ($captchaHasError): ?>
-              <small id="board-subscribe-captcha-error" class="field-error">Chybná odpověď na ověřovací otázku.</small>
+              <small id="board-subscribe-captcha-error" class="field-error"><?= h(publicCaptchaErrorMessage()) ?></small>
             <?php endif; ?>
           </div>
 

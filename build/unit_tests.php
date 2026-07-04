@@ -114,6 +114,12 @@ assert_equals('', h(''), 'empty string returns empty');
 assert_equals('Příliš žluťoučký kůň', h('Příliš žluťoučký kůň'), 'UTF-8 passes through');
 assert_equals('a &amp; b', h('a & b'), 'ampersand escaped');
 
+test_section('publicCaptchaErrorMessage()');
+
+$publicCaptchaErrorMessage = publicCaptchaErrorMessage();
+assert_contains('Chybná odpověď na ověřovací otázku.', $publicCaptchaErrorMessage, 'captcha error identifies invalid answer');
+assert_contains('Zkuste výpočet znovu a zadejte jen číslo.', $publicCaptchaErrorMessage, 'captcha error suggests how to fix the answer');
+
 // ─── 2. inputInt() ──────────────────────────────────────────────────────────
 
 test_section('inputInt()');

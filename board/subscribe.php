@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorFields[] = 'email';
         }
         if (!captchaVerify((string)($_POST['captcha'] ?? ''))) {
-            $errors[] = 'Chybná odpověď na ověřovací otázku.';
+            $errors[] = publicCaptchaErrorMessage();
             $errorFields[] = 'captcha';
         }
 
