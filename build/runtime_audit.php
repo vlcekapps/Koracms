@@ -14117,6 +14117,64 @@ if ($publicErrorSuggestionIssues === []) {
     }
 }
 
+echo "=== author_content_governance_guardrails ===\n";
+$authorContentIssues = [];
+$authorContentChecklistPath = dirname(__DIR__) . '/docs/accessibility/author-content-checklist.md';
+$authorContentChecklistSource = is_file($authorContentChecklistPath)
+    ? (string)file_get_contents($authorContentChecklistPath)
+    : '';
+$wcagConformanceSource = is_file(dirname(__DIR__) . '/docs/accessibility/wcag-22-aa-conformance.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/wcag-22-aa-conformance.md')
+    : '';
+$acrVpatDraftSource = is_file(dirname(__DIR__) . '/docs/accessibility/acr-vpat-wcag-draft.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/acr-vpat-wcag-draft.md')
+    : '';
+$a11yBacklogSource = is_file(dirname(__DIR__) . '/docs/accessibility/a11y-remediation-backlog.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/a11y-remediation-backlog.md')
+    : '';
+$manualTestProtocolSource = is_file(dirname(__DIR__) . '/docs/accessibility/manual-test-protocol.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/manual-test-protocol.md')
+    : '';
+foreach ([
+    '# Redakční checklist přístupného obsahu',
+    'alt text',
+    'WebVTT',
+    'transcript',
+    '<span lang="en">',
+    'externí embedy',
+    'Core CMS defect',
+    'Theme defect',
+    'Author-content issue',
+] as $authorContentChecklistFragment) {
+    if (!str_contains($authorContentChecklistSource, $authorContentChecklistFragment)) {
+        $authorContentIssues[] = 'author content checklist is missing fragment: ' . $authorContentChecklistFragment;
+    }
+}
+foreach ([
+    'README.md' => [$readmeSource, 'docs/accessibility/author-content-checklist.md'],
+    'docs/admin-guide.md' => [$adminGuideSource, 'accessibility/author-content-checklist.md'],
+    'docs/developer-modules.md' => [$developerModulesDocSource, 'docs/accessibility/author-content-checklist.md'],
+    'docs/accessibility/wcag-22-aa-conformance.md' => [$wcagConformanceSource, 'author-content-checklist.md'],
+    'docs/accessibility/acr-vpat-wcag-draft.md' => [$acrVpatDraftSource, 'author-content checklist'],
+    'docs/accessibility/a11y-remediation-backlog.md' => [$a11yBacklogSource, 'author-content-checklist.md'],
+    'docs/accessibility/manual-test-protocol.md' => [$manualTestProtocolSource, 'author-content-checklist.md'],
+] as $authorContentDoc => [$authorContentDocSource, $authorContentDocFragment]) {
+    if (!str_contains($authorContentDocSource, $authorContentDocFragment)) {
+        $authorContentIssues[] = $authorContentDoc . ' is missing author content checklist reference: ' . $authorContentDocFragment;
+    }
+}
+if (!str_contains($a11yBacklogSource, 'reálné použití v redakčním workflow') && !str_contains($a11yBacklogSource, 'representative')) {
+    $authorContentIssues[] = 'a11y backlog must keep remaining author-content work as real workflow/manual verification';
+}
+if ($authorContentIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($authorContentIssues as $authorContentIssue) {
+        echo '- ' . $authorContentIssue . "\n";
+    }
+}
+
 echo "=== editorial_validation_guardrails ===\n";
 $editorialValidationIssues = [];
 $pageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save.php');

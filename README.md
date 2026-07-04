@@ -563,7 +563,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - klávesnicová ovladatelnost i tam, kde je drag & drop
 - průběžný audit přes `build/runtime_audit.php`
 
-Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](docs/accessibility/): WCAG 2.2 AA matice, VPAT/ACR draft, backlog oprav a ruční testovací protokol. Report hodnotí Kora CMS jako produkt a odděluje odpovědnost CMS od ručně vloženého obsahu autora, například kvality titulků médií, alt textů nebo vlastního HTML v editoru. Podcastové epizody mají samostatné pole pro přepis epizody, které se veřejně vykreslí jako textová alternativa audia a zůstává součástí exportu/importu; audio/video snippety navíc podporují přímé odkazy na přepis a přímá videa WebVTT titulky. Stejné dokumenty jsou povinný vstup i pro návrh nových modulů: nový modul má předem určit, zda mění některý předpoklad conformance reportu, zda vyžaduje ruční testovací scénář a zda je potřeba aktualizovat backlog.
+Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](docs/accessibility/): WCAG 2.2 AA matice, VPAT/ACR draft, backlog oprav, ruční testovací protokol a redakční checklist přístupného obsahu. Report hodnotí Kora CMS jako produkt a odděluje odpovědnost CMS od ručně vloženého obsahu autora, například kvality titulků médií, alt textů nebo vlastního HTML v editoru. Podcastové epizody mají samostatné pole pro přepis epizody, které se veřejně vykreslí jako textová alternativa audia a zůstává součástí exportu/importu; audio/video snippety navíc podporují přímé odkazy na přepis a přímá videa WebVTT titulky. Checklist [docs/accessibility/author-content-checklist.md](docs/accessibility/author-content-checklist.md) dává editorům kontrolu obrázků, médií, jazyka částí, odkazů, nadpisů, tabulek, barev a externích embedů před publikací. Stejné dokumenty jsou povinný vstup i pro návrh nových modulů: nový modul má předem určit, zda mění některý předpoklad conformance reportu, zda vyžaduje ruční testovací scénář a zda je potřeba aktualizovat backlog.
 
 ---
 
@@ -850,4 +850,5 @@ Součástí návrhu nového modulu je také kontrola dokumentů [docs/accessibil
 - [docs/accessibility/acr-vpat-wcag-draft.md](docs/accessibility/acr-vpat-wcag-draft.md) – VPAT/ACR draft odvozený z WCAG matice
 - [docs/accessibility/a11y-remediation-backlog.md](docs/accessibility/a11y-remediation-backlog.md) – prioritizovaný backlog přístupnostních oprav
 - [docs/accessibility/manual-test-protocol.md](docs/accessibility/manual-test-protocol.md) – ruční testovací protokol pro klávesnici, čtečky, zoom a mobilní šířky
+- [docs/accessibility/author-content-checklist.md](docs/accessibility/author-content-checklist.md) – redakční checklist pro alt texty, titulky, přepisy, jazyk částí, odkazy a externí embedy
 - [docs/ux-audit-framework.md](docs/ux-audit-framework.md) – framework pro UX a přístupnostní audit

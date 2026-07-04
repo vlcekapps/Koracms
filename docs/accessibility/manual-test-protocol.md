@@ -4,6 +4,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 Aktuální ruční evidence:
 
+- 2026-07-04: vznikl `author-content-checklist.md` pro redakční kontrolu alt textů, médií, titulků, přepisů, jazyka částí, odkazů, nadpisů, tabulek, barev a externích embedů. Ručně zbývá projít reprezentativní publikovaný obsah a potvrdit, že nálezy jsou správně tříděné na core CMS defect, theme defect a author-content issue.
 - 2026-07-04: browser průchod při 320 px ověřil admin stránky media, widgets, statistics, Form Builder, přehled formulářů, comments, contact, chat, reservations, food, downloads, gallery, importy, content picker a reprezentativní dlouhé formuláře page/blog/news/event/download/gallery/food/board/FAQ/place/polls/reservations/podcast. Nalezený horizontální scroll rootu ve statistikách, přehledu formulářů, food/downloads/gallery a podcastech i main-level scroll u contact/chat a dlouhých fieldsetů byl opravený přes `.table-responsive`, posílené CSS containment, wrapper skrytých datových tabulek grafů a sdílené CSS pro fieldset/form controls; admin hledání mělo viditelný focus a ověřené samostatné cíle neměly pod 24 px. Zbylý ruční průchod se týká hlavně 400 % zoomu, custom modulů, sticky/anchor skoků a keyboard-only/NVDA kombinací.
 - 2026-07-04: audio/video snippety podporují odkaz na přepis přes `transcript`; přímý video shortcode podporuje WebVTT titulky přes `captions`, `srclang` a `caption_label` a knihovna médií přijímá `.vtt` soubory. Unit a runtime testy hlídají HTML výstup; ručně zbývá ověřit timing, jazyk, kvalitu titulků/přepisů a chování v prohlížeči se čtečkou.
 - 2026-07-04: podcastové epizody mají modelované pole `transcript` pro textovou alternativu audia; unit testy helperů a runtime veřejného detailu hlídají, že se přepis vykreslí jako samostatná sekce. Ručně zbývá ověřit kvalitu skutečných přepisů a další média mimo podcastový modul.
@@ -51,6 +52,7 @@ p {
 - Testovat čistou instalaci i reprezentativní web s obsahem.
 - U každého nálezu uložit URL, krok, očekávané chování, skutečné chování a dotčené WCAG kritérium.
 - Pokud je chyba v obsahu autora, označit ji jako author-content issue, ne jako core CMS defect.
+- Author-content issue posuzovat podle `author-content-checklist.md`: alt text, obrázek s textem, přepis, titulky, jazyk části, text odkazu, tabulka, barva, vlastní HTML, PDF nebo externí embed.
 - Pokud chyba vzniká v core UI nebo default šabloně, založit opravnou položku v `a11y-remediation-backlog.md`.
 - Při návrhu nového modulu projít tento protokol ještě před implementací a označit scénáře, které modul rozšiřuje nebo které bude potřeba doplnit.
 
@@ -64,9 +66,10 @@ p {
 6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů. U přímého videa s WebVTT titulky ověřit, že prohlížeč titulkovou stopu nabízí se správným jazykem a názvem; u audio/video snippetu s `transcript` ověřit dosažitelný odkaz na přepis.
 8. Otevřít podcastovou epizodu s vyplněným přepisem a ověřit, že čtečka oznámí sekci `Přepis epizody` jako textovou alternativu audia; u externích video embedů ověřit titulky nebo popsanou odpovědnost autora.
-9. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
-10. Otevřít board, downloads, events, places, reservations a food detail.
-11. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
+9. Projít reprezentativní článek nebo stránku podle `author-content-checklist.md`: obrázky s alt textem, obrázky s textem, cizojazyčný úsek s `lang`, srozumitelné odkazy, nadpisy, tabulky, barvu, vlastní HTML a externí embed.
+10. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
+11. Otevřít board, downloads, events, places, reservations a food detail.
+12. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
 
 ## Scénáře administrace
 
@@ -112,6 +115,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Stavové hlášky se oznámí jednou a neruší při každém napsaném znaku.
 - Každé pole má srozumitelný label a chyba je spojena s polem.
 - Chybové hlášky, kde je známý opravný krok, neříkají jen „chybná hodnota“, ale stručně radí, jak pokračovat.
+- Ručně vložený obsah prošel `author-content-checklist.md` a každý nález je označený jako core CMS defect, theme defect nebo author-content issue.
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
 - Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
 - Autofill u veřejného kontaktu, objednávkové poptávky, guest rezervace a Form Builder formuláře nenabízí zavádějící hodnoty a u běžných osobních polí rozpozná jméno, e-mail, telefon, URL nebo organizaci.

@@ -1517,6 +1517,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'wcag-22-aa-conformance.md',
             'a11y-remediation-backlog.md',
             'manual-test-protocol.md',
+            'author-content-checklist.md',
             'Testy a guardrails',
             'Definition of done',
             'install.php',
@@ -1582,6 +1583,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'wcag-22-aa-conformance.md',
             'a11y-remediation-backlog.md',
             'manual-test-protocol.md',
+            'author-content-checklist.md',
         ],
         $issues
     );
@@ -1607,6 +1609,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'wcag-22-aa-conformance.md',
             'a11y-remediation-backlog.md',
             'manual-test-protocol.md',
+            'author-content-checklist.md',
         ],
         $issues
     );

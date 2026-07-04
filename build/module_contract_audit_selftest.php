@@ -216,7 +216,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Povinné integrační body\n"
         . "Bezpečnostní pravidla\n"
         . "WCAG 2.2 checklist\n"
-        . "Nový modul porovnejte s wcag-22-aa-conformance.md, a11y-remediation-backlog.md a manual-test-protocol.md.\n"
+        . "Nový modul porovnejte s wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n"
         . "Testy a guardrails\n"
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
@@ -247,7 +247,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
         . "Spusťte composer ci:module-ready.\n"
-        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md a manual-test-protocol.md.\n";
+        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n";
 }
 
 function moduleContractAuditSelfTestAdminGuideFixture(): string
@@ -261,7 +261,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
         . "Obsahové trendy definuje stats_page_types.\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n"
-        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md a manual-test-protocol.md.\n";
+        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n";
 }
 
 /**
