@@ -47,6 +47,8 @@ Titulky musí být synchronizované s řečí a mají zahrnovat podstatné zvuky
 
 Stránka Kora CMS je ve výchozím stavu česky. Delší nebo významné cizojazyčné části označte atributem `lang`, aby je čtečka obrazovky četla správným hlasem.
 
+V čistém HTML editoru můžete použít nástroj `Jazyk části textu`: vyberte cizojazyčný úsek, zadejte kód jazyka, například `en`, a vložte označení. Helper vytvoří inline značku typu `<span lang="en">open source</span>`.
+
 Příklady:
 
 ```html

@@ -89,7 +89,7 @@ function adminHtmlSnippetSupportMarkup(): string
     $last = (string) array_pop($snippets);
     $body = implode(', ', $snippets) . ' a ' . $last;
 
-    return 'Můžete použít HTML, Markdown nebo snippety jako ' . $body . '.';
+    return 'Můžete použít HTML, Markdown nebo snippety jako ' . $body . '. Cizojazyčný úsek označte atributem jazyka, například <code>&lt;span lang="en"&gt;open source&lt;/span&gt;</code>.';
 }
 
 function renderAdminContentReferencePicker(string $textareaId): void
@@ -117,6 +117,34 @@ function renderAdminContentReferencePicker(string $textareaId): void
       </button>
       <small id="<?= h($pickerId) ?>-picker-launch-help" class="field-help">Vyhledejte existující článek, stránku, formulář, anketu, médium nebo jiný veřejný obsah a vložte ho rovnou do textu jako odkaz, HTML blok, fotogalerii, obrázek, přehrávač nebo obsahový snippet.</small>
     </div>
+
+    <fieldset class="content-language-helper" aria-describedby="<?= h($pickerId) ?>-language-help">
+      <legend>Jazyk části textu</legend>
+      <div class="content-language-helper__controls">
+        <div>
+          <label for="<?= h($pickerId) ?>-language-code">Kód jazyka</label>
+          <input type="text"
+                 id="<?= h($pickerId) ?>-language-code"
+                 value="en"
+                 autocomplete="off"
+                 autocapitalize="none"
+                 spellcheck="false"
+                 pattern="[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"
+                 list="<?= h($pickerId) ?>-language-options">
+          <datalist id="<?= h($pickerId) ?>-language-options">
+            <option value="en" label="angličtina"></option>
+            <option value="de" label="němčina"></option>
+            <option value="sk" label="slovenština"></option>
+            <option value="pl" label="polština"></option>
+            <option value="fr" label="francouzština"></option>
+            <option value="es" label="španělština"></option>
+          </datalist>
+        </div>
+        <button type="button" class="btn" id="<?= h($pickerId) ?>-language-insert">Označit vybraný text</button>
+      </div>
+      <small id="<?= h($pickerId) ?>-language-help" class="field-help">Vyberte v HTML editoru cizojazyčný text a nástroj ho obalí značkou <code>&lt;span lang="en"&gt;</code>. Bez výběru vloží ukázkový text.</small>
+      <p id="<?= h($pickerId) ?>-language-status" class="content-language-helper__status" aria-live="polite" aria-atomic="true"></p>
+    </fieldset>
 
     <div id="<?= h($pickerId) ?>-picker-overlay" class="content-reference-picker-overlay" hidden></div>
     <section id="<?= h($pickerId) ?>-picker-dialog"
@@ -176,6 +204,9 @@ function renderAdminContentReferencePicker(string $textareaId): void
         const searchButton = document.getElementById(<?= json_encode($pickerId . '-picker-submit', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
         const statusNode = document.getElementById(<?= json_encode($pickerId . '-picker-status', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
         const resultsNode = document.getElementById(<?= json_encode($pickerId . '-picker-results', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const languageCodeInput = document.getElementById(<?= json_encode($pickerId . '-language-code', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const languageInsertButton = document.getElementById(<?= json_encode($pickerId . '-language-insert', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        const languageStatusNode = document.getElementById(<?= json_encode($pickerId . '-language-status', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
         const liveRegion = document.getElementById('a11y-live');
         const endpoint = <?= json_encode($endpoint, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
         const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -183,7 +214,7 @@ function renderAdminContentReferencePicker(string $textareaId): void
         let savedSelection = { start: 0, end: 0, text: '' };
         let isSearching = false;
 
-        if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode) {
+        if (!textarea || !openButton || !dialog || !overlay || !queryInput || !typeSelect || !searchButton || !statusNode || !resultsNode || !languageCodeInput || !languageInsertButton || !languageStatusNode) {
             return;
         }
 
@@ -192,6 +223,13 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
         const setStatus = (message) => {
             statusNode.textContent = message;
+            if (liveRegion && message) {
+                liveRegion.textContent = message;
+            }
+        };
+
+        const setLanguageStatus = (message) => {
+            languageStatusNode.textContent = message;
             if (liveRegion && message) {
                 liveRegion.textContent = message;
             }
@@ -221,6 +259,19 @@ function renderAdminContentReferencePicker(string $textareaId): void
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+
+        const normalizeLanguageCode = (value) => {
+            const normalized = String(value ?? '').trim().replace(/_/g, '-').toLowerCase();
+            return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(normalized) ? normalized : 'en';
+        };
+
+        const insertLanguageSnippet = () => {
+            const languageCode = normalizeLanguageCode(languageCodeInput.value);
+            languageCodeInput.value = languageCode;
+            const selectedText = savedSelection.text !== '' ? savedSelection.text : 'text v cizím jazyce';
+            insertSnippet('<span lang="' + escapeHtml(languageCode) + '">' + selectedText + '</span>', false);
+            setLanguageStatus('Vybraný text byl označen jazykem ' + languageCode + '.');
+        };
 
         const insertSnippet = (snippet, blockMode) => {
             const start = Number.isInteger(savedSelection.start) ? savedSelection.start : (textarea.selectionStart ?? textarea.value.length);
@@ -498,6 +549,9 @@ function renderAdminContentReferencePicker(string $textareaId): void
 
         openButton.addEventListener('mousedown', rememberSelection);
         openButton.addEventListener('click', openDialog);
+        languageCodeInput.addEventListener('focus', rememberSelection);
+        languageInsertButton.addEventListener('mousedown', rememberSelection);
+        languageInsertButton.addEventListener('click', insertLanguageSnippet);
         if (closeButton) {
             closeButton.addEventListener('click', () => closeDialog());
         }

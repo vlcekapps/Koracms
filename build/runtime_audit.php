@@ -3376,6 +3376,7 @@ foreach ($pages as $page) {
         $expectedSnippetFragments = [
             '[audio]https://example.test/audio.mp3[/audio]',
             '[video]https://example.test/video.mp4[/video]',
+            '&lt;span lang="en"&gt;open source&lt;/span&gt;',
         ];
         if (isModuleEnabled('forms')) {
             $expectedSnippetFragments[] = '[form]slug-formulare[/form]';
@@ -6896,6 +6897,16 @@ foreach ([
     'content-reference-picker-dialog__description',
     'content-reference-picker-fieldset',
     'content-reference-picker-status',
+    'content-language-helper',
+    '-language-code',
+    'pattern="[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"',
+    '-language-insert',
+    'Označit vybraný text',
+    'normalizeLanguageCode',
+    'insertLanguageSnippet',
+    '\'<span lang="\'',
+    'setLanguageStatus',
+    'languageStatusNode.textContent = message;',
     "document.body.classList.add('admin-modal-open')",
     "document.body.classList.remove('admin-modal-open')",
     "buttonContext.className = 'sr-only';",
@@ -6936,6 +6947,9 @@ foreach ([
     '.content-reference-picker-overlay',
     '.content-reference-picker-dialog',
     '.content-reference-picker-result--with-thumb',
+    '.content-language-helper',
+    '.content-language-helper__controls',
+    '.content-language-helper__status',
     '@media (max-width: 720px)',
 ] as $pickerCssFragment) {
     if (!str_contains($contentPickerCssSource, $pickerCssFragment)) {

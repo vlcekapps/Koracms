@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Accessibility conformance report draft** – projekt má novou dokumentační sadu `docs/accessibility/` pro dlouhodobé vyhodnocování WCAG 2.2 AA a VPAT/ACR: matici kritérií, ACR draft, remediation backlog a ruční testovací protokol.
+- **Helper pro jazyk části textu** – čistý HTML editor má u sdíleného content/media pickeru nový nástroj `Jazyk části textu`, který obalí vybraný cizojazyčný text do `<span lang="…">`; runtime audit hlídá markup, JS i CSS helperu pro WCAG 2.2 `3.1.2 Language of Parts`.
 - **Redakční checklist přístupného obsahu** – nový dokument `docs/accessibility/author-content-checklist.md` odděluje odpovědnost CMS od author-content issues a dává editorům praktickou kontrolu alt textů, přepisů, titulků, jazyka částí, odkazů, nadpisů, tabulek, barev a externích embedů.
 - **WebVTT titulky a přepisy v audio/video snippetech** – knihovna médií přijímá `.vtt` soubory, `[video]` shortcode umí přidat `<track kind="captions">` přes atribut `captions` a audio/video snippety umí veřejný odkaz na přepis přes atribut `transcript`; unit a runtime audit hlídají výsledný HTML výstup.
 - **Přepisy podcastových epizod** – editor epizody má nové pole `Přepis epizody`, veřejný detail ho vykresluje jako samostatnou textovou alternativu audia a instalace, migrace, export/import, revize, unit testy i runtime audit hlídají, aby se metadata neztratila.

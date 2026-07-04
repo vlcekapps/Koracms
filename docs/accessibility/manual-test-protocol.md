@@ -4,6 +4,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 Aktuální ruční evidence:
 
+- 2026-07-04: čistý HTML editor dostal helper `Jazyk části textu` pro vložení `<span lang="…">` kolem vybraného úseku. Runtime audit hlídá zdrojový markup, JS a CSS; ručně zbývá ověřit použití helperu s klávesnicí/NVDA a kvalitu skutečného author contentu.
 - 2026-07-04: vznikl `author-content-checklist.md` pro redakční kontrolu alt textů, médií, titulků, přepisů, jazyka částí, odkazů, nadpisů, tabulek, barev a externích embedů. Ručně zbývá projít reprezentativní publikovaný obsah a potvrdit, že nálezy jsou správně tříděné na core CMS defect, theme defect a author-content issue.
 - 2026-07-04: browser průchod při 320 px ověřil admin stránky media, widgets, statistics, Form Builder, přehled formulářů, comments, contact, chat, reservations, food, downloads, gallery, importy, content picker a reprezentativní dlouhé formuláře page/blog/news/event/download/gallery/food/board/FAQ/place/polls/reservations/podcast. Nalezený horizontální scroll rootu ve statistikách, přehledu formulářů, food/downloads/gallery a podcastech i main-level scroll u contact/chat a dlouhých fieldsetů byl opravený přes `.table-responsive`, posílené CSS containment, wrapper skrytých datových tabulek grafů a sdílené CSS pro fieldset/form controls; admin hledání mělo viditelný focus a ověřené samostatné cíle neměly pod 24 px. Zbylý ruční průchod se týká hlavně 400 % zoomu, custom modulů, sticky/anchor skoků a keyboard-only/NVDA kombinací.
 - 2026-07-04: audio/video snippety podporují odkaz na přepis přes `transcript`; přímý video shortcode podporuje WebVTT titulky přes `captions`, `srclang` a `caption_label` a knihovna médií přijímá `.vtt` soubory. Unit a runtime testy hlídají HTML výstup; ručně zbývá ověřit timing, jazyk, kvalitu titulků/přepisů a chování v prohlížeči se čtečkou.
@@ -76,7 +77,7 @@ p {
 1. Přihlášení, registrace, 2FA, tokenový reset hesla a odhlášení bez myši; registrace a žádost o reset nesmí vyžadovat matematickou CAPTCHA ani jiný kognitivní test.
 2. Dashboard: Moje zkratky, fronta ke schválení, poslední aktivita a statistiky.
 3. Levá navigace a command centrum přes `Ctrl+K`.
-4. Media/content picker: otevření, hledání, změna typu výsledku, vložení a zavření.
+4. Media/content picker: otevření, hledání, změna typu výsledku, vložení a zavření; v čistém HTML editoru vybrat cizojazyčný text, použít helper `Jazyk části textu`, ověřit vložení `<span lang="en">…</span>`, live oznámení a zachování fokusu.
 5. Widget dialog: otevření, změna typu widgetu, focus trap, uložení, návrat fokusu.
 6. Editor blogového článku: dlouhá editace, content lock heartbeat, uložení a chybové stavy.
 7. Form Builder: přidání pole, změna typu pole, chybové stavy a náhled.
@@ -116,6 +117,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Každé pole má srozumitelný label a chyba je spojena s polem.
 - Chybové hlášky, kde je známý opravný krok, neříkají jen „chybná hodnota“, ale stručně radí, jak pokračovat.
 - Ručně vložený obsah prošel `author-content-checklist.md` a každý nález je označený jako core CMS defect, theme defect nebo author-content issue.
+- Cizojazyčný úsek v author contentu má odpovídající `lang`; helper `Jazyk části textu` je použitelný bez myši a nevytváří neexistující ARIA vazby.
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
 - Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
 - Autofill u veřejného kontaktu, objednávkové poptávky, guest rezervace a Form Builder formuláře nenabízí zavádějící hodnoty a u běžných osobních polí rozpozná jméno, e-mail, telefon, URL nebo organizaci.
