@@ -276,6 +276,7 @@ $fieldErrorMessages = [
     <?php if (adminFieldHasError('hours', $err, $fieldErrorMap)): ?>
       <small id="hours-error" class="field-help field-error"><?= h($fieldErrorMessages['hours']) ?></small>
     <?php endif; ?>
+    <div class="table-responsive">
     <table>
       <caption class="sr-only">Otevírací doba podle dnů</caption>
       <thead>
@@ -314,6 +315,7 @@ $fieldErrorMessages = [
       <?php endfor; ?>
       </tbody>
     </table>
+    </div>
   </fieldset>
 
   <!-- D) Predefined slots -->

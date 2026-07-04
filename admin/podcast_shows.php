@@ -116,6 +116,7 @@ adminHeader('Podcasty');
   </p>
 <?php else: ?>
   <p class="meta-row meta-row--tight"><?= $totalShows ?> podcastů</p>
+  <div class="table-responsive">
   <table>
     <caption>Přehled podcastů</caption>
     <thead>
@@ -188,6 +189,7 @@ adminHeader('Podcasty');
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <?php if ($pagerHtml !== ''): ?>
     <div class="admin-action-row">
       <?= $pagerHtml ?>

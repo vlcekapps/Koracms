@@ -14476,6 +14476,9 @@ $adminMobileFoodOrdersSource = (string)file_get_contents(dirname(__DIR__) . '/ad
 $adminMobileDownloadsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $adminMobileGalleryAlbumsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $adminMobileGalleryPhotosSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
+$adminMobileReservationResourceFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
+$adminMobilePodcastShowsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
+$adminMobilePodcastEpisodesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 foreach ([
     '@media (max-width: 720px) { html { overflow-x:hidden; } body { display:block; min-height:100vh; overflow-x:hidden; }',
     'nav { width:100%; padding:.75rem; }',
@@ -14488,7 +14491,11 @@ foreach ([
     '.table-responsive > table:not(.sr-only) { min-width:40rem; }',
     '.btn { display:inline-flex; align-items:center; justify-content:center;',
     '.button-row > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }',
+    'main > p > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }',
     '.actions > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }',
+    'fieldset { min-width:0; max-width:100%; }',
+    'input[type=url], input[type=search], input[type=date], input[type=time], input[type=datetime-local], input[type=file] { max-width:100%; min-height:1.5rem; }',
+    '.field-help code { font-size:.95em; overflow-wrap:anywhere; word-break:break-word; }',
     '.admin-sort-control { display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem; min-height:1.5rem;',
     '.button-row > .btn, .button-row > form { flex:1 1 12rem; }',
     '.button-row > form > .btn { width:100%; }',
@@ -14570,6 +14577,18 @@ foreach ([
     'gallery photos admin reflow anchors' => [
         $adminMobileGalleryPhotosSource,
         ['<div class="table-responsive">', '<caption>Fotografie v albu', 'class="actions"'],
+    ],
+    'reservation resource form reflow anchors' => [
+        $adminMobileReservationResourceFormSource,
+        ['<div class="table-responsive">', '<caption class="sr-only">Otevírací doba podle dnů</caption>', 'class="res-resource-fieldset"'],
+    ],
+    'podcast shows admin reflow anchors' => [
+        $adminMobilePodcastShowsSource,
+        ['<div class="table-responsive">', '<caption>Přehled podcastů</caption>', 'class="actions"'],
+    ],
+    'podcast episodes admin reflow anchors' => [
+        $adminMobilePodcastEpisodesSource,
+        ['<div class="table-responsive">', '<caption>Přehled epizod podcastu</caption>', 'class="actions"'],
     ],
 ] as $adminMobileSourceLabel => [$adminMobileSource, $adminMobileFragments]) {
     foreach ($adminMobileFragments as $adminMobileFragment) {

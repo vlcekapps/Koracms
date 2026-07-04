@@ -139,6 +139,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
   </p>
 <?php else: ?>
   <p class="meta-row meta-row--tight"><?= $totalEpisodes ?> epizod</p>
+  <div class="table-responsive">
   <table>
     <caption>Přehled epizod podcastu</caption>
     <thead>
@@ -208,6 +209,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
   <?php if ($pagerHtml !== ''): ?>
     <div class="admin-action-row">
       <?= $pagerHtml ?>

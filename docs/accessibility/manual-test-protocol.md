@@ -4,7 +4,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 Aktuální ruční evidence:
 
-- 2026-07-04: browser průchod při 320 px ověřil admin stránky media, widgets, statistics, Form Builder, přehled formulářů, comments, contact, chat, reservations, food, downloads, gallery, importy a content picker. Nalezený horizontální scroll rootu ve statistikách, přehledu formulářů, food/downloads/gallery a main-level scroll u contact/chat byl opravený přes `.table-responsive`, posílené CSS containment a wrapper skrytých datových tabulek grafů; admin hledání mělo viditelný focus a ověřené cíle neměly pod 24 px. Zbylý ruční průchod 320 px / 400 % se týká hlavně dlouhých formulářů, custom modulů a keyboard-only/NVDA kombinací.
+- 2026-07-04: browser průchod při 320 px ověřil admin stránky media, widgets, statistics, Form Builder, přehled formulářů, comments, contact, chat, reservations, food, downloads, gallery, importy, content picker a reprezentativní dlouhé formuláře page/blog/news/event/download/gallery/food/board/FAQ/place/polls/reservations/podcast. Nalezený horizontální scroll rootu ve statistikách, přehledu formulářů, food/downloads/gallery a podcastech i main-level scroll u contact/chat a dlouhých fieldsetů byl opravený přes `.table-responsive`, posílené CSS containment, wrapper skrytých datových tabulek grafů a sdílené CSS pro fieldset/form controls; admin hledání mělo viditelný focus a ověřené samostatné cíle neměly pod 24 px. Zbylý ruční průchod se týká hlavně 400 % zoomu, custom modulů, sticky/anchor skoků a keyboard-only/NVDA kombinací.
 - 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
@@ -50,7 +50,7 @@ Aktuální ruční evidence:
 8. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
 9. Upload a editace média včetně alt textu, licence a kolekce.
 10. Nastavení webu, nastavení modulů, import/export a migrace.
-11. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po ověření hlavních hustých tabulek pokračovat hlavně přes dlouhé editační formuláře, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
+11. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
 
 ## Scénáře pro nové moduly
 
@@ -80,7 +80,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.
 - Na 320 px jsou primární akce dosažitelné a použitelné.
-- Runtime audit `admin_mobile_reflow_guardrails` prochází pro admin mobilní baseline, datové tabulky, media grid, Form Builder gridy, statistics gridy, forms overview tabulku, husté moduly comments/contact/chat/reservations/food/downloads/gallery, widget řazení, cache-busting admin stylesheetu a minimální rozměr řadicích ovladačů i sekundárních action odkazů.
+- Runtime audit `admin_mobile_reflow_guardrails` prochází pro admin mobilní baseline, datové tabulky, media grid, Form Builder gridy, statistics gridy, forms overview tabulku, husté moduly comments/contact/chat/reservations/food/downloads/gallery/podcast, dlouhé form controls a rezervační otevírací dobu, widget řazení, cache-busting admin stylesheetu a minimální rozměr řadicích ovladačů, sekundárních action odkazů i přímých action odkazů v odstavcích.
 - Datové tabulky mohou mít horizontální scroll, ale nesmí rozšířit celou stránku spolu se sidebar navigací ani schovat focusovaný prvek bez možnosti ho dorolovat.
 - Runtime audit `contrast_focus_guardrails` prochází pro default/admin/login text, skip link, focus, hranice inputů a hranice tlačítek.
 - Ručně změřené hover, active, disabled, ikony, progress bary a custom theme settings splňují AA; u textu alespoň 4.5:1, u focusu a hranic ovládacích prvků alespoň 3:1.
