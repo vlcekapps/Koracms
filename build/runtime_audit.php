@@ -13956,6 +13956,11 @@ if ($httpIntegrationSource === '') {
         'httpIntegrationInputHasAttributes($publicFormInitialBody',
         "'field-full_name', ['autocomplete' => 'name']",
         "'field-contact_email', ['autocomplete' => 'email']",
+        "'field-project_url', ['autocomplete' => 'url']",
+        'Vyplňte pole „Jméno“. Pokud si nejste jistí, použijte nápovědu u pole.',
+        'Zadejte do pole „E-mail“ úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
+        'Zadejte do pole „Web projektu“ úplnou adresu začínající http:// nebo https:// bez přihlašovacích údajů.',
+        'Vyberte v poli „Typ požadavku“ jen možnost nabídnutou formulářem.',
     ] as $publicFormsIntegrationFragment) {
         if (!str_contains($httpIntegrationSource, $publicFormsIntegrationFragment)) {
             $publicFormsHttpIssues[] = 'public forms http integration is missing fragment: ' . $publicFormsIntegrationFragment;
@@ -13969,6 +13974,11 @@ foreach ([
     'formDeleteUploadedFile(',
     '$fieldErrors = [];',
     '$addFieldError = static function',
+    'publicFormRequiredFieldErrorMessage($label, $fieldType)',
+    'publicFormEmailFieldErrorMessage($label)',
+    'publicFormUrlFieldErrorMessage($label)',
+    'publicFormOptionFieldErrorMessage($label)',
+    'publicFormUploadFieldErrorMessage($label,',
 ] as $formsControllerFragment) {
     if (!str_contains($formsControllerSource, $formsControllerFragment)) {
         $publicFormsHttpIssues[] = 'forms controller is missing fragment: ' . $formsControllerFragment;
@@ -13982,6 +13992,27 @@ if (!str_contains($formsHelperSource, 'function formFieldAutocompletePurpose(')
     || !str_contains($formsHelperSource, "return 'family-name';")
     || !str_contains($formsHelperSource, "return 'organization';")) {
     $publicFormsHttpIssues[] = 'forms helper is missing input-purpose autocomplete mapping';
+}
+foreach ([
+    'function publicFormRequiredFieldErrorMessage(',
+    'function publicFormEmailFieldErrorMessage(',
+    'function publicFormUrlFieldErrorMessage(',
+    'function publicFormOptionFieldErrorMessage(',
+    'function publicFormUploadFieldErrorMessage(',
+] as $publicFormSuggestionHelperFragment) {
+    if (!str_contains($formsHelperSource, $publicFormSuggestionHelperFragment)) {
+        $publicFormsHttpIssues[] = 'forms helper is missing error suggestion helper: ' . $publicFormSuggestionHelperFragment;
+    }
+}
+foreach ([
+    '\'Pole „\' . $label . \'“ je povinné.\'',
+    '\'Pole „\' . $label . \'“ musí být platná e-mailová adresa.\'',
+    '\'Pole „\' . $label . \'“ musí být platná webová adresa začínající na http:// nebo https://.\'',
+    '\'Pole „\' . $label . \'“ obsahuje nepovolenou hodnotu.\'',
+] as $publicFormLegacyErrorFragment) {
+    if (str_contains($formsControllerSource, $publicFormLegacyErrorFragment)) {
+        $publicFormsHttpIssues[] = 'forms controller still contains non-actionable custom field validation copy: ' . $publicFormLegacyErrorFragment;
+    }
 }
 foreach ([
     "\$formErrorsId = 'form-errors-' . \$formFeedbackIdSuffix;",

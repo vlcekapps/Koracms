@@ -11,6 +11,7 @@ Aktuální ruční evidence:
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
 - 2026-07-04: runtime `public_error_suggestion_guardrails` a HTTP integrace hlídají, že veřejná matematická ověřovací otázka v kontaktu, newsletteru, odběru vývěsky, Food objednávkách a Form Builderu vrací field-level chybu s konkrétním návrhem opravy. Ručně zbývá širší copy pass administračních a custom validačních hlášek.
+- 2026-07-04: unit testy Form Builder error suggestions, runtime `public_forms_http_guardrails` a HTTP `public_form_submit_http` hlídají, že custom povinná, e-mailová, URL, výběrová a upload pole Form Builderu vrací konkrétní field-level návrhy oprav a po neúspěšném odeslání nezanechají uloženou neplatnou přílohu.
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá, že URL chyby v administraci míst a podcastů radí použít http/https adresu, doménu bez schématu nebo prázdné volitelné pole místo obecného „platný formát“.
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá také plánovací datum/čas chyby u stránek, článků, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod. Text musí poradit výběr platné hodnoty v poli datum/čas, prázdné volitelné plánování, odstranění prázdného řádku nebo opravu pořadí začátku/konce.
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá také vybrané administrační e-mailové chyby. Text musí poradit úplnou adresu ve tvaru `jmeno@example.cz`, prázdné volitelné pole nebo jedinečnost přihlašovací adresy.
@@ -57,7 +58,7 @@ p {
 2. Projít hlavní navigaci, vyhledávání, footer widgety a sociální odkazy jen klávesnicí.
 3. Otevřít blog index, článek s osnovou, kategorii, štítek a sérii.
 4. Odeslat komentář se správnými i chybnými hodnotami.
-5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U chybné ověřovací otázky ověřit, že čtečka oznámí text s návrhem přepočítat příklad a zadat jen číslo.
+5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U prázdného povinného textu, výběru, souhlasu a uploadu, neplatného e-mailu, neplatné URL, nepovolené výběrové hodnoty, chybné přílohy a chybné ověřovací otázky ověřit, že čtečka oznámí field-level text s konkrétním návrhem opravy.
 6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů.
 8. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.

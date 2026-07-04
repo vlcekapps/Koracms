@@ -8332,6 +8332,44 @@ try {
             'sort_order' => 20,
         ],
         [
+            'field_type' => 'url',
+            'label' => 'Web projektu',
+            'name' => 'project_url',
+            'placeholder' => 'https://example.test/projekt',
+            'default_value' => '',
+            'help_text' => 'Volitelné. Uveďte úplnou adresu začínající http:// nebo https://.',
+            'options' => '',
+            'accept_types' => '',
+            'max_file_size_mb' => 1,
+            'allow_multiple' => 0,
+            'layout_width' => 'half',
+            'start_new_row' => 0,
+            'show_if_field' => '',
+            'show_if_operator' => '',
+            'show_if_value' => '',
+            'is_required' => 0,
+            'sort_order' => 25,
+        ],
+        [
+            'field_type' => 'select',
+            'label' => 'Typ požadavku',
+            'name' => 'request_type',
+            'placeholder' => '',
+            'default_value' => '',
+            'help_text' => 'Vyberte nejbližší typ zprávy.',
+            'options' => 'Dotaz|Návrh',
+            'accept_types' => '',
+            'max_file_size_mb' => 1,
+            'allow_multiple' => 0,
+            'layout_width' => 'half',
+            'start_new_row' => 0,
+            'show_if_field' => '',
+            'show_if_operator' => '',
+            'show_if_value' => '',
+            'is_required' => 1,
+            'sort_order' => 28,
+        ],
+        [
             'field_type' => 'file',
             'label' => 'Příloha',
             'name' => 'attachment',
@@ -8411,18 +8449,104 @@ try {
     $basePublicFields = [
         'full_name' => 'HTTP Tester',
         'contact_email' => 'http.tester@example.test',
+        'project_url' => '',
+        'request_type' => 'Dotaz',
     ];
 
     $publicFormInitialState = $fetchPublicFormState();
     $publicFormInitialBody = (string)($publicFormInitialState['response']['body'] ?? '');
     if (!httpIntegrationInputHasAttributes($publicFormInitialBody, 'field-full_name', ['autocomplete' => 'name'])
         || !httpIntegrationInputHasAttributes($publicFormInitialBody, 'field-contact_email', ['autocomplete' => 'email'])
+        || !httpIntegrationInputHasAttributes($publicFormInitialBody, 'field-project_url', ['autocomplete' => 'url'])
         || !httpIntegrationInputHasAttributes($publicFormInitialBody, 'captcha', ['autocomplete' => 'off'])) {
         $publicFormIssues[] = 'veřejný Form Builder formulář nevykreslil očekávaná autocomplete metadata';
     }
 
     $validPublicFilePath = httpIntegrationCreatePngFixtureFile('kora-form-valid-', $createdTempFiles, 36, 36);
     $invalidPublicFilePath = httpIntegrationCreateTempFile('kora-form-text-', 'plain text attachment', $createdTempFiles);
+
+    $requiredFieldsState = $fetchPublicFormState();
+    $requiredFieldsResponse = postUrl(
+        $publicFormUrl,
+        [
+            'csrf_token' => (string)$requiredFieldsState['csrf_token'],
+            'captcha' => (string)$requiredFieldsState['captcha_answer'],
+        ],
+        $publicFormSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($requiredFieldsResponse) !== 200) {
+        $publicFormIssues[] = 'submit veřejného formuláře s prázdnými povinnými poli nevrátil 200';
+    }
+    foreach ([
+        'Vyplňte pole „Jméno“. Pokud si nejste jistí, použijte nápovědu u pole.',
+        'Vyberte možnost v poli „Typ požadavku“.',
+        'Nahrajte soubor v poli „Příloha“. Řiďte se povoleným typem a velikostí uvedenou u pole.',
+        'id="field-full_name-error"',
+        'id="field-request_type-error"',
+        'id="field-attachment-error"',
+    ] as $requiredFieldsFragment) {
+        if (!str_contains($requiredFieldsResponse['body'], $requiredFieldsFragment)) {
+            $publicFormIssues[] = 'submit veřejného formuláře s prázdnými povinnými poli nezobrazil fragment: ' . $requiredFieldsFragment;
+        }
+    }
+    foreach (['field-full_name', 'field-request_type', 'field-attachment'] as $requiredFieldId) {
+        if (!httpIntegrationFieldHasAriaInvalid($requiredFieldsResponse['body'], $requiredFieldId)) {
+            $publicFormIssues[] = 'submit veřejného formuláře s prázdnými povinnými poli neoznačil ' . $requiredFieldId . ' jako aria-invalid';
+        }
+    }
+    if (httpIntegrationFetchLatestFormSubmissionByFormId($pdo, $publicFormId) !== null) {
+        $publicFormIssues[] = 'submit veřejného formuláře s prázdnými povinnými poli přesto vytvořil submission';
+    }
+
+    $beforeInvalidEmailUrlUploads = httpIntegrationListStoredFormUploads();
+    $invalidEmailUrlState = $fetchPublicFormState();
+    $invalidEmailUrlResponse = postMultipartUrl(
+        $publicFormUrl,
+        [
+            'csrf_token' => (string)$invalidEmailUrlState['csrf_token'],
+            'captcha' => (string)$invalidEmailUrlState['captcha_answer'],
+            'full_name' => $basePublicFields['full_name'],
+            'contact_email' => 'neni-email',
+            'project_url' => 'javascript:alert(1)',
+            'request_type' => 'Cizí hodnota',
+        ],
+        [
+            'attachment' => [
+                'path' => $validPublicFilePath,
+                'filename' => 'http-form-email-url-' . bin2hex(random_bytes(4)) . '.png',
+                'type' => 'image/png',
+            ],
+        ],
+        $publicFormSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($invalidEmailUrlResponse) !== 200) {
+        $publicFormIssues[] = 'submit veřejného formuláře s neplatným e-mailem, URL a selectem nevrátil 200';
+    }
+    foreach ([
+        'Zadejte do pole „E-mail“ úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
+        'Zadejte do pole „Web projektu“ úplnou adresu začínající http:// nebo https:// bez přihlašovacích údajů.',
+        'Vyberte v poli „Typ požadavku“ jen možnost nabídnutou formulářem.',
+        'id="field-contact_email-error"',
+        'id="field-project_url-error"',
+        'id="field-request_type-error"',
+    ] as $invalidEmailUrlFragment) {
+        if (!str_contains($invalidEmailUrlResponse['body'], $invalidEmailUrlFragment)) {
+            $publicFormIssues[] = 'submit veřejného formuláře s neplatným e-mailem, URL a selectem nezobrazil fragment: ' . $invalidEmailUrlFragment;
+        }
+    }
+    foreach (['field-contact_email', 'field-project_url', 'field-request_type'] as $invalidFieldId) {
+        if (!httpIntegrationFieldHasAriaInvalid($invalidEmailUrlResponse['body'], $invalidFieldId)) {
+            $publicFormIssues[] = 'submit veřejného formuláře s neplatným e-mailem, URL a selectem neoznačil ' . $invalidFieldId . ' jako aria-invalid';
+        }
+    }
+    if (httpIntegrationFetchLatestFormSubmissionByFormId($pdo, $publicFormId) !== null) {
+        $publicFormIssues[] = 'submit veřejného formuláře s neplatným e-mailem, URL a selectem přesto vytvořil submission';
+    }
+    if (httpIntegrationListStoredFormUploads() !== $beforeInvalidEmailUrlUploads) {
+        $publicFormIssues[] = 'submit veřejného formuláře s neplatným e-mailem, URL a selectem po sobě nechal uloženou přílohu';
+    }
 
     $beforeInvalidCaptchaUploads = httpIntegrationListStoredFormUploads();
     $invalidCaptchaState = $fetchPublicFormState();
@@ -8433,6 +8557,8 @@ try {
             'captcha' => '0',
             'full_name' => $basePublicFields['full_name'],
             'contact_email' => $basePublicFields['contact_email'],
+            'project_url' => $basePublicFields['project_url'],
+            'request_type' => $basePublicFields['request_type'],
         ],
         [
             'attachment' => [
@@ -8478,6 +8604,8 @@ try {
             'captcha' => (string)$invalidTypeState['captcha_answer'],
             'full_name' => $basePublicFields['full_name'],
             'contact_email' => $basePublicFields['contact_email'],
+            'project_url' => $basePublicFields['project_url'],
+            'request_type' => $basePublicFields['request_type'],
         ],
         [
             'attachment' => [
@@ -8516,6 +8644,8 @@ try {
             'captcha' => (string)$validSubmitState['captcha_answer'],
             'full_name' => $basePublicFields['full_name'],
             'contact_email' => $basePublicFields['contact_email'],
+            'project_url' => $basePublicFields['project_url'],
+            'request_type' => $basePublicFields['request_type'],
         ],
         [
             'attachment' => [
@@ -8547,6 +8677,9 @@ try {
             }
             if ((string)($submissionData['contact_email'] ?? '') !== $basePublicFields['contact_email']) {
                 $publicFormIssues[] = 'validní submit veřejného formuláře neuložil contact_email';
+            }
+            if ((string)($submissionData['request_type'] ?? '') !== $basePublicFields['request_type']) {
+                $publicFormIssues[] = 'validní submit veřejného formuláře neuložil request_type';
             }
 
             $attachmentData = $submissionData['attachment'] ?? null;

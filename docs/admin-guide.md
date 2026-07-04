@@ -1045,6 +1045,8 @@ Veřejný kontakt, objednávkové poptávky ve Food modulu, guest rezervace a fo
 
 Veřejné formuláře s matematickou ověřovací otázkou mají u chybné odpovědi sdílenou field-level hlášku, která kromě identifikace chyby radí přepočítat příklad a zadat jen číslo. Týká se kontaktu, newsletter subscribe, odběru vývěsky, objednávkových poptávek ve Food modulu a Form Builder formulářů.
 
+Veřejná custom pole ve Form Builderu mají konkrétní návrhy oprav i mimo ověřovací otázku. Povinná textová, výběrová, souhlasová a souborová pole říkají, co má návštěvník doplnit; e-mail radí úplnou adresu ve tvaru `jmeno@example.cz`, URL radí http/https adresu bez přihlašovacích údajů, nepovolená výběrová hodnota vede uživatele zpět k nabízeným možnostem a upload připomíná povolený typ a velikost souboru.
+
 Validační hlášky v administraci mají u známých oprav říkat, jak pokračovat. URL pole u zajímavých míst a podcastů proto vysvětlují povolený `http://`/`https://` tvar, doménu bez schématu s automatickým uložením jako `https://` a kdy je bezpečné volitelné pole nechat prázdné.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.

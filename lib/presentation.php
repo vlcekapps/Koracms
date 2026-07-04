@@ -8988,6 +8988,48 @@ function normalizePublicFormUrlFieldValue(string $value): string
     return normalizeHttpExternalUrl($value, false);
 }
 
+function publicFormRequiredFieldErrorMessage(string $label, string $fieldType = 'text'): string
+{
+    $fieldLabel = trim($label) !== '' ? trim($label) : 'Toto pole';
+
+    return match (normalizeFormFieldType($fieldType)) {
+        'checkbox_group' => 'Vyberte alespoň jednu možnost v poli „' . $fieldLabel . '“.',
+        'radio', 'select' => 'Vyberte možnost v poli „' . $fieldLabel . '“.',
+        'checkbox', 'consent' => 'Zaškrtněte pole „' . $fieldLabel . '“, aby bylo možné formulář odeslat.',
+        'file' => 'Nahrajte soubor v poli „' . $fieldLabel . '“. Řiďte se povoleným typem a velikostí uvedenou u pole.',
+        default => 'Vyplňte pole „' . $fieldLabel . '“. Pokud si nejste jistí, použijte nápovědu u pole.',
+    };
+}
+
+function publicFormEmailFieldErrorMessage(string $label): string
+{
+    $fieldLabel = trim($label) !== '' ? trim($label) : 'Toto pole';
+
+    return 'Zadejte do pole „' . $fieldLabel . '“ úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
+}
+
+function publicFormUrlFieldErrorMessage(string $label): string
+{
+    $fieldLabel = trim($label) !== '' ? trim($label) : 'Toto pole';
+
+    return 'Zadejte do pole „' . $fieldLabel . '“ úplnou adresu začínající http:// nebo https:// bez přihlašovacích údajů.';
+}
+
+function publicFormOptionFieldErrorMessage(string $label): string
+{
+    $fieldLabel = trim($label) !== '' ? trim($label) : 'Toto pole';
+
+    return 'Vyberte v poli „' . $fieldLabel . '“ jen možnost nabídnutou formulářem.';
+}
+
+function publicFormUploadFieldErrorMessage(string $label, string $uploadError): string
+{
+    $fieldLabel = trim($label) !== '' ? trim($label) : 'Toto pole';
+    $message = trim($uploadError) !== '' ? trim($uploadError) : 'Soubor se nepodařilo ověřit.';
+
+    return 'Pole „' . $fieldLabel . '“: ' . $message . ' Zkontrolujte povolený typ a velikost souboru uvedenou u pole.';
+}
+
 function normalizeFormConditionOperator(string $value, string $fallbackExpected = ''): string
 {
     $normalized = trim($value);

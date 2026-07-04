@@ -724,6 +724,49 @@ assert_equals('organization', formFieldAutocompletePurpose('text', 'firma', 'Fir
 assert_equals('', formFieldAutocompletePurpose('text', 'username', 'Uživatelské jméno'), 'username-like text fields are not treated as personal name');
 assert_equals('', formFieldAutocompletePurpose('text', 'tema_pozadavku', 'Téma požadavku'), 'generic text fields do not get autocomplete');
 
+test_section('Form Builder error suggestions');
+
+assert_equals(
+    'Vyplňte pole „Jméno“. Pokud si nejste jistí, použijte nápovědu u pole.',
+    publicFormRequiredFieldErrorMessage('Jméno', 'text'),
+    'required text field suggests using the field help'
+);
+assert_equals(
+    'Zaškrtněte pole „Souhlas“, aby bylo možné formulář odeslat.',
+    publicFormRequiredFieldErrorMessage('Souhlas', 'consent'),
+    'required consent field suggests checking the field'
+);
+assert_equals(
+    'Nahrajte soubor v poli „Příloha“. Řiďte se povoleným typem a velikostí uvedenou u pole.',
+    publicFormRequiredFieldErrorMessage('Příloha', 'file'),
+    'required file field suggests upload type and size guidance'
+);
+assert_equals(
+    'Vyberte možnost v poli „Typ požadavku“.',
+    publicFormRequiredFieldErrorMessage('Typ požadavku', 'select'),
+    'required select field suggests choosing an offered option'
+);
+assert_equals(
+    'Zadejte do pole „E-mail“ úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
+    publicFormEmailFieldErrorMessage('E-mail'),
+    'email field suggests a complete address example'
+);
+assert_equals(
+    'Zadejte do pole „Web projektu“ úplnou adresu začínající http:// nebo https:// bez přihlašovacích údajů.',
+    publicFormUrlFieldErrorMessage('Web projektu'),
+    'URL field suggests explicit http/https address without credentials'
+);
+assert_equals(
+    'Vyberte v poli „Typ požadavku“ jen možnost nabídnutou formulářem.',
+    publicFormOptionFieldErrorMessage('Typ požadavku'),
+    'option field suggests selecting offered choices only'
+);
+assert_equals(
+    'Pole „Příloha“: Vybraný typ souboru není v tomto poli povolený. Zkontrolujte povolený typ a velikost souboru uvedenou u pole.',
+    publicFormUploadFieldErrorMessage('Příloha', 'Vybraný typ souboru není v tomto poli povolený.'),
+    'upload field appends actionable type and size guidance'
+);
+
 test_section('stats referrer normalizer');
 
 $_SERVER['HTTP_HOST'] = 'pvlcek.cz';

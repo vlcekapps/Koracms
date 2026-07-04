@@ -50,7 +50,7 @@ function storePublicFormUpload(array $field, array $file): array
     $upload = koraInspectUploadedFile($file, [
         'upload_error' => 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.',
         'invalid_upload_error' => 'Nahraný soubor se nepodařilo ověřit.',
-        'too_large_error' => 'Vybraný soubor je větší, než tento formulář dovoluje.',
+        'too_large_error' => 'Vybraný soubor je větší, než tento formulář dovoluje. Nahrajte menší soubor podle limitu uvedeného u pole.',
         'max_bytes' => $maxFileSizeBytes,
     ]);
     if (empty($upload['ok'])) {
@@ -311,13 +311,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formData[$name] = $value;
 
                 if ($required && $value === []) {
-                    $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
+                    $addFieldError($name, publicFormRequiredFieldErrorMessage($label, $fieldType));
                 }
 
                 $allowedOptions = formFieldOptionsList((string)($field['options'] ?? ''));
                 foreach ($value as $selectedOption) {
                     if (!in_array($selectedOption, $allowedOptions, true)) {
-                        $addFieldError($name, 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.');
+                        $addFieldError($name, publicFormOptionFieldErrorMessage($label));
                         break;
                     }
                 }
@@ -331,7 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $value = isset($_POST[$name]) ? '1' : '';
                 $formData[$name] = $value;
                 if ($required && $value !== '1') {
-                    $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
+                    $addFieldError($name, publicFormRequiredFieldErrorMessage($label, $fieldType));
                 }
                 $submissionData[$name] = $value;
                 $notificationData[$label] = formSubmissionDisplayValueForField($field, $value);
@@ -340,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hasUpload = publicFormUploadInputHasFile($_FILES[$name] ?? null);
                 if (!$hasUpload) {
                     if ($required) {
-                        $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
+                        $addFieldError($name, publicFormRequiredFieldErrorMessage($label, $fieldType));
                     }
                     $emptyFileValue = formFieldAllowsMultipleFiles($field) ? [] : '';
                     $submissionData[$name] = $emptyFileValue;
@@ -350,7 +350,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $uploadResult = storePublicFormUploads($field, $_FILES[$name] ?? null);
                 if (isset($uploadResult['error'])) {
-                    $addFieldError($name, 'Pole „' . $label . '“: ' . $uploadResult['error']);
+                    $addFieldError($name, publicFormUploadFieldErrorMessage($label, (string)$uploadResult['error']));
                     $submissionData[$name] = formFieldAllowsMultipleFiles($field) ? [] : '';
                     $notificationData[$label] = '';
                     continue;
@@ -370,17 +370,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($required && $value === '') {
-                $addFieldError($name, 'Pole „' . $label . '“ je povinné.');
+                $addFieldError($name, publicFormRequiredFieldErrorMessage($label, $fieldType));
             }
 
             if ($fieldType === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                $addFieldError($name, 'Pole „' . $label . '“ musí být platná e-mailová adresa.');
+                $addFieldError($name, publicFormEmailFieldErrorMessage($label));
             }
 
             if ($fieldType === 'url' && $value !== '') {
                 $normalizedUrlValue = normalizePublicFormUrlFieldValue($value);
                 if ($normalizedUrlValue === '') {
-                    $addFieldError($name, 'Pole „' . $label . '“ musí být platná webová adresa začínající na http:// nebo https://.');
+                    $addFieldError($name, publicFormUrlFieldErrorMessage($label));
                 } else {
                     $value = $normalizedUrlValue;
                     $formData[$name] = $value;
@@ -390,7 +390,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (in_array($fieldType, ['select', 'radio'], true) && $value !== '') {
                 $allowedOptions = formFieldOptionsList((string)($field['options'] ?? ''));
                 if (!in_array($value, $allowedOptions, true)) {
-                    $addFieldError($name, 'Pole „' . $label . '“ obsahuje nepovolenou hodnotu.');
+                    $addFieldError($name, publicFormOptionFieldErrorMessage($label));
                 }
             }
 

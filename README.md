@@ -458,6 +458,8 @@ Veřejný kontakt, food objednávkové poptávky, guest rezervace a Form Builder
 
 Veřejné formuláře, které stále používají matematickou ověřovací otázku proti spamu, zobrazují u chybné odpovědi field-level text s konkrétní opravou: přepočítat příklad a zadat jen číslo. Runtime audit i HTTP integrace hlídají kontakt, newsletter subscribe, odběr vývěsky, Food objednávky a Form Builder.
 
+Form Builder má stejný pattern i pro vlastní veřejná pole. Povinná textová, výběrová, souhlasová a souborová pole radí konkrétní akci; e-mail radí úplnou adresu ve tvaru `jmeno@example.cz`, URL radí http/https bez přihlašovacích údajů, výběrová pole radí použít jen nabídnutou možnost a upload připomíná povolený typ a velikost u pole. HTTP integrace hlídá required, e-mail, URL, select i upload chybové stavy.
+
 Administrace postupně zpřesňuje validační texty tak, aby vedle identifikace chyby nabízely i opravu. URL pole u zajímavých míst a podcastů například vysvětlují, že lze zadat `http://`/`https://` adresu nebo doménu bez schématu, kterou CMS uloží jako `https://`, případně volitelné pole nechat prázdné.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů radí zadat úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí připomínají možnost nechat pole prázdné a u přihlašovacího e-mailu jedinečnost adresy.
