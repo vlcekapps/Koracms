@@ -7007,8 +7007,8 @@ try {
     if (!responseHasLocationHeader($blogPageOneResponse['headers'], BASE_URL . '/admin/pages.php', $baseUrl)) {
         $blogStaticPagesIssues[] = 'uložení první blogové stránky nemíří zpět na přehled stránek';
     }
-    $blogPageOneStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? ORDER BY id DESC LIMIT 1");
-    $blogPageOneStmt->execute([$blogPageOneSlug]);
+    $blogPageOneStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? AND blog_id = ? ORDER BY id DESC LIMIT 1");
+    $blogPageOneStmt->execute([$blogPageOneSlug, $blogStaticMainId]);
     $blogPageOne = $blogPageOneStmt->fetch() ?: null;
     if (!$blogPageOne) {
         $blogStaticPagesIssues[] = 'první blogová stránka se po uložení nevytvořila';
@@ -7042,8 +7042,8 @@ try {
     if (httpIntegrationStatusCode($blogPageTwoResponse) !== 302) {
         $blogStaticPagesIssues[] = 'uložení druhé blogové stránky nevrátilo redirect';
     }
-    $blogPageTwoStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? ORDER BY id DESC LIMIT 1");
-    $blogPageTwoStmt->execute([$blogPageTwoSlug]);
+    $blogPageTwoStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? AND blog_id = ? ORDER BY id DESC LIMIT 1");
+    $blogPageTwoStmt->execute([$blogPageTwoSlug, $blogStaticMainId]);
     $blogPageTwo = $blogPageTwoStmt->fetch() ?: null;
     if (!$blogPageTwo) {
         $blogStaticPagesIssues[] = 'druhá blogová stránka se po uložení nevytvořila';
@@ -7212,6 +7212,124 @@ try {
     );
     if (httpIntegrationStatusCode($foreignBlogPageResponse) !== 404) {
         $blogStaticPagesIssues[] = 'blogová stránka je dostupná i pod cizím blogem místo 404';
+    }
+
+    $sameSlugOtherBlogTitle = 'HTTP stejný slug v jiném blogu';
+    $sameSlugOtherBlogContent = '<p>Stejný slug v jiném blogu musí mít vlastní veřejnou adresu.</p>';
+    $sameSlugOtherBlogResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => $sameSlugOtherBlogTitle,
+        'slug' => $blogPageOneSlug,
+        'content' => $sameSlugOtherBlogContent,
+        'blog_id' => (string)$blogStaticOtherId,
+        'is_published' => '1',
+        'admin_note' => 'HTTP scoped slug test',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($sameSlugOtherBlogResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'stejný slug v jiném blogu nebyl povolen';
+    }
+    $sameSlugOtherBlogStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? AND blog_id = ? ORDER BY id DESC LIMIT 1");
+    $sameSlugOtherBlogStmt->execute([$blogPageOneSlug, $blogStaticOtherId]);
+    $sameSlugOtherBlogPage = $sameSlugOtherBlogStmt->fetch() ?: null;
+    if (!$sameSlugOtherBlogPage) {
+        $blogStaticPagesIssues[] = 'stejný slug v jiném blogu se neuložil';
+    } else {
+        $createdPageIds[] = (int)$sameSlugOtherBlogPage['id'];
+        $sameSlugOtherBlogDetailResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/' . rawurlencode($blogStaticOtherSlug) . '/stranka/' . rawurlencode($blogPageOneSlug),
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($sameSlugOtherBlogDetailResponse) !== 200
+            || !str_contains($sameSlugOtherBlogDetailResponse['body'], $sameSlugOtherBlogTitle)
+            || !str_contains($sameSlugOtherBlogDetailResponse['body'], 'Stejný slug v jiném blogu')) {
+            $blogStaticPagesIssues[] = 'veřejná URL pro stejný slug v jiném blogu nefunguje';
+        }
+    }
+
+    $duplicateBlogPageTitle = 'HTTP Duplicitní slug ve stejném blogu';
+    $duplicateBlogPageContent = '<p>Rozepsaný obsah nesmí zmizet při duplicitním blogovém slugu.</p>';
+    $duplicateBlogPageResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => $duplicateBlogPageTitle,
+        'slug' => $blogPageOneSlug,
+        'content' => $duplicateBlogPageContent,
+        'blog_id' => (string)$blogStaticMainId,
+        'is_published' => '1',
+        'article_status' => 'draft',
+        'publish_at' => '2031-01-02T03:04',
+        'admin_note' => 'Poznámka se také musí zachovat.',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($duplicateBlogPageResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'duplicitní slug ve stejném blogu nevrátil redirect s chybou';
+    }
+    $duplicateBlogLocation = responseLocationHeaderValue($duplicateBlogPageResponse['headers']);
+    if ($duplicateBlogLocation === ''
+        || !str_contains($duplicateBlogLocation, BASE_URL . '/admin/page_form.php')
+        || !str_contains($duplicateBlogLocation, 'err=slug_blog')) {
+        $blogStaticPagesIssues[] = 'duplicitní slug ve stejném blogu nemá kontextovou validační chybu';
+    } else {
+        $duplicateBlogFormResponse = fetchUrl($baseUrl . $duplicateBlogLocation, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($duplicateBlogFormResponse) !== 200
+            || !str_contains($duplicateBlogFormResponse['body'], 'Tento slug už v tomto blogu používá jiná stránka.')
+            || !str_contains($duplicateBlogFormResponse['body'], $duplicateBlogPageTitle)
+            || !str_contains($duplicateBlogFormResponse['body'], 'Rozepsaný obsah nesmí zmizet')
+            || !str_contains($duplicateBlogFormResponse['body'], 'value="' . h((string)$blogStaticMainId) . '" selected')
+            || !str_contains($duplicateBlogFormResponse['body'], 'Poznámka se také musí zachovat.')) {
+            $blogStaticPagesIssues[] = 'formulář po duplicitním blogovém slugu nezachoval rozepsaný obsah nebo blog';
+        }
+    }
+
+    $globalPageSlug = 'http-global-page-scope-' . bin2hex(random_bytes(4));
+    $globalPageFirstResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => 'HTTP Globální stránka scope',
+        'slug' => $globalPageSlug,
+        'content' => '<p>První globální stránka.</p>',
+        'is_published' => '1',
+        'show_in_nav' => '1',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($globalPageFirstResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'uložení první globální stránky pro scoped slug test nevrátilo redirect';
+    }
+    $globalPageStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE slug = ? AND blog_id IS NULL ORDER BY id DESC LIMIT 1");
+    $globalPageStmt->execute([$globalPageSlug]);
+    $globalPage = $globalPageStmt->fetch() ?: null;
+    if (!$globalPage) {
+        $blogStaticPagesIssues[] = 'první globální stránka pro scoped slug test se nevytvořila';
+    } else {
+        $createdPageIds[] = (int)$globalPage['id'];
+    }
+
+    $duplicateGlobalContent = '<p>Rozepsaný obsah globální stránky se má zachovat.</p>';
+    $duplicateGlobalPageResponse = postUrl($pageSaveUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'redirect' => BASE_URL . '/admin/pages.php',
+        'title' => 'HTTP Duplicitní globální slug',
+        'slug' => $globalPageSlug,
+        'content' => $duplicateGlobalContent,
+        'is_published' => '1',
+        'show_in_nav' => '1',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($duplicateGlobalPageResponse) !== 302) {
+        $blogStaticPagesIssues[] = 'duplicitní globální slug nevrátil redirect s chybou';
+    }
+    $duplicateGlobalLocation = responseLocationHeaderValue($duplicateGlobalPageResponse['headers']);
+    if ($duplicateGlobalLocation === ''
+        || !str_contains($duplicateGlobalLocation, BASE_URL . '/admin/page_form.php')
+        || !str_contains($duplicateGlobalLocation, 'err=slug_global')) {
+        $blogStaticPagesIssues[] = 'duplicitní globální slug nemá kontextovou validační chybu';
+    } else {
+        $duplicateGlobalFormResponse = fetchUrl($baseUrl . $duplicateGlobalLocation, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($duplicateGlobalFormResponse) !== 200
+            || !str_contains($duplicateGlobalFormResponse['body'], 'Tento slug už používá jiná globální stránka.')
+            || !str_contains($duplicateGlobalFormResponse['body'], 'HTTP Duplicitní globální slug')
+            || !str_contains($duplicateGlobalFormResponse['body'], 'Rozepsaný obsah globální stránky')) {
+            $blogStaticPagesIssues[] = 'formulář po duplicitním globálním slugu nezachoval rozepsaný obsah';
+        }
     }
 
     $convertArticleTitle = 'HTTP Převod článku na blogovou stránku';

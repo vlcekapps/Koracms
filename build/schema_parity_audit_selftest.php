@@ -99,9 +99,12 @@ function validSchemaParityFixture(): array
 <?php
 CREATE TABLE IF NOT EXISTS cms_pages (
   id INT,
+  slug VARCHAR(255) NOT NULL,
   blog_id INT NULL,
+  slug_scope_id INT GENERATED ALWAYS AS (IFNULL(blog_id, 0)) STORED,
   blog_nav_order INT NOT NULL DEFAULT 0,
-  deleted_at DATETIME NULL
+  deleted_at DATETIME NULL,
+  UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_nav_links (
   id INT,
@@ -406,7 +409,11 @@ PHP,
         'migrate.php' => <<<'PHP'
 <?php
 // cms_pages.blog_id
+// cms_pages.slug_scope_id
 // cms_pages.blog_nav_order
+// uq_pages_scope_slug
+// DROP INDEX slug
+// DROP INDEX uq_cms_pages_slug
 // idx_pages_blog_nav
 // cms_nav_links
 // idx_nav_links_scope
@@ -702,11 +709,14 @@ $validFiles = validSchemaParityFixture();
 assertSchemaParityAuditPasses('Clean schema parity fixture', $validFiles);
 
 $missingInstallColumnFiles = $validFiles;
-$missingInstallColumnFiles['install.php'] = str_replace("  blog_id INT NULL,\n", '', $missingInstallColumnFiles['install.php']);
+$missingInstallColumnFiles['install.php'] = str_replace([
+    "  slug_scope_id INT GENERATED ALWAYS AS (IFNULL(blog_id, 0)) STORED,\n",
+    "  UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug)\n",
+], '', $missingInstallColumnFiles['install.php']);
 assertSchemaParityAuditFails(
     'Fresh install column guard',
     $missingInstallColumnFiles,
-    'install.php fresh schema is missing critical column cms_pages.blog_id.'
+    'install.php fresh schema is missing critical column cms_pages.slug_scope_id.'
 );
 
 $missingMigrationSnippetFiles = $validFiles;

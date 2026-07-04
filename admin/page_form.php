@@ -20,6 +20,12 @@ if ($id !== null) {
     $page = null;
 }
 
+$pageFormFlash = $_SESSION['page_form_flash'] ?? null;
+unset($_SESSION['page_form_flash']);
+$pageFormFlashValues = is_array($pageFormFlash) && is_array($pageFormFlash['values'] ?? null)
+    ? $pageFormFlash['values']
+    : [];
+
 // Content locking – pokus o získání zámku při editaci existující stránky
 $contentLockWarning = null;
 if ($page) {
@@ -37,11 +43,39 @@ if ($page === null) {
         'is_published' => 0,
         'show_in_nav' => 0,
         'status' => 'published',
+        'publish_at' => null,
         'unpublish_at' => null,
         'admin_note' => '',
     ];
     if ($requestedBlogId !== null && getBlogById($requestedBlogId)) {
         $page['blog_id'] = $requestedBlogId;
+    }
+}
+
+if ($pageFormFlashValues !== []) {
+    $flashIdRaw = $pageFormFlashValues['id'] ?? null;
+    $flashId = $flashIdRaw !== null && $flashIdRaw !== '' ? (int)$flashIdRaw : null;
+    if ($flashId === $id) {
+        foreach (['title', 'slug', 'content', 'publish_at', 'unpublish_at', 'admin_note'] as $flashKey) {
+            if (array_key_exists($flashKey, $pageFormFlashValues)) {
+                $page[$flashKey] = (string)$pageFormFlashValues[$flashKey];
+            }
+        }
+        if (array_key_exists('blog_id', $pageFormFlashValues)) {
+            $page['blog_id'] = $pageFormFlashValues['blog_id'] !== null && $pageFormFlashValues['blog_id'] !== ''
+                ? (int)$pageFormFlashValues['blog_id']
+                : null;
+        }
+        if (array_key_exists('is_published', $pageFormFlashValues)) {
+            $page['is_published'] = (int)$pageFormFlashValues['is_published'];
+        }
+        if (array_key_exists('show_in_nav', $pageFormFlashValues)) {
+            $page['show_in_nav'] = (int)$pageFormFlashValues['show_in_nav'];
+        }
+        if (array_key_exists('article_status', $pageFormFlashValues)
+            && in_array((string)$pageFormFlashValues['article_status'], ['draft', 'pending', 'published'], true)) {
+            $page['status'] = (string)$pageFormFlashValues['article_status'];
+        }
     }
 }
 
@@ -63,17 +97,37 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $pageTitle = $id ? 'Upravit statickou stránku' : 'Nová statická stránka';
 $err = trim($_GET['err'] ?? '');
 $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
+$pagePublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $pageUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
+$pageSlugErrorMessage = 'Slug stránky je už obsazený. Zvolte prosím jiný.';
+if ($err === 'slug_blog') {
+    $pageSlugErrorMessage = 'Tento slug už v tomto blogu používá jiná stránka.';
+} elseif ($err === 'slug_global') {
+    $pageSlugErrorMessage = 'Tento slug už používá jiná globální stránka.';
+}
+$formatDateTimeLocalValue = static function ($value): string {
+    $text = trim((string)$value);
+    if ($text === '') {
+        return '';
+    }
+
+    $timestamp = strtotime($text);
+    return $timestamp === false ? $text : date('Y-m-d\TH:i', $timestamp);
+};
 $fieldErrorMap = [
     'required' => ['title'],
     'slug' => ['slug'],
+    'slug_blog' => ['slug'],
+    'slug_global' => ['slug'],
     'blog' => ['blog_id'],
+    'publish_at' => ['publish_at'],
     'unpublish_at' => ['unpublish_at'],
 ];
 $fieldErrorMessages = [
     'title' => 'Název stránky je povinný.',
-    'slug' => 'Slug stránky je už obsazený. Zvolte prosím jiný.',
+    'slug' => $pageSlugErrorMessage,
     'blog' => 'Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.',
+    'publish_at' => $pagePublishAtErrorMessage,
     'unpublish_at' => $pageUnpublishAtErrorMessage,
 ];
 
@@ -104,10 +158,12 @@ adminHeader($pageTitle);
 
 <?php if ($err === 'required'): ?>
   <p role="alert" class="error" id="form-error">Název stránky je povinný.</p>
-<?php elseif ($err === 'slug'): ?>
-  <p role="alert" class="error" id="form-error">Slug stránky je už obsazený. Zvolte prosím jiný.</p>
+<?php elseif (in_array($err, ['slug', 'slug_blog', 'slug_global'], true)): ?>
+  <p role="alert" class="error" id="form-error"><?= h($pageSlugErrorMessage) ?></p>
 <?php elseif ($err === 'blog'): ?>
   <p role="alert" class="error" id="form-error">Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.</p>
+<?php elseif ($err === 'publish_at'): ?>
+  <p role="alert" class="error" id="form-error"><?= h($pagePublishAtErrorMessage) ?></p>
 <?php elseif ($err === 'unpublish_at'): ?>
   <p role="alert" class="error" id="form-error"><?= h($pageUnpublishAtErrorMessage) ?></p>
 <?php endif; ?>
@@ -205,13 +261,15 @@ adminHeader($pageTitle);
 
     <label for="publish_at">Plánované publikování</label>
     <input type="datetime-local" id="publish_at" name="publish_at"
-           class="admin-input-auto" value="<?= h(!empty($page['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['publish_at'])) : '') ?>">
-    <small class="field-help">Nechte prázdné, pokud se má stránka zveřejnit hned.</small>
+           <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['publish-at-help']) ?>
+           class="admin-input-auto" value="<?= h($formatDateTimeLocalValue($page['publish_at'] ?? '')) ?>">
+    <small id="publish-at-help" class="field-help">Nechte prázdné, pokud se má stránka zveřejnit hned.</small>
+    <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
-           class="admin-input-auto" value="<?= h(!empty($page['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$page['unpublish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h($formatDateTimeLocalValue($page['unpublish_at'] ?? '')) ?>">
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
     <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>

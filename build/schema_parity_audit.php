@@ -86,6 +86,7 @@ $dbSource = schemaParityReadFile($projectRoot, 'db.php', $issues);
 
 $criticalInstallColumns = [
     'cms_pages.blog_id' => ['cms_pages', 'blog_id'],
+    'cms_pages.slug_scope_id' => ['cms_pages', 'slug_scope_id'],
     'cms_pages.blog_nav_order' => ['cms_pages', 'blog_nav_order'],
     'cms_pages.deleted_at' => ['cms_pages', 'deleted_at'],
     'cms_nav_links.blog_id' => ['cms_nav_links', 'blog_id'],
@@ -274,7 +275,11 @@ foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
 
 $criticalMigrationSnippets = [
     'cms_pages.blog_id',
+    'cms_pages.slug_scope_id',
     'cms_pages.blog_nav_order',
+    'uq_pages_scope_slug',
+    'DROP INDEX slug',
+    'DROP INDEX uq_cms_pages_slug',
     'idx_pages_blog_nav',
     'cms_nav_links',
     'idx_nav_links_scope',
@@ -458,6 +463,13 @@ foreach ($criticalMigrationSnippets as $snippet) {
         $issues
     );
 }
+
+schemaParityRequire(
+    schemaParityTableContains($installSource, 'cms_pages', 'UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug)')
+    && !schemaParityTableContains($installSource, 'cms_pages', 'slug         VARCHAR(255) NOT NULL UNIQUE'),
+    'install.php must scope cms_pages slug uniqueness by slug_scope_id instead of a global slug UNIQUE index.',
+    $issues
+);
 
 schemaParityRequire(
     str_contains($blogIndexSource, 'SELECT id, title, slug, blog_id, blog_nav_order')

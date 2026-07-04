@@ -38,9 +38,9 @@ if ($direction === 'article_to_page') {
     }
     $pageContent .= (string)$article['content'];
 
-    $slug = uniquePageSlug($pdo, pageSlug((string)$article['slug'] ?: (string)$article['title']));
     $isPublished = (string)$article['status'] === 'published' ? 1 : 0;
     $pageBlogId = !empty($article['blog_id']) ? (int)$article['blog_id'] : null;
+    $slug = uniquePageSlug($pdo, pageSlug((string)$article['slug'] ?: (string)$article['title']), null, $pageBlogId);
     $navOrder = $pageBlogId === null ? nextPageNavigationOrder($pdo) : 0;
     $blogNavOrder = $pageBlogId !== null ? nextBlogPageNavigationOrder($pdo, $pageBlogId) : 0;
 

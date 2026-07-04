@@ -6860,7 +6860,7 @@ function uniqueArticleSlug(PDO $pdo, string $candidate, ?int $excludeId = null, 
     }
 }
 
-function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null): string
+function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null, ?int $blogId = null): string
 {
     $baseSlug = pageSlug($candidate);
     if ($baseSlug === '') {
@@ -6869,10 +6869,13 @@ function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null): st
 
     $slug = $baseSlug;
     $suffix = 2;
-    $stmt = $pdo->prepare("SELECT id FROM cms_pages WHERE slug = ? AND id != ?");
+    $excludeId = $excludeId ?? 0;
+    $stmt = $blogId === null
+        ? $pdo->prepare("SELECT id FROM cms_pages WHERE slug = ? AND blog_id IS NULL AND id != ?")
+        : $pdo->prepare("SELECT id FROM cms_pages WHERE slug = ? AND blog_id = ? AND id != ?");
 
     while (true) {
-        $stmt->execute([$slug, $excludeId ?? 0]);
+        $stmt->execute($blogId === null ? [$slug, $excludeId] : [$slug, $blogId, $excludeId]);
         if (!$stmt->fetch()) {
             return $slug;
         }

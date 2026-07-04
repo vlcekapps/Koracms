@@ -371,9 +371,10 @@ $tables = [
     'cms_pages' => "CREATE TABLE IF NOT EXISTS cms_pages (
         id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         title        VARCHAR(255) NOT NULL,
-        slug         VARCHAR(255) NOT NULL UNIQUE,
+        slug         VARCHAR(255) NOT NULL,
         content      TEXT,
         blog_id      INT          NULL DEFAULT NULL,
+        slug_scope_id INT GENERATED ALWAYS AS (IFNULL(blog_id, 0)) STORED,
         blog_nav_order INT        NOT NULL DEFAULT 0,
         show_in_nav  TINYINT(1)   NOT NULL DEFAULT 0,
         nav_order    INT          NOT NULL DEFAULT 0,
@@ -382,6 +383,7 @@ $tables = [
         publish_at   DATETIME     NULL DEFAULT NULL,
         created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug),
         INDEX idx_pages_blog_nav (blog_id, blog_nav_order)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
@@ -1590,6 +1592,7 @@ $addColumns = [
     'cms_news.deleted_at'            => "ALTER TABLE cms_news ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_pages.deleted_at'           => "ALTER TABLE cms_pages ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_pages.blog_id'              => "ALTER TABLE cms_pages ADD COLUMN blog_id INT NULL DEFAULT NULL AFTER content",
+    'cms_pages.slug_scope_id'        => "ALTER TABLE cms_pages ADD COLUMN slug_scope_id INT GENERATED ALWAYS AS (IFNULL(blog_id, 0)) STORED AFTER blog_id",
     'cms_pages.blog_nav_order'       => "ALTER TABLE cms_pages ADD COLUMN blog_nav_order INT NOT NULL DEFAULT 0 AFTER blog_id",
     'cms_events.deleted_at'          => "ALTER TABLE cms_events ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL",
     'cms_events.event_kind'          => "ALTER TABLE cms_events ADD COLUMN event_kind VARCHAR(50) NOT NULL DEFAULT 'general'",
@@ -3498,6 +3501,19 @@ try {
         $log[] = '· cms_pages: přidán index idx_pages_blog_nav';
     }
 } catch (\PDOException $e) {}
+
+try {
+    try { $pdo->exec("ALTER TABLE cms_pages DROP INDEX slug"); } catch (\PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE cms_pages DROP INDEX uq_cms_pages_slug"); } catch (\PDOException $e) {}
+
+    $idxCheck = $pdo->query("SHOW INDEX FROM cms_pages WHERE Key_name = 'uq_pages_scope_slug'")->fetch();
+    if (!$idxCheck && $columnExists('cms_pages', 'slug_scope_id')) {
+        $pdo->exec("ALTER TABLE cms_pages ADD UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug)");
+        $log[] = '· cms_pages: UNIQUE index změněn na kontextový (slug_scope_id, slug)';
+    }
+} catch (\PDOException $e) {
+    $log[] = '· cms_pages kontextový slug index – přeskočeno: ' . h($e->getMessage());
+}
 
 // ── 7. FULLTEXT indexy pro vyhledávání ────────────────────────────────────────
 

@@ -346,15 +346,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($importTitle === '') {
                             continue;
                         }
-                        $importSlug = trim((string)($row['slug'] ?? ''));
-                        if ($importSlug === '') {
-                            $importSlug = uniquePageSlug($pdo, $importTitle);
-                        } else {
-                            $importSlug = uniquePageSlug($pdo, $importSlug, (int)$row['id']);
-                        }
                         $importBlogId = !empty($row['blog_id']) ? (int)$row['blog_id'] : null;
                         if ($importBlogId !== null && !getBlogById($importBlogId)) {
                             $importBlogId = null;
+                        }
+                        $importSlug = trim((string)($row['slug'] ?? ''));
+                        if ($importSlug === '') {
+                            $importSlug = uniquePageSlug($pdo, $importTitle, null, $importBlogId);
+                        } else {
+                            $importSlug = uniquePageSlug($pdo, $importSlug, (int)$row['id'], $importBlogId);
                         }
                         $ins->execute([
                             (int)$row['id'], $importTitle, $importSlug,

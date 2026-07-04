@@ -8395,7 +8395,7 @@ $foundationChecks = [
         && str_contains($schemaParityAuditSource, 'articleExcerpt(')
         && str_contains($schemaParityAuditSelftestSource, 'assertSchemaParityAuditPasses')
         && str_contains($schemaParityAuditSelftestSource, 'assertSchemaParityAuditFails')
-        && str_contains($schemaParityAuditSelftestSource, 'install.php fresh schema is missing critical column cms_pages.blog_id.')
+        && str_contains($schemaParityAuditSelftestSource, 'install.php fresh schema is missing critical column cms_pages.slug_scope_id.')
         && str_contains($schemaParityAuditSelftestSource, 'migrate.php upgrade schema is missing critical migration guard cms_media.caption.')
         && str_contains($schemaParityAuditSelftestSource, 'sitemap.php gallery photos query must keep created_at qualified by alias.')
         && str_contains($schemaParityAuditSelftestSource, 'feed.php must keep articleExcerpt() available through db.php presentation helpers.'),
@@ -14013,7 +14013,8 @@ $reservationBookingSource = (string)file_get_contents(dirname(__DIR__) . '/reser
 if (!str_contains($pageSaveSource, 'validateDateTimeLocal($unpublishAt)')) {
     $editorialValidationIssues[] = 'page save is missing datetime parsing for unpublish_at';
 }
-if (!str_contains($pageSaveSource, "'err' => 'unpublish_at'")) {
+if (!str_contains($pageSaveSource, "'err' => 'unpublish_at'")
+    && !str_contains($pageSaveSource, "pageSaveRedirectWithFlash(\$fallback, 'unpublish_at'")) {
     $editorialValidationIssues[] = 'page save is missing invalid unpublish_at rejection';
 }
 if (!str_contains($pageSaveSource, "'unpublish_at' => \$unpublishAtSql") || !str_contains($pageSaveSource, "'admin_note' => \$adminNote")) {
@@ -17540,17 +17541,45 @@ if (str_contains($blogStaticStatsSource, 'aria-label="Hlavní navigace"')) {
 if (!str_contains($blogStaticInstallSource, 'blog_id') || !str_contains($blogStaticInstallSource, 'blog_nav_order') || !str_contains($blogStaticInstallSource, 'idx_pages_blog_nav')) {
     $blogStaticPageIssues[] = 'fresh install is missing blog page schema fields on cms_pages';
 }
+if (!str_contains($blogStaticInstallSource, 'slug_scope_id')
+    || !str_contains($blogStaticInstallSource, 'UNIQUE KEY uq_pages_scope_slug (slug_scope_id, slug)')
+    || str_contains($blogStaticInstallSource, 'slug         VARCHAR(255) NOT NULL UNIQUE')) {
+    $blogStaticPageIssues[] = 'fresh install still has global cms_pages slug uniqueness instead of scoped page slug uniqueness';
+}
 if (!str_contains($blogStaticInstallSource, 'CREATE TABLE IF NOT EXISTS cms_nav_links') || !str_contains($blogStaticInstallSource, 'idx_nav_links_scope')) {
     $blogStaticPageIssues[] = 'fresh install is missing external navigation links schema';
 }
 if (!str_contains($blogStaticMigrateSource, 'cms_pages.blog_id') || !str_contains($blogStaticMigrateSource, 'cms_pages.blog_nav_order') || !str_contains($blogStaticMigrateSource, 'idx_pages_blog_nav')) {
     $blogStaticPageIssues[] = 'migration is missing blog page schema upgrade on cms_pages';
 }
+if (!str_contains($blogStaticMigrateSource, 'cms_pages.slug_scope_id')
+    || !str_contains($blogStaticMigrateSource, 'uq_pages_scope_slug')
+    || !str_contains($blogStaticMigrateSource, 'ALTER TABLE cms_pages DROP INDEX slug')
+    || !str_contains($blogStaticMigrateSource, 'ALTER TABLE cms_pages DROP INDEX uq_cms_pages_slug')) {
+    $blogStaticPageIssues[] = 'migration is missing scoped cms_pages slug uniqueness migration';
+}
 if (!str_contains($blogStaticMigrateSource, 'cms_nav_links') || !str_contains($blogStaticMigrateSource, 'idx_nav_links_scope')) {
     $blogStaticPageIssues[] = 'migration is missing external navigation links schema';
 }
 if (!str_contains($blogPresentationSource, 'function pageBlogContext') || !str_contains($blogPresentationSource, '/stranka/') || !str_contains($blogPresentationSource, 'function normalizeBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function nextBlogPageNavigationOrder') || !str_contains($blogPresentationSource, 'function navigationLinkAnchorAttributes')) {
     $blogStaticPageIssues[] = 'presentation helpers are missing blog page routing or ordering support';
+}
+if (!str_contains($blogPresentationSource, 'function uniquePageSlug(PDO $pdo, string $candidate, ?int $excludeId = null, ?int $blogId = null)')
+    || !str_contains($blogPresentationSource, 'blog_id IS NULL')
+    || !str_contains($blogPresentationSource, 'blog_id = ?')) {
+    $blogStaticPageIssues[] = 'uniquePageSlug is not scoped by global/blog page context';
+}
+foreach ([
+    'function uniqueArticleSlug' => 'blog_id = ?',
+    'function uniqueBlogCategorySlug' => 'blog_id = ?',
+    'function uniqueBlogTagSlug' => 'blog_id = ?',
+    'function uniqueBlogSeriesSlug' => 'blog_id = ?',
+] as $blogSlugHelper => $blogSlugScopeFragment) {
+    $helperOffset = strpos($blogPresentationSource, $blogSlugHelper);
+    $helperSource = $helperOffset === false ? '' : substr($blogPresentationSource, $helperOffset, 900);
+    if ($helperOffset === false || !str_contains($helperSource, $blogSlugScopeFragment)) {
+        $blogStaticPageIssues[] = $blogSlugHelper . ' no longer proves blog-scoped slug uniqueness';
+    }
 }
 if (!str_contains($blogPresentationSource, 'function navigationLinkAccessibleSuffix')) {
     $blogStaticPageIssues[] = 'presentation helpers are missing hidden-text suffix support for navigation links';
@@ -17588,6 +17617,12 @@ if (!str_contains($blogStaticPageFormSource, 'name="blog_id"') || !str_contains(
 }
 if (!str_contains($blogStaticPageSaveSource, '$targetBlogId') || !str_contains($blogStaticPageSaveSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticPageSaveSource, 'normalizeBlogPageNavigationOrder')) {
     $blogStaticPageIssues[] = 'page save is missing blog-specific persistence or ordering';
+}
+if (!str_contains($blogStaticPageSaveSource, 'uniquePageSlug($pdo, $slug, $id, $targetBlogId)')
+    || !str_contains($blogStaticPageSaveSource, 'page_form_flash')
+    || !str_contains($blogStaticPageSaveSource, 'slug_blog')
+    || !str_contains($blogStaticPageSaveSource, 'slug_global')) {
+    $blogStaticPageIssues[] = 'page save is missing scoped slug validation or form-state preservation';
 }
 if (!str_contains($blogStaticPagesAdminSource, 'blog_nav_order') || !str_contains($blogStaticPagesAdminSource, 'Uložit pořadí') || !str_contains($blogStaticPagesAdminSource, 'blog-page-order-status') || !str_contains($blogStaticPagesAdminSource, 'Přidat externí odkaz blogu')) {
     $blogStaticPageIssues[] = 'blog page ordering admin screen is missing reorder persistence or accessibility helpers';
@@ -17630,11 +17665,27 @@ if (!str_contains($blogStaticMenuSource, 'WHERE blog_id IS NULL AND deleted_at I
 if (!str_contains($blogStaticConvertSource, 'blog_nav_order') || !str_contains($blogStaticConvertSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticConvertSource, '$targetBlogId = !empty($page[\'blog_id\']) ? (int)$page[\'blog_id\'] : $defaultBlogId')) {
     $blogStaticPageIssues[] = 'content conversion is missing blog-preserving page/article behavior';
 }
+if (!str_contains($blogStaticConvertSource, 'uniquePageSlug($pdo, pageSlug((string)$article[\'slug\'] ?: (string)$article[\'title\']), null, $pageBlogId)')) {
+    $blogStaticPageIssues[] = 'article-to-page conversion does not generate page slug in the target blog context';
+}
 if (!str_contains($blogExportSource, 'blog_id, blog_nav_order') || !str_contains($blogImportSource, 'blog_id, blog_nav_order') || !str_contains($blogExportSource, 'nav_links') || !str_contains($blogImportSource, 'nav_links')) {
     $blogStaticPageIssues[] = 'export/import is missing blog page fields';
 }
+if (!str_contains($blogImportSource, 'uniquePageSlug($pdo, $importTitle, null, $importBlogId)')
+    || !str_contains($blogImportSource, 'uniquePageSlug($pdo, $importSlug, (int)$row[\'id\'], $importBlogId)')) {
+    $blogStaticPageIssues[] = 'JSON import does not generate page slugs in the imported blog context';
+}
 if (!str_contains($blogStaticHttpIntegrationSource, "blog_static_pages_http")) {
     $blogStaticPageIssues[] = 'http integration suite is missing blog static page scenarios';
+}
+foreach ([
+    'Tento slug už v tomto blogu používá jiná stránka.',
+    'Tento slug už používá jiná globální stránka.',
+    'stejný slug v jiném blogu',
+] as $blogStaticPageHttpFragment) {
+    if (!str_contains($blogStaticHttpIntegrationSource, $blogStaticPageHttpFragment)) {
+        $blogStaticPageIssues[] = 'http integration suite is missing scoped slug regression fragment: ' . $blogStaticPageHttpFragment;
+    }
 }
 if ($blogStaticPageIssues === []) {
     echo "OK\n";

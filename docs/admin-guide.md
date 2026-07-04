@@ -324,6 +324,8 @@ Když změníte slug kategorie nebo štítku, Kora CMS automaticky uloží trval
 
 Každý blog může mít vlastní horní navigaci nad výpisem článků. Do stejného pořadí lze přidat statické stránky blogu i externí nebo interní odkazy. Odkaz má název, cílovou adresu, volitelný přístupný popis pro čtečky obrazovky, přepínač zobrazení a volbu otevření v novém okně. Přístupný popis se ve veřejném výstupu přidává jako skrytý text za viditelný název odkazu, takže čtečka nehlásí jiný název než ten, který je vidět na stránce. Pokud se odkaz otevírá v novém okně, veřejný výstup automaticky přidá bezpečné atributy `target="_blank"` a `rel="noopener noreferrer"` a stejným skrytým textem oznámí otevření v novém okně.
 
+Statická stránka přiřazená k blogu má veřejnou adresu `/{blog-slug}/stranka/{page-slug}`. Slug tak musí být jedinečný jen v daném blogu; stejný slug lze použít v jiném blogu, protože výsledná URL je jiná. Globální statické stránky mimo blog zůstávají unikátní mezi globálními stránkami.
+
 Globální hlavní navigace v **Navigace webu** používá stejný model pro odkazy napříč celým webem. Blogové odkazy jsou ale oddělené od globální navigace a řadí se jen v kontextu konkrétního blogu.
 
 V přehledech `Statické stránky` a `Články` se pro převod obsahu dál zobrazuje šipka jako vizuální vodítko, ale pro čtečky obrazovky je nově skrytá. Asistivní technologie tak hlásí jen samotnou akci `Článek` nebo `Stránka`, ne dekorativní symbol před ní.

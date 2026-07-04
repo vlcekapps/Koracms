@@ -4,6 +4,16 @@ require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu statických stránek nemáte potřebné oprávnění.');
 verifyCsrf();
 
+/**
+ * @param array<string, mixed> $values
+ */
+function pageSaveRedirectWithFlash(string $fallback, string $errorCode, array $values): void
+{
+    $_SESSION['page_form_flash'] = ['values' => $values];
+    header('Location: ' . appendUrlQuery($fallback, ['err' => $errorCode]));
+    exit;
+}
+
 $id = inputInt('post', 'id');
 $title = trim((string)($_POST['title'] ?? ''));
 $rawSlug = trim((string)($_POST['slug'] ?? ''));
@@ -13,6 +23,7 @@ $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
 $adminNote = trim((string)($_POST['admin_note'] ?? ''));
 $selectedBlogId = inputInt('post', 'blog_id');
+$requestedStatusInput = trim((string)($_POST['article_status'] ?? ''));
 
 $publishAt = trim((string)($_POST['publish_at'] ?? ''));
 $publishAtSql = null;
@@ -26,43 +37,52 @@ if ($id !== null) {
     $fallbackParams['blog_id'] = $selectedBlogId;
 }
 $fallback = BASE_URL . '/admin/page_form.php?' . http_build_query($fallbackParams);
+$formValues = [
+    'id' => $id,
+    'title' => $title,
+    'slug' => $rawSlug !== '' ? $rawSlug : $slug,
+    'content' => $content,
+    'blog_id' => $selectedBlogId,
+    'is_published' => $isPublished,
+    'show_in_nav' => $showInNav,
+    'article_status' => $requestedStatusInput,
+    'publish_at' => $publishAt,
+    'unpublish_at' => $unpublishAt,
+    'admin_note' => $adminNote,
+];
 
 if ($publishAt !== '') {
     $publishAtSql = validateDateTimeLocal($publishAt);
     if ($publishAtSql === null) {
-        header('Location: ' . appendUrlQuery($fallback, ['err' => 'publish_at']));
-        exit;
+        pageSaveRedirectWithFlash($fallback, 'publish_at', $formValues);
     }
 }
 
 if ($unpublishAt !== '') {
     $unpublishAtSql = validateDateTimeLocal($unpublishAt);
     if ($unpublishAtSql === null) {
-        header('Location: ' . appendUrlQuery($fallback, ['err' => 'unpublish_at']));
-        exit;
+        pageSaveRedirectWithFlash($fallback, 'unpublish_at', $formValues);
     }
 }
 
 if ($title === '' || $slug === '') {
-    header('Location: ' . appendUrlQuery($fallback, ['err' => 'required']));
-    exit;
+    pageSaveRedirectWithFlash($fallback, 'required', $formValues);
 }
 
 $targetBlogId = null;
 if ($selectedBlogId !== null) {
     $targetBlog = getBlogById($selectedBlogId);
     if (!$targetBlog) {
-        header('Location: ' . appendUrlQuery($fallback, ['err' => 'blog']));
-        exit;
+        pageSaveRedirectWithFlash($fallback, 'blog', $formValues);
     }
     $targetBlogId = (int)$targetBlog['id'];
 }
+$formValues['blog_id'] = $targetBlogId;
 
 $pdo = db_connect();
-$uniqueSlug = uniquePageSlug($pdo, $slug, $id);
+$uniqueSlug = uniquePageSlug($pdo, $slug, $id, $targetBlogId);
 if ($uniqueSlug !== $slug) {
-    header('Location: ' . appendUrlQuery($fallback, ['err' => 'slug']));
-    exit;
+    pageSaveRedirectWithFlash($fallback, $targetBlogId === null ? 'slug_global' : 'slug_blog', $formValues);
 }
 
 $pdo->beginTransaction();
@@ -70,7 +90,7 @@ $pdo->beginTransaction();
 try {
     if ($id !== null) {
         $oldStmt = $pdo->prepare(
-            "SELECT id, title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, unpublish_at, admin_note, preview_token
+            "SELECT id, title, slug, content, blog_id, blog_nav_order, is_published, show_in_nav, nav_order, publish_at, unpublish_at, status, admin_note, preview_token
              FROM cms_pages
              WHERE id = ? AND deleted_at IS NULL"
         );
@@ -122,7 +142,7 @@ try {
             'admin_note' => $adminNote,
         ]);
 
-        $requestedStatus = trim($_POST['article_status'] ?? '');
+        $requestedStatus = $requestedStatusInput;
         if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
             $requestedStatus = $oldData['status'] ?? 'published';
         }
@@ -162,7 +182,7 @@ try {
 
         logAction('page_edit', 'id=' . $id . ', title=' . mb_substr($title, 0, 80));
     } else {
-        $requestedStatus = trim($_POST['article_status'] ?? '');
+        $requestedStatus = $requestedStatusInput;
         if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
             $requestedStatus = $isPublished === 1 ? 'published' : 'draft';
         }
@@ -205,6 +225,9 @@ try {
 } catch (\Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
+    }
+    if ($e instanceof \PDOException && (string)$e->getCode() === '23000') {
+        pageSaveRedirectWithFlash($fallback, $targetBlogId === null ? 'slug_global' : 'slug_blog', $formValues);
     }
     throw $e;
 }

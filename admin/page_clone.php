@@ -29,7 +29,8 @@ if (!$source) {
     exit;
 }
 
-$newSlug = uniquePageSlug($pdo, pageSlug((string)$source['slug'] . '-kopie'), null);
+$sourceBlogId = !empty($source['blog_id']) ? (int)$source['blog_id'] : null;
+$newSlug = uniquePageSlug($pdo, pageSlug((string)$source['slug'] . '-kopie'), null, $sourceBlogId);
 $previewToken = bin2hex(random_bytes(16));
 
 $pdo->prepare(

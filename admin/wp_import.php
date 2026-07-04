@@ -322,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
                 continue;
             }
             $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $page['content']);
-            $slug = uniquePageSlug($pdo, pageSlug($page['slug'] ?: $page['title']));
+            $slug = uniquePageSlug($pdo, pageSlug($page['slug'] ?: $page['title']), null, null);
             $pdo->prepare("INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at) VALUES (?,?,?,?,1,?,?)")
                 ->execute([$page['title'], $slug, trim($content), $page['status'] === 'publish' ? 1 : 0, $page['menu_order'], $page['date']]);
             $insertedPages++;
