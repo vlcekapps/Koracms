@@ -501,6 +501,7 @@ $tables = [
         title       VARCHAR(255) NOT NULL,
         slug        VARCHAR(255) NOT NULL,
         description TEXT,
+        transcript  TEXT,
         audio_file  VARCHAR(255) NOT NULL DEFAULT '',
         image_file  VARCHAR(255) NOT NULL DEFAULT '',
         audio_url   VARCHAR(500) NOT NULL DEFAULT '',
@@ -1481,6 +1482,8 @@ $addColumns = [
     'cms_downloads.download_count'   => "ALTER TABLE cms_downloads ADD COLUMN download_count INT NOT NULL DEFAULT 0 AFTER file_size",
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER download_count",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    // cms_podcasts
+    'cms_podcasts.transcript'        => "ALTER TABLE cms_podcasts ADD COLUMN transcript TEXT AFTER description",
     // cms_media
     'cms_media.collection_id'        => "ALTER TABLE cms_media ADD COLUMN collection_id INT NULL DEFAULT NULL AFTER folder",
     'cms_media.caption'              => "ALTER TABLE cms_media ADD COLUMN caption TEXT AFTER alt_text",

@@ -1606,14 +1606,15 @@ if (isModuleEnabled('podcast')) {
     $runtimeAuditPodcastEpisodeOldSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditPodcastShowId, 'runtime-audit-epizoda-old-' . bin2hex(random_bytes(3)));
     $pdo->prepare(
         "INSERT INTO cms_podcasts (
-            show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+            show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
             episode_type, explicit_mode, block_from_feed, publish_at, status, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, '', ?, '12:34', 1, 2, 'bonus', 'yes', 0, NOW(), 'published', NOW(), NOW())"
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, '12:34', 1, 2, 'bonus', 'yes', 0, NOW(), 'published', NOW(), NOW())"
     )->execute([
         $runtimeAuditPodcastShowId,
         $runtimeAuditPodcastEpisodeTitle,
         $runtimeAuditPodcastEpisodeSlug,
         '<p>Detailní text testovací epizody pro runtime audit podcastů.</p>',
+        '<p>Přepis runtime audit epizody slouží jako textová alternativa k audio záznamu.</p>',
         $runtimeAuditPodcastAudioFile,
         $runtimeAuditPodcastEpisodeImage,
         'Krátký podtitul testovací epizody.',
@@ -1700,14 +1701,15 @@ if (isModuleEnabled('podcast')) {
     $runtimeAuditHiddenPodcastEpisodeSlug = uniquePodcastEpisodeSlug($pdo, $runtimeAuditHiddenPodcastShowId, 'runtime-audit-hidden-epizoda-' . bin2hex(random_bytes(4)));
     $pdo->prepare(
         "INSERT INTO cms_podcasts (
-            show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+            show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
             episode_type, explicit_mode, block_from_feed, publish_at, status, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, '', ?, '01:23', 1, 1, 'full', 'inherit', 0, NOW(), 'published', NOW(), NOW())"
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, '01:23', 1, 1, 'full', 'inherit', 0, NOW(), 'published', NOW(), NOW())"
     )->execute([
         $runtimeAuditHiddenPodcastShowId,
         'Runtime audit skryta epizoda',
         $runtimeAuditHiddenPodcastEpisodeSlug,
         '<p>Skryta epizoda pro overeni asset endpointu.</p>',
+        '<p>Skryty prepis nesmi byt verejne dostupny.</p>',
         $runtimeAuditHiddenPodcastAudioFile,
         $runtimeAuditHiddenPodcastEpisodeImage,
         'Skryta epizoda.',
@@ -4930,6 +4932,8 @@ foreach ($pages as $page) {
             'name="audio_file"',
             'name="image_file"',
             'name="audio_url"',
+            'name="transcript"',
+            'id="podcast-episode-transcript-help"',
             'name="publish_at"',
             'revisions.php?type=podcast_episode&amp;id=',
             'Upravit epizodu podcastu',
@@ -5606,6 +5610,10 @@ foreach ($pages as $page) {
         }
         if (!str_contains($result['body'], 'application/ld+json')) {
             $issues[] = 'podcast episode is missing structured data';
+        }
+        if (!str_contains($result['body'], 'id="podcast-episode-transcript"')
+            || !str_contains($result['body'], 'Přepis runtime audit epizody slouží jako textová alternativa k audio záznamu.')) {
+            $issues[] = 'podcast episode is missing public transcript section';
         }
         foreach ([
             '<h2 id="podcast-episode-breadcrumb-heading" class="sr-only">Drobečková navigace</h2>',
@@ -17324,6 +17332,15 @@ if (!str_contains($podcastShowViewSource, 'pagerHtml')) {
 if (!str_contains($podcastEpisodeViewSource, 'id="podcast-episode-player-label" class="sr-only"')
     || !str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-labelledby="podcast-episode-player-label">')) {
     $podcastSourceIssues[] = 'podcast episode audio player is missing heading-backed accessible label';
+}
+if (!str_contains($podcastEpisodeViewSource, 'id="podcast-episode-transcript"')
+    || !str_contains($podcastEpisodeViewSource, "renderContent((string)\$episode['transcript'])")) {
+    $podcastSourceIssues[] = 'podcast episode view is missing optional transcript section';
+}
+if (!str_contains($adminExportSource, 'description, transcript, audio_file')
+    || !str_contains($importAdminSource, '(id, show_id, title, slug, description, transcript, audio_file')
+    || !str_contains($importAdminSource, "\$row['transcript'] ?? ''")) {
+    $podcastSourceIssues[] = 'podcast import/export is missing episode transcript metadata';
 }
 if (str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-label=')) {
     $podcastSourceIssues[] = 'podcast episode audio player still uses aria-label instead of hidden DOM label';

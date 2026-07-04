@@ -497,6 +497,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             title        VARCHAR(255) NOT NULL,
             slug         VARCHAR(255) NOT NULL,
             description  TEXT,
+            transcript   TEXT,
             audio_file   VARCHAR(255) NOT NULL DEFAULT '',
             image_file   VARCHAR(255) NOT NULL DEFAULT '',
             audio_url    VARCHAR(500) NOT NULL DEFAULT '',

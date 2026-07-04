@@ -11,6 +11,7 @@ $showId = inputInt('post', 'show_id');
 $title = trim((string)($_POST['title'] ?? ''));
 $slugInput = trim((string)($_POST['slug'] ?? ''));
 $description = (string)($_POST['description'] ?? '');
+$transcript = (string)($_POST['transcript'] ?? '');
 $audioUrlInput = trim((string)($_POST['audio_url'] ?? ''));
 $subtitle = trim((string)($_POST['subtitle'] ?? ''));
 $duration = trim((string)($_POST['duration'] ?? ''));
@@ -149,6 +150,7 @@ if ($id !== null) {
             'title' => $title,
             'slug' => $uniqueSlug,
             'description' => $description,
+            'transcript' => $transcript,
             'audio_url' => $audioUrl,
             'subtitle' => $subtitle,
             'duration' => $duration,
@@ -172,7 +174,7 @@ if ($id !== null) {
     ]);
     $pdo->prepare(
         "UPDATE cms_podcasts
-         SET show_id = ?, title = ?, slug = ?, description = ?, audio_file = ?, image_file = ?, audio_url = ?,
+         SET show_id = ?, title = ?, slug = ?, description = ?, transcript = ?, audio_file = ?, image_file = ?, audio_url = ?,
              subtitle = ?, duration = ?, episode_num = ?, season_num = ?, episode_type = ?, explicit_mode = ?,
              block_from_feed = ?, publish_at = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
@@ -181,6 +183,7 @@ if ($id !== null) {
         $title,
         $uniqueSlug,
         $description,
+        $transcript,
         $audioFilename,
         $imageFilename,
         $audioUrl,
@@ -211,14 +214,15 @@ if ($id !== null) {
     $status = $requestedStatus;
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+         (show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
           episode_type, explicit_mode, block_from_feed, publish_at, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $showId,
         $title,
         $uniqueSlug,
         $description,
+        $transcript,
         $audioFilename,
         $imageFilename,
         $audioUrl,

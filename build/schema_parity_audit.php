@@ -263,6 +263,7 @@ $criticalInstallColumns = [
     'cms_res_booking_events.booking_id' => ['cms_res_booking_events', 'booking_id'],
     'cms_res_booking_events.event_type' => ['cms_res_booking_events', 'event_type'],
     'cms_res_booking_events.description' => ['cms_res_booking_events', 'description'],
+    'cms_podcasts.transcript' => ['cms_podcasts', 'transcript'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -297,6 +298,7 @@ $criticalMigrationSnippets = [
     'cms_media.updated_at',
     'idx_media_visibility',
     'idx_media_collection',
+    'cms_podcasts.transcript',
     'cms_gallery_photos.slug',
     'cms_gallery_albums.default_credit',
     'cms_gallery_albums.default_license_label',

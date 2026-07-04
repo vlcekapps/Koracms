@@ -199,10 +199,13 @@ Každý podcastový pořad má vlastní nastavení feedu pro podcastové aplikac
 - Typ: `full` / `trailer` / `bonus`
 - Vlastní explicit režim (přepíše nastavení pořadu)
 - Možnost skrýt epizodu z RSS feedu
+- Přepis epizody jako textová alternativa audia
 
 ### Generované iTunes značky
 
 `itunes:summary`, `itunes:subtitle`, `itunes:owner`, `itunes:type`, `itunes:explicit`, `itunes:season`, `itunes:episodeType`
+
+Přepis epizody vyplňujte u audio obsahu, který nemá jinou textovou alternativu. Veřejný detail epizody ho zobrazí v samostatné sekci **Přepis epizody**, takže je dostupný pro čtečky obrazovky, uživatele bez možnosti poslouchat audio i vyhledávání v obsahu. Přepis se ukládá do revizí epizody a zachovává se v JSON exportu/importu.
 
 ---
 

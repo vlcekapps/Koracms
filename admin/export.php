@@ -109,7 +109,7 @@ $tables = [
     'podcast_shows' => "SELECT id, title, slug, description, author, subtitle, cover_image,
                                language, category, owner_name, owner_email, explicit_mode, show_type, feed_complete,
                                feed_episode_limit, website_url, is_published, status, created_at, updated_at FROM cms_podcast_shows",
-    'podcasts'      => "SELECT id, show_id, title, slug, description, audio_file, image_file, audio_url, subtitle,
+    'podcasts'      => "SELECT id, show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle,
                                duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
     'polls'         => "SELECT id, question, slug, description, vote_mode, max_choices, results_visibility,

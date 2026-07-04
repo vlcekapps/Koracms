@@ -14,6 +14,7 @@ $episode = [
     'title' => '',
     'slug' => '',
     'description' => '',
+    'transcript' => '',
     'audio_file' => '',
     'image_file' => '',
     'audio_url' => '',
@@ -262,6 +263,11 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       <small id="podcast-episode-description-help" class="field-help"><?= adminHtmlSnippetSupportMarkup() ?></small>
       <?php renderAdminContentReferencePicker('description'); ?>
     <?php endif; ?>
+
+    <label for="transcript">Přepis epizody</label>
+    <textarea id="transcript" name="transcript" rows="12" aria-describedby="podcast-episode-transcript-help"><?= h((string)$episode['transcript']) ?></textarea>
+    <small id="podcast-episode-transcript-help" class="field-help">Volitelné. Přepis zpřístupní obsah audio epizody lidem, kteří audio nemohou poslouchat, a hodí se i jako textová alternativa pro vyhledávání v obsahu. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('transcript'); ?>
   </fieldset>
 
   <fieldset class="admin-fieldset-card admin-action-row">

@@ -712,6 +712,45 @@ assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook U
 assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
 assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
 
+test_section('podcast episode accessibility metadata');
+
+$podcastEpisodeWithTranscriptOnly = [
+    'id' => 42,
+    'show_id' => 7,
+    'show_slug' => 'testovaci-porad',
+    'title' => 'Epizoda s přepisem',
+    'slug' => 'epizoda-s-prepisem',
+    'description' => '',
+    'transcript' => '<p>Plný přepis epizody slouží jako textová alternativa audia.</p>',
+    'audio_file' => '',
+    'audio_url' => '',
+    'image_file' => '',
+    'subtitle' => '',
+    'created_at' => '2026-07-04 12:00:00',
+    'status' => 'published',
+];
+assert_equals(
+    'Plný přepis epizody slouží jako textová alternativa audia.',
+    podcastEpisodeExcerpt($podcastEpisodeWithTranscriptOnly, 120),
+    'podcast episode excerpt falls back to transcript when description is empty'
+);
+$hydratedPodcastEpisode = hydratePodcastEpisodePresentation($podcastEpisodeWithTranscriptOnly);
+assert_equals(
+    'Plný přepis epizody slouží jako textová alternativa audia.',
+    $hydratedPodcastEpisode['transcript_plain'],
+    'podcast episode hydration exposes plain transcript text'
+);
+assert_equals(
+    'Plný přepis epizody slouží jako textová alternativa audia.',
+    $hydratedPodcastEpisode['feed_summary'],
+    'podcast episode feed summary can fall back to transcript'
+);
+assert_equals(
+    '<p>Plný přepis epizody slouží jako textová alternativa audia.</p>',
+    podcastEpisodeRevisionSnapshot($podcastEpisodeWithTranscriptOnly)['transcript'],
+    'podcast episode revision snapshot keeps transcript content'
+);
+
 test_section('form field autocomplete purpose');
 
 assert_equals('email', formFieldAutocompletePurpose('email', 'email_pro_odpoved', 'E-mail pro odpověď'), 'email fields expose email autocomplete');

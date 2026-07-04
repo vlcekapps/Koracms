@@ -1409,10 +1409,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['podcasts']) && is_array($data['podcasts'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcasts
-                          (id, show_id, title, slug, description, audio_file, image_file, audio_url, subtitle,
+                          (id, show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle,
                            duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                            publish_at, status, created_at, updated_at)
-                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcasts'] as $row) {
                         $showId = max(1, (int)($row['show_id'] ?? 1));
@@ -1431,6 +1431,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $ins->execute([
                             (int)$row['id'], $showId,
                             $title, $slug, $row['description'] ?? '',
+                            $row['transcript'] ?? '',
                             $row['audio_file'] ?? '', $row['image_file'] ?? '',
                             normalizePodcastEpisodeAudioUrl((string)($row['audio_url'] ?? '')), $row['subtitle'] ?? '',
                             $row['duration'] ?? '', !empty($row['episode_num']) ? (int)$row['episode_num'] : null,

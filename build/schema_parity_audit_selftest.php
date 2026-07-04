@@ -133,6 +133,10 @@ CREATE TABLE IF NOT EXISTS cms_media (
   visibility VARCHAR(20),
   updated_at DATETIME
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_podcasts (
+  id INT,
+  transcript TEXT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_albums (
   id INT,
   default_credit VARCHAR(255),
@@ -431,6 +435,7 @@ PHP,
 // cms_media.updated_at
 // idx_media_visibility
 // idx_media_collection
+// cms_podcasts.transcript
 // cms_gallery_photos.slug
 // cms_gallery_albums.default_credit
 // cms_gallery_albums.default_license_label

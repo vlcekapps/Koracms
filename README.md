@@ -244,7 +244,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s typy, místy konání, opakovanými termíny, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi, fotografickými metadaty a bezpečným media endpointem |
-| **Podcasty** | Více pořadů, epizody, artwork, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
+| **Podcasty** | Více pořadů, epizody, artwork, přepisy epizod, chráněné assety, RSS feed s iTunes značkami, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s kategoriemi, landing stránkami, sériemi verzí, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, denními nabídkami, strukturovanými položkami, cenami, alergeny, nutričními údaji, obrázky, veřejnými filtry, objednávkovými poptávkami, archivem, hledáním a revizemi |
@@ -562,7 +562,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - klávesnicová ovladatelnost i tam, kde je drag & drop
 - průběžný audit přes `build/runtime_audit.php`
 
-Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](docs/accessibility/): WCAG 2.2 AA matice, VPAT/ACR draft, backlog oprav a ruční testovací protokol. Report hodnotí Kora CMS jako produkt a odděluje odpovědnost CMS od ručně vloženého obsahu autora, například titulků médií, alt textů nebo vlastního HTML v editoru. Stejné dokumenty jsou povinný vstup i pro návrh nových modulů: nový modul má předem určit, zda mění některý předpoklad conformance reportu, zda vyžaduje ruční testovací scénář a zda je potřeba aktualizovat backlog.
+Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](docs/accessibility/): WCAG 2.2 AA matice, VPAT/ACR draft, backlog oprav a ruční testovací protokol. Report hodnotí Kora CMS jako produkt a odděluje odpovědnost CMS od ručně vloženého obsahu autora, například titulků médií, alt textů nebo vlastního HTML v editoru. Podcastové epizody mají samostatné pole pro přepis epizody, které se veřejně vykreslí jako textová alternativa audia a zůstává součástí exportu/importu. Stejné dokumenty jsou povinný vstup i pro návrh nových modulů: nový modul má předem určit, zda mění některý předpoklad conformance reportu, zda vyžaduje ruční testovací scénář a zda je potřeba aktualizovat backlog.
 
 ---
 

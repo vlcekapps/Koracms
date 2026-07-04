@@ -72,4 +72,16 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
       <p class="empty-state">Tato epizoda zatím nemá doplněný podrobný popis.</p>
     <?php endif; ?>
   </section>
+
+  <?php if ((string)($episode['transcript'] ?? '') !== ''): ?>
+    <section class="surface" aria-labelledby="podcast-episode-transcript">
+      <div class="section-heading">
+        <div>
+          <h2 id="podcast-episode-transcript" class="section-title">Přepis epizody</h2>
+        </div>
+      </div>
+
+      <div class="prose episode-detail__content"><?= renderContent((string)$episode['transcript']) ?></div>
+    </section>
+  <?php endif; ?>
 </div>

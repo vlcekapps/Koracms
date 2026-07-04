@@ -1636,6 +1636,7 @@ function podcastEpisodeRevisionSnapshot(array $episode): array
         'title' => trim((string)($episode['title'] ?? '')),
         'slug' => podcastEpisodeSlug((string)($episode['slug'] ?? '')),
         'description' => (string)($episode['description'] ?? ''),
+        'transcript' => (string)($episode['transcript'] ?? ''),
         'audio_url' => normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? '')),
         'subtitle' => trim((string)($episode['subtitle'] ?? '')),
         'duration' => trim((string)($episode['duration'] ?? '')),
@@ -1993,6 +1994,9 @@ function downloadExcerpt(array $download, int $limit = 220): string
 function podcastEpisodeExcerpt(array $episode, int $limit = 220): string
 {
     $descriptionExcerpt = normalizePlainText((string)($episode['description'] ?? ''));
+    if ($descriptionExcerpt === '') {
+        $descriptionExcerpt = normalizePlainText((string)($episode['transcript'] ?? ''));
+    }
     if ($descriptionExcerpt === '') {
         return '';
     }
@@ -7801,6 +7805,8 @@ function hydratePodcastShowPresentation(array $show): array
 function hydratePodcastEpisodePresentation(array $episode): array
 {
     $episode['slug'] = podcastEpisodeSlug((string)($episode['slug'] ?? ''));
+    $episode['transcript'] = (string)($episode['transcript'] ?? '');
+    $episode['transcript_plain'] = normalizePlainText($episode['transcript']);
     $episode['audio_url'] = normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? ''));
     $episode['subtitle'] = trim((string)($episode['subtitle'] ?? ''));
     $episode['season_num'] = !empty($episode['season_num']) ? (int)$episode['season_num'] : null;
@@ -7826,7 +7832,8 @@ function hydratePodcastEpisodePresentation(array $episode): array
     }
     $episode['display_date'] = $displayDate;
     $episode['feed_subtitle'] = podcastFeedSubtitle((string)($episode['subtitle'] !== '' ? $episode['subtitle'] : $episode['excerpt']));
-    $episode['feed_summary'] = podcastFeedSummary((string)($episode['description'] ?? ''));
+    $episodeDescription = (string)($episode['description'] ?? '');
+    $episode['feed_summary'] = podcastFeedSummary($episodeDescription !== '' ? $episodeDescription : $episode['transcript_plain']);
     $episode['is_scheduled'] = podcastEpisodeIsScheduled($episode);
     $episode['is_public'] = podcastEpisodeIsPublic($episode);
     return $episode;

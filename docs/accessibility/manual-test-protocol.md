@@ -5,6 +5,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 Aktuální ruční evidence:
 
 - 2026-07-04: browser průchod při 320 px ověřil admin stránky media, widgets, statistics, Form Builder, přehled formulářů, comments, contact, chat, reservations, food, downloads, gallery, importy, content picker a reprezentativní dlouhé formuláře page/blog/news/event/download/gallery/food/board/FAQ/place/polls/reservations/podcast. Nalezený horizontální scroll rootu ve statistikách, přehledu formulářů, food/downloads/gallery a podcastech i main-level scroll u contact/chat a dlouhých fieldsetů byl opravený přes `.table-responsive`, posílené CSS containment, wrapper skrytých datových tabulek grafů a sdílené CSS pro fieldset/form controls; admin hledání mělo viditelný focus a ověřené samostatné cíle neměly pod 24 px. Zbylý ruční průchod se týká hlavně 400 % zoomu, custom modulů, sticky/anchor skoků a keyboard-only/NVDA kombinací.
+- 2026-07-04: podcastové epizody mají modelované pole `transcript` pro textovou alternativu audia; unit testy helperů a runtime veřejného detailu hlídají, že se přepis vykreslí jako samostatná sekce. Ručně zbývá ověřit kvalitu skutečných přepisů a další média mimo podcastový modul.
 - 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
@@ -61,9 +62,10 @@ p {
 5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U prázdného povinného textu, výběru, souhlasu a uploadu, neplatného e-mailu, neplatné URL, nepovolené výběrové hodnoty, chybné přílohy a chybné ověřovací otázky ověřit, že čtečka oznámí field-level text s konkrétním návrhem opravy.
 6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů.
-8. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
-9. Otevřít board, downloads, events, places, reservations a food detail.
-10. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
+8. Otevřít podcastovou epizodu s vyplněným přepisem a ověřit, že čtečka oznámí sekci `Přepis epizody` jako textovou alternativu audia; u videí a externích embedů ověřit titulky nebo popsanou odpovědnost autora.
+9. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
+10. Otevřít board, downloads, events, places, reservations a food detail.
+11. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
 
 ## Scénáře administrace
 
