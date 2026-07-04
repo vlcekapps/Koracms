@@ -14468,6 +14468,46 @@ if ($contrastFocusIssues === []) {
     }
 }
 
+echo "=== text_spacing_guardrails ===\n";
+$textSpacingIssues = [];
+$textSpacingCssPaths = array_values(array_unique(array_filter(array_merge(
+    glob(dirname(__DIR__) . '/assets/*.css') ?: [],
+    glob(dirname(__DIR__) . '/admin/assets/*.css') ?: [],
+    glob(dirname(__DIR__) . '/themes/*/assets/*.css') ?: []
+))));
+foreach ($textSpacingCssPaths as $textSpacingCssPath) {
+    $textSpacingCssSource = (string)file_get_contents($textSpacingCssPath);
+    $textSpacingRelativePath = str_replace('\\', '/', substr($textSpacingCssPath, strlen(dirname(__DIR__)) + 1));
+
+    if (preg_match('/\bletter-spacing\s*:\s*-\s*(?:\d|\.)/i', $textSpacingCssSource) === 1) {
+        $textSpacingIssues[] = $textSpacingRelativePath . ' contains negative letter-spacing';
+    }
+    if (preg_match('/\b(?:line-height|letter-spacing|word-spacing)\s*:[^;{}!]*!important/i', $textSpacingCssSource) === 1) {
+        $textSpacingIssues[] = $textSpacingRelativePath . ' locks text spacing property with !important';
+    }
+    if (preg_match('/\btext-overflow\s*:\s*ellipsis\b/i', $textSpacingCssSource) === 1) {
+        $textSpacingIssues[] = $textSpacingRelativePath . ' contains text-overflow ellipsis that can hide expanded text';
+    }
+    if (preg_match('/-webkit-line-clamp\s*:/i', $textSpacingCssSource) === 1) {
+        $textSpacingIssues[] = $textSpacingRelativePath . ' contains line clamp that can hide expanded text';
+    }
+}
+if (preg_match('/\.seo-preview__title\s*\{[^}]*overflow-wrap\s*:\s*anywhere/s', $contrastAdminCssSource) !== 1
+    || preg_match('/\.seo-preview__desc\s*\{[^}]*overflow-wrap\s*:\s*anywhere/s', $contrastAdminCssSource) !== 1) {
+    $textSpacingIssues[] = 'admin SEO preview must wrap long text instead of clipping it';
+}
+if (preg_match('/\.brand__title\s*\{[^}]*letter-spacing:\s*0/s', $contrastPublicCssSource) !== 1) {
+    $textSpacingIssues[] = 'default public brand title must not use negative letter-spacing';
+}
+if ($textSpacingIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($textSpacingIssues as $textSpacingIssue) {
+        echo '- ' . $textSpacingIssue . "\n";
+    }
+}
+
 echo "=== admin_mobile_reflow_guardrails ===\n";
 $adminMobileReflowIssues = [];
 $adminMobileCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');

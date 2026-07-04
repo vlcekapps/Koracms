@@ -9,6 +9,7 @@ Aktuální ruční evidence:
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
+- 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
 
 ## Prostředí
 
@@ -17,6 +18,20 @@ Aktuální ruční evidence:
 - Zoom 200 % a 400 %.
 - Viewport 320 px šířky a běžný desktop.
 - Vypnutá myš nebo test bez použití myši.
+
+Pro WCAG `1.4.12 Text Spacing` použít bookmarklet, devtools nebo uživatelský stylesheet s ekvivalentem:
+
+```css
+* {
+  line-height: 1.5 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+p {
+  margin-bottom: 2em !important;
+}
+```
 
 ## Obecná pravidla průchodu
 
@@ -81,10 +96,12 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.
+- Při text spacing override se text neztrácí, nepřekrývá sousední obsah, není zkrácený ellipsis/line clampem a ovládací prvky zůstávají použitelné.
 - Na 320 px jsou primární akce dosažitelné a použitelné.
 - Runtime audit `admin_mobile_reflow_guardrails` prochází pro admin mobilní baseline, datové tabulky, media grid, Form Builder gridy, statistics gridy, forms overview tabulku, husté moduly comments/contact/chat/reservations/food/downloads/gallery/podcast, dlouhé form controls a rezervační otevírací dobu, widget řazení, cache-busting admin stylesheetu a minimální rozměr řadicích ovladačů, sekundárních action odkazů i přímých action odkazů v odstavcích.
 - Datové tabulky mohou mít horizontální scroll, ale nesmí rozšířit celou stránku spolu se sidebar navigací ani schovat focusovaný prvek bez možnosti ho dorolovat.
 - Runtime audit `contrast_focus_guardrails` prochází pro default/admin/login text, skip link, focus, hranice inputů a hranice tlačítek.
+- Runtime audit `text_spacing_guardrails` prochází pro core CSS bez záporného `letter-spacing`, textového ořezu a text-spacing `!important` zámků.
 - Ručně změřené hover, active, disabled, ikony, progress bary a custom theme settings splňují AA; u textu alespoň 4.5:1, u focusu a hranic ovládacích prvků alespoň 3:1.
 - Focus prstenec je při klávesnici viditelný na světlém i tmavém pozadí a nezaniká pod outline/box-shadow jiného prvku.
 

@@ -181,8 +181,8 @@ body.theme-public textarea.form-control {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 3.6rem);
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .brand__title--compact {
@@ -335,7 +335,7 @@ body.theme-public textarea.form-control {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 3vw, 2.4rem);
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 .section-title--compact {

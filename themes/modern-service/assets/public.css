@@ -142,7 +142,7 @@ body.theme-modern-service {
 }
 
 .theme-modern-service.page-blog-article .section-title--hero {
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .theme-modern-service .button-primary {
