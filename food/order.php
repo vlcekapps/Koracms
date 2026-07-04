@@ -54,15 +54,17 @@ $errors = [];
 $fieldErrors = [];
 $success = false;
 $referenceCode = '';
+$contactDefaults = currentUserContactDefaults($pdo);
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 $formData = [
-    'customer_name' => trim((string)($_POST['customer_name'] ?? '')),
-    'customer_email' => trim((string)($_POST['customer_email'] ?? '')),
-    'customer_phone' => trim((string)($_POST['customer_phone'] ?? '')),
+    'customer_name' => $isPostRequest ? trim((string)($_POST['customer_name'] ?? '')) : $contactDefaults['name'],
+    'customer_email' => $isPostRequest ? trim((string)($_POST['customer_email'] ?? '')) : $contactDefaults['email'],
+    'customer_phone' => $isPostRequest ? trim((string)($_POST['customer_phone'] ?? '')) : $contactDefaults['phone'],
     'customer_note' => trim((string)($_POST['customer_note'] ?? '')),
     'quantities' => [],
 ];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     rateLimit('food_order', 5, 300);
 
     if (honeypotTriggered()) {

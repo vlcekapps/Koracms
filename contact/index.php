@@ -13,13 +13,15 @@ $siteName  = getSetting('site_name', 'Kora CMS');
 $destEmail = getSetting('contact_email', '');
 $topics = contactTopics($pdo, true);
 $topicRequired = $topics !== [];
+$contactDefaults = currentUserContactDefaults($pdo);
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 
 $errors        = [];
 $fieldErrors   = [];
 $success       = false;
 $referenceCode = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     rateLimit('contact', 3, 120);
 
     if (honeypotTriggered()) {
@@ -123,8 +125,8 @@ renderPublicPage([
         'topicRequired' => $topicRequired,
         'captchaExpr' => $captchaExpr,
         'formData' => [
-            'sender_name' => trim((string)($_POST['sender_name'] ?? '')),
-            'from' => trim($_POST['from'] ?? ''),
+            'sender_name' => $isPostRequest ? trim((string)($_POST['sender_name'] ?? '')) : $contactDefaults['name'],
+            'from' => $isPostRequest ? trim((string)($_POST['from'] ?? '')) : $contactDefaults['email'],
             'topic_id' => trim((string)($_POST['topic_id'] ?? '')),
             'subject' => trim($_POST['subject'] ?? ''),
             'message' => trim($_POST['message'] ?? ''),

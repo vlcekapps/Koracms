@@ -1048,6 +1048,8 @@ Veřejná registrace a žádost o obnovu hesla nevyžadují matematickou CAPTCHA
 
 Veřejný kontakt, objednávkové poptávky ve Food modulu, guest rezervace a formuláře vytvořené přes Form Builder používají `autocomplete` metadata pro běžná osobní pole. Form Builder automaticky nastavuje účel pro pole typu e-mail, telefon a URL a u zjevně pojmenovaných krátkých textových polí také pro jméno, křestní jméno, příjmení nebo organizaci. Pokud nový formulář sbírá specializované údaje, například adresu nebo platební údaje, je potřeba doplnit explicitní návrh a ověření podle accessibility protokolu.
 
+Veřejný kontakt a Food objednávka zároveň u přihlášeného veřejného uživatele předvyplňují známé jméno, e-mail a telefon z profilu přes `currentUserContactDefaults()`. Pokud návštěvník hodnotu ve formuláři ručně změní a formulář spadne na validační chybě, CMS zachová odeslanou hodnotu a nepřepíše ji znovu profilem.
+
 Veřejné formuláře s matematickou ověřovací otázkou mají u chybné odpovědi sdílenou field-level hlášku, která kromě identifikace chyby radí přepočítat příklad a zadat jen číslo. Týká se kontaktu, newsletter subscribe, odběru vývěsky, objednávkových poptávek ve Food modulu a Form Builder formulářů.
 
 Veřejná custom pole ve Form Builderu mají konkrétní návrhy oprav i mimo ověřovací otázku. Povinná textová, výběrová, souhlasová a souborová pole říkají, co má návštěvník doplnit; e-mail radí úplnou adresu ve tvaru `jmeno@example.cz`, URL radí http/https adresu bez přihlašovacích údajů, nepovolená výběrová hodnota vede uživatele zpět k nabízeným možnostem a upload připomíná povolený typ a velikost souboru.

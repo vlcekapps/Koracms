@@ -13,6 +13,7 @@ Aktuální ruční evidence:
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
+- 2026-07-04: automatizovaný guardrail pro WCAG 2.2 `3.3.7 Redundant Entry` pokrývá veřejný kontakt a Food objednávku: `currentUserContactDefaults()` čte jméno, e-mail a telefon z profilu, HTTP integrace ověřuje předvyplnění v renderu a POST chybové stavy dál zachovávají ručně upravené hodnoty. Ručně zbývá projít širší auth/rezervační/objednávková/custom flow a potvrdit, že předvyplnění není matoucí na sdíleném zařízení.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
 - 2026-07-04: runtime `public_error_suggestion_guardrails` a HTTP integrace hlídají, že veřejná matematická ověřovací otázka v kontaktu, newsletteru, odběru vývěsky, Food objednávkách a Form Builderu vrací field-level chybu s konkrétním návrhem opravy. Ručně zbývá širší copy pass administračních a custom validačních hlášek.
 - 2026-07-04: unit testy Form Builder error suggestions, runtime `public_forms_http_guardrails` a HTTP `public_form_submit_http` hlídají, že custom povinná, e-mailová, URL, výběrová a upload pole Form Builderu vrací konkrétní field-level návrhy oprav a po neúspěšném odeslání nezanechají uloženou neplatnou přílohu.
@@ -68,8 +69,8 @@ p {
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů. U přímého videa s WebVTT titulky ověřit, že prohlížeč titulkovou stopu nabízí se správným jazykem a názvem; u audio/video snippetu s `transcript` ověřit dosažitelný odkaz na přepis.
 8. Otevřít podcastovou epizodu s vyplněným přepisem a ověřit, že čtečka oznámí sekci `Přepis epizody` jako textovou alternativu audia; u externích video embedů ověřit titulky nebo popsanou odpovědnost autora.
 9. Projít reprezentativní článek nebo stránku podle `author-content-checklist.md`: obrázky s alt textem, obrázky s textem, cizojazyčný úsek s `lang`, srozumitelné odkazy, nadpisy, tabulky, barvu, vlastní HTML a externí embed.
-10. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
-11. Otevřít board, downloads, events, places, reservations a food detail.
+10. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe; jako přihlášený veřejný uživatel ověřit, že kontaktní formulář předvyplní známé jméno a e-mail, ale dovolí hodnoty upravit a po validační chybě je nepřepíše zpět profilem.
+11. Otevřít board, downloads, events, places, reservations a food detail; u Food objednávky jako přihlášený veřejný uživatel ověřit předvyplněné jméno, e-mail a telefon, ruční úpravu a zachování upravených hodnot po chybě.
 12. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
 
 ## Scénáře administrace
@@ -121,6 +122,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
 - Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
 - Autofill u veřejného kontaktu, objednávkové poptávky, guest rezervace a Form Builder formuláře nenabízí zavádějící hodnoty a u běžných osobních polí rozpozná jméno, e-mail, telefon, URL nebo organizaci.
+- Veřejný kontakt a Food objednávka nepřinutí přihlášeného veřejného uživatele znovu zadat kontaktní údaje, které CMS bezpečně zná z profilu, a po ruční úpravě nezahodí zadanou hodnotu při validační chybě.
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.

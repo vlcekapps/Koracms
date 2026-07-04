@@ -56,7 +56,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.2.6 Consistent Help | Partially Supports | Help text and contact options exist; repeated help mechanisms need an inventory pass. |
 | 3.3.1 Error Identification | Supports | Field-level and form-level error messaging is guarded. |
 | 3.3.2 Labels or Instructions | Supports | Forms use labels, fieldsets, legends and helper text. |
-| 3.3.7 Redundant Entry | Partially Supports | Some data is reused, but redundant-entry coverage needs workflow testing. |
+| 3.3.7 Redundant Entry | Partially Supports | Public profile contact details are reused through `currentUserContactDefaults()`: the public contact form and Food order form prefill known name/e-mail/phone values and keep submitted values after validation errors. Runtime `redundant_entry_guardrails` and HTTP integration cover that baseline, but admin/custom workflow coverage still needs manual redundant-entry testing. |
 | 4.1.2 Name, Role, Value | Supports | Controls, dialogs and landmarks are covered by ARIA/name guardrails, including command center `aria-expanded` state, rendered dialog semantics and manual no-regression confirmation for core dialogs on 2026-07-04. |
 
 ## WCAG 2.2 Level AA

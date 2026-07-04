@@ -919,6 +919,51 @@ function currentUserDisplayName(): string
 }
 
 /**
+ * @return array{name:string,email:string,phone:string}
+ */
+function currentUserContactDefaults(?PDO $pdo = null): array
+{
+    $defaults = [
+        'name' => '',
+        'email' => '',
+        'phone' => '',
+    ];
+    $userId = currentUserId();
+    if ($userId === null || $userId <= 0) {
+        return $defaults;
+    }
+
+    try {
+        $connection = $pdo ?? db_connect();
+        $stmt = $connection->prepare(
+            "SELECT email, first_name, last_name, nickname, phone
+             FROM cms_users
+             WHERE id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+    } catch (\PDOException $e) {
+        return $defaults;
+    }
+
+    if (!is_array($row)) {
+        return $defaults;
+    }
+
+    $firstName = trim((string)($row['first_name'] ?? ''));
+    $lastName = trim((string)($row['last_name'] ?? ''));
+    $fullName = trim($firstName . ' ' . $lastName);
+    $nickname = trim((string)($row['nickname'] ?? ''));
+
+    return [
+        'name' => $fullName !== '' ? $fullName : $nickname,
+        'email' => trim((string)($row['email'] ?? '')),
+        'phone' => trim((string)($row['phone'] ?? '')),
+    ];
+}
+
+/**
  * Vrátí pouze bezpečný interní redirect v rámci tohoto webu.
  * Zahazuje externí URL, protocol-relative URL i neplatné cesty.
  */

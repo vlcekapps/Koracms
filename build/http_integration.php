@@ -3145,6 +3145,21 @@ try {
         $createdContactTopicIds[] = $contactTopicId;
     }
 
+    $prefillPublicEmail = 'http-prefill-public-' . bin2hex(random_bytes(4)) . '@example.test';
+    $prefillPublicName = 'HTTP Prefill Kontakt';
+    $prefillPublicPhone = '+420777123456';
+    $pdo->prepare(
+        "INSERT INTO cms_users (
+            email, password, first_name, last_name, nickname, phone, role, is_superadmin, is_confirmed, created_at
+         ) VALUES (?, ?, 'HTTP', 'Prefill Kontakt', 'HTTP Prefill', ?, 'public', 0, 1, NOW())"
+    )->execute([
+        $prefillPublicEmail,
+        password_hash('HttpPublicPrefill123!', PASSWORD_DEFAULT),
+        $prefillPublicPhone,
+    ]);
+    $prefillPublicUserId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $prefillPublicUserId;
+
     $contactPublicSession = koraPrimeTestSession([], 'kora-http-contact-public-' . bin2hex(random_bytes(3)));
     $contactPublicUrl = $baseUrl . BASE_URL . '/contact/index.php';
     $contactPublicPage = fetchUrl($contactPublicUrl, $contactPublicSession['cookie'], 0);
@@ -3162,6 +3177,17 @@ try {
     }
     if ($contactTopicId > 0 && !str_contains($contactPublicPage['body'], 'name="topic_id"')) {
         $contactCenterIssues[] = 'veřejný kontaktní formulář s aktivním tématem nevyžaduje výběr tématu';
+    }
+
+    $contactPrefillSession = koraPrimeTestSession([
+        'cms_user_id' => $prefillPublicUserId,
+        'cms_user_name' => $prefillPublicName,
+    ], 'kora-http-contact-prefill-' . bin2hex(random_bytes(3)));
+    $contactPrefillPage = fetchUrl($contactPublicUrl, $contactPrefillSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contactPrefillPage) !== 200
+        || !httpIntegrationInputHasAttributes($contactPrefillPage['body'], 'sender_name', ['value' => $prefillPublicName])
+        || !httpIntegrationInputHasAttributes($contactPrefillPage['body'], 'from', ['value' => $prefillPublicEmail])) {
+        $contactCenterIssues[] = 'přihlášený veřejný uživatel nemá v kontaktním formuláři předvyplněné kontaktní údaje z profilu';
     }
 
     $invalidContactSubject = 'HTTP contact invalid captcha ' . bin2hex(random_bytes(4));
@@ -6405,6 +6431,19 @@ try {
             || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'customer_phone', ['autocomplete' => 'tel'])
             || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'captcha', ['autocomplete' => 'off'])) {
             $foodStructuredIssues[] = 'objednávkový formulář nevykreslil očekávaná autocomplete metadata';
+        }
+        if ($prefillPublicUserId > 0) {
+            $foodPrefillSession = koraPrimeTestSession([
+                'cms_user_id' => $prefillPublicUserId,
+                'cms_user_name' => $prefillPublicName,
+            ], 'kora-http-food-order-prefill-' . bin2hex(random_bytes(3)));
+            $foodPrefillPage = fetchUrl($foodOrderUrl, $foodPrefillSession['cookie'], 0);
+            if (httpIntegrationStatusCode($foodPrefillPage) !== 200
+                || !httpIntegrationInputHasAttributes($foodPrefillPage['body'], 'customer_name', ['value' => $prefillPublicName])
+                || !httpIntegrationInputHasAttributes($foodPrefillPage['body'], 'customer_email', ['value' => $prefillPublicEmail])
+                || !httpIntegrationInputHasAttributes($foodPrefillPage['body'], 'customer_phone', ['value' => $prefillPublicPhone])) {
+                $foodStructuredIssues[] = 'přihlášený veřejný uživatel nemá v objednávkovém formuláři předvyplněné kontaktní údaje z profilu';
+            }
         }
         $invalidFoodOrderResponse = postUrl(
             $foodOrderUrl,

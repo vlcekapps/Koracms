@@ -40,6 +40,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 ## WCAG 2.2 checklist
 
 - Formuláře mají skutečné `label`, skupiny polí přes `fieldset` a `legend`, chybové hlášky přes `role="alert"` nebo `role="status"` a `aria-describedby` pouze na existující prvky.
+- Pokud veřejný nebo administrační formulář znovu sbírá kontaktní údaje přihlášeného uživatele, použijte bezpečné předvyplnění přes `currentUserContactDefaults()` nebo zdokumentujte výjimku. Při validační chybě musí mít přednost odeslaná hodnota, aby CMS nepřepsal ručně upravený údaj zpět profilem.
 - Navigace, vyhledávání, aside a významné sekce se pojmenovávají přes skutečný nadpis a `aria-labelledby`, ne samotným `aria-label`.
 - Odkazy do nového okna používají viditelný text plus `newWindowLinkSrOnlySuffix()`, `target="_blank"` a `rel="noopener noreferrer"`.
 - Tabulky mají `<caption>` nebo vazbu na skutečný nadpis; význam nesmí být nesen jen barvou, ikonou nebo pořadím.

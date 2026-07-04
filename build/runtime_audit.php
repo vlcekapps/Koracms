@@ -14189,6 +14189,92 @@ if ($authorContentIssues === []) {
     }
 }
 
+echo "=== redundant_entry_guardrails ===\n";
+$redundantEntryIssues = [];
+$contactPublicSource = (string)file_get_contents(dirname(__DIR__) . '/contact/index.php');
+$foodOrderSource = (string)file_get_contents(dirname(__DIR__) . '/food/order.php');
+foreach ([
+    'function currentUserContactDefaults(?PDO $pdo = null): array',
+    'SELECT email, first_name, last_name, nickname, phone',
+    "'name' => \$fullName !== '' ? \$fullName : \$nickname",
+    "'phone' => trim((string)(\$row['phone'] ?? ''))",
+] as $redundantEntryAuthFragment) {
+    if (!str_contains($authSource, $redundantEntryAuthFragment)) {
+        $redundantEntryIssues[] = 'auth helper is missing redundant-entry fragment: ' . $redundantEntryAuthFragment;
+    }
+}
+foreach ([
+    '$contactDefaults = currentUserContactDefaults($pdo);',
+    'if ($isPostRequest)',
+    "\$contactDefaults['name']",
+    "\$contactDefaults['email']",
+] as $redundantEntryContactFragment) {
+    if (!str_contains($contactPublicSource, $redundantEntryContactFragment)) {
+        $redundantEntryIssues[] = 'contact controller is missing redundant-entry fragment: ' . $redundantEntryContactFragment;
+    }
+}
+foreach ([
+    '$contactDefaults = currentUserContactDefaults($pdo);',
+    'if ($isPostRequest)',
+    "\$contactDefaults['name']",
+    "\$contactDefaults['email']",
+    "\$contactDefaults['phone']",
+] as $redundantEntryFoodFragment) {
+    if (!str_contains($foodOrderSource, $redundantEntryFoodFragment)) {
+        $redundantEntryIssues[] = 'food order controller is missing redundant-entry fragment: ' . $redundantEntryFoodFragment;
+    }
+}
+foreach ([
+    'kora-http-contact-prefill',
+    'kora-http-food-order-prefill',
+    'předvyplněné kontaktní údaje z profilu',
+] as $redundantEntryHttpFragment) {
+    if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, $redundantEntryHttpFragment)) {
+        $redundantEntryIssues[] = 'HTTP integration is missing redundant-entry render assertion: ' . $redundantEntryHttpFragment;
+    }
+}
+foreach ([
+    'currentUserContactDefaults()',
+    'Redundant Entry',
+] as $redundantEntryDocFragment) {
+    if (!str_contains($wcagConformanceSource, $redundantEntryDocFragment)
+        || !str_contains($acrVpatDraftSource, $redundantEntryDocFragment)
+        || !str_contains($manualTestProtocolSource, $redundantEntryDocFragment)) {
+        $redundantEntryIssues[] = 'accessibility docs are missing redundant-entry fragment: ' . $redundantEntryDocFragment;
+    }
+}
+foreach ([
+    'kontakt',
+    'Food objednávka',
+] as $redundantEntryCzechDocFragment) {
+    if (!str_contains($wcagConformanceSource, $redundantEntryCzechDocFragment)
+        || !str_contains($manualTestProtocolSource, $redundantEntryCzechDocFragment)) {
+        $redundantEntryIssues[] = 'Czech accessibility docs are missing redundant-entry fragment: ' . $redundantEntryCzechDocFragment;
+    }
+}
+foreach ([
+    'public contact',
+    'Food order',
+] as $redundantEntryAcrFragment) {
+    if (!str_contains($acrVpatDraftSource, $redundantEntryAcrFragment)) {
+        $redundantEntryIssues[] = 'ACR draft is missing redundant-entry fragment: ' . $redundantEntryAcrFragment;
+    }
+}
+if (!str_contains($a11yBacklogSource, 'Základní guardrail pro kontakt a Food objednávku je hotový')) {
+    $redundantEntryIssues[] = 'a11y backlog must describe remaining redundant-entry work after contact/Food guardrails';
+}
+if (!str_contains($developerModulesDocSource, 'currentUserContactDefaults()')) {
+    $redundantEntryIssues[] = 'developer module guide must mention currentUserContactDefaults() for repeated contact details';
+}
+if ($redundantEntryIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($redundantEntryIssues as $redundantEntryIssue) {
+        echo '- ' . $redundantEntryIssue . "\n";
+    }
+}
+
 echo "=== editorial_validation_guardrails ===\n";
 $editorialValidationIssues = [];
 $pageSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_save.php');
