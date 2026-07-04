@@ -484,6 +484,8 @@ Přihlašovací obrazovky administrace včetně 2FA načítají sdílený static
 
 Kontrastní baseline pro výchozí šablonu, administrační layout a přihlašovací obrazovky je hlídaný přes runtime sekci `contrast_focus_guardrails`. Ta měří textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek; custom theme, hover/disabled a ikonové stavy zůstávají předmětem ručního testovacího protokolu.
 
+Mobilní baseline administrace hlídá runtime sekce `admin_mobile_reflow_guardrails`. Sdílený admin stylesheet na malé šířce skládá navigaci nad obsah, zmenšuje padding hlavní části, nechává datové tabulky scrollovat lokálně, skládá media/Form Builder/statistics gridy do jednoho sloupce a dorovnává malé řadicí ovladače na minimální target size.
+
 Společný layout administrace pojmenovává hlavní administrační navigaci skutečným nadpisem `Administrace` přes `aria-labelledby`. Serverové stavové a chybové hlášky si zároveň ponechávají vlastní `role` a skrytý live region slouží jen pro doplňková klientská oznámení.
 
 Veřejný admin bar a vybrané pomocné navigace v administraci, například filtry komentářů, kontaktních a chatových zpráv, odpovědí formulářů, newsletteru, fronty ke schválení, nastavení webu a stránkování rezervací, používají skutečné skryté nadpisy přes `aria-labelledby`. Čtečky obrazovky je tak najdou jako landmarky i při navigaci po nadpisech, bez vizuální změny rozhraní.
@@ -528,6 +530,7 @@ Projekt cílí na **WCAG 2.2 Level AA**:
 - helper texty přes `aria-describedby`
 - přístupné dialogy s návratem fokusu
 - měřený kontrast textu, focusu, skip linku a hranic ovládacích prvků ve výchozí, administrační a přihlašovací vrstvě
+- mobilní baseline administrace pro stackovanou navigaci, scrollovatelné datové tabulky, jednosloupcové komplexní gridy a ovladatelné action rows
 - klávesnicová ovladatelnost i tam, kde je drag & drop
 - průběžný audit přes `build/runtime_audit.php`
 

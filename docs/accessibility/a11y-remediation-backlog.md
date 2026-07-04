@@ -6,7 +6,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
-| Reflow a mobilní administrace | 1.4.10, 2.4.11, 2.5.8 | Husté tabulky, row actions a dlouhé formuláře mohou být problematické na 320 px a při zoomu. | Projít hlavní admin tabulky při 320 px/400 % zoomu, prioritně media, widgets, statistics a form builder. |
+| Ruční reflow průchod administrace | 1.4.10, 2.4.11, 2.5.8 | Runtime audit hlídá sdílený mobilní baseline pro admin layout, datové tabulky a komplexní gridy, ale reálný 320 px / 400 % průchod nad daty ještě není potvrzený. | Projít hlavní admin workflow při 320 px/400 % zoomu, prioritně media, widgets, statistics, Form Builder a řádkové akce v tabulkách. |
 
 ## Střední priorita
 
@@ -37,6 +37,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 ## Uzavřená evidence
 
+- 2026-07-04: `1.4.10 Reflow`, `2.4.11 Focus Not Obscured` a `2.5.8 Target Size` mají nový runtime `admin_mobile_reflow_guardrails`, který hlídá stackování admin navigace na mobilní šířce, lokální scroll datových tabulek, one-column collapse media/Form Builder/statistics gridů, flexibilní action rows a minimální rozměr řadicích ovladačů; zbylá práce je ruční průchod 320 px / 400 % s reálnými daty.
 - 2026-07-04: `1.4.3 Contrast (Minimum)`, `1.4.11 Non-text Contrast` a `2.4.7 Focus Visible` mají nový runtime `contrast_focus_guardrails`, který měří default/admin/login textové páry, stavové hlášky, focus tokeny, skip link a hranice inputů/tlačítek; zbylá práce je ruční měření custom theme, hover/disabled, ikon a progress stavů.
 - 2026-07-04: `3.3.8 Accessible Authentication (Minimum)` je po automatizovaných guardrailech a ručním potvrzení auth flow vedené jako `Supports`; při změnách loginu, registrace, 2FA, tokenového resetu nebo session timeoutů se ruční scénář z `manual-test-protocol.md` opakuje.
 - 2026-07-04: command centrum, widget dialog a content/media picker prošly ručním NVDA/keyboard-only ověřením bez regrese; při změnách JS dialogů se znovu ověřuje Escape, Tab focus smyčka, návrat fokusu a oznamovaný stav ovládacích prvků.

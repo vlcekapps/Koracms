@@ -70,16 +70,16 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 1.4.3 Contrast (Minimum) | Partially Supports | Runtime `contrast_focus_guardrails` now measures default theme, admin layout and standalone login text/status color pairs against AA thresholds. Custom theme settings, hover/disabled states and author-supplied colors still need manual measurement. |
 | 1.4.4 Resize Text | Supports | Layouts are responsive and do not block browser zoom. |
 | 1.4.5 Images of Text | Supports | Core UI does not use images of text as controls or headings. |
-| 1.4.10 Reflow | Partially Supports | Responsive patterns exist; 320 px and admin tables need manual verification. |
+| 1.4.10 Reflow | Partially Supports | Runtime `admin_mobile_reflow_guardrails` now covers the shared admin mobile baseline: stacked navigation, reduced main padding, local horizontal scrolling for data tables and one-column collapse for media, widgets, statistics and Form Builder grids. Manual 320 px / 400 % verification with real data remains required. |
 | 1.4.11 Non-text Contrast | Partially Supports | Runtime guardrails measure focus indicators plus default/admin/login input and button borders against the 3:1 non-text threshold. Icons, progress bars, disabled/hover states and custom theme variants still need manual verification. |
 | 1.4.12 Text Spacing | Partially Supports | No known blocking CSS, but text spacing must be manually tested. |
 | 1.4.13 Content on Hover or Focus | Partially Supports | Core avoids hover-only content; dropdowns/tooltips require manual checks. |
 | 2.4.5 Multiple Ways | Supports | Navigation, search, sitemap and module listings provide multiple discovery paths. |
 | 2.4.6 Headings and Labels | Supports | Heading-backed landmarks and form labels are guarded. |
 | 2.4.7 Focus Visible | Supports | Public, admin and standalone login CSS include visible focus styles, and runtime guardrails measure focus token contrast against primary backgrounds. |
-| 2.4.11 Focus Not Obscured (Minimum) | Partially Supports | Sticky and anchor interactions need manual verification. |
+| 2.4.11 Focus Not Obscured (Minimum) | Partially Supports | Admin mobile CSS removes the fixed side-by-side sidebar/content layout at narrow widths and keeps command dialogs within the viewport. Sticky/anchor interactions and table scrolling still need manual verification. |
 | 2.5.7 Dragging Movements | Supports | Reordering uses accessible button alternatives and is not drag-only. |
-| 2.5.8 Target Size (Minimum) | Partially Supports | Public controls are generally large enough; compact admin row actions need measurement. |
+| 2.5.8 Target Size (Minimum) | Partially Supports | Shared admin CSS now guards mobile navigation targets, flexible action rows and minimum sort-control target sizing. Compact row actions and icon-like controls still need manual measurement. |
 | 3.1.2 Language of Parts | Partially Supports | Authors can add HTML language attributes, but CMS does not enforce them. |
 | 3.2.3 Consistent Navigation | Supports | Shared public/admin layouts keep navigation consistent. |
 | 3.2.4 Consistent Identification | Supports | Shared module manifests and labels support consistent naming. |

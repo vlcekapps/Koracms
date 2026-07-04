@@ -4,6 +4,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 Aktuální ruční evidence:
 
+- 2026-07-04: runtime `admin_mobile_reflow_guardrails` automaticky hlídá admin mobilní baseline: navigace se na malé šířce skládá nad obsah, datové tabulky mají lokální horizontální scroll, media/Form Builder/statistics gridy padají do jednoho sloupce a řadicí ovladače mají minimální target size. Ruční průchod 320 px / 400 % zůstává povinný pro reálné tabulky, dialogy, picker a dlouhé formuláře.
 - 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
@@ -49,6 +50,7 @@ Aktuální ruční evidence:
 8. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
 9. Upload a editace média včetně alt textu, licence a kolekce.
 10. Nastavení webu, nastavení modulů, import/export a migrace.
+11. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll.
 
 ## Scénáře pro nové moduly
 
@@ -78,6 +80,8 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.
 - Na 320 px jsou primární akce dosažitelné a použitelné.
+- Runtime audit `admin_mobile_reflow_guardrails` prochází pro admin mobilní baseline, datové tabulky, media grid, Form Builder gridy, statistics gridy, widget řazení a minimální rozměr řadicích ovladačů.
+- Datové tabulky mohou mít horizontální scroll, ale nesmí rozšířit celou stránku spolu se sidebar navigací ani schovat focusovaný prvek bez možnosti ho dorolovat.
 - Runtime audit `contrast_focus_guardrails` prochází pro default/admin/login text, skip link, focus, hranice inputů a hranice tlačítek.
 - Ručně změřené hover, active, disabled, ikony, progress bary a custom theme settings splňují AA; u textu alespoň 4.5:1, u focusu a hranic ovládacích prvků alespoň 3:1.
 - Focus prstenec je při klávesnici viditelný na světlém i tmavém pozadí a nezaniká pod outline/box-shadow jiného prvku.

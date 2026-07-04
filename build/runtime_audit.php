@@ -14456,6 +14456,68 @@ if ($contrastFocusIssues === []) {
     }
 }
 
+echo "=== admin_mobile_reflow_guardrails ===\n";
+$adminMobileReflowIssues = [];
+$adminMobileCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');
+$adminMobileMediaSource = (string)file_get_contents(dirname(__DIR__) . '/admin/media.php');
+$adminMobileWidgetsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
+$adminMobileStatisticsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/statistics.php');
+$adminMobileFormBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
+foreach ([
+    '@media (max-width: 720px) { body { display:block; min-height:100vh; }',
+    'nav { width:100%; padding:.75rem; }',
+    'nav a, nav summary, nav .nav-summary { min-height:2.75rem;',
+    'main { min-width:0; padding:1rem; overflow-x:auto;',
+    'table:not(.sr-only) { min-width:40rem; }',
+    '.table-responsive { max-width:100%; overflow-x:auto;',
+    '.table-responsive > table:not(.sr-only) { min-width:40rem; }',
+    '.btn { display:inline-flex; align-items:center; justify-content:center;',
+    '.admin-sort-control { display:inline-flex; align-items:center; justify-content:center; min-width:1.5rem; min-height:1.5rem;',
+    '.button-row > .btn, .button-row > form { flex:1 1 12rem; }',
+    '.button-row > form > .btn { width:100%; }',
+    '.media-edit-grid, .form-builder-action-grid, .form-builder-field-grid, .form-builder-field-grid--secondary, .form-builder-condition-grid, .form-submission-grid { grid-template-columns:1fr; }',
+    '.media-info-list { grid-template-columns:1fr; }',
+    '.settings-input-short, .admin-input-sm, .admin-input-compact, .admin-select-sm, .admin-select-md, .admin-select-lg, .res-booking-input-auto, .res-resource-inline-control { width:100%; min-width:0; max-width:100%; }',
+    '.widget-sort-item__body, .admin-sort-item__body { min-width:0; }',
+    '.admin-stat-bar { grid-template-columns:1fr; gap:.25rem; }',
+] as $adminMobileCssFragment) {
+    if (!str_contains($adminMobileCssSource, $adminMobileCssFragment)) {
+        $adminMobileReflowIssues[] = 'admin mobile CSS is missing fragment: ' . $adminMobileCssFragment;
+    }
+}
+foreach ([
+    'media admin reflow anchors' => [
+        $adminMobileMediaSource,
+        ['class="table-responsive"', 'class="media-grid"', 'class="media-edit-grid"', 'class="button-row media-filter-actions"'],
+    ],
+    'widgets admin reflow anchors' => [
+        $adminMobileWidgetsSource,
+        ['class="widget-sort-item', 'class="widget-sort-item__body"', 'class="widget-sort-item__actions"', 'class="button-row widget-dialog-actions"'],
+    ],
+    'statistics admin reflow anchors' => [
+        $adminMobileStatisticsSource,
+        ['class="admin-summary-grid', 'class="admin-stat-bar"', 'class="admin-stat-progress"', '<table aria-labelledby="sec-referrers">'],
+    ],
+    'form builder reflow anchors' => [
+        $adminMobileFormBuilderSource,
+        ['class="form-builder-action-grid"', 'class="form-builder-field-grid"', 'class="form-builder-field-grid form-builder-field-grid--secondary"', 'class="form-builder-condition-grid"'],
+    ],
+] as $adminMobileSourceLabel => [$adminMobileSource, $adminMobileFragments]) {
+    foreach ($adminMobileFragments as $adminMobileFragment) {
+        if (!str_contains($adminMobileSource, $adminMobileFragment)) {
+            $adminMobileReflowIssues[] = $adminMobileSourceLabel . ' is missing fragment: ' . $adminMobileFragment;
+        }
+    }
+}
+if ($adminMobileReflowIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($adminMobileReflowIssues as $adminMobileReflowIssue) {
+        echo '- ' . $adminMobileReflowIssue . "\n";
+    }
+}
+
 echo "=== admin_field_error_guardrails ===\n";
 $adminFieldErrorIssues = [];
 $adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
