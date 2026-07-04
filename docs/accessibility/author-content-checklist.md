@@ -10,6 +10,7 @@ Použijte ho před publikací nového nebo výrazně upraveného obsahu. Pokud n
 - Obrázky s viditelným textem nejsou jediným nositelem důležité informace.
 - Audio má přepis: u podcastové epizody pole `Přepis epizody`, u audio shortcodu atribut `transcript`.
 - Předtočené video má titulky: u přímého video shortcodu atribut `captions` s WebVTT `.vtt` souborem, u externí platformy ověřené titulky v cílové službě.
+- Video má přepis nebo audio-description stopu, pokud obraz nese důležitou informaci, kterou nelze získat ze zvuku nebo okolního textu.
 - Video nebo audio má textovou alternativu, pokud zvuk nebo obraz nese důležitou informaci, kterou nelze získat z okolního textu.
 - Cizojazyčná část textu má v HTML editoru vyznačený jazyk, například `<span lang="en">open source</span>`, pokud výslovnost nebo porozumění závisí na jazyce.
 - Nadpisy jdou po logické osnově a nepřeskakují úroveň jen kvůli vzhledu.
@@ -35,13 +36,13 @@ U audio shortcodu lze doplnit odkaz na přepis:
 [audio src="/uploads/media/rozhovor.mp3" transcript="/uploads/media/rozhovor-prepis.html"][/audio]
 ```
 
-U přímého video shortcodu lze doplnit WebVTT titulky a přepis:
+U přímého video shortcodu lze doplnit WebVTT titulky, audio-description stopu a přepis:
 
 ```text
-[video src="/uploads/media/video.mp4" captions="/uploads/media/video.cs.vtt" srclang="cs" caption_label="České titulky" transcript="/uploads/media/video-prepis.html"][/video]
+[video src="/uploads/media/video.mp4" captions="/uploads/media/video.cs.vtt" srclang="cs" caption_label="České titulky" descriptions="/uploads/media/video-popis.cs.vtt" description_label="Zvukový popis" transcript="/uploads/media/video-prepis.html"][/video]
 ```
 
-Titulky musí být synchronizované s řečí a mají zahrnovat podstatné zvuky, pokud nesou význam. Přepis má zachytit mluvené slovo a důležité zvukové nebo vizuální informace. U externích video platforem ověřte titulky přímo v cílové službě; CMS nemůže garantovat jejich dostupnost ani kvalitu.
+Titulky musí být synchronizované s řečí a mají zahrnovat podstatné zvuky, pokud nesou význam. Audio-description stopa nebo přepis musí popsat důležité vizuální informace, které nejsou zřejmé ze zvuku nebo okolního textu. U externích video platforem ověřte titulky a popis přímo v cílové službě; CMS nemůže garantovat jejich dostupnost ani kvalitu.
 
 ## Jazyk částí
 

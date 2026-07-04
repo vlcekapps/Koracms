@@ -6660,7 +6660,7 @@ if ($articleId === false) {
         $shortcodeContent = <<<HTML
 <p>Runtime audit shortcode test.</p>
 [audio src="/downloads/file.php?id=123" mime="audio/mpeg" transcript="/uploads/runtime-audio-prepis.html" transcript_label="Přepis audia"][/audio]
-[video src="/downloads/file.php?id=321" mime="video/mp4" captions="/uploads/runtime-video.cs.vtt" srclang="cs" caption_label="České titulky" transcript="/uploads/runtime-video-prepis.html"][/video]
+[video src="/downloads/file.php?id=321" mime="video/mp4" captions="/uploads/runtime-video.cs.vtt" srclang="cs" caption_label="České titulky" descriptions="/uploads/runtime-video-popis.cs.vtt" description_label="Zvukový popis" transcript="/uploads/runtime-video-prepis.html"][/video]
 [video transcript="/uploads/runtime-youtube-prepis.html"]https://www.youtube.com/watch?v=yIdGMYUmfgg&t=26s[/video]
 [pdf src="{$runtimeAuditPdfUrl}" title="Runtime audit PDF" mime="application/pdf"][/pdf]
 [code]echo "Ahoj z code shortcodu";
@@ -6721,6 +6721,9 @@ HTML;
             }
             if (!str_contains($shortcodeProbe['body'], '<track kind="captions" src="/uploads/runtime-video.cs.vtt" srclang="cs" label="České titulky" default>')) {
                 $contentShortcodeIssues[] = 'video shortcode is missing WebVTT captions track';
+            }
+            if (!str_contains($shortcodeProbe['body'], '<track kind="descriptions" src="/uploads/runtime-video-popis.cs.vtt" srclang="cs" label="Zvukový popis">')) {
+                $contentShortcodeIssues[] = 'video shortcode is missing WebVTT audio description track';
             }
             if (!str_contains($shortcodeProbe['body'], '<a href="/uploads/runtime-video-prepis.html">Přepis videa</a>')) {
                 $contentShortcodeIssues[] = 'video shortcode is missing transcript link';
@@ -6988,11 +6991,17 @@ if (!str_contains($contentLibrarySource, 'function renderContentPdfShortcode(str
     $contentSnippetIssues[] = 'content renderer is missing pdf shortcode helper';
 }
 if (!str_contains($contentLibrarySource, 'function renderContentVideoCaptionTrack(string $url, string $language = \'cs\', string $label = \'\'): string')
-    || !str_contains($contentLibrarySource, '<track kind="captions"')
+    || !str_contains($contentLibrarySource, "renderContentVideoTextTrack('captions'")
+    || !str_contains($contentLibrarySource, 'function renderContentVideoDescriptionTrack(string $url, string $language = \'cs\', string $label = \'\'): string')
+    || !str_contains($contentLibrarySource, "renderContentVideoTextTrack('descriptions'")
+    || !str_contains($contentLibrarySource, "['captions', 'descriptions']")
     || !str_contains($contentLibrarySource, 'function renderContentMediaTranscriptLink(')) {
-    $contentSnippetIssues[] = 'content renderer is missing media captions/transcript helpers';
+    $contentSnippetIssues[] = 'content renderer is missing media captions/descriptions/transcript helpers';
 }
 if (!str_contains($contentLibrarySource, "'captions', 'caption', 'subtitles', 'track'")
+    || !str_contains($contentLibrarySource, "'descriptions', 'description', 'audio_description', 'description_track'")
+    || !str_contains($contentLibrarySource, "'description_lang', 'descriptions_lang', 'audio_description_lang'")
+    || !str_contains($contentLibrarySource, "'description_label', 'descriptions_label', 'audio_description_label'")
     || !str_contains($contentLibrarySource, "'transcript', 'transcript_url'")
     || !str_contains($contentLibrarySource, "'transcript_label', 'transcript_title'")) {
     $contentSnippetIssues[] = 'content renderer is missing media accessibility shortcode attributes';
@@ -14163,6 +14172,8 @@ foreach ([
     'alt text',
     'WebVTT',
     'transcript',
+    'descriptions',
+    'Zvukový popis',
     '<span lang="en">',
     'externí embedy',
     'Core CMS defect',

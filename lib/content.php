@@ -145,7 +145,7 @@ function renderContentMediaTranscriptLink(string $url, string $defaultLabel, str
     return '<p class="' . h($className) . '"><a href="' . h($normalizedUrl) . '">' . h($label) . '</a></p>';
 }
 
-function renderContentVideoCaptionTrack(string $url, string $language = 'cs', string $label = ''): string
+function renderContentVideoTextTrack(string $kind, string $url, string $language = 'cs', string $label = '', bool $default = false): string
 {
     $normalizedUrl = normalizeContentEmbedUrl($url);
     if ($normalizedUrl === '') {
@@ -157,10 +157,25 @@ function renderContentVideoCaptionTrack(string $url, string $language = 'cs', st
         return '';
     }
 
-    $resolvedLanguage = normalizeContentTrackLanguage($language);
-    $resolvedLabel = trim($label) !== '' ? trim($label) : 'Titulky';
+    if (!in_array($kind, ['captions', 'descriptions'], true)) {
+        return '';
+    }
 
-    return '<track kind="captions" src="' . h($normalizedUrl) . '" srclang="' . h($resolvedLanguage) . '" label="' . h($resolvedLabel) . '" default>';
+    $resolvedLanguage = normalizeContentTrackLanguage($language);
+    $resolvedLabel = trim($label) !== '' ? trim($label) : ($kind === 'descriptions' ? 'Zvukový popis' : 'Titulky');
+    $defaultAttribute = $default ? ' default' : '';
+
+    return '<track kind="' . h($kind) . '" src="' . h($normalizedUrl) . '" srclang="' . h($resolvedLanguage) . '" label="' . h($resolvedLabel) . '"' . $defaultAttribute . '>';
+}
+
+function renderContentVideoCaptionTrack(string $url, string $language = 'cs', string $label = ''): string
+{
+    return renderContentVideoTextTrack('captions', $url, $language, $label, true);
+}
+
+function renderContentVideoDescriptionTrack(string $url, string $language = 'cs', string $label = ''): string
+{
+    return renderContentVideoTextTrack('descriptions', $url, $language, $label);
 }
 
 function contentYouTubeHost(string $url): string
@@ -417,7 +432,10 @@ function renderContentVideoShortcode(
     string $captionLanguage = 'cs',
     string $captionLabel = '',
     string $transcriptUrl = '',
-    string $transcriptLabel = ''
+    string $transcriptLabel = '',
+    string $descriptionUrl = '',
+    string $descriptionLanguage = 'cs',
+    string $descriptionLabel = ''
 ): ?string {
     $normalizedUrl = normalizeContentEmbedUrl($url);
     $youtubeVideo = renderContentYouTubeVideoShortcode($normalizedUrl, $title, $transcriptUrl, $transcriptLabel);
@@ -433,6 +451,7 @@ function renderContentVideoShortcode(
 
     $escapedUrl = h($normalizedUrl);
     $captionTrackHtml = renderContentVideoCaptionTrack($captionsUrl, $captionLanguage, $captionLabel);
+    $descriptionTrackHtml = renderContentVideoDescriptionTrack($descriptionUrl, $descriptionLanguage, $descriptionLabel);
     $transcriptHtml = renderContentMediaTranscriptLink($transcriptUrl, 'Přepis videa', $transcriptLabel);
 
     return "\n\n"
@@ -440,6 +459,7 @@ function renderContentVideoShortcode(
         . '<video class="video-player" controls preload="metadata">'
         . '<source src="' . $escapedUrl . '" type="' . h($mimeType) . '">'
         . $captionTrackHtml
+        . $descriptionTrackHtml
         . 'Váš prohlížeč nepodporuje přehrávání videa. <a href="' . $escapedUrl . '">Otevřít video soubor</a>.'
         . '</video>'
         . $transcriptHtml
@@ -1173,8 +1193,23 @@ function renderContentShortcodes(string $text): string
             $captionLabel = contentShortcodeAttributeValue($attributes, ['caption_label', 'captions_label', 'track_label']);
             $transcriptUrl = contentShortcodeAttributeValue($attributes, ['transcript', 'transcript_url']);
             $transcriptLabel = contentShortcodeAttributeValue($attributes, ['transcript_label', 'transcript_title']);
+            $descriptionUrl = contentShortcodeAttributeValue($attributes, ['descriptions', 'description', 'audio_description', 'description_track']);
+            $descriptionLanguage = contentShortcodeAttributeValue($attributes, ['description_lang', 'descriptions_lang', 'audio_description_lang']);
+            $descriptionLabel = contentShortcodeAttributeValue($attributes, ['description_label', 'descriptions_label', 'audio_description_label']);
 
-            return renderContentVideoShortcode($source, $mimeType, $title, $captionsUrl, $captionLanguage, $captionLabel, $transcriptUrl, $transcriptLabel) ?? $matches[0];
+            return renderContentVideoShortcode(
+                $source,
+                $mimeType,
+                $title,
+                $captionsUrl,
+                $captionLanguage,
+                $captionLabel,
+                $transcriptUrl,
+                $transcriptLabel,
+                $descriptionUrl,
+                $descriptionLanguage,
+                $descriptionLabel
+            ) ?? $matches[0];
         },
         $text
     ) ?? $text;

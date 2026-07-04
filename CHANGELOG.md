@@ -8,6 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Accessibility conformance report draft** – projekt má novou dokumentační sadu `docs/accessibility/` pro dlouhodobé vyhodnocování WCAG 2.2 AA a VPAT/ACR: matici kritérií, ACR draft, remediation backlog a ruční testovací protokol.
+- **Audio-description stopa pro video snippety** – přímý `[video]` shortcode umí WebVTT stopu `descriptions` a vykresluje `<track kind="descriptions">`; unit testy a runtime audit hlídají label, `.vtt` soubor a veřejný render vedle titulků a přepisu pro WCAG `1.2.3`/`1.2.5`.
 - **Předvyplnění kontaktních údajů pro Redundant Entry** – veřejný kontakt a Food objednávka u přihlášeného veřejného uživatele používají `currentUserContactDefaults()` pro jméno, e-mail a telefon; HTTP integrace a runtime audit hlídají render i dokumentační stopu pro WCAG 2.2 `3.3.7 Redundant Entry`.
 - **Field-level chyby guest rezervací** – veřejný rezervační formulář pro hosty používá sdílený `publicCaptchaErrorMessage()` a navazuje chyby jména, e-mailu, telefonu, počtu osob, slotu/času a ověření přes `aria-invalid`/`aria-describedby`; HTTP integrace hlídá chybnou captchu bez uložení rezervace.
 - **Helper pro jazyk části textu** – čistý HTML editor má u sdíleného content/media pickeru nový nástroj `Jazyk části textu`, který obalí vybraný cizojazyčný text do `<span lang="…">`; runtime audit hlídá markup, JS i CSS helperu pro WCAG 2.2 `3.1.2 Language of Parts`.

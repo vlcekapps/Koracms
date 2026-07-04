@@ -1282,7 +1282,7 @@ Podporované obsahové snippety v HTML editoru:
 
 - `[audio]...[/audio]`
 - `[video]...[/video]` pro přímé video soubory i běžné YouTube URL
-- `[video src="/uploads/media/video.mp4" captions="/uploads/media/video.cs.vtt" srclang="cs"][/video]` pro přímé video s WebVTT titulky
+- `[video src="/uploads/media/video.mp4" captions="/uploads/media/video.cs.vtt" srclang="cs" descriptions="/uploads/media/video-popis.cs.vtt"][/video]` pro přímé video s WebVTT titulky a zvukovým popisem
 - `[pdf]...[/pdf]`
 - `[code]...[/code]`
 - `[gallery]slug-alba[/gallery]`
@@ -1301,9 +1301,9 @@ Praktické poznámky:
 - PDF snippet vykreslí inline náhled dokumentu přes interní same-origin preview endpoint a pod ním ponechá i odkaz `Otevřít PDF samostatně`.
 - Starší PDF snippety, které už mají v obsahu jen cestu `/uploads/media/...`, fungují zpětně bez ruční úpravy.
 - YouTube URL ve video snippetu se převádí na vložený `youtube-nocookie.com` přehrávač a zachová i čas začátku z parametrů `t` nebo `start`.
-- Přímý video snippet umí atribut `captions` pro WebVTT soubor (`.vtt`), `srclang` pro jazyk titulků a `caption_label` pro název stopy. Audio i video snippet umí atribut `transcript` s odkazem na přepis a `transcript_label` pro text odkazu.
+- Přímý video snippet umí atribut `captions` pro WebVTT soubor (`.vtt`), `srclang` pro jazyk titulků a `caption_label` pro název stopy. Pro zvukový popis důležitých vizuálních informací umí také `descriptions`, `description_lang` a `description_label`. Audio i video snippet umí atribut `transcript` s odkazem na přepis a `transcript_label` pro text odkazu.
 - V čistém HTML editoru použijte nástroj `Jazyk části textu`, pokud je vybraný úsek v jiném jazyce než stránka. Helper vloží například `<span lang="en">open source</span>`.
-- URL ve snippetech pro audio, video, titulky, přepisy a PDF musí být buď úplná `http://` / `https://` adresa bez přihlašovacích údajů, nebo interní absolutní cesta začínající jedním lomítkem, například `/uploads/media/soubor.pdf`. Protocol-relative adresy `//example.com/...` se z bezpečnostních důvodů odmítají.
+- URL ve snippetech pro audio, video, titulky, popisové stopy, přepisy a PDF musí být buď úplná `http://` / `https://` adresa bez přihlašovacích údajů, nebo interní absolutní cesta začínající jedním lomítkem, například `/uploads/media/soubor.pdf`. Protocol-relative adresy `//example.com/...` se z bezpečnostních důvodů odmítají.
 - Shortcode `[code]...[/code]` je určený pro kopírovatelný obsah, například příkazy, konfiguraci, kód nebo jiné krátké texty; na veřejném webu zobrazí blok s tlačítkem `Kopírovat do schránky`.
 - Obsahové karty a vložené bloky ze snippetů mají skrytý nadpis napojený přes `aria-labelledby`, takže je uživatel čtečky obrazovky najde i navigací po nadpisech.
 - Při vložení obrázku z knihovny médií picker zachová `alt` atribut, ale nevkládá automatický `figcaption` z názvu média. Pokud médium nemá vyplněný alternativní text, vloží se `alt=""`, který lze v editoru ručně upravit.
@@ -1443,7 +1443,7 @@ Pokud je médium použité, smazání je zablokované a administrace ukáže nal
 - fulltext prochází jméno souboru, `alt text`, `caption`, popis, `credit`, licenci i název kolekce
 - po uploadu, úpravě, náhradě souboru i mazání se používá PRG návrat, takže refresh neopakuje POST
 - médium lze nahradit novým souborem ve stejné MIME rodině bez rozbití existujících referencí
-- knihovna médií přijímá WebVTT titulkové soubory (`.vtt`) pro použití ve video shortcodu
+- knihovna médií přijímá WebVTT soubory (`.vtt`) pro titulky a zvukový popis ve video shortcodu
 - bulk akce umí přepnout na `Veřejné`, `Soukromé`, přiřadit kolekci, doplnit výchozí kredit/licenci z kolekce a smazat nepoužitá média
 - společný upload helper při přípravě adresáře, nahrazení existujícího cíle a finálním přesunu uploadu zapisuje případné selhání do strukturovaného logu s hashem cesty
 - pokud při přesunu, náhradě nebo úklidu originálu, miniatury či WebP varianty selže souborová operace, CMS ji zapíše do strukturovaného logu s hashem cesty a příponou souboru, ne s plnou fyzickou cestou

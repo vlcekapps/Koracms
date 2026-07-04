@@ -1582,11 +1582,16 @@ assert_contains(
     $audioTranscriptShortcodeHtml,
     'audio shortcode can render a transcript link'
 );
-$videoCaptionShortcodeHtml = renderContentShortcodes('[video src="/uploads/video.mp4" mime="video/mp4" captions="/uploads/video.cs.vtt" srclang="cs" caption_label="České titulky" transcript="/uploads/video-prepis.html"][/video]');
+$videoCaptionShortcodeHtml = renderContentShortcodes('[video src="/uploads/video.mp4" mime="video/mp4" captions="/uploads/video.cs.vtt" srclang="cs" caption_label="České titulky" descriptions="/uploads/video-popis.cs.vtt" description_label="Zvukový popis" transcript="/uploads/video-prepis.html"][/video]');
 assert_contains(
     '<track kind="captions" src="/uploads/video.cs.vtt" srclang="cs" label="České titulky" default>',
     $videoCaptionShortcodeHtml,
     'video shortcode can render a WebVTT captions track'
+);
+assert_contains(
+    '<track kind="descriptions" src="/uploads/video-popis.cs.vtt" srclang="cs" label="Zvukový popis">',
+    $videoCaptionShortcodeHtml,
+    'video shortcode can render a WebVTT audio description track'
 );
 assert_contains(
     '<p class="embedded-media__transcript"><a href="/uploads/video-prepis.html">Přepis videa</a></p>',
@@ -1596,6 +1601,9 @@ assert_contains(
 $invalidVideoCaptionHtml = renderContentVideoShortcode('/uploads/video.mp4', 'video/mp4', '', '/uploads/video.txt');
 assert_true($invalidVideoCaptionHtml !== null, 'video shortcode still renders when optional caption URL is not WebVTT');
 assert_false(str_contains((string)$invalidVideoCaptionHtml, '<track'), 'video shortcode ignores non-WebVTT caption URLs');
+$invalidVideoDescriptionHtml = renderContentVideoShortcode('/uploads/video.mp4', 'video/mp4', '', '', 'cs', '', '', '', '/uploads/video-popis.txt');
+assert_true($invalidVideoDescriptionHtml !== null, 'video shortcode still renders when optional description URL is not WebVTT');
+assert_false(str_contains((string)$invalidVideoDescriptionHtml, 'kind="descriptions"'), 'video shortcode ignores non-WebVTT audio description URLs');
 $youtubeTranscriptHtml = renderContentShortcodes('[video transcript="/uploads/youtube-prepis.html" transcript_label="Přepis záznamu"]https://www.youtube.com/watch?v=yIdGMYUmfgg[/video]');
 assert_contains('Přepis záznamu', $youtubeTranscriptHtml, 'YouTube video shortcode can render a separate transcript link');
 
