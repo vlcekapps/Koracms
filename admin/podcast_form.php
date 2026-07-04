@@ -73,12 +73,13 @@ $publishInput = !empty($episode['publish_at']) ? date('Y-m-d\TH:i', strtotime((s
 $err = trim((string)($_GET['err'] ?? ''));
 $podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
 $podcastEpisodePublishAtErrorMessage = 'Plánované zveřejnění musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro zveřejnění po uložení či schválení.';
+$podcastEpisodeAudioUploadErrorMessage = 'Audio soubor se nepodařilo nahrát. Nahrajte MP3, OGG, WAV, M4A nebo AAC; pokud používáte externí audio odkaz, nechte pole souboru prázdné.';
 $formError = match ($err) {
     'required' => 'Název epizody je povinný.',
     'slug' => 'Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už v rámci pořadu používá jiná epizoda.',
     'url' => $podcastEpisodeAudioUrlErrorMessage,
-    'audio' => 'Audio soubor se nepodařilo uložit.',
+    'audio' => $podcastEpisodeAudioUploadErrorMessage,
     'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
     default => '',
@@ -96,7 +97,7 @@ $fieldErrorMessages = [
     'title' => 'Název epizody je povinný.',
     'slug' => 'Slug epizody musí zůstat jedinečný v rámci pořadu.',
     'audio_url' => $podcastEpisodeAudioUrlErrorMessage,
-    'audio_file' => 'Audio soubor se nepodařilo uložit.',
+    'audio_file' => $podcastEpisodeAudioUploadErrorMessage,
     'image_file' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.',
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
 ];
@@ -209,7 +210,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <input type="file" id="audio_file" name="audio_file" accept=".mp3,.ogg,.wav,.m4a,.aac,audio/*"
            <?= adminFieldAttributes('audio_file', $err, $fieldErrorMap, array_filter(['podcast-episode-audio-help', (string)$episode['audio_file'] !== '' ? 'podcast-episode-audio-current' : ''])) ?>
            >
-    <small id="podcast-episode-audio-help" class="field-help">Můžete nahrát běžný zvukový soubor, například MP3, OGG, WAV, M4A nebo AAC.</small>
+    <small id="podcast-episode-audio-help" class="field-help">Můžete nahrát běžný zvukový soubor: MP3, OGG, WAV, M4A nebo AAC. Pokud používáte externí audio odkaz níže, pole souboru nechte prázdné.</small>
     <?php adminRenderFieldError('audio_file', $err, $fieldErrorMap, $fieldErrorMessages['audio_file']); ?>
     <?php if ((string)$episode['audio_file'] !== ''): ?>
       <small id="podcast-episode-audio-current" class="field-help">Aktuální soubor je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>

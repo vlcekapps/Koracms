@@ -468,6 +468,8 @@ Zdroj, externí odkaz, domovská stránka projektu, upload souboru a SHA-256 che
 
 Vybrané obrazové uploady v administraci článků, vývěsky, událostí, míst a položek ke stažení radí povolené formáty JPEG, PNG, GIF nebo WebP, výslovně říkají, že SVG a jiné formáty CMS nepřijímá, a připomínají možnost nechat volitelné obrazové pole prázdné. Runtime audit hlídá i field-level napojení náhledového obrázku u downloadů.
 
+Vybrané neobrazové uploady pokračují stejným směrem: příloha vývěsky radí povolené dokumentové a archivní formáty a podcastová epizoda radí MP3/OGG/WAV/M4A/AAC i možnost použít místo uploadu externí audio odkaz. Runtime audit hlídá, aby se tyto chyby nevrátily k obecnému „nepodařilo se uložit“.
+
 Stejný princip platí pro plánování publikace a časové rozsahy. U článků, stránek, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod chybové hlášky vysvětlují, že má správce vybrat platnou hodnotu v poli datum/čas, volitelné plánování nechat prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
 
 Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.

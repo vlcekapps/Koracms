@@ -16525,6 +16525,46 @@ foreach ([
     }
 }
 foreach ([
+    'board attachment upload error suggestion' => [
+        'source' => $boardFormSource,
+        'required' => [
+            '$boardAttachmentUploadErrorMessage',
+            "adminFieldAttributes('file', \$err, \$fieldErrorMap",
+            "adminRenderFieldError('file'",
+            'PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, ZIP nebo TXT',
+            'Pokud přílohu nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
+        ],
+    ],
+    'podcast episode audio upload error suggestion' => [
+        'source' => $podcastEpisodeFormSource,
+        'required' => [
+            '$podcastEpisodeAudioUploadErrorMessage',
+            "adminFieldAttributes('audio_file'",
+            "adminRenderFieldError('audio_file'",
+            'MP3, OGG, WAV, M4A nebo AAC',
+            'pokud používáte externí audio odkaz, nechte pole souboru prázdné.',
+        ],
+        'forbidden' => [
+            'Audio soubor se nepodařilo uložit.',
+        ],
+    ],
+] as $adminFileUploadSuggestionLabel => $adminFileUploadSuggestionSpec) {
+    $adminFileUploadSuggestionSource = (string)$adminFileUploadSuggestionSpec['source'];
+    foreach ($adminFileUploadSuggestionSpec['required'] as $adminFileUploadRequiredFragment) {
+        if (!str_contains($adminFileUploadSuggestionSource, $adminFileUploadRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminFileUploadSuggestionLabel . ' is missing actionable file upload fragment: ' . $adminFileUploadRequiredFragment;
+        }
+    }
+    foreach ($adminFileUploadSuggestionSpec['forbidden'] as $adminFileUploadForbiddenFragment) {
+        if (str_contains($adminFileUploadSuggestionSource, $adminFileUploadForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminFileUploadSuggestionLabel . ' still contains generic file upload validation copy';
+        }
+    }
+}
+foreach ([
     'place URL error suggestion' => [
         'source' => $placeFormSource,
         'required' => [

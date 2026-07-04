@@ -58,6 +58,7 @@ $boardPostedDateErrorMessage = 'Datum vyvěšení musí být platné kalendářn
 $boardRemovalDateErrorMessage = 'Datum sejmutí musí být platné kalendářní datum. Vyberte datum v poli Datum sejmutí nebo pole nechte prázdné.';
 $boardDateRangeErrorMessage = 'Datum sejmutí nesmí být dříve než datum vyvěšení. Upravte jedno z dat nebo datum sejmutí nechte prázdné.';
 $boardImageUploadErrorMessage = 'Obrázek oznámení se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
+$boardAttachmentUploadErrorMessage = 'Přílohu se nepodařilo nahrát. Nahrajte PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, ZIP nebo TXT. Pokud přílohu nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
     'posted_date' => $boardPostedDateErrorMessage,
@@ -67,7 +68,7 @@ $formError = match ($err) {
     'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => $boardContactEmailErrorMessage,
     'image' => $boardImageUploadErrorMessage,
-    'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
+    'file' => $boardAttachmentUploadErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
@@ -91,7 +92,7 @@ $fieldErrorMessages = [
     'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => $boardContactEmailErrorMessage,
     'image' => $boardImageUploadErrorMessage,
-    'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
+    'file' => $boardAttachmentUploadErrorMessage,
 ];
 
 adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sekce ' . $publicLabel);
@@ -291,7 +292,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.zip,.txt"
            <?= adminFieldAttributes('file', $err, $fieldErrorMap, array_filter(['board-file-help', !empty($document['original_name']) ? 'board-file-current' : ''])) ?>
            >
-    <small id="board-file-help" class="field-help">Můžete nahrát běžný dokument nebo archiv, například PDF, DOCX, XLSX, PPTX, ODT nebo ZIP.</small>
+    <small id="board-file-help" class="field-help">Můžete nahrát běžný dokument nebo archiv: PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, ZIP nebo TXT.</small>
     <?php adminRenderFieldError('file', $err, $fieldErrorMap, $fieldErrorMessages['file']); ?>
     <?php if (!empty($document['original_name'])): ?>
       <small id="board-file-current" class="field-help">Aktuální příloha: <strong><?= h((string)$document['original_name']) ?></strong><?php if ((int)$document['file_size'] > 0): ?> (<?= h(formatFileSize((int)$document['file_size'])) ?>)<?php endif; ?>. Nahrajte nový soubor, pokud ji chcete nahradit.</small>
