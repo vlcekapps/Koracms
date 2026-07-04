@@ -36,15 +36,15 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 1.3.3 Sensory Characteristics | Supports | Instructions are text-based and do not rely only on color, shape or position. |
 | 1.4.1 Use of Color | Supports | Statuses and labels include text, not color alone. |
 | 1.4.2 Audio Control | Not Applicable | Core CMS does not autoplay audio. |
-| 2.1.1 Keyboard | Partially Supports | Core patterns support keyboard use; command center, widget dialog and content/media picker now have automated guardrails for Escape, Tab focus cycling and focus return. Dense admin workflows still need manual coverage. |
-| 2.1.2 No Keyboard Trap | Supports | Dialogs are designed with focus trap and focus return. |
+| 2.1.1 Keyboard | Partially Supports | Core patterns support keyboard use; command center, widget dialog and content/media picker have automated guardrails for Escape, Tab focus cycling and focus return, with manual no-regression confirmation on 2026-07-04. Dense admin workflows still need manual coverage. |
+| 2.1.2 No Keyboard Trap | Supports | Core dialogs are designed with focus trap and focus return; command center, widget dialog and content/media picker were manually confirmed without regression on 2026-07-04. |
 | 2.1.4 Character Key Shortcuts | Supports | Global command shortcut uses `Ctrl+K` and is disabled in form fields. |
 | 2.2.1 Timing Adjustable | Partially Supports | Content lock refresh reduces data loss; auth/session timeout behavior needs manual assessment. |
 | 2.2.2 Pause, Stop, Hide | Supports | Core does not generate moving or auto-updating visual content requiring pause controls. |
 | 2.3.1 Three Flashes or Below Threshold | Supports | Core does not generate flashing content. |
 | 2.4.1 Bypass Blocks | Supports | Skip links and main content anchors are present in public/admin/system layouts. |
 | 2.4.2 Page Titled | Supports | Shared SEO/theme layers generate page titles. |
-| 2.4.3 Focus Order | Partially Supports | Layouts and core dialogs are structured for logical focus, with automated guardrails for returning focus to the trigger in command center, widget dialog and content/media picker. Manual keyboard sweeps remain required. |
+| 2.4.3 Focus Order | Partially Supports | Layouts and core dialogs are structured for logical focus, with automated guardrails for returning focus to the trigger in command center, widget dialog and content/media picker. Those dialogs were manually confirmed without regression on 2026-07-04; broader admin keyboard sweeps remain required. |
 | 2.4.4 Link Purpose (In Context) | Supports | Links generally use meaningful text and hidden contextual suffixes where needed. |
 | 2.5.1 Pointer Gestures | Supports | Core does not require multipoint or path-based gestures. |
 | 2.5.2 Pointer Cancellation | Supports | State-changing actions are explicit buttons/POST actions, not down-event-only actions. |
@@ -57,7 +57,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.3.1 Error Identification | Supports | Field-level and form-level error messaging is guarded. |
 | 3.3.2 Labels or Instructions | Supports | Forms use labels, fieldsets, legends and helper text. |
 | 3.3.7 Redundant Entry | Partially Supports | Some data is reused, but redundant-entry coverage needs workflow testing. |
-| 4.1.2 Name, Role, Value | Supports | Controls, dialogs and landmarks are covered by ARIA/name guardrails, including command center `aria-expanded` state and rendered dialog semantics. |
+| 4.1.2 Name, Role, Value | Supports | Controls, dialogs and landmarks are covered by ARIA/name guardrails, including command center `aria-expanded` state, rendered dialog semantics and manual no-regression confirmation for core dialogs on 2026-07-04. |
 
 ## WCAG 2.2 Level AA
 

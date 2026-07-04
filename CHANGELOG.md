@@ -88,6 +88,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **ACR evidence pro dialog focus** – command centrum, widget dialog a content/media picker jsou po ručním keyboard-only/NVDA potvrzení vedené jako ověřené bez regrese; backlog už nechává dialogy jen jako regresní scénář při budoucích změnách JS.
 - **Dialog focus guardrails** – command centrum oznamuje otevřený stav přes `aria-expanded` a runtime/HTTP audity nově hlídají Escape, Tab focus smyčku a návrat fokusu u command centra, widget dialogu a content/media pickeru.
 - **ACR evidence pro accessible authentication** – po ručním potvrzení auth flow je WCAG/ACR řádek `3.3.8 Accessible Authentication (Minimum)` vedený jako `Supports`; backlog už nechává auth jen jako regresní scénář při budoucích změnách loginu, 2FA, resetu hesla nebo session timeoutů.
 - **Accessible authentication bez matematické CAPTCHA** – veřejná registrace a žádost o obnovu hesla už nevyžadují matematickou ověřovací otázku. Ochranu proti automatizovaným pokusům drží CSRF, rate limiting a honeypot a runtime audit hlídá, aby se kognitivní CAPTCHA do auth flow nevrátila.
