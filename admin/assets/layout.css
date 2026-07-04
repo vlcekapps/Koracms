@@ -15,7 +15,7 @@
   --admin-nav-hover: rgba(255,255,255,.08);
   --admin-btn-bg: #f8fafc;
   --admin-btn-text: #102a43;
-  --admin-btn-border: #c6d0db;
+  --admin-btn-border: #6b7280;
   --admin-btn-danger-bg: #b42318;
   --admin-btn-danger-border: #8f1d14;
   --admin-btn-success-bg: #1b5e20;
@@ -49,9 +49,11 @@
   --admin-field-help: #555;
   --admin-focus: #005fcc;
   --admin-focus-nav: #7ecfff;
+  --admin-skip-bg: #005fcc;
+  --admin-skip-text: #fff;
   --admin-invalid-border: #b42318;
   --admin-input-bg: #fff;
-  --admin-input-border: #aaa;
+  --admin-input-border: #767676;
   --admin-footer-text: #666;
 }
 @media (prefers-color-scheme: dark) {
@@ -72,7 +74,7 @@
     --admin-nav-hover: rgba(255,255,255,.1);
     --admin-btn-bg: #252540;
     --admin-btn-text: #e0e0e0;
-    --admin-btn-border: #4a4a65;
+    --admin-btn-border: #73799a;
     --admin-btn-danger-bg: #8f1d14;
     --admin-btn-danger-border: #6b1610;
     --admin-btn-success-bg: #154d1a;
@@ -106,9 +108,11 @@
     --admin-field-help: #a0a0a0;
     --admin-focus: #4da6ff;
     --admin-focus-nav: #7ecfff;
+    --admin-skip-bg: #4da6ff;
+    --admin-skip-text: #000;
     --admin-invalid-border: #f08080;
     --admin-input-bg: #252540;
-    --admin-input-border: #4a4a65;
+    --admin-input-border: #73799a;
     --admin-footer-text: #8899aa;
   }
 }
@@ -522,7 +526,7 @@ input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="
 :focus-visible { outline: 3px solid var(--admin-focus); outline-offset: 2px; }
 nav a:focus-visible { outline-color: var(--admin-focus-nav); }
 .skip-link { position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:999; }
-.skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:var(--admin-focus);color:#fff;font-size:1rem;text-decoration:none;z-index:9999; }
+.skip-link:focus { position:fixed;top:0;left:0;width:auto;height:auto;padding:.75rem 1.5rem;background:var(--admin-skip-bg);color:var(--admin-skip-text);font-size:1rem;text-decoration:none;z-index:9999; }
 .admin-nav-site { margin:0 0 .75rem; color:var(--admin-nav-summary); font-size:.95rem; font-weight:700; }
 .admin-nav-user { font-size:.8rem; color:var(--admin-nav-summary); margin:0 0 .75rem; }
 .admin-command-nav-search { margin:0 0 1rem; padding:.75rem; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(255,255,255,.06); }

@@ -67,16 +67,16 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 1.2.5 Audio Description (Prerecorded) | Partially Supports | Authors can provide descriptions, but there is no dedicated metadata workflow for audio description. |
 | 1.3.4 Orientation | Supports | CMS does not restrict screen orientation. |
 | 1.3.5 Identify Input Purpose | Partially Supports | Authentication fields are now covered for `username`, `current-password`, `new-password` and 2FA `one-time-code` metadata by runtime and HTTP integration guardrails. Contact, ordering, reservations and generated form templates still need a broader autocomplete audit. |
-| 1.4.3 Contrast (Minimum) | Partially Supports | Default UI targets AA; custom themes and all states need manual measurement. |
+| 1.4.3 Contrast (Minimum) | Partially Supports | Runtime `contrast_focus_guardrails` now measures default theme, admin layout and standalone login text/status color pairs against AA thresholds. Custom theme settings, hover/disabled states and author-supplied colors still need manual measurement. |
 | 1.4.4 Resize Text | Supports | Layouts are responsive and do not block browser zoom. |
 | 1.4.5 Images of Text | Supports | Core UI does not use images of text as controls or headings. |
 | 1.4.10 Reflow | Partially Supports | Responsive patterns exist; 320 px and admin tables need manual verification. |
-| 1.4.11 Non-text Contrast | Partially Supports | Focus and controls are styled; detailed color measurement remains required. |
+| 1.4.11 Non-text Contrast | Partially Supports | Runtime guardrails measure focus indicators plus default/admin/login input and button borders against the 3:1 non-text threshold. Icons, progress bars, disabled/hover states and custom theme variants still need manual verification. |
 | 1.4.12 Text Spacing | Partially Supports | No known blocking CSS, but text spacing must be manually tested. |
 | 1.4.13 Content on Hover or Focus | Partially Supports | Core avoids hover-only content; dropdowns/tooltips require manual checks. |
 | 2.4.5 Multiple Ways | Supports | Navigation, search, sitemap and module listings provide multiple discovery paths. |
 | 2.4.6 Headings and Labels | Supports | Heading-backed landmarks and form labels are guarded. |
-| 2.4.7 Focus Visible | Supports | Public/admin CSS includes visible focus styles. |
+| 2.4.7 Focus Visible | Supports | Public, admin and standalone login CSS include visible focus styles, and runtime guardrails measure focus token contrast against primary backgrounds. |
 | 2.4.11 Focus Not Obscured (Minimum) | Partially Supports | Sticky and anchor interactions need manual verification. |
 | 2.5.7 Dragging Movements | Supports | Reordering uses accessible button alternatives and is not drag-only. |
 | 2.5.8 Target Size (Minimum) | Partially Supports | Public controls are generally large enough; compact admin row actions need measurement. |

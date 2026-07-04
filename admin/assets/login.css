@@ -3,11 +3,13 @@
   --login-text: #1a1a2e;
   --login-error: #c00;
   --login-focus: #005fcc;
+  --login-skip-bg: #005fcc;
+  --login-skip-text: #fff;
   --login-input-bg: #fff;
-  --login-input-border: #aaa;
+  --login-input-border: #767676;
   --login-btn-bg: #f8fafc;
   --login-btn-text: #102a43;
-  --login-btn-border: #c6d0db;
+  --login-btn-border: #6b7280;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,11 +18,13 @@
     --login-text: #e0e0e0;
     --login-error: #f08080;
     --login-focus: #4da6ff;
+    --login-skip-bg: #4da6ff;
+    --login-skip-text: #000;
     --login-input-bg: #252540;
-    --login-input-border: #4a4a65;
+    --login-input-border: #73799a;
     --login-btn-bg: #252540;
     --login-btn-text: #e0e0e0;
-    --login-btn-border: #4a4a65;
+    --login-btn-border: #73799a;
   }
 }
 
@@ -85,9 +89,9 @@ button {
   width: auto;
   height: auto;
   padding: 0.75rem 1.5rem;
-  color: #fff;
+  color: var(--login-skip-text);
   text-decoration: none;
-  background: var(--login-focus);
+  background: var(--login-skip-bg);
 }
 
 .totp-code-input {

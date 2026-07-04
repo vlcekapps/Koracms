@@ -6,7 +6,6 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
-| Kontrast a focus appearance | 1.4.3, 1.4.11, 2.4.7 | Automat hlídá strukturu, ale kontrast musí být změřen pro stavy hover/focus/disabled a theme varianty. | Změřit admin i default theme a zavést kontrastní tokeny nebo auditní seznam barev. |
 | Reflow a mobilní administrace | 1.4.10, 2.4.11, 2.5.8 | Husté tabulky, row actions a dlouhé formuláře mohou být problematické na 320 px a při zoomu. | Projít hlavní admin tabulky při 320 px/400 % zoomu, prioritně media, widgets, statistics a form builder. |
 
 ## Střední priorita
@@ -14,6 +13,7 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 | Oblast | Kritéria | Riziko | Doporučený další krok |
 |---|---|---|---|
 | Média a titulky | 1.2.1 až 1.2.5 | CMS podporuje embedy, ale neumí systematicky vést autora k přepisům, titulkům a audio description. | Doplnit dokumentaci pro autory a zvážit metadata pro transcript/caption u vlastních video/audio médií. |
+| Kontrast custom/hover/disabled stavů | 1.4.3, 1.4.11, 2.4.7 | Runtime audit měří default/admin/login text, focus, input border a button border tokeny, ale ne všechny custom theme settings, hover/disabled stavy, ikony a progress bary v reálném prohlížeči. | Ručně změřit default i aktivní theme varianty ve Firefox/Chrome a při nálezu doplnit konkrétní CSS token nebo nový auditní pár. |
 | Autocomplete a input purpose | 1.3.5 | Auth flow má automatizovaný guardrail, ale ne všechna další osobní pole mají ověřené `autocomplete`. | Projít kontakt, rezervace, food objednávky a Form Builder šablony. |
 | Text spacing | 1.4.12 | CSS pravděpodobně neblokuje spacing, ale není doložené ručním testem. | Projít veřejné a admin šablony s text spacing bookmarkletem nebo ekvivalentním CSS testem. |
 | Error suggestions | 3.3.3 | Některé validace jen řeknou, že hodnota je chybná, ale nemusí poradit opravu. | Udělat copy pass nad chybami formulářů a doplnit konkrétní návrhy. |
@@ -37,5 +37,6 @@ Tento backlog navazuje na `wcag-22-aa-conformance.md`. Neobsahuje všechny nápa
 
 ## Uzavřená evidence
 
+- 2026-07-04: `1.4.3 Contrast (Minimum)`, `1.4.11 Non-text Contrast` a `2.4.7 Focus Visible` mají nový runtime `contrast_focus_guardrails`, který měří default/admin/login textové páry, stavové hlášky, focus tokeny, skip link a hranice inputů/tlačítek; zbylá práce je ruční měření custom theme, hover/disabled, ikon a progress stavů.
 - 2026-07-04: `3.3.8 Accessible Authentication (Minimum)` je po automatizovaných guardrailech a ručním potvrzení auth flow vedené jako `Supports`; při změnách loginu, registrace, 2FA, tokenového resetu nebo session timeoutů se ruční scénář z `manual-test-protocol.md` opakuje.
 - 2026-07-04: command centrum, widget dialog a content/media picker prošly ručním NVDA/keyboard-only ověřením bez regrese; při změnách JS dialogů se znovu ověřuje Escape, Tab focus smyčka, návrat fokusu a oznamovaný stav ovládacích prvků.

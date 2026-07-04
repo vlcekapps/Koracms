@@ -14161,6 +14161,301 @@ if ($utf8CopyIssues === []) {
     }
 }
 
+echo "=== contrast_focus_guardrails ===\n";
+$contrastFocusIssues = [];
+$contrastAdminCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');
+$contrastAdminLoginCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/login.css');
+$contrastPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
+$contrastPublicCoreCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public-core.css');
+$contrastCssHexVariable = static function (string $css, string $variableName, string $match = 'first'): string {
+    $matches = [];
+    $count = preg_match_all(
+        '/--' . preg_quote($variableName, '/') . '\s*:\s*(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?)\b/',
+        $css,
+        $matches
+    );
+    if ($count === false || $count === 0) {
+        return '';
+    }
+
+    $index = $match === 'last' ? $count - 1 : 0;
+    return strtolower($matches[1][$index]);
+};
+$contrastHexToRgb = static function (string $hex): ?array {
+    $hex = ltrim(trim($hex), '#');
+    if (strlen($hex) === 3) {
+        $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+    }
+    if (strlen($hex) !== 6 || preg_match('/^[0-9a-fA-F]{6}$/', $hex) !== 1) {
+        return null;
+    }
+
+    return [
+        hexdec(substr($hex, 0, 2)),
+        hexdec(substr($hex, 2, 2)),
+        hexdec(substr($hex, 4, 2)),
+    ];
+};
+$contrastRelativeLuminance = static function (string $hex) use ($contrastHexToRgb): ?float {
+    $rgb = $contrastHexToRgb($hex);
+    if ($rgb === null) {
+        return null;
+    }
+
+    $linearize = static function (int $channel): float {
+        $value = $channel / 255;
+        return $value <= 0.03928 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
+    };
+
+    return (0.2126 * $linearize($rgb[0]))
+        + (0.7152 * $linearize($rgb[1]))
+        + (0.0722 * $linearize($rgb[2]));
+};
+$contrastRatio = static function (string $foreground, string $background) use ($contrastRelativeLuminance): ?float {
+    $foregroundLuminance = $contrastRelativeLuminance($foreground);
+    $backgroundLuminance = $contrastRelativeLuminance($background);
+    if ($foregroundLuminance === null || $backgroundLuminance === null) {
+        return null;
+    }
+
+    $lighter = max($foregroundLuminance, $backgroundLuminance);
+    $darker = min($foregroundLuminance, $backgroundLuminance);
+    return ($lighter + 0.05) / ($darker + 0.05);
+};
+$contrastCheckPair = static function (string $label, string $foreground, string $background, float $minimum) use (&$contrastFocusIssues, $contrastRatio): void {
+    $ratio = $contrastRatio($foreground, $background);
+    if ($ratio === null) {
+        $contrastFocusIssues[] = $label . ' has an invalid or missing color token';
+        return;
+    }
+    if ($ratio + 0.005 < $minimum) {
+        $contrastFocusIssues[] = sprintf(
+            '%s contrast %.2f is below %.1f (%s on %s)',
+            $label,
+            $ratio,
+            $minimum,
+            $foreground,
+            $background
+        );
+    }
+};
+
+$adminLight = [
+    'bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-bg'),
+    'surface' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-surface'),
+    'text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text'),
+    'text-muted' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text-muted'),
+    'text-meta' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text-meta'),
+    'link' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-link'),
+    'btn-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-bg'),
+    'btn-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-text'),
+    'btn-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-border'),
+    'btn-danger-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-danger-bg'),
+    'btn-success-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-success-bg'),
+    'focus' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-focus'),
+    'focus-nav' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-focus-nav'),
+    'skip-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-skip-bg'),
+    'skip-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-skip-text'),
+    'invalid-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-invalid-border'),
+    'input-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-input-bg'),
+    'input-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-input-border'),
+    'field-help' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-field-help'),
+    'nav-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-nav-bg'),
+    'nav-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-nav-text'),
+    'pending-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-pending-bg'),
+    'pending-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-pending-text'),
+    'published-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-published-bg'),
+    'published-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-published-text'),
+    'hidden-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-hidden-bg'),
+    'hidden-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-hidden-text'),
+    'scheduled-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-scheduled-bg'),
+    'scheduled-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-scheduled-text'),
+    'current-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-current-bg'),
+    'current-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-current-text'),
+    'danger-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-danger-bg'),
+    'danger-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-danger-text'),
+    'neutral-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-neutral-bg'),
+    'neutral-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-neutral-text'),
+];
+$adminDark = [
+    'bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-bg', 'last'),
+    'surface' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-surface', 'last'),
+    'text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text', 'last'),
+    'text-muted' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text-muted', 'last'),
+    'text-meta' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-text-meta', 'last'),
+    'link' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-link', 'last'),
+    'btn-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-bg', 'last'),
+    'btn-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-text', 'last'),
+    'btn-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-border', 'last'),
+    'btn-danger-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-danger-bg', 'last'),
+    'btn-success-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-btn-success-bg', 'last'),
+    'focus' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-focus', 'last'),
+    'focus-nav' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-focus-nav', 'last'),
+    'skip-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-skip-bg', 'last'),
+    'skip-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-skip-text', 'last'),
+    'invalid-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-invalid-border', 'last'),
+    'input-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-input-bg', 'last'),
+    'input-border' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-input-border', 'last'),
+    'field-help' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-field-help', 'last'),
+    'nav-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-nav-bg', 'last'),
+    'nav-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-nav-text', 'last'),
+    'pending-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-pending-bg', 'last'),
+    'pending-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-pending-text', 'last'),
+    'published-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-published-bg', 'last'),
+    'published-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-published-text', 'last'),
+    'hidden-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-hidden-bg', 'last'),
+    'hidden-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-hidden-text', 'last'),
+    'scheduled-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-scheduled-bg', 'last'),
+    'scheduled-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-scheduled-text', 'last'),
+    'current-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-current-bg', 'last'),
+    'current-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-current-text', 'last'),
+    'danger-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-danger-bg', 'last'),
+    'danger-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-danger-text', 'last'),
+    'neutral-bg' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-neutral-bg', 'last'),
+    'neutral-text' => $contrastCssHexVariable($contrastAdminCssSource, 'admin-neutral-text', 'last'),
+];
+$loginLight = [
+    'bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-bg'),
+    'text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-text'),
+    'focus' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-focus'),
+    'skip-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-skip-bg'),
+    'skip-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-skip-text'),
+    'input-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-input-bg'),
+    'input-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-input-border'),
+    'btn-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-bg'),
+    'btn-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-text'),
+    'btn-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-border'),
+];
+$loginDark = [
+    'bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-bg', 'last'),
+    'text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-text', 'last'),
+    'focus' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-focus', 'last'),
+    'skip-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-skip-bg', 'last'),
+    'skip-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-skip-text', 'last'),
+    'input-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-input-bg', 'last'),
+    'input-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-input-border', 'last'),
+    'btn-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-bg', 'last'),
+    'btn-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-text', 'last'),
+    'btn-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-border', 'last'),
+];
+$public = [
+    'bg-main' => $contrastCssHexVariable($contrastPublicCssSource, 'bg-main'),
+    'bg-accent' => $contrastCssHexVariable($contrastPublicCssSource, 'bg-accent'),
+    'surface' => $contrastCssHexVariable($contrastPublicCssSource, 'surface'),
+    'text-main' => $contrastCssHexVariable($contrastPublicCssSource, 'text-main'),
+    'text-muted' => $contrastCssHexVariable($contrastPublicCssSource, 'text-muted'),
+    'border-soft' => $contrastCssHexVariable($contrastPublicCssSource, 'border-soft'),
+    'accent' => $contrastCssHexVariable($contrastPublicCssSource, 'accent'),
+    'accent-strong' => $contrastCssHexVariable($contrastPublicCssSource, 'accent-strong'),
+];
+
+foreach ([
+    'admin layout focus outline' => [$contrastAdminCssSource, ':focus-visible { outline: 3px solid var(--admin-focus); outline-offset: 2px; }'],
+    'admin nav focus outline' => [$contrastAdminCssSource, 'nav a:focus-visible { outline-color: var(--admin-focus-nav); }'],
+    'admin skip link tokens' => [$contrastAdminCssSource, 'background:var(--admin-skip-bg);color:var(--admin-skip-text)'],
+    'admin login focus outline' => [$contrastAdminLoginCssSource, ':focus-visible'],
+    'admin login skip link tokens' => [$contrastAdminLoginCssSource, 'background: var(--login-skip-bg);'],
+    'public core focus outline' => [$contrastPublicCoreCssSource, ':focus-visible'],
+    'public form focus outline' => [$contrastPublicCssSource, 'outline: 2px solid var(--accent);'],
+] as $contrastFocusFragmentLabel => [$contrastFocusSource, $contrastFocusFragment]) {
+    if (!str_contains($contrastFocusSource, $contrastFocusFragment)) {
+        $contrastFocusIssues[] = 'focus/skip CSS is missing fragment: ' . $contrastFocusFragmentLabel;
+    }
+}
+
+foreach ([
+    'admin light body text' => [$adminLight['text'], $adminLight['bg'], 4.5],
+    'admin light muted text' => [$adminLight['text-muted'], $adminLight['bg'], 4.5],
+    'admin light meta text' => [$adminLight['text-meta'], $adminLight['bg'], 4.5],
+    'admin light link text' => [$adminLight['link'], $adminLight['bg'], 4.5],
+    'admin light nav text' => [$adminLight['nav-text'], $adminLight['nav-bg'], 4.5],
+    'admin light button text' => [$adminLight['btn-text'], $adminLight['btn-bg'], 4.5],
+    'admin light danger button text' => ['#fff', $adminLight['btn-danger-bg'], 4.5],
+    'admin light success button text' => ['#fff', $adminLight['btn-success-bg'], 4.5],
+    'admin light field help' => [$adminLight['field-help'], $adminLight['bg'], 4.5],
+    'admin light skip link text' => [$adminLight['skip-text'], $adminLight['skip-bg'], 4.5],
+    'admin light pending status' => [$adminLight['pending-text'], $adminLight['pending-bg'], 4.5],
+    'admin light published status' => [$adminLight['published-text'], $adminLight['published-bg'], 4.5],
+    'admin light hidden status' => [$adminLight['hidden-text'], $adminLight['hidden-bg'], 4.5],
+    'admin light scheduled status' => [$adminLight['scheduled-text'], $adminLight['scheduled-bg'], 4.5],
+    'admin light current status' => [$adminLight['current-text'], $adminLight['current-bg'], 4.5],
+    'admin light danger status' => [$adminLight['danger-text'], $adminLight['danger-bg'], 4.5],
+    'admin light neutral status' => [$adminLight['neutral-text'], $adminLight['neutral-bg'], 4.5],
+    'admin dark body text' => [$adminDark['text'], $adminDark['bg'], 4.5],
+    'admin dark muted text' => [$adminDark['text-muted'], $adminDark['bg'], 4.5],
+    'admin dark meta text' => [$adminDark['text-meta'], $adminDark['bg'], 4.5],
+    'admin dark link text' => [$adminDark['link'], $adminDark['bg'], 4.5],
+    'admin dark nav text' => [$adminDark['nav-text'], $adminDark['nav-bg'], 4.5],
+    'admin dark button text' => [$adminDark['btn-text'], $adminDark['btn-bg'], 4.5],
+    'admin dark danger button text' => ['#fff', $adminDark['btn-danger-bg'], 4.5],
+    'admin dark success button text' => ['#fff', $adminDark['btn-success-bg'], 4.5],
+    'admin dark field help' => [$adminDark['field-help'], $adminDark['bg'], 4.5],
+    'admin dark skip link text' => [$adminDark['skip-text'], $adminDark['skip-bg'], 4.5],
+    'admin dark pending status' => [$adminDark['pending-text'], $adminDark['pending-bg'], 4.5],
+    'admin dark published status' => [$adminDark['published-text'], $adminDark['published-bg'], 4.5],
+    'admin dark hidden status' => [$adminDark['hidden-text'], $adminDark['hidden-bg'], 4.5],
+    'admin dark scheduled status' => [$adminDark['scheduled-text'], $adminDark['scheduled-bg'], 4.5],
+    'admin dark current status' => [$adminDark['current-text'], $adminDark['current-bg'], 4.5],
+    'admin dark danger status' => [$adminDark['danger-text'], $adminDark['danger-bg'], 4.5],
+    'admin dark neutral status' => [$adminDark['neutral-text'], $adminDark['neutral-bg'], 4.5],
+    'admin login light text' => [$loginLight['text'], $loginLight['bg'], 4.5],
+    'admin login light button text' => [$loginLight['btn-text'], $loginLight['btn-bg'], 4.5],
+    'admin login light skip link text' => [$loginLight['skip-text'], $loginLight['skip-bg'], 4.5],
+    'admin login dark text' => [$loginDark['text'], $loginDark['bg'], 4.5],
+    'admin login dark button text' => [$loginDark['btn-text'], $loginDark['btn-bg'], 4.5],
+    'admin login dark skip link text' => [$loginDark['skip-text'], $loginDark['skip-bg'], 4.5],
+    'public body text on background' => [$public['text-main'], $public['bg-main'], 4.5],
+    'public body text on surface' => [$public['text-main'], $public['surface'], 4.5],
+    'public muted text on surface' => [$public['text-muted'], $public['surface'], 4.5],
+    'public link text on surface' => [$public['accent-strong'], $public['surface'], 4.5],
+    'public primary button text' => ['#ffffff', $public['accent'], 4.5],
+    'public danger button text' => ['#ffffff', '#b93a2c', 4.5],
+    'public status success text' => ['#11421f', '#edf8ef', 4.5],
+    'public status warning text' => ['#704611', '#fff4df', 4.5],
+    'public status info text' => ['#143f66', '#edf5fc', 4.5],
+    'public status error text' => ['#7d1f1f', '#fff0f0', 4.5],
+    'public core skip link text' => ['#000000', '#ffffff', 4.5],
+] as $contrastLabel => [$contrastForeground, $contrastBackground, $contrastMinimum]) {
+    $contrastCheckPair($contrastLabel, $contrastForeground, $contrastBackground, $contrastMinimum);
+}
+
+foreach ([
+    'admin light focus ring on background' => [$adminLight['focus'], $adminLight['bg'], 3.0],
+    'admin light focus ring on surface' => [$adminLight['focus'], $adminLight['surface'], 3.0],
+    'admin light nav focus ring' => [$adminLight['focus-nav'], $adminLight['nav-bg'], 3.0],
+    'admin light input border' => [$adminLight['input-border'], $adminLight['input-bg'], 3.0],
+    'admin light button border' => [$adminLight['btn-border'], $adminLight['btn-bg'], 3.0],
+    'admin light invalid border' => [$adminLight['invalid-border'], $adminLight['input-bg'], 3.0],
+    'admin dark focus ring on background' => [$adminDark['focus'], $adminDark['bg'], 3.0],
+    'admin dark focus ring on surface' => [$adminDark['focus'], $adminDark['surface'], 3.0],
+    'admin dark nav focus ring' => [$adminDark['focus-nav'], $adminDark['nav-bg'], 3.0],
+    'admin dark input border' => [$adminDark['input-border'], $adminDark['input-bg'], 3.0],
+    'admin dark button border' => [$adminDark['btn-border'], $adminDark['btn-bg'], 3.0],
+    'admin dark invalid border' => [$adminDark['invalid-border'], $adminDark['input-bg'], 3.0],
+    'admin login light focus ring' => [$loginLight['focus'], $loginLight['bg'], 3.0],
+    'admin login light input border' => [$loginLight['input-border'], $loginLight['input-bg'], 3.0],
+    'admin login light button border' => [$loginLight['btn-border'], $loginLight['btn-bg'], 3.0],
+    'admin login dark focus ring' => [$loginDark['focus'], $loginDark['bg'], 3.0],
+    'admin login dark input border' => [$loginDark['input-border'], $loginDark['input-bg'], 3.0],
+    'admin login dark button border' => [$loginDark['btn-border'], $loginDark['btn-bg'], 3.0],
+    'public core focus ring' => ['#005fcc', '#ffffff', 3.0],
+    'public default focus ring on surface' => [$public['accent'], $public['surface'], 3.0],
+    'public default focus ring on page background' => [$public['accent'], $public['bg-main'], 3.0],
+    'public border token on surface' => [$public['border-soft'], $public['surface'], 3.0],
+    'public border token on page background' => [$public['border-soft'], $public['bg-main'], 3.0],
+] as $contrastLabel => [$contrastForeground, $contrastBackground, $contrastMinimum]) {
+    $contrastCheckPair($contrastLabel, $contrastForeground, $contrastBackground, $contrastMinimum);
+}
+
+if ($contrastFocusIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($contrastFocusIssues as $contrastFocusIssue) {
+        echo '- ' . $contrastFocusIssue . "\n";
+    }
+}
+
 echo "=== admin_field_error_guardrails ===\n";
 $adminFieldErrorIssues = [];
 $adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');

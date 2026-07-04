@@ -4,6 +4,7 @@ Tento protokol popisuje ruční ověření pro `wcag-22-aa-conformance.md`. Ruč
 
 Aktuální ruční evidence:
 
+- 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
 
@@ -77,7 +78,9 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.
 - Na 320 px jsou primární akce dosažitelné a použitelné.
-- Kontrast textu, ikon, hranic inputů, focusu a stavových prvků splňuje AA.
+- Runtime audit `contrast_focus_guardrails` prochází pro default/admin/login text, skip link, focus, hranice inputů a hranice tlačítek.
+- Ručně změřené hover, active, disabled, ikony, progress bary a custom theme settings splňují AA; u textu alespoň 4.5:1, u focusu a hranic ovládacích prvků alespoň 3:1.
+- Focus prstenec je při klávesnici viditelný na světlém i tmavém pozadí a nezaniká pod outline/box-shadow jiného prvku.
 
 ## Zápis výsledků
 
