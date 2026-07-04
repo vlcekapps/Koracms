@@ -66,7 +66,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 1.2.4 Captions (Live) | Not Applicable | Core CMS does not provide live audio/video streaming. |
 | 1.2.5 Audio Description (Prerecorded) | Partially Supports | Authors can provide descriptions, but there is no dedicated metadata workflow for audio description. |
 | 1.3.4 Orientation | Supports | CMS does not restrict screen orientation. |
-| 1.3.5 Identify Input Purpose | Partially Supports | Authentication fields are now covered for `username`, `current-password`, `new-password` and 2FA `one-time-code` metadata by runtime and HTTP integration guardrails. Contact, ordering, reservations and generated form templates still need a broader autocomplete audit. |
+| 1.3.5 Identify Input Purpose | Partially Supports | Authentication fields are covered for `username`, `current-password`, `new-password` and 2FA `one-time-code` metadata. Public contact, food order, guest reservation and generated Form Builder forms now expose guarded autocomplete metadata for name, email, phone, URL and obvious organization/name text fields. Browser autofill behavior and specialized address/payment custom fields still need manual verification. |
 | 1.4.3 Contrast (Minimum) | Partially Supports | Runtime `contrast_focus_guardrails` now measures default theme, admin layout and standalone login text/status color pairs against AA thresholds. Custom theme settings, hover/disabled states and author-supplied colors still need manual measurement. |
 | 1.4.4 Resize Text | Supports | Layouts are responsive and do not block browser zoom. |
 | 1.4.5 Images of Text | Supports | Core UI does not use images of text as controls or headings. |

@@ -8,6 +8,7 @@ Aktuální ruční evidence:
 - 2026-07-04: runtime `contrast_focus_guardrails` automaticky měří baseline kontrast pro default theme, admin layout a standalone login: textové páry, stavové hlášky, skip link, focus tokeny a hranice inputů/tlačítek. Ruční kontrastní průchod zůstává povinný pro custom theme settings, hover/disabled stavy, ikony a progress bary.
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
+- 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 
 ## Prostředí
 
@@ -31,7 +32,7 @@ Aktuální ruční evidence:
 2. Projít hlavní navigaci, vyhledávání, footer widgety a sociální odkazy jen klávesnicí.
 3. Otevřít blog index, článek s osnovou, kategorii, štítek a sérii.
 4. Odeslat komentář se správnými i chybnými hodnotami.
-5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat.
+5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill.
 6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
 7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů.
 8. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe.
@@ -74,6 +75,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Každé pole má srozumitelný label a chyba je spojena s polem.
 - Autentizační flow nevyžaduje řešení hádanek, opisování CAPTCHA ani jiný kognitivní test bez alternativy.
 - Správce hesel nabídne vyplnění veřejného i administračního přihlášení a rozpozná vytvoření nebo změnu hesla bez ručního přepisování.
+- Autofill u veřejného kontaktu, objednávkové poptávky, guest rezervace a Form Builder formuláře nenabízí zavádějící hodnoty a u běžných osobních polí rozpozná jméno, e-mail, telefon, URL nebo organizaci.
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.

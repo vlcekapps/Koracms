@@ -3050,6 +3050,11 @@ try {
     if (httpIntegrationStatusCode($contactPublicPage) !== 200 || $contactPublicCsrf === '') {
         $contactCenterIssues[] = 'veřejný kontaktní formulář nevrátil 200 nebo nevykreslil CSRF token';
     }
+    if (!httpIntegrationInputHasAttributes($contactPublicPage['body'], 'sender_name', ['autocomplete' => 'name'])
+        || !httpIntegrationInputHasAttributes($contactPublicPage['body'], 'from', ['autocomplete' => 'email'])
+        || !httpIntegrationInputHasAttributes($contactPublicPage['body'], 'captcha', ['autocomplete' => 'off'])) {
+        $contactCenterIssues[] = 'veřejný kontaktní formulář nevykreslil očekávaná autocomplete metadata';
+    }
     if (!str_contains($contactPublicPage['body'], 'name="sender_name"')) {
         $contactCenterIssues[] = 'veřejný kontaktní formulář neobsahuje volitelné jméno';
     }
@@ -6293,6 +6298,12 @@ try {
             || !str_contains($invalidFoodOrderPage['body'], 'Objednávky jsou nezávazné')) {
             $foodStructuredIssues[] = 'veřejný formulář objednávkové poptávky se nenačetl';
         }
+        if (!httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'customer_name', ['autocomplete' => 'name'])
+            || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'customer_email', ['autocomplete' => 'email'])
+            || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'customer_phone', ['autocomplete' => 'tel'])
+            || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'captcha', ['autocomplete' => 'off'])) {
+            $foodStructuredIssues[] = 'objednávkový formulář nevykreslil očekávaná autocomplete metadata';
+        }
         $invalidFoodOrderResponse = postUrl(
             $foodOrderUrl,
             [
@@ -8133,6 +8144,14 @@ try {
         'full_name' => 'HTTP Tester',
         'contact_email' => 'http.tester@example.test',
     ];
+
+    $publicFormInitialState = $fetchPublicFormState();
+    $publicFormInitialBody = (string)($publicFormInitialState['response']['body'] ?? '');
+    if (!httpIntegrationInputHasAttributes($publicFormInitialBody, 'field-full_name', ['autocomplete' => 'name'])
+        || !httpIntegrationInputHasAttributes($publicFormInitialBody, 'field-contact_email', ['autocomplete' => 'email'])
+        || !httpIntegrationInputHasAttributes($publicFormInitialBody, 'captcha', ['autocomplete' => 'off'])) {
+        $publicFormIssues[] = 'veřejný Form Builder formulář nevykreslil očekávaná autocomplete metadata';
+    }
 
     $validPublicFilePath = httpIntegrationCreatePngFixtureFile('kora-form-valid-', $createdTempFiles, 36, 36);
     $invalidPublicFilePath = httpIntegrationCreateTempFile('kora-form-text-', 'plain text attachment', $createdTempFiles);

@@ -13891,6 +13891,9 @@ if ($httpIntegrationSource === '') {
         'httpIntegrationListStoredFormUploads(',
         "'attachment' => [",
         'httpIntegrationFetchLatestFormSubmissionByFormId(',
+        'httpIntegrationInputHasAttributes($publicFormInitialBody',
+        "'field-full_name', ['autocomplete' => 'name']",
+        "'field-contact_email', ['autocomplete' => 'email']",
     ] as $publicFormsIntegrationFragment) {
         if (!str_contains($httpIntegrationSource, $publicFormsIntegrationFragment)) {
             $publicFormsHttpIssues[] = 'public forms http integration is missing fragment: ' . $publicFormsIntegrationFragment;
@@ -13912,6 +13915,12 @@ foreach ([
 if (!str_contains($formsHelperSource, 'function formDeleteUploadedFilesFromSubmissionData(')) {
     $publicFormsHttpIssues[] = 'forms helper is missing uploaded-file cleanup helper';
 }
+if (!str_contains($formsHelperSource, 'function formFieldAutocompletePurpose(')
+    || !str_contains($formsHelperSource, "return 'given-name';")
+    || !str_contains($formsHelperSource, "return 'family-name';")
+    || !str_contains($formsHelperSource, "return 'organization';")) {
+    $publicFormsHttpIssues[] = 'forms helper is missing input-purpose autocomplete mapping';
+}
 foreach ([
     "\$formErrorsId = 'form-errors-' . \$formFeedbackIdSuffix;",
     'role="alert"',
@@ -13920,6 +13929,8 @@ foreach ([
     'aria-invalid="true"',
     'field-error',
     'captcha-error',
+    'formFieldAutocompletePurpose(',
+    '\' autocomplete="\' . h($autocompletePurpose) . \'"',
 ] as $formsViewFragment) {
     if (!str_contains($formsViewSource, $formsViewFragment)) {
         $publicFormsHttpIssues[] = 'forms view is missing fragment: ' . $formsViewFragment;
@@ -17593,6 +17604,25 @@ foreach ([
 ] as $contactViewFragment) {
     if (!str_contains($themeContactViewSource, $contactViewFragment)) {
         $themeLayoutIssues[] = 'contact public form is missing topic/reference field-level fragment: ' . $contactViewFragment;
+    }
+}
+foreach ([
+    'contact sender name autocomplete' => [$themeContactViewSource, 'maxlength="255" value="<?= h($formValue(\'sender_name\')) ?>" autocomplete="name"'],
+    'contact email autocomplete' => [$themeContactViewSource, 'maxlength="255" value="<?= h($formValue(\'from\')) ?>" autocomplete="email"'],
+    'contact captcha autocomplete off' => [$themeContactViewSource, 'inputmode="numeric" autocomplete="off"<?= $fieldAttributes(\'captcha\') ?>'],
+    'food order name autocomplete' => [$themeFoodOrderViewSource, 'maxlength="255" autocomplete="name" value="<?= h($fieldValue(\'customer_name\')) ?>"'],
+    'food order email autocomplete' => [$themeFoodOrderViewSource, 'maxlength="255" autocomplete="email" value="<?= h($fieldValue(\'customer_email\')) ?>"'],
+    'food order phone autocomplete' => [$themeFoodOrderViewSource, 'maxlength="80" autocomplete="tel" value="<?= h($fieldValue(\'customer_phone\')) ?>"'],
+    'food order captcha autocomplete off' => [$themeFoodOrderViewSource, 'inputmode="numeric" autocomplete="off"<?= $fieldAttributes(\'captcha\') ?>'],
+    'reservation guest name autocomplete' => [$themeReservationsBookViewSource, 'value="<?= h($formData[\'guest_name\']) ?>" autocomplete="name"'],
+    'reservation guest email autocomplete' => [$themeReservationsBookViewSource, 'value="<?= h($formData[\'guest_email\']) ?>" autocomplete="email"'],
+    'reservation guest phone autocomplete' => [$themeReservationsBookViewSource, 'value="<?= h($formData[\'guest_phone\']) ?>" autocomplete="tel"'],
+    'reservation captcha autocomplete off' => [$themeReservationsBookViewSource, 'aria-required="true" autocomplete="off" inputmode="numeric"'],
+    'form builder autocomplete helper call' => [$themeFormsShowViewSource, 'formFieldAutocompletePurpose('],
+    'form builder escaped autocomplete token' => [$themeFormsShowViewSource, '\' autocomplete="\' . h($autocompletePurpose) . \'"'],
+] as $publicInputPurposeLabel => [$publicInputPurposeSource, $publicInputPurposeFragment]) {
+    if (!str_contains((string)$publicInputPurposeSource, (string)$publicInputPurposeFragment)) {
+        $themeLayoutIssues[] = 'public input purpose guardrail is missing ' . $publicInputPurposeLabel;
     }
 }
 foreach ([

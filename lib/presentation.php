@@ -9033,6 +9033,66 @@ function formFieldTypeLabel(string $type): string
     return formFieldTypeDefinitions()[$normalized]['label'] ?? 'Krátký text';
 }
 
+function formFieldAutocompletePurpose(string $type, string $name = '', string $label = ''): string
+{
+    $normalizedType = normalizeFormFieldType($type);
+    if ($normalizedType === 'email') {
+        return 'email';
+    }
+    if ($normalizedType === 'tel') {
+        return 'tel';
+    }
+    if ($normalizedType === 'url') {
+        return 'url';
+    }
+    if ($normalizedType !== 'text') {
+        return '';
+    }
+
+    $slug = slugify(trim($name . ' ' . $label));
+    if ($slug === '') {
+        return '';
+    }
+
+    /** @param list<string> $needles */
+    $contains = static function (string $value, array $needles): bool {
+        $wrapped = '-' . $value . '-';
+        foreach ($needles as $needle) {
+            if (str_contains($wrapped, '-' . $needle . '-')) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    if ($contains($slug, ['username', 'user-name', 'uzivatelske-jmeno', 'prihlasovaci-jmeno'])) {
+        return '';
+    }
+
+    if ($contains($slug, ['firma', 'firmy', 'spolecnost', 'organizace', 'company', 'organization', 'organisation'])) {
+        return 'organization';
+    }
+
+    if ($contains($slug, ['jmeno-a-prijmeni', 'cele-jmeno', 'vase-jmeno', 'kontaktni-osoba', 'contact-name', 'full-name', 'fullname', 'your-name'])) {
+        return 'name';
+    }
+
+    if ($contains($slug, ['krestni-jmeno', 'given-name', 'first-name', 'firstname'])) {
+        return 'given-name';
+    }
+
+    if ($contains($slug, ['prijmeni', 'family-name', 'last-name', 'lastname', 'surname'])) {
+        return 'family-name';
+    }
+
+    if ($contains($slug, ['jmeno'])) {
+        return 'name';
+    }
+
+    return '';
+}
+
 /**
  * @return list<string>
  */

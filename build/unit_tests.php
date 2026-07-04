@@ -706,6 +706,18 @@ assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook U
 assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
 assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
 
+test_section('form field autocomplete purpose');
+
+assert_equals('email', formFieldAutocompletePurpose('email', 'email_pro_odpoved', 'E-mail pro odpověď'), 'email fields expose email autocomplete');
+assert_equals('tel', formFieldAutocompletePurpose('tel', 'telefon', 'Telefon'), 'tel fields expose tel autocomplete');
+assert_equals('url', formFieldAutocompletePurpose('url', 'adresa_stranky', 'Adresa stránky'), 'url fields expose url autocomplete');
+assert_equals('name', formFieldAutocompletePurpose('text', 'full_name', 'Jméno'), 'full name text fields expose name autocomplete');
+assert_equals('given-name', formFieldAutocompletePurpose('text', 'first_name', 'Křestní jméno'), 'first name text fields expose given-name autocomplete');
+assert_equals('family-name', formFieldAutocompletePurpose('text', 'last_name', 'Příjmení'), 'last name text fields expose family-name autocomplete');
+assert_equals('organization', formFieldAutocompletePurpose('text', 'firma', 'Firma'), 'organization text fields expose organization autocomplete');
+assert_equals('', formFieldAutocompletePurpose('text', 'username', 'Uživatelské jméno'), 'username-like text fields are not treated as personal name');
+assert_equals('', formFieldAutocompletePurpose('text', 'tema_pozadavku', 'Téma požadavku'), 'generic text fields do not get autocomplete');
+
 test_section('stats referrer normalizer');
 
 $_SERVER['HTTP_HOST'] = 'pvlcek.cz';

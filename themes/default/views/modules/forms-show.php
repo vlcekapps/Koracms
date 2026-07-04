@@ -263,12 +263,14 @@ $formErrorsHeadingId = 'form-errors-heading-' . $formFeedbackIdSuffix;
                     'url' => 'url',
                     default => 'text',
                 };
-                $autocomplete = match ($fieldType) {
-                    'email' => ' autocomplete="email"',
-                    'tel' => ' autocomplete="tel"',
-                    'url' => ' autocomplete="url"',
-                    default => '',
-                };
+                $autocompletePurpose = formFieldAutocompletePurpose(
+                    $fieldType,
+                    (string)($field['name'] ?? ''),
+                    (string)($field['label'] ?? '')
+                );
+                $autocomplete = $autocompletePurpose !== ''
+                    ? ' autocomplete="' . h($autocompletePurpose) . '"'
+                    : '';
               ?>
               <div class="<?= h($fieldClass) ?>"<?= $conditionalAttributes ?><?= $conditionalHidden ?>>
                 <label for="<?= $fieldId ?>"><?= $label ?><?= $required ? ' <span aria-hidden="true">*</span>' : '' ?></label>
