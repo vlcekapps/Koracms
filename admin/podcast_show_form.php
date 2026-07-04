@@ -44,11 +44,12 @@ $categories = $pdo->query(
 )->fetchAll(\PDO::FETCH_COLUMN);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));
+$podcastShowWebsiteUrlErrorMessage = 'Web pořadu musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud web pořadu nechcete vyplnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Název pořadu je povinný.',
     'slug' => 'Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už používá jiný pořad.',
-    'url' => 'Web pořadu musí mít platný formát.',
+    'url' => $podcastShowWebsiteUrlErrorMessage,
     'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
     'feed_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
     'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
@@ -66,7 +67,7 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'title' => 'Název pořadu je povinný.',
     'slug' => 'Slug pořadu musí zůstat jedinečný.',
-    'website_url' => 'Web pořadu musí mít platný formát.',
+    'website_url' => $podcastShowWebsiteUrlErrorMessage,
     'owner_email' => 'E-mail vlastníka feedu musí mít platný formát.',
     'feed_episode_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
     'cover_image' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
@@ -137,9 +138,10 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 
     <label for="website_url">Web pořadu</label>
     <input type="url" id="website_url" name="website_url" maxlength="500"
-           <?= adminFieldAttributes('website_url', $err, $fieldErrorMap) ?>
+           <?= adminFieldAttributes('website_url', $err, $fieldErrorMap, ['podcast-show-website-url-help']) ?>
            placeholder="https://example.com/podcast"
            value="<?= h((string)$show['website_url']) ?>">
+    <small id="podcast-show-website-url-help" class="field-help">Volitelné. Zadejte http/https adresu nebo doménu bez schématu; CMS ji uloží jako https://.</small>
     <?php adminRenderFieldError('website_url', $err, $fieldErrorMap, $fieldErrorMessages['website_url']); ?>
   </fieldset>
 

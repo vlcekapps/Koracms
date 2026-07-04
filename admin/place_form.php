@@ -46,10 +46,11 @@ $categories = $pdo->query(
 )->fetchAll(\PDO::FETCH_COLUMN);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));
+$placeUrlErrorMessage = 'Webový odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud odkaz nechcete vyplnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím povinné pole názvu místa.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
-    'url' => 'Webový odkaz musí mít platný formát.',
+    'url' => $placeUrlErrorMessage,
     'email' => 'Kontaktní e-mail nemá platný formát.',
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
@@ -66,7 +67,7 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'name' => 'Název místa je povinný.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
-    'url' => 'Webový odkaz musí mít platný formát.',
+    'url' => $placeUrlErrorMessage,
     'contact_email' => 'Kontaktní e-mail nemá platný formát.',
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
     'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
@@ -160,8 +161,9 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 
     <label for="url">Web / externí odkaz</label>
     <input type="url" id="url" name="url" maxlength="500"
-           <?= adminFieldAttributes('url', $err, $fieldErrorMap) ?>
+           <?= adminFieldAttributes('url', $err, $fieldErrorMap, ['place-url-help']) ?>
            value="<?= h((string)$place['url']) ?>">
+    <small id="place-url-help" class="field-help">Volitelné. Zadejte http/https adresu nebo doménu bez schématu; CMS ji uloží jako https://.</small>
     <?php adminRenderFieldError('url', $err, $fieldErrorMap, $fieldErrorMessages['url']); ?>
 
     <div class="admin-form-grid">

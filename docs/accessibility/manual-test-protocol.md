@@ -11,6 +11,7 @@ Aktuální ruční evidence:
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
 - 2026-07-04: runtime `public_error_suggestion_guardrails` a HTTP integrace hlídají, že veřejná matematická ověřovací otázka v kontaktu, newsletteru, odběru vývěsky, Food objednávkách a Form Builderu vrací field-level chybu s konkrétním návrhem opravy. Ručně zbývá širší copy pass administračních a custom validačních hlášek.
+- 2026-07-04: runtime `admin_field_error_guardrails` hlídá, že URL chyby v administraci míst a podcastů radí použít http/https adresu, doménu bez schématu nebo prázdné volitelné pole místo obecného „platný formát“.
 
 ## Prostředí
 
@@ -67,7 +68,8 @@ p {
 8. Admin tabulky s hromadnými akcemi: media, comments, contact, chat, statistics.
 9. Upload a editace média včetně alt textu, licence a kolekce.
 10. Nastavení webu, nastavení modulů, import/export a migrace.
-11. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
+11. U míst a podcastů zadat neplatnou URL do volitelného URL pole a ověřit, že field-level chyba vysvětluje povolený http/https nebo doménový tvar a možnost pole vynechat.
+12. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
 
 ## Scénáře pro nové moduly
 

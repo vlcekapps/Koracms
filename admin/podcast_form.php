@@ -71,11 +71,12 @@ $episode = hydratePodcastEpisodePresentation($episode);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $publishInput = !empty($episode['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$episode['publish_at'])) : '';
 $err = trim((string)($_GET['err'] ?? ''));
+$podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Název epizody je povinný.',
     'slug' => 'Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.',
     'slug_taken' => 'Tento slug už v rámci pořadu používá jiná epizoda.',
-    'url' => 'Externí audio odkaz musí mít platný formát.',
+    'url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio' => 'Audio soubor se nepodařilo uložit.',
     'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
     'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
@@ -93,7 +94,7 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'title' => 'Název epizody je povinný.',
     'slug' => 'Slug epizody musí zůstat jedinečný v rámci pořadu.',
-    'audio_url' => 'Externí audio odkaz musí mít platný formát.',
+    'audio_url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio_file' => 'Audio soubor se nepodařilo uložit.',
     'image_file' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.',
     'publish_at' => 'Plánované zveřejnění má neplatný formát data a času.',
@@ -226,7 +227,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
            <?= adminFieldAttributes('audio_url', $err, $fieldErrorMap, ['podcast-episode-audio-url-help']) ?>
            placeholder="https://example.com/episode.mp3"
            value="<?= h((string)$episode['audio_url']) ?>">
-    <small id="podcast-episode-audio-url-help" class="field-help">Hodí se pro externí hosting nebo přímý odkaz na audio soubor.</small>
+    <small id="podcast-episode-audio-url-help" class="field-help">Volitelné. Hodí se pro externí hosting nebo přímý odkaz na audio soubor; zadejte http/https adresu nebo doménu bez schématu.</small>
     <?php adminRenderFieldError('audio_url', $err, $fieldErrorMap, $fieldErrorMessages['audio_url']); ?>
 
     <label for="image_file">Obrázek epizody</label>

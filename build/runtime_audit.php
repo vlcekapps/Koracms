@@ -16438,6 +16438,56 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
         }
     }
 }
+foreach ([
+    'place URL error suggestion' => [
+        'source' => $placeFormSource,
+        'required' => [
+            '$placeUrlErrorMessage',
+            'Lze zadat i doménu bez schématu; CMS ji uloží jako https://.',
+            "adminFieldAttributes('url', \$err, \$fieldErrorMap, ['place-url-help'])",
+            'id="place-url-help"',
+        ],
+        'forbidden' => [
+            'Webový odkaz musí mít platný formát.',
+        ],
+    ],
+    'podcast episode audio URL error suggestion' => [
+        'source' => $podcastEpisodeFormSource,
+        'required' => [
+            '$podcastEpisodeAudioUrlErrorMessage',
+            'Pokud používáte nahraný audio soubor, nechte pole prázdné.',
+            "adminFieldAttributes('audio_url', \$err, \$fieldErrorMap, ['podcast-episode-audio-url-help'])",
+            'id="podcast-episode-audio-url-help"',
+        ],
+        'forbidden' => [
+            'Externí audio odkaz musí mít platný formát.',
+        ],
+    ],
+    'podcast show website URL error suggestion' => [
+        'source' => $podcastShowFormSource,
+        'required' => [
+            '$podcastShowWebsiteUrlErrorMessage',
+            'Pokud web pořadu nechcete vyplnit, nechte pole prázdné.',
+            "adminFieldAttributes('website_url', \$err, \$fieldErrorMap, ['podcast-show-website-url-help'])",
+            'id="podcast-show-website-url-help"',
+        ],
+        'forbidden' => [
+            'Web pořadu musí mít platný formát.',
+        ],
+    ],
+] as $adminErrorSuggestionLabel => $adminErrorSuggestionSpec) {
+    $adminErrorSuggestionSource = (string)$adminErrorSuggestionSpec['source'];
+    foreach ($adminErrorSuggestionSpec['required'] as $adminErrorSuggestionRequiredFragment) {
+        if (!str_contains($adminErrorSuggestionSource, $adminErrorSuggestionRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminErrorSuggestionLabel . ' is missing actionable URL fragment: ' . $adminErrorSuggestionRequiredFragment;
+        }
+    }
+    foreach ($adminErrorSuggestionSpec['forbidden'] as $adminErrorSuggestionForbiddenFragment) {
+        if (str_contains($adminErrorSuggestionSource, $adminErrorSuggestionForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminErrorSuggestionLabel . ' still contains generic URL validation copy';
+        }
+    }
+}
 if (str_contains($pageFormSource, 'title="Pouze malá písmena, číslice a pomlčky"')) {
     $adminFieldErrorIssues[] = 'page slug field still relies on title tooltip for pattern help';
 }
