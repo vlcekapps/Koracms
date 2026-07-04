@@ -14,6 +14,7 @@ Aktuální ruční evidence:
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá, že URL chyby v administraci míst a podcastů radí použít http/https adresu, doménu bez schématu nebo prázdné volitelné pole místo obecného „platný formát“.
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá také plánovací datum/čas chyby u stránek, článků, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod. Text musí poradit výběr platné hodnoty v poli datum/čas, prázdné volitelné plánování, odstranění prázdného řádku nebo opravu pořadí začátku/konce.
 - 2026-07-04: runtime `admin_field_error_guardrails` hlídá také vybrané administrační e-mailové chyby. Text musí poradit úplnou adresu ve tvaru `jmeno@example.cz`, prázdné volitelné pole nebo jedinečnost přihlašovací adresy.
+- 2026-07-04: runtime `admin_field_error_guardrails` hlídá také běžné datumové chyby ve vývěsce, jídelních lístcích a položkách ke stažení. Text musí poradit výběr kalendářního data, prázdné volitelné pole nebo opravu pořadí od/do; datum vydání u downloadů musí mít field-level chybu přes `aria-describedby`.
 
 ## Prostředí
 
@@ -72,8 +73,9 @@ p {
 10. Nastavení webu, nastavení modulů, import/export a migrace.
 11. U míst a podcastů zadat neplatnou URL do volitelného URL pole a ověřit, že field-level chyba vysvětluje povolený http/https nebo doménový tvar a možnost pole vynechat.
 12. U administračních e-mailových polí zadat neúplnou hodnotu bez domény nebo zavináče a ověřit, že chyba radí úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
-13. U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů zadat neplatnou datum/čas hodnotu a ověřit, že chyba radí použít ovladač datum/čas, nechat volitelné pole prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
-14. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
+13. U běžných datumových polí ve vývěsce, jídelních lístcích a downloadech zadat neplatné datum a ověřit, že chyba radí kalendářní datum, prázdné volitelné pole nebo opravu pořadí od/do; u data vydání ověřit i field-level chybu a `aria-describedby`.
+14. U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů zadat neplatnou datum/čas hodnotu a ověřit, že chyba radí použít ovladač datum/čas, nechat volitelné pole prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
+15. Při 320 px šířce a 400 % zoomu ověřit, že admin navigace nepřekrývá hlavní obsah, tabulky rolují jen ve své ose, dlouhé fieldsety nevyvolávají horizontální scroll hlavního obsahu, action rows zůstávají ovladatelné a focus není schovaný mimo viditelný scroll; po 320px ověření hlavních hustých tabulek a reprezentativních dlouhých formulářů pokračovat hlavně přes 400 % zoom, custom moduly, sticky/anchor skoky a keyboard-only/NVDA kombinace.
 
 ## Scénáře pro nové moduly
 

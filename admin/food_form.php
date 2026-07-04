@@ -36,13 +36,16 @@ $card = $card ?: [
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
+$foodValidFromErrorMessage = 'Datum „Platí od“ musí být platné kalendářní datum. Vyberte datum v poli Platí od nebo pole nechte prázdné.';
+$foodValidToErrorMessage = 'Datum „Platí do“ musí být platné kalendářní datum. Vyberte datum v poli Platí do nebo pole nechte prázdné.';
+$foodValidRangeErrorMessage = 'Datum „Platí do“ nesmí být dříve než datum „Platí od“. Upravte jedno z dat nebo datum „Platí do“ nechte prázdné.';
 $foodOrderEmailErrorMessage = 'E-mail pro objednávky musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím název lístku.',
     'slug' => 'Slug lístku je povinný a musí být unikátní.',
-    'valid_from' => 'Datum „Platí od“ má neplatný formát.',
-    'valid_to' => 'Datum „Platí do“ má neplatný formát.',
-    'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+    'valid_from' => $foodValidFromErrorMessage,
+    'valid_to' => $foodValidToErrorMessage,
+    'valid_range' => $foodValidRangeErrorMessage,
     'order_email' => $foodOrderEmailErrorMessage,
     default => '',
 };
@@ -57,9 +60,9 @@ $fieldErrorMap = [
 $fieldErrorMessages = [
     'title' => 'Název lístku je povinný.',
     'slug' => 'Slug lístku je povinný a musí být unikátní.',
-    'valid_from' => 'Datum „Platí od“ má neplatný formát.',
-    'valid_to' => 'Datum „Platí do“ má neplatný formát.',
-    'valid_range' => 'Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+    'valid_from' => $foodValidFromErrorMessage,
+    'valid_to' => $foodValidToErrorMessage,
+    'valid_range' => $foodValidRangeErrorMessage,
     'order_email' => $foodOrderEmailErrorMessage,
 ];
 

@@ -1047,6 +1047,8 @@ Validační hlášky v administraci mají u známých oprav říkat, jak pokrač
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
 
+Běžná datumová pole ve vývěsce, jídelních lístcích a položkách ke stažení nepředpokládají ruční znalost formátu. Chyba má správci poradit výběr kalendářního data, prázdné volitelné pole nebo opravu pořadí od/do; datum vydání u downloadů má field-level chybu napojenou přes `aria-describedby`.
+
 U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů CMS nepředpokládá ruční znalost formátu. Pokud prohlížeč pošle neplatnou hodnotu, chyba má správci poradit, aby znovu vybral datum a čas v ovládacím prvku, volitelné plánování nechal prázdné, odstranil prázdný řádek nebo opravil pořadí začátku a konce.
 
 Vývojové kontroly:

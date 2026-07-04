@@ -55,6 +55,7 @@ $downloadSeriesOptions = $pdo->query(
 $downloadTypes = downloadTypeDefinitions();
 $editorMode = getSetting('content_editor', 'html');
 $err = trim((string)($_GET['err'] ?? ''));
+$downloadReleaseDateErrorMessage = 'Datum vydání musí být platné kalendářní datum. Vyberte datum v poli Datum vydání nebo pole nechte prázdné.';
 $errorMessage = match ($err) {
     'required' => 'Název položky je povinný.',
     'slug' => 'Slug položky musí obsahovat alespoň jedno písmeno nebo číslo.',
@@ -62,19 +63,25 @@ $errorMessage = match ($err) {
     'source' => 'Nahrajte soubor, vyplňte externí odkaz, nebo použijte obojí.',
     'url' => 'Externí odkaz musí být platná adresa začínající na http:// nebo https://.',
     'project_url' => 'Domovská stránka projektu musí být platná adresa začínající na http:// nebo https://.',
-    'release_date' => 'Datum vydání nemá platný formát.',
+    'release_date' => $downloadReleaseDateErrorMessage,
     'series' => 'Vybraná série ke stažení neexistuje.',
     'checksum' => 'SHA-256 checksum musí obsahovat 64 hexadecimálních znaků.',
     'image' => 'Náhledový obrázek se nepodařilo uložit.',
     'file' => 'Soubor se nepodařilo uložit nebo má nepovolený formát.',
     default => '',
 };
+$fieldErrorMap = [
+    'release_date' => ['release_date'],
+];
+$fieldErrorMessages = [
+    'release_date' => $downloadReleaseDateErrorMessage,
+];
 
 adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení');
 ?>
 
 <?php if ($errorMessage !== ''): ?>
-  <p class="error" role="alert"><?= h($errorMessage) ?></p>
+  <p class="error" role="alert" id="form-error"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
 <?php if ($id !== null): ?>
@@ -86,7 +93,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   Vytvořte přehlednou kartu ke stažení. Položka může mít lokální soubor, externí odkaz třeba na GitHub Releases, nebo obojí zároveň.
 </p>
 
-<form method="post" action="download_save.php" enctype="multipart/form-data" novalidate>
+<form method="post" action="download_save.php" enctype="multipart/form-data" novalidate<?= $errorMessage !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$id ?>">
@@ -183,7 +190,10 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
     <label for="release_date">Datum vydání</label>
     <input type="date" id="release_date" name="release_date"
+           <?= adminFieldAttributes('release_date', $err, $fieldErrorMap, ['download-release-date-help'], 'download-release-date-error') ?>
            value="<?= h((string)$download['release_date']) ?>">
+    <small id="download-release-date-help" class="field-help">Volitelné. Použijte kalendářní datum vydání položky nebo pole nechte prázdné.</small>
+    <?php adminRenderFieldError('release_date', $err, $fieldErrorMap, $fieldErrorMessages['release_date'], 'download-release-date-error'); ?>
 
     <label for="platform_label">Platforma / cílové prostředí</label>
     <input type="text" id="platform_label" name="platform_label" maxlength="100"

@@ -14763,6 +14763,7 @@ $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/co
 $contactMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_message.php');
 $contactTopicsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_topics.php');
 $contactReplySource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_reply.php');
+$downloadFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
 $downloadsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/events.php');
 $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
@@ -16421,6 +16422,7 @@ $adminFieldErrorForms = [
     'poll form' => [$pollFormValidationSource, "adminFieldAttributes('question'", "adminFieldAttributes('start_date'", "poll-options-error"],
     'form builder' => [$formBuilderSource, "adminFieldAttributes('title'", "adminFieldAttributes('notification_email'", "adminFieldAttributes('webhook_url'"],
     'board form' => [$boardFormSource, "adminFieldAttributes('posted_date'", "adminFieldAttributes('board_image'", "adminFieldAttributes('file'"],
+    'download form' => [$downloadFormSource, "adminFieldAttributes('release_date'", "adminRenderFieldError('release_date'", 'download-release-date-help'],
     'event form' => [$eventFormSource, "adminFieldAttributes('event_date'", "adminFieldAttributes('registration_url'", "adminFieldAttributes('unpublish_at'"],
     'place form' => [$placeFormSource, "adminFieldAttributes('latitude'", "adminFieldAttributes('contact_email'", "adminFieldAttributes('place_image'"],
     'podcast episode form' => [$podcastEpisodeFormSource, "adminFieldAttributes('audio_url'", "adminFieldAttributes('image_file'", "adminFieldAttributes('publish_at'"],
@@ -16707,6 +16709,62 @@ foreach ([
     foreach ($adminDateTimeSuggestionSpec['forbidden'] as $adminDateTimeForbiddenFragment) {
         if (str_contains($adminDateTimeSuggestionSource, $adminDateTimeForbiddenFragment)) {
             $adminFieldErrorIssues[] = $adminDateTimeSuggestionLabel . ' still contains generic date/time validation copy';
+        }
+    }
+}
+foreach ([
+    'food validity date error suggestion' => [
+        'source' => $foodFormSource,
+        'required' => [
+            '$foodValidFromErrorMessage',
+            '$foodValidToErrorMessage',
+            '$foodValidRangeErrorMessage',
+            'Vyberte datum v poli Platí od nebo pole nechte prázdné.',
+            'Vyberte datum v poli Platí do nebo pole nechte prázdné.',
+            'Upravte jedno z dat nebo datum „Platí do“ nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Datum „Platí od“ má neplatný formát.',
+            'Datum „Platí do“ má neplatný formát.',
+        ],
+    ],
+    'board visibility date error suggestion' => [
+        'source' => $boardFormSource,
+        'required' => [
+            '$boardPostedDateErrorMessage',
+            '$boardRemovalDateErrorMessage',
+            '$boardDateRangeErrorMessage',
+            'Vyberte datum v poli Datum vyvěšení.',
+            'Vyberte datum v poli Datum sejmutí nebo pole nechte prázdné.',
+            'Upravte jedno z dat nebo datum sejmutí nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Zadejte platné datum vyvěšení.',
+            'Zadejte platné datum sejmutí.',
+        ],
+    ],
+    'download release date error suggestion' => [
+        'source' => $downloadFormSource,
+        'required' => [
+            '$downloadReleaseDateErrorMessage',
+            "adminFieldAttributes('release_date', \$err, \$fieldErrorMap, ['download-release-date-help'], 'download-release-date-error')",
+            "adminRenderFieldError('release_date', \$err, \$fieldErrorMap, \$fieldErrorMessages['release_date'], 'download-release-date-error')",
+            'Datum vydání musí být platné kalendářní datum. Vyberte datum v poli Datum vydání nebo pole nechte prázdné.',
+        ],
+        'forbidden' => [
+            'Datum vydání nemá platný formát.',
+        ],
+    ],
+] as $adminDateSuggestionLabel => $adminDateSuggestionSpec) {
+    $adminDateSuggestionSource = (string)$adminDateSuggestionSpec['source'];
+    foreach ($adminDateSuggestionSpec['required'] as $adminDateRequiredFragment) {
+        if (!str_contains($adminDateSuggestionSource, $adminDateRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminDateSuggestionLabel . ' is missing actionable date fragment: ' . $adminDateRequiredFragment;
+        }
+    }
+    foreach ($adminDateSuggestionSpec['forbidden'] as $adminDateForbiddenFragment) {
+        if (str_contains($adminDateSuggestionSource, $adminDateForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminDateSuggestionLabel . ' still contains generic date validation copy';
         }
     }
 }

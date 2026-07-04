@@ -5058,7 +5058,7 @@ try {
         $boardIssues[] = 'neplatné datum vývěsky vytvořilo záznam v databázi';
     }
     $invalidBoardPage = fetchUrl($baseUrl . BASE_URL . '/admin/board_form.php?err=posted_date', $adminSession['cookie'], 0);
-    if (!str_contains($invalidBoardPage['body'], 'Zadejte platné datum vyvěšení.')) {
+    if (!str_contains($invalidBoardPage['body'], 'Datum vyvěšení musí být platné kalendářní datum. Vyberte datum v poli Datum vyvěšení.')) {
         $boardIssues[] = 'neplatné datum vývěsky nezobrazilo validační zprávu';
     }
     if (!httpIntegrationFieldHasAriaInvalid($invalidBoardPage['body'], 'posted_date')) {
