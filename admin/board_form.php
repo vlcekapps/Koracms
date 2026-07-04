@@ -57,6 +57,7 @@ $boardContactEmailErrorMessage = 'Kontaktní e-mail musí být úplná adresa ve
 $boardPostedDateErrorMessage = 'Datum vyvěšení musí být platné kalendářní datum. Vyberte datum v poli Datum vyvěšení.';
 $boardRemovalDateErrorMessage = 'Datum sejmutí musí být platné kalendářní datum. Vyberte datum v poli Datum sejmutí nebo pole nechte prázdné.';
 $boardDateRangeErrorMessage = 'Datum sejmutí nesmí být dříve než datum vyvěšení. Upravte jedno z dat nebo datum sejmutí nechte prázdné.';
+$boardImageUploadErrorMessage = 'Obrázek oznámení se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
     'posted_date' => $boardPostedDateErrorMessage,
@@ -65,7 +66,7 @@ $formError = match ($err) {
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => $boardContactEmailErrorMessage,
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+    'image' => $boardImageUploadErrorMessage,
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
     default => '',
 };
@@ -89,7 +90,7 @@ $fieldErrorMessages = [
     'slug' => 'Slug položky je povinný a musí být unikátní.',
     'category' => 'Vybraná kategorie neexistuje.',
     'contact_email' => $boardContactEmailErrorMessage,
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+    'image' => $boardImageUploadErrorMessage,
     'file' => 'Přílohu se nepodařilo nahrát nebo má nepovolený formát.',
 ];
 
@@ -253,7 +254,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <input type="file" id="board_image" name="board_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            <?= adminFieldAttributes('board_image', $err, $fieldErrorMap, array_filter(['board-image-help', !empty($document['image_file']) ? 'board-image-current' : ''])) ?>
            >
-    <small id="board-image-help" class="field-help">Hodí se pro parte, ztracené zvíře, plakát nebo ilustrační fotku oznámení.</small>
+    <small id="board-image-help" class="field-help">Hodí se pro parte, ztracené zvíře, plakát nebo ilustrační fotku oznámení. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá.</small>
     <?php adminRenderFieldError('board_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if (!empty($document['image_file'])): ?>
       <small id="board-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>

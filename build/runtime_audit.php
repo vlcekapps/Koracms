@@ -16422,7 +16422,7 @@ $adminFieldErrorForms = [
     'poll form' => [$pollFormValidationSource, "adminFieldAttributes('question'", "adminFieldAttributes('start_date'", "poll-options-error"],
     'form builder' => [$formBuilderSource, "adminFieldAttributes('title'", "adminFieldAttributes('notification_email'", "adminFieldAttributes('webhook_url'"],
     'board form' => [$boardFormSource, "adminFieldAttributes('posted_date'", "adminFieldAttributes('board_image'", "adminFieldAttributes('file'"],
-    'download form' => [$downloadFormSource, "adminFieldAttributes('file'", "adminFieldAttributes('external_url'", "adminFieldAttributes('project_url'", "adminFieldAttributes('release_date'", "adminFieldAttributes('checksum_sha256'"],
+    'download form' => [$downloadFormSource, "adminFieldAttributes('file'", "adminFieldAttributes('external_url'", "adminFieldAttributes('project_url'", "adminFieldAttributes('release_date'", "adminFieldAttributes('checksum_sha256'", "adminFieldAttributes('download_image'"],
     'event form' => [$eventFormSource, "adminFieldAttributes('event_date'", "adminFieldAttributes('registration_url'", "adminFieldAttributes('unpublish_at'"],
     'place form' => [$placeFormSource, "adminFieldAttributes('latitude'", "adminFieldAttributes('contact_email'", "adminFieldAttributes('place_image'"],
     'podcast episode form' => [$podcastEpisodeFormSource, "adminFieldAttributes('audio_url'", "adminFieldAttributes('image_file'", "adminFieldAttributes('publish_at'"],
@@ -16440,6 +16440,87 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
     foreach ($formFragments as $requiredFragment) {
         if (!str_contains($formSource, $requiredFragment)) {
             $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
+        }
+    }
+}
+foreach ([
+    'blog article image upload error suggestion' => [
+        'source' => $blogFormSource,
+        'required' => [
+            '$blogImageUploadErrorMessage',
+            "adminFieldAttributes('image', \$err, \$fieldErrorMap, array_filter(['blog-image-help'",
+            "adminRenderFieldError('image'",
+            'SVG a jiné formáty CMS nepřijímá',
+            'Pokud obrázek nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.',
+        ],
+    ],
+    'board image upload error suggestion' => [
+        'source' => $boardFormSource,
+        'required' => [
+            '$boardImageUploadErrorMessage',
+            "adminFieldAttributes('board_image'",
+            "adminRenderFieldError('board_image'",
+            'SVG a jiné formáty CMS nepřijímá',
+            'Pokud obrázek nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+        ],
+    ],
+    'download preview image upload error suggestion' => [
+        'source' => $downloadFormSource,
+        'required' => [
+            '$downloadImageUploadErrorMessage',
+            "adminFieldAttributes('download_image', \$err, \$fieldErrorMap, \$downloadImageHelpIds, 'download-image-error')",
+            "adminRenderFieldError('download_image'",
+            'id="download-image-help"',
+            'id="download-image-current"',
+            'SVG a jiné formáty CMS nepřijímá',
+            'Pokud obrázek nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Náhledový obrázek se nepodařilo uložit.',
+        ],
+    ],
+    'event image upload error suggestion' => [
+        'source' => $eventFormSource,
+        'required' => [
+            '$eventImageUploadErrorMessage',
+            "adminFieldAttributes('event_image'",
+            "adminRenderFieldError('event_image'",
+            'SVG a jiné formáty CMS nepřijímá',
+            'Pokud obrázek nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Obrázek události se nepodařilo uložit.',
+        ],
+    ],
+    'place image upload error suggestion' => [
+        'source' => $placeFormSource,
+        'required' => [
+            '$placeImageUploadErrorMessage',
+            "adminFieldAttributes('place_image'",
+            "adminRenderFieldError('place_image'",
+            'SVG a jiné formáty CMS nepřijímá',
+            'Pokud obrázek nechcete měnit, nechte pole prázdné.',
+        ],
+        'forbidden' => [
+            'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+        ],
+    ],
+] as $adminImageSuggestionLabel => $adminImageSuggestionSpec) {
+    $adminImageSuggestionSource = (string)$adminImageSuggestionSpec['source'];
+    foreach ($adminImageSuggestionSpec['required'] as $adminImageRequiredFragment) {
+        if (!str_contains($adminImageSuggestionSource, $adminImageRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminImageSuggestionLabel . ' is missing actionable image upload fragment: ' . $adminImageRequiredFragment;
+        }
+    }
+    foreach ($adminImageSuggestionSpec['forbidden'] as $adminImageForbiddenFragment) {
+        if (str_contains($adminImageSuggestionSource, $adminImageForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminImageSuggestionLabel . ' still contains generic image upload validation copy';
         }
     }
 }

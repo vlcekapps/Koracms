@@ -1051,6 +1051,8 @@ Běžná datumová pole ve vývěsce, jídelních lístcích a položkách ke st
 
 Položky ke stažení mají stejný field-level pattern i pro zdroj a metadata souboru. Pokud chybí lokální soubor i externí odkaz, formulář vysvětlí obě použitelné cesty. Neplatná externí URL nebo domovská stránka projektu radí `http://`/`https://` adresu nebo doménu bez schématu a u volitelné domovské stránky i možnost nechat pole prázdné. SHA-256 checksum radí přesných 64 znaků `0-9` a `a-f`, připomíná ignorování mezer a automatický dopočet u lokálního souboru.
 
+Obrazové uploady v článcích, vývěsce, událostech, místech a položkách ke stažení mají správci poradit povolené formáty JPEG, PNG, GIF nebo WebP, zákaz SVG a možnost volitelné pole neměnit. Náhledový obrázek u downloadů používá stejné field-level `aria-describedby` napojení jako ostatní validační chyby.
+
 U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů CMS nepředpokládá ruční znalost formátu. Pokud prohlížeč pošle neplatnou hodnotu, chyba má správci poradit, aby znovu vybral datum a čas v ovládacím prvku, volitelné plánování nechal prázdné, odstranil prázdný řádek nebo opravil pořadí začátku a konce.
 
 Vývojové kontroly:

@@ -314,6 +314,7 @@ $fieldErrorMap = [
 $blogPublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.';
 $blogUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $blogPublishRangeErrorMessage = 'Plánované zrušení publikace musí být později než plánované publikování. Upravte jeden z časů nebo zrušení publikace nechte prázdné.';
+$blogImageUploadErrorMessage = 'Náhledový obrázek se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $fieldErrorMessages = [
     'title' => 'Vyplňte prosím název článku.',
     'content' => 'Vyplňte prosím obsah článku.',
@@ -327,7 +328,7 @@ $fieldErrorMessages = [
     'series_target' => 'Vybraná série článků nepatří do cílového blogu.',
     'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
     'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
-    'image_upload' => 'Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.',
+    'image_upload' => $blogImageUploadErrorMessage,
 ];
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
@@ -416,7 +417,7 @@ adminHeader($pageTitle);
 <?php elseif ($err === 'missing_tags_action'): ?>
   <p role="alert" class="error" id="form-error">Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
 <?php elseif ($err === 'image_upload'): ?>
-  <p role="alert" class="error" id="form-error">Náhledový obrázek se nepodařilo uložit. Použijte JPEG, PNG, GIF nebo WebP.</p>
+  <p role="alert" class="error" id="form-error"><?= h($blogImageUploadErrorMessage) ?></p>
 <?php endif; ?>
 
 <form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>
@@ -634,12 +635,11 @@ adminHeader($pageTitle);
 
     <label for="image">Náhledový obrázek</label>
     <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
-           <?= adminFieldAttributes('image', $err, $fieldErrorMap, [!empty($article['image_file']) ? 'blog-image-current' : 'blog-image-help'], 'blog-image-error') ?>>
+           <?= adminFieldAttributes('image', $err, $fieldErrorMap, array_filter(['blog-image-help', !empty($article['image_file']) ? 'blog-image-current' : '']), 'blog-image-error') ?>>
+    <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá.</small>
     <?php if (!empty($article['image_file'])): ?>
       <small id="blog-image-current" class="field-help">Aktuální obrázek: <a href="<?= BASE_URL ?>/uploads/articles/<?= rawurlencode((string)$article['image_file']) ?>"
              target="_blank" rel="noopener noreferrer"><?= h((string)$article['image_file']) ?><?= newWindowLinkSrOnlySuffix() ?></a>.</small>
-    <?php else: ?>
-      <small id="blog-image-help" class="field-help">Volitelné. Hodí se pro úvodní náhled článku.</small>
     <?php endif; ?>
     <?php adminRenderFieldError('image', $err, $fieldErrorMap, $fieldErrorMessages['image_upload'], 'blog-image-error'); ?>
     <?php if (!empty($article['image_file'])): ?>

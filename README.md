@@ -466,6 +466,8 @@ Běžná datumová pole ve vývěsce, jídelních lístcích a položkách ke st
 
 Zdroj, externí odkaz, domovská stránka projektu, upload souboru a SHA-256 checksum u položek ke stažení mají field-level chyby s konkrétní opravou. Texty vysvětlují lokální soubor versus externí URL, povolený http/https nebo doménový tvar, prázdné volitelné URL pole a přesný 64znakový checksum; runtime audit hlídá, aby se nevrátily obecné validační hlášky.
 
+Vybrané obrazové uploady v administraci článků, vývěsky, událostí, míst a položek ke stažení radí povolené formáty JPEG, PNG, GIF nebo WebP, výslovně říkají, že SVG a jiné formáty CMS nepřijímá, a připomínají možnost nechat volitelné obrazové pole prázdné. Runtime audit hlídá i field-level napojení náhledového obrázku u downloadů.
+
 Stejný princip platí pro plánování publikace a časové rozsahy. U článků, stránek, novinek, událostí, anket, rezervačních zdrojů a podcastových epizod chybové hlášky vysvětlují, že má správce vybrat platnou hodnotu v poli datum/čas, volitelné plánování nechat prázdné, odstranit prázdný řádek nebo opravit pořadí začátku a konce.
 
 Návrat po přihlášení do administrace používá bezpečný redirect jen pro interní administrační cíle a potvrzení migrace. Veřejné interní cesty, externí URL, protocol-relative URL i pokusy o smyčku zpět na login nebo 2FA se zahodí a použije se dashboard administrace. Unit testy i runtime audit hlídají, aby se z tohoto helperu nestal otevřený redirect.

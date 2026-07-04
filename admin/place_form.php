@@ -48,13 +48,14 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));
 $placeUrlErrorMessage = 'Webový odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud odkaz nechcete vyplnit, nechte pole prázdné.';
 $placeContactEmailErrorMessage = 'Kontaktní e-mail místa musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
+$placeImageUploadErrorMessage = 'Hlavní obrázek místa se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím povinné pole názvu místa.',
     'slug' => 'Slug místa je povinný a musí být unikátní.',
     'url' => $placeUrlErrorMessage,
     'email' => $placeContactEmailErrorMessage,
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+    'image' => $placeImageUploadErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
@@ -71,7 +72,7 @@ $fieldErrorMessages = [
     'url' => $placeUrlErrorMessage,
     'contact_email' => $placeContactEmailErrorMessage,
     'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
-    'image' => 'Obrázek se nepodařilo nahrát. Použijte JPEG, PNG, GIF nebo WebP.',
+    'image' => $placeImageUploadErrorMessage,
 ];
 
 adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
@@ -225,7 +226,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <input type="file" id="place_image" name="place_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            <?= adminFieldAttributes('place_image', $err, $fieldErrorMap, array_filter(['place-image-help', !empty($place['image_file']) ? 'place-image-current' : ''])) ?>
            >
-    <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát k lokalitě.</small>
+    <small id="place-image-help" class="field-help">Hodí se pro fotku místa, ilustrační snímek nebo plakát k lokalitě. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá.</small>
     <?php adminRenderFieldError('place_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if (!empty($place['image_file'])): ?>
       <small id="place-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>

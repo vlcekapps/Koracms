@@ -87,13 +87,14 @@ $err = trim((string)($_GET['err'] ?? ''));
 $eventPublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.';
 $eventUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $eventOrganizerEmailErrorMessage = 'E-mail pořadatele musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
+$eventImageUploadErrorMessage = 'Obrázek události se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
     'required' => 'Vyplňte prosím všechna povinná pole. Událost musí mít název a datum začátku.',
     'slug' => 'Slug události je povinný a musí být unikátní.',
     'dates' => 'Konec akce nesmí být dříve než její začátek.',
     'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
-    'image' => 'Obrázek události se nepodařilo uložit.',
+    'image' => $eventImageUploadErrorMessage,
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Vyberte platný typ akce.',
@@ -121,7 +122,7 @@ $fieldErrorMessages = [
     'dates' => 'Konec akce nesmí být dříve než její začátek.',
     'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
-    'image' => 'Obrázek události se nepodařilo uložit.',
+    'image' => $eventImageUploadErrorMessage,
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Vyberte platný typ akce.',
@@ -350,7 +351,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <input type="file" id="event_image" name="event_image" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
            <?= adminFieldAttributes('event_image', $err, $fieldErrorMap, array_filter(['event-image-help', (string)$event['image_file'] !== '' ? 'event-image-current' : ''])) ?>
            >
-    <small id="event-image-help" class="field-help">Volitelné. Hodí se pro přehled akcí, detail události i sdílení na webu.</small>
+    <small id="event-image-help" class="field-help">Volitelné. Hodí se pro přehled akcí, detail události i sdílení na webu. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá.</small>
     <?php adminRenderFieldError('event_image', $err, $fieldErrorMap, $fieldErrorMessages['image']); ?>
     <?php if ((string)$event['image_url'] !== ''): ?>
       <div class="admin-preview-block">
