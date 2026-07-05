@@ -5,6 +5,16 @@ requireCapability('settings_manage', 'Přístup odepřen. Pro správu přesměro
 $pdo = db_connect();
 $success = '';
 $error   = '';
+$redirectFieldErrors = [];
+$redirectFieldErrorMessages = [
+    'old_path' => 'Zadejte interní cestu bez domény, která začíná jedním lomítkem, například /stara-stranka.',
+    'new_path' => 'Zadejte interní cestu začínající lomítkem, nebo úplnou http/https adresu bez přihlašovacích údajů.',
+];
+$redirectForm = [
+    'old_path' => '',
+    'new_path' => '',
+    'status_code' => 301,
+];
 
 $editId = inputInt('get', 'edit');
 
@@ -12,21 +22,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $oldPathInput = trim((string)($_POST['old_path'] ?? ''));
     $newPathInput = trim((string)($_POST['new_path'] ?? ''));
+    $redirectForm = [
+        'old_path' => $oldPathInput,
+        'new_path' => $newPathInput,
+        'status_code' => in_array((int)($_POST['status_code'] ?? 301), [301, 302], true) ? (int)$_POST['status_code'] : 301,
+    ];
     $oldPath = internalRedirectTarget($oldPathInput, '');
     $newPath = storedRedirectTarget($newPathInput, '');
-    $statusCode = in_array((int)($_POST['status_code'] ?? 301), [301, 302], true) ? (int)$_POST['status_code'] : 301;
+    $statusCode = (int)$redirectForm['status_code'];
     $updateId   = inputInt('post', 'update_id');
 
     if ($oldPathInput === '') {
-        $error = 'Stará cesta je povinná.';
+        $error = 'Přesměrování nejde uložit bez staré cesty. U pole Stará cesta je konkrétní nápověda.';
+        $redirectFieldErrors[] = 'old_path';
     } elseif ($oldPath === '') {
-        $error = 'Stará cesta musí být interní cesta v rámci tohoto webu a začínat lomítkem.';
+        $error = 'Stará cesta přesměrování není použitelná. U pole Stará cesta je konkrétní nápověda.';
+        $redirectFieldErrors[] = 'old_path';
     } elseif ($newPathInput === '') {
-        $error = 'Nová cesta je povinná.';
+        $error = 'Přesměrování nejde uložit bez nové cesty. U pole Nová cesta je konkrétní nápověda.';
+        $redirectFieldErrors[] = 'new_path';
     } elseif ($newPath === '') {
-        $error = 'Nová cesta musí být interní cesta nebo úplná adresa začínající http:// či https:// bez přihlašovacích údajů.';
+        $error = 'Nová cesta přesměrování není použitelná. U pole Nová cesta je konkrétní nápověda.';
+        $redirectFieldErrors[] = 'new_path';
     } elseif ($oldPath === $newPath) {
-        $error = 'Stará a nová cesta nesmí být stejné.';
+        $error = 'Stará a nová cesta přesměrování se nesmí shodovat. U obou polí je konkrétní nápověda.';
+        $redirectFieldErrors = ['old_path', 'new_path'];
     } elseif ($updateId !== null) {
         try {
             $pdo->prepare("UPDATE cms_redirects SET old_path = ?, new_path = ?, status_code = ? WHERE id = ?")
@@ -34,7 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Přesměrování uloženo.';
             $editId = null;
         } catch (\PDOException $e) {
-            $error = str_contains($e->getMessage(), 'Duplicate') ? 'Přesměrování pro tuto cestu už existuje.' : 'Chyba při ukládání.';
+            $error = str_contains($e->getMessage(), 'Duplicate')
+                ? 'Přesměrování pro tuto starou cestu už existuje. U pole Stará cesta je konkrétní nápověda.'
+                : 'Přesměrování se nepodařilo uložit. Zkontrolujte zadané cesty a zkuste to znovu.';
+            $redirectFieldErrors = str_contains($e->getMessage(), 'Duplicate') ? ['old_path'] : ['old_path', 'new_path'];
         }
     } else {
         try {
@@ -43,7 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Přesměrování přidáno.';
             logAction('redirect_add', "old={$oldPath} new={$newPath} status={$statusCode}");
         } catch (\PDOException $e) {
-            $error = str_contains($e->getMessage(), 'Duplicate') ? 'Přesměrování pro tuto cestu už existuje.' : 'Chyba při ukládání.';
+            $error = str_contains($e->getMessage(), 'Duplicate')
+                ? 'Přesměrování pro tuto starou cestu už existuje. U pole Stará cesta je konkrétní nápověda.'
+                : 'Přesměrování se nepodařilo uložit. Zkontrolujte zadané cesty a zkuste to znovu.';
+            $redirectFieldErrors = str_contains($e->getMessage(), 'Duplicate') ? ['old_path'] : ['old_path', 'new_path'];
         }
     }
 }
@@ -68,29 +94,33 @@ $redirects = $pdo->query("SELECT * FROM cms_redirects ORDER BY old_path")->fetch
 adminHeader('Přesměrování (301/302)');
 ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="redirect-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="admin-description">Spravujte přesměrování starých URL na nové. Užitečné po importu obsahu z jiného webu nebo po změně slug adresy.</p>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' ? ' aria-describedby="redirect-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nové přesměrování</legend>
 
     <label for="old_path">Stará cesta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="old_path" name="old_path" required aria-required="true" maxlength="500"
-           placeholder="/stara-stranka" aria-describedby="old-path-help">
+           placeholder="/stara-stranka" value="<?= h((string)$redirectForm['old_path']) ?>"
+           <?= adminFieldAttributes('old_path', $redirectFieldErrors, [], ['old-path-help']) ?>>
     <small id="old-path-help" class="field-help">Interní cesta bez domény, např. <code>/blog/stary-clanek</code>.</small>
+    <?php adminRenderFieldError('old_path', $redirectFieldErrors, [], $redirectFieldErrorMessages['old_path']); ?>
 
     <label for="new_path">Nová cesta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="new_path" name="new_path" required aria-required="true" maxlength="500"
-           placeholder="/nova-stranka" aria-describedby="new-path-help">
+           placeholder="/nova-stranka" value="<?= h((string)$redirectForm['new_path']) ?>"
+           <?= adminFieldAttributes('new_path', $redirectFieldErrors, [], ['new-path-help']) ?>>
     <small id="new-path-help" class="field-help">Interní cesta nebo úplná adresa začínající <code>http://</code> či <code>https://</code>, např. <code>/blog/novy-clanek</code>.</small>
+    <?php adminRenderFieldError('new_path', $redirectFieldErrors, [], $redirectFieldErrorMessages['new_path']); ?>
 
     <label for="status_code">Typ přesměrování</label>
     <select id="status_code" name="status_code" aria-describedby="status-code-help" class="admin-input-auto">
-      <option value="301">301 – Trvalé</option>
-      <option value="302">302 – Dočasné</option>
+      <option value="301"<?= (int)$redirectForm['status_code'] === 301 ? ' selected' : '' ?>>301 – Trvalé</option>
+      <option value="302"<?= (int)$redirectForm['status_code'] === 302 ? ' selected' : '' ?>>302 – Dočasné</option>
     </select>
     <small id="status-code-help" class="field-help">301 je vhodné pro trvalý přesun obsahu (vyhledávače přenesou hodnocení). 302 pro dočasné přesměrování.</small>
 

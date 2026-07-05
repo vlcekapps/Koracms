@@ -15,6 +15,15 @@ $users = $pdo->query(
 )->fetchAll();
 
 $err = '';
+$fieldErrors = [];
+$fieldErrorMessages = [
+    'resource_id' => 'Vyberte aktivní rezervační zdroj, pro který má rezervace vzniknout.',
+    'user_id' => 'Vyberte registrovaného uživatele ze seznamu, nebo přepněte typ zákazníka na Host.',
+    'guest_name' => 'Doplňte jméno hosta, aby šla rezervace dohledat a potvrdit.',
+    'booking_date' => 'Vyberte skutečné datum rezervace.',
+    'start_time' => 'Zadejte čas začátku rezervace.',
+    'end_time' => 'Zadejte čas konce pozdější než začátek.',
+];
 
 // ── Zpracování POST ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -34,15 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Validace
     if ($resourceId === null) {
-        $err = 'Vyberte zdroj.';
+        $err = 'Rezervaci nejde vytvořit bez zdroje. U pole Zdroj je konkrétní nápověda.';
+        $fieldErrors[] = 'resource_id';
     } elseif ($mode === 'user' && $userId === null) {
-        $err = 'Vyberte registrovaného uživatele.';
+        $err = 'Rezervaci pro registrovaného zákazníka nejde vytvořit bez uživatele. U pole Uživatel je konkrétní nápověda.';
+        $fieldErrors[] = 'user_id';
     } elseif ($mode === 'guest' && $guestName === '') {
-        $err = 'Vyplňte jméno hosta.';
+        $err = 'Rezervaci pro hosta nejde vytvořit bez jména. U pole Jméno hosta je konkrétní nápověda.';
+        $fieldErrors[] = 'guest_name';
     } elseif ($bookingDate === '' || $startTime === '' || $endTime === '') {
-        $err = 'Vyplňte datum a čas rezervace.';
+        $err = 'Rezervaci nejde vytvořit bez data a času. U zvýrazněných polí je konkrétní nápověda.';
+        $fieldErrors = array_values(array_filter([
+            $bookingDate === '' ? 'booking_date' : null,
+            $startTime === '' ? 'start_time' : null,
+            $endTime === '' ? 'end_time' : null,
+        ]));
     } elseif ($startTime >= $endTime) {
-        $err = 'Čas začátku musí být před časem konce.';
+        $err = 'Čas rezervace není použitelný. U polí Začátek a Konec je konkrétní nápověda.';
+        $fieldErrors = ['start_time', 'end_time'];
     } else {
         // Kontrola dostupnosti (konflikty)
         $stmtConflict = $pdo->prepare(
@@ -54,7 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $stmtConflict->execute([$resourceId, $bookingDate, $endTime, $startTime]);
         if ((int)$stmtConflict->fetchColumn() > 0) {
-            $err = 'V daném čase již existuje jiná rezervace pro tento zdroj.';
+            $err = 'V daném čase už existuje jiná rezervace pro tento zdroj. U data a času je konkrétní nápověda.';
+            $fieldErrors = ['booking_date', 'start_time', 'end_time'];
         }
     }
 
@@ -116,7 +135,7 @@ $partySize   = $_POST['party_size'] ?? '1';
 $notes       = $_POST['notes'] ?? '';
 ?>
 <?php if ($err !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($err) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($err) ?></p>
 <?php endif; ?>
 
 <?php if (isset($_GET['ok'])): ?>
@@ -147,7 +166,7 @@ $notes       = $_POST['notes'] ?? '';
 
   <div id="user-fields"<?= $mode === 'guest' ? ' hidden' : '' ?>>
     <label for="user_id">Uživatel <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <select id="user_id" name="user_id">
+    <select id="user_id" name="user_id"<?= adminFieldAttributes('user_id', $fieldErrors) ?>>
       <option value="">– Vyberte –</option>
       <?php foreach ($users as $u):
           $uName = trim($u['first_name'] . ' ' . $u['last_name']);
@@ -156,11 +175,14 @@ $notes       = $_POST['notes'] ?? '';
         <option value="<?= (int)$u['id'] ?>" <?= $userId === (int)$u['id'] ? 'selected' : '' ?>><?= h($uLabel) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php adminRenderFieldError('user_id', $fieldErrors, [], $fieldErrorMessages['user_id']); ?>
   </div>
 
   <div id="guest-fields"<?= $mode !== 'guest' ? ' hidden' : '' ?>>
     <label for="guest_name">Jméno hosta <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="guest_name" name="guest_name" maxlength="255" autocomplete="name" value="<?= h($guestName) ?>">
+    <input type="text" id="guest_name" name="guest_name" maxlength="255" autocomplete="name" value="<?= h($guestName) ?>"
+           <?= adminFieldAttributes('guest_name', $fieldErrors) ?>>
+    <?php adminRenderFieldError('guest_name', $fieldErrors, [], $fieldErrorMessages['guest_name']); ?>
 
     <label for="guest_email">E-mail hosta</label>
     <input type="email" id="guest_email" name="guest_email" maxlength="255" autocomplete="email" value="<?= h($guestEmail) ?>">
@@ -173,27 +195,34 @@ $notes       = $_POST['notes'] ?? '';
     <legend>Rezervace</legend>
 
     <label for="resource_id">Zdroj <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <select id="resource_id" name="resource_id" required aria-required="true">
+    <select id="resource_id" name="resource_id" required aria-required="true"<?= adminFieldAttributes('resource_id', $fieldErrors) ?>>
       <option value="">– Vyberte –</option>
       <?php foreach ($resources as $r): ?>
         <option value="<?= (int)$r['id'] ?>" <?= $resourceId === (int)$r['id'] ? 'selected' : '' ?>><?= h($r['name']) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php adminRenderFieldError('resource_id', $fieldErrors, [], $fieldErrorMessages['resource_id']); ?>
 
     <label for="booking_date">Datum <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="date" id="booking_date" name="booking_date" required aria-required="true"
-           value="<?= h($bookingDate) ?>" class="res-booking-input-auto">
+           value="<?= h($bookingDate) ?>" class="res-booking-input-auto"
+           <?= adminFieldAttributes('booking_date', $fieldErrors) ?>>
+    <?php adminRenderFieldError('booking_date', $fieldErrors, [], $fieldErrorMessages['booking_date']); ?>
 
     <div class="res-booking-time-row">
       <div>
         <label for="start_time">Začátek <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
         <input type="time" id="start_time" name="start_time" required aria-required="true"
-               value="<?= h($startTime) ?>" class="res-booking-input-stacked">
+               value="<?= h($startTime) ?>" class="res-booking-input-stacked"
+               <?= adminFieldAttributes('start_time', $fieldErrors) ?>>
+        <?php adminRenderFieldError('start_time', $fieldErrors, [], $fieldErrorMessages['start_time']); ?>
       </div>
       <div>
         <label for="end_time">Konec <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
         <input type="time" id="end_time" name="end_time" required aria-required="true"
-               value="<?= h($endTime) ?>" class="res-booking-input-stacked">
+               value="<?= h($endTime) ?>" class="res-booking-input-stacked"
+               <?= adminFieldAttributes('end_time', $fieldErrors) ?>>
+        <?php adminRenderFieldError('end_time', $fieldErrors, [], $fieldErrorMessages['end_time']); ?>
       </div>
     </div>
 

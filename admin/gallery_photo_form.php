@@ -7,9 +7,9 @@ $id = inputInt('get', 'id');
 $albumId = inputInt('get', 'album_id');
 $errorKey = trim($_GET['err'] ?? '');
 $errorMap = [
-    'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
-    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
-    'taken_at' => 'Zadejte datum pořízení ve tvaru RRRR-MM-DD.',
+    'slug' => 'Slug fotografie už používá jiná fotografie. U pole Slug adresy je konkrétní nápověda.',
+    'license_url' => 'Adresa licence fotografie není použitelná. U pole Adresa licence je konkrétní nápověda.',
+    'taken_at' => 'Datum pořízení fotografie není použitelné. U pole Datum pořízení je konkrétní nápověda.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
 $fieldErrorMap = [
@@ -18,9 +18,9 @@ $fieldErrorMap = [
     'taken_at' => ['taken_at'],
 ];
 $fieldErrorMessages = [
-    'slug' => 'Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.',
-    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
-    'taken_at' => 'Zadejte datum pořízení ve tvaru RRRR-MM-DD.',
+    'slug' => 'Zadejte jiný jedinečný slug z malých písmen, číslic a pomlček, nebo pole nechte prázdné pro automatické vytvoření.',
+    'license_url' => 'Zadejte úplnou adresu licence začínající http:// nebo https://, nebo pole nechte prázdné.',
+    'taken_at' => 'Vyberte skutečné kalendářní datum v poli Datum pořízení, nebo pole nechte prázdné.',
 ];
 
 $photo = null;
@@ -63,13 +63,13 @@ adminHeader($pageTitle);
 </p>
 
 <?php if ($formError !== ''): ?>
-  <div id="form-errors" class="error" role="alert">
+  <div id="form-errors" class="error" role="alert" aria-atomic="true">
     <p><?= h($formError) ?></p>
   </div>
 <?php endif; ?>
 
 <?php if ($id !== null): ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_save.php" novalidate>
+  <form method="post" action="<?= BASE_URL ?>/admin/gallery_photo_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$photo['id'] ?>">
     <input type="hidden" name="album_id" value="<?= (int)$album['id'] ?>">
@@ -86,7 +86,7 @@ adminHeader($pageTitle);
 
       <label for="title">Titulek fotografie</label>
       <input type="text" id="title" name="title" maxlength="255"
-             value="<?= h((string)$photo['title']) ?>"<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
+             value="<?= h((string)$photo['title']) ?>">
 
       <label for="slug">Slug adresy</label>
       <input type="text" id="slug" name="slug" maxlength="255"
@@ -128,7 +128,8 @@ adminHeader($pageTitle);
 
         <label for="taken_at">Datum pořízení</label>
         <input type="date" id="taken_at" name="taken_at"
-               value="<?= h((string)($photo['taken_at'] ?? '')) ?>"<?= adminFieldAttributes('taken_at', $errorKey, $fieldErrorMap) ?>>
+               value="<?= h((string)($photo['taken_at'] ?? '')) ?>"<?= adminFieldAttributes('taken_at', $errorKey, $fieldErrorMap, ['gallery-photo-taken-at-help']) ?>>
+        <small id="gallery-photo-taken-at-help" class="field-help">Volitelné. Vyberte skutečné datum pořízení fotografie.</small>
         <?php adminRenderFieldError('taken_at', $errorKey, $fieldErrorMap, $fieldErrorMessages['taken_at']); ?>
 
         <label for="location_label">Místo pořízení</label>

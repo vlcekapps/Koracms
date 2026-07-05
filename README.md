@@ -479,6 +479,8 @@ Stejný pattern používají i další administrační taxonomie: kategorie výv
 
 Stejný pattern se rozšířil i na další běžná administrační workflow mimo číselníky: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Souhrnné alerty jsou textové a atomické, field-level texty radí doplnit název, opravit URL, slug, kapacitu, RSS limit, cover obrázek nebo doplnit předmět a text rozesílky.
 
+Stejné field-level guardraily platí i pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace v administraci. Chyba vždy zůstává u konkrétního pole přes existující `aria-describedby`, nastaví `aria-invalid` a radí praktický další krok: doplnit název, opravit interní cestu nebo URL, zvolit jiný slug, vybrat platné nadřazené album, opravit licenci či datum pořízení, případně doplnit zdroj, uživatele/hosta, datum a čas rezervace nebo vyřešit konflikt termínu.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

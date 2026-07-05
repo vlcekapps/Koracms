@@ -26,6 +26,8 @@ V detailu odpovědi Form Builderu stejný princip platí i pro GitHub issue brid
 
 Stejný field-level pattern používají i další běžná administrační workflow: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Při chybě má souhrnný text zůstat textový a atomický, dotčené pole má mít `aria-invalid`, `aria-describedby` jen na existující nápovědu nebo chybu a lokální text má správci říct konkrétní opravu.
 
+Stejný guardrail platí pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace. Chyby mají správci poradit doplnění názvu, opravu interní cesty nebo URL, jiný slug, platné nadřazené album, platnou licenci, kalendářní datum pořízení, výběr zdroje nebo uživatele, doplnění údajů hosta, opravu času a řešení kolize rezervace.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---
@@ -1091,6 +1093,8 @@ Blogové kategorie a štítky používají stejný princip u povinného názvu a
 Kategorie a série ke stažení stejný princip používají u prázdného názvu, nepoužitelného nebo duplicitního slugu a u příliš dlouhého meta title kategorie. Chyba má být napojená na existující text přes `aria-describedby`, pole má být označené jako neplatné a text má správci říct, jakou hodnotu zkusit nebo že může slug nechat prázdný.
 
 Stejný field-level pattern používají kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. U povinného názvu, nepoužitelného nebo duplicitního slugu a příliš dlouhého meta title má souhrnný alert upozornit na dotčené pole, lokální text poradit konkrétní opravu a `aria-describedby` mířit jen na existující nápovědu nebo chybový text. Rezervační kategorie a místa navíc po chybě zachovávají rozepsané hodnoty.
+
+Hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace navazují na stejný pattern. U navigace a redirectů má chyba vysvětlit povinný název, interní cestu začínající lomítkem nebo úplnou http/https adresu bez přihlašovacích údajů. U galerie má poradit jedinečný slug, platné nadřazené album, úplnou URL licence nebo skutečné kalendářní datum pořízení. U ruční rezervace má správce dostat konkrétní informaci k výběru zdroje, uživatele nebo hosta, data, času a konfliktu rezervace.
 
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 

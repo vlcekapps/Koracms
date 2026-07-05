@@ -6,10 +6,10 @@ $pdo = db_connect();
 $id = inputInt('get', 'id');
 $errorKey = trim($_GET['err'] ?? '');
 $errorMap = [
-    'required' => 'Vyplňte prosím název alba.',
-    'slug' => 'Zadaný slug už používá jiné album. Zvolte prosím jiný.',
-    'parent' => 'Zvolené nadřazené album není platné.',
-    'license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
+    'required' => 'Album galerie nejde uložit bez názvu. U pole Název alba je konkrétní nápověda.',
+    'slug' => 'Slug alba galerie už používá jiné album. U pole Slug adresy je konkrétní nápověda.',
+    'parent' => 'Nadřazené album není možné použít. U pole Nadřazené album je konkrétní nápověda.',
+    'license_url' => 'Adresa výchozí licence alba není použitelná. U pole Adresa výchozí licence je konkrétní nápověda.',
 ];
 $formError = $errorMap[$errorKey] ?? '';
 $fieldErrorMap = [
@@ -19,10 +19,10 @@ $fieldErrorMap = [
     'license_url' => ['default_license_url'],
 ];
 $fieldErrorMessages = [
-    'name' => 'Vyplňte prosím název alba.',
-    'slug' => 'Zadaný slug už používá jiné album. Zvolte prosím jiný.',
-    'parent_id' => 'Zvolené nadřazené album není platné.',
-    'default_license_url' => 'Zadejte platnou adresu licence začínající http:// nebo https://.',
+    'name' => 'Doplňte krátký název alba, například Jarní setkání obce.',
+    'slug' => 'Zadejte jiný jedinečný slug z malých písmen, číslic a pomlček, nebo pole nechte prázdné pro automatické vytvoření.',
+    'parent_id' => 'Vyberte existující album mimo vlastní podstrom, nebo ponechte nejvyšší úroveň.',
+    'default_license_url' => 'Zadejte úplnou adresu licence začínající http:// nebo https://, nebo pole nechte prázdné.',
 ];
 
 $album = [
@@ -83,12 +83,12 @@ adminHeader($pageTitle);
 <p><a href="<?= BASE_URL ?>/admin/gallery_albums.php"><span aria-hidden="true">←</span> Zpět na alba galerie</a></p>
 
 <?php if ($formError !== ''): ?>
-  <div id="form-errors" class="error" role="alert">
+  <div id="form-errors" class="error" role="alert" aria-atomic="true">
     <p><?= h($formError) ?></p>
   </div>
 <?php endif; ?>
 
-<form method="post" action="<?= BASE_URL ?>/admin/gallery_album_save.php" novalidate>
+<form method="post" action="<?= BASE_URL ?>/admin/gallery_album_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-errors"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="id" value="<?= (int)$album['id'] ?>">
 

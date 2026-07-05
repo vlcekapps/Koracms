@@ -1399,6 +1399,90 @@ try {
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
+    $redirectsValidationIssues = [];
+    $redirectsValidationSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Redirect Validation Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-redirect-validation-' . bin2hex(random_bytes(3)));
+    foreach ([
+        'old_required' => [
+            'post' => ['old_path' => '', 'new_path' => '/nova-stranka', 'status_code' => '301'],
+            'expected' => [
+                'id="redirect-form-error" class="error" role="alert" aria-atomic="true">Přesměrování nejde uložit bez staré cesty.',
+                'aria-invalid="true" aria-describedby="old-path-help old_path-error"',
+                'id="old_path-error"',
+                'Zadejte interní cestu bez domény, která začíná jedním lomítkem, například /stara-stranka.',
+            ],
+            'forbidden' => ['Stará cesta je povinná.'],
+        ],
+        'old_invalid' => [
+            'post' => ['old_path' => 'stara-stranka', 'new_path' => '/nova-stranka', 'status_code' => '302'],
+            'expected' => [
+                'id="redirect-form-error" class="error" role="alert" aria-atomic="true">Stará cesta přesměrování není použitelná.',
+                'value="stara-stranka"',
+                '<option value="302" selected>302',
+                'aria-invalid="true" aria-describedby="old-path-help old_path-error"',
+            ],
+            'forbidden' => ['Stará cesta musí být interní cesta v rámci tohoto webu a začínat lomítkem.'],
+        ],
+        'new_required' => [
+            'post' => ['old_path' => '/stara-stranka', 'new_path' => '', 'status_code' => '301'],
+            'expected' => [
+                'id="redirect-form-error" class="error" role="alert" aria-atomic="true">Přesměrování nejde uložit bez nové cesty.',
+                'aria-invalid="true" aria-describedby="new-path-help new_path-error"',
+                'id="new_path-error"',
+                'Zadejte interní cestu začínající lomítkem, nebo úplnou http/https adresu bez přihlašovacích údajů.',
+            ],
+            'forbidden' => ['Nová cesta je povinná.'],
+        ],
+        'new_invalid' => [
+            'post' => ['old_path' => '/stara-stranka', 'new_path' => 'javascript:alert(1)', 'status_code' => '301'],
+            'expected' => [
+                'id="redirect-form-error" class="error" role="alert" aria-atomic="true">Nová cesta přesměrování není použitelná.',
+                'value="javascript:alert(1)"',
+                'aria-invalid="true" aria-describedby="new-path-help new_path-error"',
+            ],
+            'forbidden' => ['Nová cesta musí být interní cesta nebo úplná adresa začínající http:// či https:// bez přihlašovacích údajů.'],
+        ],
+        'same_paths' => [
+            'post' => ['old_path' => '/stejna-cesta', 'new_path' => '/stejna-cesta', 'status_code' => '301'],
+            'expected' => [
+                'id="redirect-form-error" class="error" role="alert" aria-atomic="true">Stará a nová cesta přesměrování se nesmí shodovat.',
+                'aria-invalid="true" aria-describedby="old-path-help old_path-error"',
+                'aria-invalid="true" aria-describedby="new-path-help new_path-error"',
+            ],
+            'forbidden' => ['Stará a nová cesta nesmí být stejné.'],
+        ],
+    ] as $redirectValidationLabel => $redirectValidationSpec) {
+        $redirectValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/redirects.php',
+            array_merge(
+                ['csrf_token' => $redirectsValidationSession['csrf']],
+                (array)$redirectValidationSpec['post']
+            ),
+            $redirectsValidationSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($redirectValidationResponse) !== 200) {
+            $redirectsValidationIssues[] = 'chybový stav přesměrování ' . $redirectValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$redirectValidationSpec['expected'] as $redirectExpectedFragment) {
+            if (!str_contains($redirectValidationResponse['body'], (string)$redirectExpectedFragment)) {
+                $redirectsValidationIssues[] = 'chybový stav přesměrování ' . $redirectValidationLabel . ' neobsahuje: ' . (string)$redirectExpectedFragment;
+            }
+        }
+        foreach ((array)$redirectValidationSpec['forbidden'] as $redirectForbiddenFragment) {
+            if (str_contains($redirectValidationResponse['body'], (string)$redirectForbiddenFragment)) {
+                $redirectsValidationIssues[] = 'chybový stav přesměrování ' . $redirectValidationLabel . ' stále používá starý obecný text';
+            }
+        }
+    }
+    httpIntegrationPrintResult('redirects_validation_http', $redirectsValidationIssues, $failures);
+
     $adminConsistentHelpIssues = [];
     $adminDashboardForHelp = fetchUrl($baseUrl . BASE_URL . '/admin/index.php', $adminSession['cookie'], 0);
     $adminHelpPage = fetchUrl($baseUrl . BASE_URL . '/admin/help.php', $adminSession['cookie'], 0);
@@ -4358,6 +4442,65 @@ try {
         $formsNavIssues[] = 'admin menu chybně tvrdí, že se aktivní formulář v navigaci na webu nezobrazí';
     }
 
+    foreach ([
+        'title_required' => [
+            'post' => [
+                'action' => 'save_link',
+                'title' => '',
+                'url' => '/kontakt',
+                'alt_text' => '',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="nav-link-error" class="error" role="alert" aria-atomic="true">Externí odkaz navigace nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="nav-link-title-help title-error"',
+                'id="title-error"',
+                'Doplňte krátký název odkazu, například Kontakt.',
+            ],
+            'forbidden' => ['Zadejte název odkazu.'],
+        ],
+        'url_invalid' => [
+            'post' => [
+                'action' => 'save_link',
+                'title' => 'Neplatný odkaz navigace',
+                'url' => 'javascript:alert(1)',
+                'alt_text' => '',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="nav-link-error" class="error" role="alert" aria-atomic="true">Adresa externího odkazu navigace není použitelná.',
+                'aria-invalid="true" aria-describedby="nav-link-url-help url-error"',
+                'id="url-error"',
+                'Zadejte interní cestu začínající lomítkem, například /kontakt, nebo úplnou http/https adresu bez přihlašovacích údajů.',
+            ],
+            'forbidden' => ['Zadejte interní cestu webu nebo úplnou adresu začínající http:// či https:// bez přihlašovacích údajů.'],
+        ],
+    ] as $adminMenuLinkValidationLabel => $adminMenuLinkValidationSpec) {
+        $adminMenuLinkValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/menu.php',
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$adminMenuLinkValidationSpec['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($adminMenuLinkValidationResponse) !== 200) {
+            $formsNavIssues[] = 'chybový stav externího odkazu hlavní navigace ' . $adminMenuLinkValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$adminMenuLinkValidationSpec['expected'] as $adminMenuLinkExpectedFragment) {
+            if (!str_contains($adminMenuLinkValidationResponse['body'], (string)$adminMenuLinkExpectedFragment)) {
+                $formsNavIssues[] = 'chybový stav externího odkazu hlavní navigace ' . $adminMenuLinkValidationLabel . ' neobsahuje: ' . (string)$adminMenuLinkExpectedFragment;
+            }
+        }
+        foreach ((array)$adminMenuLinkValidationSpec['forbidden'] as $adminMenuLinkForbiddenFragment) {
+            if (str_contains($adminMenuLinkValidationResponse['body'], (string)$adminMenuLinkForbiddenFragment)) {
+                $formsNavIssues[] = 'chybový stav externího odkazu hlavní navigace ' . $adminMenuLinkValidationLabel . ' stále používá starý obecný text';
+            }
+        }
+    }
+
     $navFormPath = formPublicPath(['id' => $navFormId, 'slug' => $navFormSlug]);
     saveSetting('nav_order_unified', 'page:999999');
     clearSettingsCache();
@@ -4491,6 +4634,117 @@ try {
     ]);
     $galleryMissingAltPhotoId = (int)$pdo->lastInsertId();
     $createdGalleryPhotoIds[] = $galleryMissingAltPhotoId;
+
+    foreach ([
+        'required' => [
+            'expected' => [
+                'id="form-errors" class="error" role="alert" aria-atomic="true"',
+                'Album galerie nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="name-error"',
+                'id="name-error"',
+                'Doplňte krátký název alba, například Jarní setkání obce.',
+            ],
+            'forbidden' => ['Vyplňte prosím název alba.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'Slug alba galerie už používá jiné album.',
+                'aria-invalid="true" aria-describedby="gallery-album-slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte jiný jedinečný slug z malých písmen, číslic a pomlček, nebo pole nechte prázdné pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Zadaný slug už používá jiné album. Zvolte prosím jiný.'],
+        ],
+        'parent' => [
+            'expected' => [
+                'Nadřazené album není možné použít.',
+                'aria-invalid="true" aria-describedby="parent_id-error"',
+                'id="parent_id-error"',
+                'Vyberte existující album mimo vlastní podstrom, nebo ponechte nejvyšší úroveň.',
+            ],
+            'forbidden' => ['Zvolené nadřazené album není platné.'],
+        ],
+        'license_url' => [
+            'expected' => [
+                'Adresa výchozí licence alba není použitelná.',
+                'aria-invalid="true" aria-describedby="gallery-album-license-url-help default_license_url-error"',
+                'id="default_license_url-error"',
+                'Zadejte úplnou adresu licence začínající http:// nebo https://, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Zadejte platnou adresu licence začínající http:// nebo https://.'],
+        ],
+    ] as $galleryAlbumValidationError => $galleryAlbumValidationSpec) {
+        $galleryAlbumValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/gallery_album_form.php?id=' . $galleryMetadataAlbumId . '&err=' . rawurlencode((string)$galleryAlbumValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($galleryAlbumValidationResponse) !== 200) {
+            $galleryMetadataIssues[] = 'editor alba galerie s err=' . (string)$galleryAlbumValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$galleryAlbumValidationSpec['expected'] as $galleryAlbumExpectedFragment) {
+            if (!str_contains($galleryAlbumValidationResponse['body'], (string)$galleryAlbumExpectedFragment)) {
+                $galleryMetadataIssues[] = 'editor alba galerie s err=' . (string)$galleryAlbumValidationError . ' neobsahuje: ' . (string)$galleryAlbumExpectedFragment;
+            }
+        }
+        foreach ((array)$galleryAlbumValidationSpec['forbidden'] as $galleryAlbumForbiddenFragment) {
+            if (str_contains($galleryAlbumValidationResponse['body'], (string)$galleryAlbumForbiddenFragment)) {
+                $galleryMetadataIssues[] = 'editor alba galerie s err=' . (string)$galleryAlbumValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+
+    foreach ([
+        'slug' => [
+            'expected' => [
+                'id="form-errors" class="error" role="alert" aria-atomic="true"',
+                'Slug fotografie už používá jiná fotografie.',
+                'aria-invalid="true" aria-describedby="gallery-photo-slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte jiný jedinečný slug z malých písmen, číslic a pomlček, nebo pole nechte prázdné pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Zadaný slug už používá jiná fotografie. Zvolte prosím jiný.'],
+        ],
+        'license_url' => [
+            'expected' => [
+                'Adresa licence fotografie není použitelná.',
+                'aria-invalid="true" aria-describedby="gallery-photo-license-url-help license_url-error"',
+                'id="license_url-error"',
+                'Zadejte úplnou adresu licence začínající http:// nebo https://, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Zadejte platnou adresu licence začínající http:// nebo https://.'],
+        ],
+        'taken_at' => [
+            'expected' => [
+                'Datum pořízení fotografie není použitelné.',
+                'aria-invalid="true" aria-describedby="gallery-photo-taken-at-help taken_at-error"',
+                'id="taken_at-error"',
+                'Vyberte skutečné kalendářní datum v poli Datum pořízení, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Zadejte datum pořízení ve tvaru RRRR-MM-DD.'],
+        ],
+    ] as $galleryPhotoValidationError => $galleryPhotoValidationSpec) {
+        $galleryPhotoValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/gallery_photo_form.php?id=' . $galleryMetadataPhotoId . '&album_id=' . $galleryMetadataAlbumId . '&err=' . rawurlencode((string)$galleryPhotoValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($galleryPhotoValidationResponse) !== 200) {
+            $galleryMetadataIssues[] = 'editor fotografie galerie s err=' . (string)$galleryPhotoValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$galleryPhotoValidationSpec['expected'] as $galleryPhotoExpectedFragment) {
+            if (!str_contains($galleryPhotoValidationResponse['body'], (string)$galleryPhotoExpectedFragment)) {
+                $galleryMetadataIssues[] = 'editor fotografie galerie s err=' . (string)$galleryPhotoValidationError . ' neobsahuje: ' . (string)$galleryPhotoExpectedFragment;
+            }
+        }
+        foreach ((array)$galleryPhotoValidationSpec['forbidden'] as $galleryPhotoForbiddenFragment) {
+            if (str_contains($galleryPhotoValidationResponse['body'], (string)$galleryPhotoForbiddenFragment)) {
+                $galleryMetadataIssues[] = 'editor fotografie galerie s err=' . (string)$galleryPhotoValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
 
     $galleryPhotoDetailResponse = fetchUrl(
         $baseUrl . galleryPhotoPublicPath(['id' => $galleryMetadataPhotoId, 'slug' => $galleryMetadataPhotoSlug]),
@@ -5901,6 +6155,134 @@ try {
         "INSERT INTO cms_res_slots (resource_id, day_of_week, start_time, end_time, max_bookings)
          VALUES (?, ?, '09:00:00', '10:00:00', 2)"
     )->execute([$resourceId, $bookingDayOfWeek]);
+
+    foreach ([
+        'resource_required' => [
+            'post' => [
+                'mode' => 'user',
+                'resource_id' => '',
+                'user_id' => (string)$adminUserId,
+                'booking_date' => $bookingDate,
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'party_size' => '1',
+                'notes' => '',
+            ],
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Rezervaci nejde vytvořit bez zdroje.',
+                'aria-invalid="true" aria-describedby="resource_id-error"',
+                'id="resource_id-error"',
+                'Vyberte aktivní rezervační zdroj, pro který má rezervace vzniknout.',
+            ],
+            'forbidden' => ['Vyberte zdroj.'],
+        ],
+        'user_required' => [
+            'post' => [
+                'mode' => 'user',
+                'resource_id' => (string)$resourceId,
+                'user_id' => '',
+                'booking_date' => $bookingDate,
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'party_size' => '1',
+                'notes' => '',
+            ],
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Rezervaci pro registrovaného zákazníka nejde vytvořit bez uživatele.',
+                'aria-invalid="true" aria-describedby="user_id-error"',
+                'id="user_id-error"',
+                'Vyberte registrovaného uživatele ze seznamu, nebo přepněte typ zákazníka na Host.',
+            ],
+            'forbidden' => ['Vyberte registrovaného uživatele.'],
+        ],
+        'guest_name_required' => [
+            'post' => [
+                'mode' => 'guest',
+                'resource_id' => (string)$resourceId,
+                'guest_name' => '',
+                'guest_email' => 'host@example.test',
+                'guest_phone' => '',
+                'booking_date' => $bookingDate,
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'party_size' => '1',
+                'notes' => '',
+            ],
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Rezervaci pro hosta nejde vytvořit bez jména.',
+                'aria-invalid="true" aria-describedby="guest_name-error"',
+                'id="guest_name-error"',
+                'Doplňte jméno hosta, aby šla rezervace dohledat a potvrdit.',
+            ],
+            'forbidden' => ['Vyplňte jméno hosta.'],
+        ],
+        'datetime_required' => [
+            'post' => [
+                'mode' => 'user',
+                'resource_id' => (string)$resourceId,
+                'user_id' => (string)$adminUserId,
+                'booking_date' => '',
+                'start_time' => '',
+                'end_time' => '',
+                'party_size' => '1',
+                'notes' => '',
+            ],
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Rezervaci nejde vytvořit bez data a času.',
+                'aria-invalid="true" aria-describedby="booking_date-error"',
+                'aria-invalid="true" aria-describedby="start_time-error"',
+                'aria-invalid="true" aria-describedby="end_time-error"',
+                'Vyberte skutečné datum rezervace.',
+                'Zadejte čas konce pozdější než začátek.',
+            ],
+            'forbidden' => ['Vyplňte datum a čas rezervace.'],
+        ],
+        'time_order' => [
+            'post' => [
+                'mode' => 'user',
+                'resource_id' => (string)$resourceId,
+                'user_id' => (string)$adminUserId,
+                'booking_date' => $bookingDate,
+                'start_time' => '10:00',
+                'end_time' => '09:00',
+                'party_size' => '1',
+                'notes' => '',
+            ],
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Čas rezervace není použitelný.',
+                'aria-invalid="true" aria-describedby="start_time-error"',
+                'aria-invalid="true" aria-describedby="end_time-error"',
+                'Zadejte čas začátku rezervace.',
+                'Zadejte čas konce pozdější než začátek.',
+            ],
+            'forbidden' => ['Čas začátku musí být před časem konce.'],
+        ],
+    ] as $reservationBookingValidationLabel => $reservationBookingValidationSpec) {
+        $reservationBookingValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/res_booking_add.php',
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$reservationBookingValidationSpec['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($reservationBookingValidationResponse) !== 200) {
+            $reservationIssues[] = 'chybový stav ruční rezervace ' . $reservationBookingValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$reservationBookingValidationSpec['expected'] as $reservationBookingExpectedFragment) {
+            if (!str_contains($reservationBookingValidationResponse['body'], (string)$reservationBookingExpectedFragment)) {
+                $reservationIssues[] = 'chybový stav ruční rezervace ' . $reservationBookingValidationLabel . ' neobsahuje: ' . (string)$reservationBookingExpectedFragment;
+            }
+        }
+        foreach ((array)$reservationBookingValidationSpec['forbidden'] as $reservationBookingForbiddenFragment) {
+            if (str_contains($reservationBookingValidationResponse['body'], (string)$reservationBookingForbiddenFragment)) {
+                $reservationIssues[] = 'chybový stav ruční rezervace ' . $reservationBookingValidationLabel . ' stále používá starý obecný text';
+            }
+        }
+    }
+
     $pdo->prepare(
         "INSERT INTO cms_res_bookings
          (resource_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
@@ -5910,6 +6292,44 @@ try {
     )->execute([$resourceId, $bookingDate, $confirmationToken, $calendarToken]);
     $bookingId = (int)$pdo->lastInsertId();
     reservationRecordBookingEvent($pdo, $bookingId, 'created', 'Rezervace byla vytvořena integračním testem.');
+
+    $reservationConflictResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_booking_add.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'mode' => 'guest',
+            'resource_id' => (string)$resourceId,
+            'guest_name' => 'Kolizní host',
+            'guest_email' => 'conflict@example.test',
+            'guest_phone' => '',
+            'booking_date' => $bookingDate,
+            'start_time' => '09:15',
+            'end_time' => '09:45',
+            'party_size' => '1',
+            'notes' => '',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($reservationConflictResponse) !== 200) {
+        $reservationIssues[] = 'chybový stav ruční rezervace conflict se nevyrenderoval';
+    } else {
+        foreach ([
+            'role="alert" class="error" id="form-error" aria-atomic="true">V daném čase už existuje jiná rezervace pro tento zdroj.',
+            'aria-invalid="true" aria-describedby="booking_date-error"',
+            'aria-invalid="true" aria-describedby="start_time-error"',
+            'aria-invalid="true" aria-describedby="end_time-error"',
+            'Vyberte skutečné datum rezervace.',
+            'value="Kolizní host"',
+        ] as $reservationConflictExpectedFragment) {
+            if (!str_contains($reservationConflictResponse['body'], $reservationConflictExpectedFragment)) {
+                $reservationIssues[] = 'chybový stav ruční rezervace conflict neobsahuje: ' . $reservationConflictExpectedFragment;
+            }
+        }
+        if (str_contains($reservationConflictResponse['body'], 'V daném čase již existuje jiná rezervace pro tento zdroj.')) {
+            $reservationIssues[] = 'chybový stav ruční rezervace conflict stále používá starý obecný text';
+        }
+    }
 
     $calendarResponse = fetchUrl(
         $baseUrl . BASE_URL . '/reservations/calendar.php?token=' . rawurlencode($calendarToken),
