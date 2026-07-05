@@ -16856,6 +16856,36 @@ foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
     }
 }
 foreach ([
+    '\'title\' => \'Doplňte název formuláře. Bude použitý v administraci',
+    '\'slug\' => \'Zadejte jiný slug, nebo pole nechte prázdné',
+    '\'submitter_email_field\' => \'Vyberte uložené e-mailové pole formuláře.',
+    '\'webhook_url\' => \'Zadejte úplnou HTTPS adresu veřejně dostupného endpointu',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Formulář nejde uložit bez názvu.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Slug formuláře není možné použít.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">E-mail pro notifikaci nemá platný tvar.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Potvrzovací e-mail potřebuje pole s e-mailovou adresou odesílatele.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Webhook URL není možné použít.',
+    "adminFieldAttributes('slug', \$err, \$fieldErrorMap, ['slug-help'])",
+    "adminRenderFieldError('slug', \$err, \$fieldErrorMap, \$fieldErrorMessages['slug']);",
+    "adminFieldAttributes('submitter_email_field', \$err, \$fieldErrorMap, ['submitter-email-field-help'])",
+    "adminRenderFieldError('submitter_email_field', \$err, \$fieldErrorMap, \$fieldErrorMessages['submitter_email_field']);",
+] as $formBuilderEditorSuggestionFragment) {
+    if (!str_contains($formBuilderSource, $formBuilderEditorSuggestionFragment)) {
+        $adminFieldErrorIssues[] = 'Form Builder editor is missing actionable field-level error fragment: ' . $formBuilderEditorSuggestionFragment;
+    }
+}
+foreach ([
+    '<p role="alert" class="error" id="form-error">Název formuláře je povinný.</p>',
+    '<p role="alert" class="error" id="form-error">Slug formuláře je už obsazený.</p>',
+    '<p role="alert" class="error" id="form-error"><?= h($formNotificationEmailErrorMessage) ?></p>',
+    '<p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>',
+    '<p role="alert" class="error" id="form-error">Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.</p>',
+] as $formBuilderEditorGenericErrorFragment) {
+    if (str_contains($formBuilderSource, $formBuilderEditorGenericErrorFragment)) {
+        $adminFieldErrorIssues[] = 'Form Builder editor still uses a generic validation alert without actionable field-level context';
+    }
+}
+foreach ([
     'JSON import upload error suggestion' => [
         'source' => $importAdminSource,
         'required' => [

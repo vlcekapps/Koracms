@@ -3684,6 +3684,83 @@ try {
     if ($issuePresetCsrf === '') {
         $formPresetIssues[] = 'preset formuláře pro nahlášení chyby nevykreslil csrf_token';
     }
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Formulář nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte název formuláře.',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Název formuláře je povinný.</p>',
+            ],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug formuláře není možné použít.',
+                'aria-invalid="true" aria-describedby="slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte jiný slug, nebo pole nechte prázdné',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Slug formuláře je už obsazený.</p>',
+            ],
+        ],
+        'notification_email' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">E-mail pro notifikaci nemá platný tvar.',
+                'aria-invalid="true" aria-describedby="notification-email-help notification_email-error"',
+                'id="notification_email-error"',
+                'Zadejte úplnou e-mailovou adresu pro notifikaci ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Zadejte úplnou e-mailovou adresu pro notifikaci ve tvaru',
+            ],
+        ],
+        'submitter_email_field' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Potvrzovací e-mail potřebuje pole s e-mailovou adresou odesílatele.',
+                'aria-invalid="true" aria-describedby="submitter-email-field-help submitter_email_field-error"',
+                'id="submitter_email_field-error"',
+                'Vyberte uložené e-mailové pole formuláře.',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>',
+            ],
+        ],
+        'webhook_url' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Webhook URL není možné použít.',
+                'aria-invalid="true" aria-describedby="webhook-url-help webhook_url-error"',
+                'id="webhook_url-error"',
+                'Zadejte úplnou HTTPS adresu veřejně dostupného endpointu',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.</p>',
+            ],
+        ],
+    ] as $formBuilderErrorCode => $formBuilderErrorSpec) {
+        $formBuilderErrorResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/form_form.php?err=' . rawurlencode($formBuilderErrorCode),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($formBuilderErrorResponse) !== 200) {
+            $formPresetIssues[] = 'editor Form Builderu s err=' . $formBuilderErrorCode . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$formBuilderErrorSpec['expected'] as $formBuilderExpectedFragment) {
+            if (!str_contains($formBuilderErrorResponse['body'], $formBuilderExpectedFragment)) {
+                $formPresetIssues[] = 'editor Form Builderu s err=' . $formBuilderErrorCode . ' neobsahuje: ' . $formBuilderExpectedFragment;
+            }
+        }
+        foreach ((array)$formBuilderErrorSpec['forbidden'] as $formBuilderForbiddenFragment) {
+            if (str_contains($formBuilderErrorResponse['body'], $formBuilderForbiddenFragment)) {
+                $formPresetIssues[] = 'editor Form Builderu s err=' . $formBuilderErrorCode . ' stále používá starý obecný text: ' . $formBuilderForbiddenFragment;
+            }
+        }
+    }
 
     $issuePresetTitle = 'HTTP preset issue ' . bin2hex(random_bytes(4));
     $issuePresetSlug = uniqueFormSlug($pdo, 'http-preset-issue-' . bin2hex(random_bytes(4)));

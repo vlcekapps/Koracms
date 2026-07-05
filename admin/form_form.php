@@ -45,11 +45,11 @@ $fieldErrorMap = [
     'webhook_url' => ['webhook_url'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Název formuláře je povinný.',
-    'slug' => 'Slug formuláře je už obsazený.',
+    'title' => 'Doplňte název formuláře. Bude použitý v administraci, nadpisu veřejné stránky i v e-mailových šablonách.',
+    'slug' => 'Zadejte jiný slug, nebo pole nechte prázdné a CMS vytvoří volnou adresu z názvu formuláře.',
     'notification_email' => $formNotificationEmailErrorMessage,
-    'submitter_email_field' => 'Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.',
-    'webhook_url' => 'Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.',
+    'submitter_email_field' => 'Vyberte uložené e-mailové pole formuláře. Pokud tu žádné není, nejdřív přidejte pole typu e-mail a formulář znovu uložte.',
+    'webhook_url' => 'Zadejte úplnou HTTPS adresu veřejně dostupného endpointu, například https://example.com/hooks/forms; localhost a privátní síť nejsou povolené.',
 ];
 $pageTitle = $form
     ? 'Upravit formulář – ' . mb_strimwidth((string)$form['title'], 0, 60, '…', 'UTF-8')
@@ -126,15 +126,15 @@ adminHeader($pageTitle);
   <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
 <?php if ($err === 'required'): ?>
-  <p role="alert" class="error" id="form-error">Název formuláře je povinný.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Formulář nejde uložit bez názvu. U pole Název formuláře je konkrétní nápověda.</p>
 <?php elseif ($err === 'slug'): ?>
-  <p role="alert" class="error" id="form-error">Slug formuláře je už obsazený.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Slug formuláře není možné použít. U pole Slug (URL) je konkrétní nápověda.</p>
 <?php elseif ($err === 'notification_email'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formNotificationEmailErrorMessage) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">E-mail pro notifikaci nemá platný tvar. U pole je konkrétní nápověda.</p>
 <?php elseif ($err === 'submitter_email_field'): ?>
-  <p role="alert" class="error" id="form-error">Pro potvrzovací e-mail vyberte pole s e-mailovou adresou odesílatele.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Potvrzovací e-mail potřebuje pole s e-mailovou adresou odesílatele. U výběru je konkrétní nápověda.</p>
 <?php elseif ($err === 'webhook_url'): ?>
-  <p role="alert" class="error" id="form-error">Zadejte platnou HTTPS adresu webhooku mimo localhost a privátní síť.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Webhook URL není možné použít. U pole Adresa webhooku je konkrétní nápověda.</p>
 <?php endif; ?>
 
 <div class="button-row">

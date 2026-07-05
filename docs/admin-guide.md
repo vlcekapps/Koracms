@@ -1074,6 +1074,8 @@ Veřejná custom pole ve Form Builderu mají konkrétní návrhy oprav i mimo ov
 
 Validační hlášky v administraci mají u známých oprav říkat, jak pokračovat. URL pole u zajímavých míst a podcastů proto vysvětlují povolený `http://`/`https://` tvar, doménu bez schématu s automatickým uložením jako `https://` a kdy je bezpečné volitelné pole nechat prázdné.
 
+Editor Form Builderu se drží stejného pravidla u názvu, slugu, notifikačního e-mailu, potvrzovacího e-mailového pole a webhook URL. Chyba má správci říct konkrétní další krok: doplnit název, zvolit jiný nebo prázdný slug, zadat úplnou e-mailovou adresu, přidat/vybrat e-mailové pole formuláře nebo použít veřejně dostupný HTTPS webhook endpoint.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.

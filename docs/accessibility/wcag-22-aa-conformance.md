@@ -94,6 +94,8 @@ Poznámka k `3.3.3` z 2026-07-05: detaily kontaktních zpráv, chat zpráv a odp
 
 Poznámka k `3.3.3` z 2026-07-05: GitHub issue bridge v detailu odpovědi Form Builderu už při chybě vytvoření nebo ručního napojení issue nezůstává jen u obecného alertu. Pole repozitář, název issue, tělo issue a adresa existující issue dostávají `aria-invalid`, `aria-describedby` na existující field-level text a konkrétní radu pro opravu; runtime `admin_field_error_guardrails` a HTTP scénář `form_issue_preset_http` hlídají render i zákaz návratu starých generických textů.
 
+Poznámka k `3.3.3` z 2026-07-05: editor Form Builderu má zpřesněné chybové stavy pro název formuláře, slug, notifikační e-mail, pole pro potvrzovací e-mail odesílateli a webhook URL. Souhrnný `role="alert"` nově odkazuje na konkrétní pole a field-level text radí doplnění názvu, jiný nebo prázdný slug, úplný e-mail, přidání/výběr e-mailového pole nebo veřejně dostupnou HTTPS webhook adresu; runtime `admin_field_error_guardrails` a HTTP scénář `form_issue_preset_http` hlídají zdroj i render.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.
