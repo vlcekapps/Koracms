@@ -5405,7 +5405,7 @@ try {
     $pdo->prepare(
         "UPDATE cms_res_resources
          SET reminders_enabled = 1,
-             reminder_hours_before = 720,
+             reminder_hours_before = 48,
              reminder_message = 'Testovací připomínka rezervace.',
              calendar_invite_enabled = 1
          WHERE id = ?"
@@ -5425,7 +5425,10 @@ try {
 
     $calendarToken = reservationCalendarToken();
     $confirmationToken = bin2hex(random_bytes(16));
-    $bookingDate = (new DateTimeImmutable('+3 days'))->format('Y-m-d');
+    $bookingDate = (string)$pdo->query("SELECT DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))")->fetchColumn();
+    if ($bookingDate === '') {
+        $bookingDate = (new DateTimeImmutable('+1 day'))->format('Y-m-d');
+    }
     $bookingDayOfWeek = ((int)(new DateTimeImmutable($bookingDate))->format('N')) - 1;
     $pdo->prepare(
         "INSERT INTO cms_res_hours (resource_id, day_of_week, open_time, close_time, is_closed)
