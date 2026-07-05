@@ -14043,6 +14043,13 @@ if ($httpIntegrationSource === '') {
         "'field-full_name', ['autocomplete' => 'name']",
         "'field-contact_email', ['autocomplete' => 'email']",
         "'field-project_url', ['autocomplete' => 'url']",
+        "'field-street_address', ['autocomplete' => 'street-address']",
+        "'field-postal_code', ['autocomplete' => 'postal-code']",
+        "'field-city', ['autocomplete' => 'address-level2']",
+        "'field-region', ['autocomplete' => 'address-level1']",
+        "'field-country', ['autocomplete' => 'country-name']",
+        "'field-job_title', ['autocomplete' => 'organization-title']",
+        "'field-birth_date', ['autocomplete' => 'bday']",
         'Vyplňte pole „Jméno“. Pokud si nejste jistí, použijte nápovědu u pole.',
         'Zadejte do pole „E-mail“ úplnou e-mailovou adresu ve tvaru jmeno@example.cz.',
         'Zadejte do pole „Web projektu“ úplnou adresu začínající http:// nebo https:// bez přihlašovacích údajů.',
@@ -14076,7 +14083,14 @@ if (!str_contains($formsHelperSource, 'function formDeleteUploadedFilesFromSubmi
 if (!str_contains($formsHelperSource, 'function formFieldAutocompletePurpose(')
     || !str_contains($formsHelperSource, "return 'given-name';")
     || !str_contains($formsHelperSource, "return 'family-name';")
-    || !str_contains($formsHelperSource, "return 'organization';")) {
+    || !str_contains($formsHelperSource, "return 'organization';")
+    || !str_contains($formsHelperSource, "return 'organization-title';")
+    || !str_contains($formsHelperSource, "return 'street-address';")
+    || !str_contains($formsHelperSource, "return 'postal-code';")
+    || !str_contains($formsHelperSource, "return 'address-level2';")
+    || !str_contains($formsHelperSource, "return 'address-level1';")
+    || !str_contains($formsHelperSource, "return 'country-name';")
+    || !str_contains($formsHelperSource, "return 'bday';")) {
     $publicFormsHttpIssues[] = 'forms helper is missing input-purpose autocomplete mapping';
 }
 foreach ([

@@ -760,6 +760,17 @@ assert_equals('name', formFieldAutocompletePurpose('text', 'full_name', 'Jméno'
 assert_equals('given-name', formFieldAutocompletePurpose('text', 'first_name', 'Křestní jméno'), 'first name text fields expose given-name autocomplete');
 assert_equals('family-name', formFieldAutocompletePurpose('text', 'last_name', 'Příjmení'), 'last name text fields expose family-name autocomplete');
 assert_equals('organization', formFieldAutocompletePurpose('text', 'firma', 'Firma'), 'organization text fields expose organization autocomplete');
+assert_equals('organization-title', formFieldAutocompletePurpose('text', 'job_title', 'Pracovní pozice'), 'job title text fields expose organization-title autocomplete');
+assert_equals('organization-title', formFieldAutocompletePurpose('text', 'organization_title', 'Organization title'), 'organization title text fields prefer organization-title over organization autocomplete');
+assert_equals('street-address', formFieldAutocompletePurpose('text', 'street_address', 'Ulice a číslo'), 'street address text fields expose street-address autocomplete');
+assert_equals('address-line1', formFieldAutocompletePurpose('text', 'address_line_1', 'Adresa řádek 1'), 'address line 1 text fields expose address-line1 autocomplete');
+assert_equals('address-line2', formFieldAutocompletePurpose('text', 'address_line_2', 'Adresa řádek 2'), 'address line 2 text fields expose address-line2 autocomplete');
+assert_equals('postal-code', formFieldAutocompletePurpose('text', 'postal_code', 'PSČ'), 'postal code text fields expose postal-code autocomplete');
+assert_equals('address-level2', formFieldAutocompletePurpose('text', 'city', 'Město'), 'city text fields expose address-level2 autocomplete');
+assert_equals('address-level1', formFieldAutocompletePurpose('text', 'region', 'Kraj'), 'region text fields expose address-level1 autocomplete');
+assert_equals('country-name', formFieldAutocompletePurpose('text', 'country', 'Země'), 'country text fields expose country-name autocomplete');
+assert_equals('bday', formFieldAutocompletePurpose('date', 'birth_date', 'Datum narození'), 'birth date fields expose bday autocomplete');
+assert_equals('', formFieldAutocompletePurpose('text', 'web_address', 'Adresa webu'), 'web address text fields do not get postal address autocomplete');
 assert_equals('', formFieldAutocompletePurpose('text', 'username', 'Uživatelské jméno'), 'username-like text fields are not treated as personal name');
 assert_equals('', formFieldAutocompletePurpose('text', 'tema_pozadavku', 'Téma požadavku'), 'generic text fields do not get autocomplete');
 

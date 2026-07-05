@@ -9097,9 +9097,6 @@ function formFieldAutocompletePurpose(string $type, string $name = '', string $l
     if ($normalizedType === 'url') {
         return 'url';
     }
-    if ($normalizedType !== 'text') {
-        return '';
-    }
 
     $slug = slugify(trim($name . ' ' . $label));
     if ($slug === '') {
@@ -9122,8 +9119,56 @@ function formFieldAutocompletePurpose(string $type, string $name = '', string $l
         return '';
     }
 
+    if ($normalizedType === 'date') {
+        if ($contains($slug, ['datum-narozeni', 'narozeni', 'birth-date', 'date-of-birth', 'birthday', 'bday'])) {
+            return 'bday';
+        }
+
+        return '';
+    }
+
+    if ($normalizedType !== 'text') {
+        return '';
+    }
+
+    if ($contains($slug, ['email', 'e-mail', 'mail', 'web', 'url', 'uri', 'www'])) {
+        return '';
+    }
+
+    if ($contains($slug, ['pracovni-pozice', 'pozice', 'funkce', 'job-title', 'jobtitle', 'organization-title'])) {
+        return 'organization-title';
+    }
+
     if ($contains($slug, ['firma', 'firmy', 'spolecnost', 'organizace', 'company', 'organization', 'organisation'])) {
         return 'organization';
+    }
+
+    if ($contains($slug, ['psc', 'postal-code', 'postcode', 'zip', 'zip-code', 'postovni-smerovaci-cislo'])) {
+        return 'postal-code';
+    }
+
+    if ($contains($slug, ['adresa-radek-1', 'prvni-radek-adresy', 'address-line-1', 'address-line1'])) {
+        return 'address-line1';
+    }
+
+    if ($contains($slug, ['adresa-radek-2', 'druhy-radek-adresy', 'address-line-2', 'address-line2'])) {
+        return 'address-line2';
+    }
+
+    if ($contains($slug, ['ulice-a-cislo', 'ulice', 'street-address', 'street', 'postal-address', 'dodaci-adresa', 'fakturacni-adresa'])) {
+        return 'street-address';
+    }
+
+    if ($contains($slug, ['mesto', 'obec', 'locality', 'lokalita', 'city', 'address-level-2', 'address-level2'])) {
+        return 'address-level2';
+    }
+
+    if ($contains($slug, ['kraj', 'region', 'state', 'province', 'address-level-1', 'address-level1'])) {
+        return 'address-level1';
+    }
+
+    if ($contains($slug, ['stat', 'zeme', 'country', 'country-name'])) {
+        return 'country-name';
     }
 
     if ($contains($slug, ['jmeno-a-prijmeni', 'cele-jmeno', 'vase-jmeno', 'kontaktni-osoba', 'contact-name', 'full-name', 'fullname', 'your-name'])) {
