@@ -35,19 +35,19 @@ $errors = [];
 $errorFields = [];
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
+    $errors[] = 'Uživatelský účet nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.';
     $errorFields[] = 'email';
 }
 if ($accountId === null && ($newPass === '' || strlen($newPass) < 8)) {
-    $errors[] = 'Heslo je povinné a musí mít alespoň 8 znaků.';
+    $errors[] = 'Nový účet nejde vytvořit bez hesla dlouhého alespoň 8 znaků.';
     $errorFields[] = 'new_pass';
 }
 if ($newPass !== '' && strlen($newPass) < 8) {
-    $errors[] = 'Heslo musí mít alespoň 8 znaků.';
+    $errors[] = 'Nové heslo není dostatečně dlouhé. U pole Heslo je konkrétní nápověda.';
     $errorFields[] = 'new_pass';
 }
 if ($newPass !== $newPass2) {
-    $errors[] = 'Hesla se neshodují.';
+    $errors[] = 'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.';
     $errorFields[] = 'new_pass';
     $errorFields[] = 'new_pass2';
 }
@@ -61,7 +61,7 @@ if (empty($errors)) {
         $duplicateStmt->execute([$email]);
     }
     if ($duplicateStmt->fetch()) {
-        $errors[] = 'Tento e-mail již používá jiný účet.';
+        $errors[] = 'Tento e-mail už používá jiný účet. Zadejte jinou přihlašovací adresu.';
         $errorFields[] = 'email';
     }
 }
@@ -82,7 +82,7 @@ if ($authorFieldsAllowed) {
     if ($authorWebsiteInput !== '') {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
-            $errors[] = 'Web autora musí být platná veřejná adresa. Lze zadat i doménu bez schématu, CMS ji uloží jako https://.';
+            $errors[] = 'Web autora není použitelný. U pole Web autora je konkrétní nápověda.';
             $errorFields[] = 'author_website';
         }
     } else {
@@ -99,14 +99,14 @@ if ($authorFieldsAllowed) {
         ]);
     $authorSlug = authorSlug($authorSlugSource);
     if ($authorSlug === '') {
-        $errors[] = 'Slug veřejného autora je povinný.';
+        $errors[] = 'Veřejný autorský profil potřebuje použitelný slug. U pole Slug veřejného autora je konkrétní nápověda.';
         $errorFields[] = 'author_slug';
     }
 
     if (empty($errors)) {
         $uniqueAuthorSlug = uniqueAuthorSlug($pdo, $authorSlug, $accountId);
         if ($submittedAuthorSlug !== '' && $uniqueAuthorSlug !== $authorSlug) {
-            $errors[] = 'Zvolený slug veřejného autora už používá jiný účet.';
+            $errors[] = 'Zvolený slug veřejného autora už používá jiný účet. U pole Slug veřejného autora je konkrétní nápověda.';
             $errorFields[] = 'author_slug';
         } else {
             $authorSlug = $uniqueAuthorSlug;
@@ -119,7 +119,7 @@ if ($authorFieldsAllowed) {
             $authorAvatarFilename
         );
         if ($avatarUpload['error'] !== '') {
-            $errors[] = $avatarUpload['error'];
+            $errors[] = 'Avatar autora se nepodařilo uložit. U pole Avatar autora je konkrétní nápověda.';
             $errorFields[] = 'author_avatar';
         } else {
             $authorAvatarFilename = (string)$avatarUpload['filename'];

@@ -320,6 +320,27 @@ function httpIntegrationFieldHasAriaInvalid(string $html, string $fieldId): bool
     return preg_match('/id="' . preg_quote($fieldId, '/') . '"[^>]*aria-invalid="true"/i', $html) === 1;
 }
 
+/**
+ * @param array<string, string> $attributes
+ */
+function httpIntegrationElementHasAttributes(string $html, string $tagName, string $fieldId, array $attributes): bool
+{
+    $pattern = '/<' . preg_quote($tagName, '/') . '\b(?=[^>]*\bid="' . preg_quote($fieldId, '/') . '")[^>]*>/is';
+    if (preg_match($pattern, $html, $matches) !== 1) {
+        return false;
+    }
+
+    $elementTag = $matches[0];
+    foreach ($attributes as $attributeName => $attributeValue) {
+        $attributePattern = '/\b' . preg_quote($attributeName, '/') . '="' . preg_quote($attributeValue, '/') . '"/i';
+        if (preg_match($attributePattern, $elementTag) !== 1) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function httpIntegrationCheckboxIsChecked(string $html, string $fieldId): bool
 {
     $pattern = '/<input(?=[^>]*id="' . preg_quote($fieldId, '/') . '")(?=[^>]*\bchecked\b)[^>]*>/i';
@@ -331,20 +352,7 @@ function httpIntegrationCheckboxIsChecked(string $html, string $fieldId): bool
  */
 function httpIntegrationInputHasAttributes(string $html, string $fieldId, array $attributes): bool
 {
-    $pattern = '/<input\b(?=[^>]*\bid="' . preg_quote($fieldId, '/') . '")[^>]*>/is';
-    if (preg_match($pattern, $html, $matches) !== 1) {
-        return false;
-    }
-
-    $inputTag = $matches[0];
-    foreach ($attributes as $attributeName => $attributeValue) {
-        $attributePattern = '/\b' . preg_quote($attributeName, '/') . '="' . preg_quote($attributeValue, '/') . '"/i';
-        if (preg_match($attributePattern, $inputTag) !== 1) {
-            return false;
-        }
-    }
-
-    return true;
+    return httpIntegrationElementHasAttributes($html, 'input', $fieldId, $attributes);
 }
 
 function httpIntegrationAuthHtmlHasNoCaptchaChallenge(string $html): bool
@@ -2037,6 +2045,42 @@ try {
         $settingsIssues[] = 'neplatný contact_email nezachoval zadanou hodnotu po PRG';
     }
 
+    $invalidCoreFields = $settingsPostFields;
+    $invalidCoreFields['csrf_token'] = $adminSession['csrf'];
+    $invalidCoreFields['site_name'] = '';
+    $invalidCoreFields['board_public_label'] = str_repeat('X', 61);
+    $invalidCoreFields['github_issues_repository'] = 'owner/repo/extra';
+    $invalidCoreResponse = postUrl($settingsSaveUrl, $invalidCoreFields, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($invalidCoreResponse) !== 302) {
+        $settingsIssues[] = 'neplatný název webu, vývěska a GitHub repozitář nevrátily PRG redirect';
+    }
+    clearSettingsCache();
+    if (httpIntegrationSettingValue($pdo, 'site_name') !== $validSiteName) {
+        $settingsIssues[] = 'neplatný core settings průchod způsobil částečné uložení site_name';
+    }
+    $invalidCorePage = fetchUrl($settingsPageUrl, $adminSession['cookie'], 0);
+    foreach ([
+        'Nastavení webu nejde uložit bez názvu webu. U pole Název webu je konkrétní nápověda.',
+        'Doplňte krátký název webu, například název organizace nebo projektu.',
+        'Veřejný název sekce vývěsky je příliš dlouhý. U pole Veřejný název sekce vývěsky je konkrétní nápověda.',
+        'Zkraťte veřejný název sekce vývěsky na nejvýše 60 znaků, například Úřední deska.',
+        'Výchozí repozitář pro GitHub issue bridge není použitelný. U pole Výchozí repozitář je konkrétní nápověda.',
+        'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms, nebo pole nechte prázdné.',
+    ] as $invalidCoreFragment) {
+        if (!str_contains($invalidCorePage['body'], $invalidCoreFragment)) {
+            $settingsIssues[] = 'neplatný core settings průchod nezobrazil fragment: ' . $invalidCoreFragment;
+        }
+    }
+    foreach (['site_name', 'board_public_label', 'github_issues_repository'] as $invalidCoreFieldId) {
+        if (!httpIntegrationFieldHasAriaInvalid($invalidCorePage['body'], $invalidCoreFieldId)) {
+            $settingsIssues[] = 'neplatný core settings průchod neoznačil pole aria-invalid: ' . $invalidCoreFieldId;
+        }
+    }
+    if (!str_contains($invalidCorePage['body'], 'id="settings-form-errors" aria-atomic="true"')
+        || !str_contains($invalidCorePage['body'], 'aria-describedby="settings-form-errors"')) {
+        $settingsIssues[] = 'neplatný core settings průchod nemá text-backed alert a form aria-describedby';
+    }
+
     $svgPath = httpIntegrationCreateTempFile(
         'kora-svg-',
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
@@ -2067,7 +2111,7 @@ try {
         $settingsIssues[] = 'neplatný SVG upload způsobil částečné uložení ostatních nastavení';
     }
     $invalidSvgPage = fetchUrl($settingsPageUrl, $adminSession['cookie'], 0);
-    if (!str_contains($invalidSvgPage['body'], 'Logo: nepodporovaný formát')) {
+    if (!str_contains($invalidSvgPage['body'], 'Logo má nepodporovaný formát. Nahrajte JPEG, PNG, GIF nebo WebP, případně pole nechte prázdné.')) {
         $settingsIssues[] = 'SVG upload loga nezobrazil správnou validační chybu';
     }
     if (!httpIntegrationFieldHasAriaInvalid($invalidSvgPage['body'], 'site_logo')) {
@@ -2481,6 +2525,256 @@ try {
         clearSettingsCache();
     }
     httpIntegrationPrintResult('auth_accessibility_http', $authAccessibilityIssues, $failures);
+
+    $adminValidationA11yIssues = [];
+    $adminAccountValidationSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Validation Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-admin-validation-a11y-' . bin2hex(random_bytes(3)));
+    $adminAccountEmail = (string)($pdo->query(
+        'SELECT email FROM cms_users WHERE id = ' . (int)$adminUserId . ' LIMIT 1'
+    )->fetchColumn() ?: 'http-validation-admin@example.test');
+
+    $profileUrl = $baseUrl . BASE_URL . '/admin/profile.php';
+    $profilePage = fetchUrl($profileUrl, $adminAccountValidationSession['cookie'], 0);
+    $profileCsrf = extractHiddenInputValue($profilePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($profilePage) !== 200 || $profileCsrf === '') {
+        $adminValidationA11yIssues[] = 'Můj profil nevykreslil stránku a csrf_token pro validační průchod';
+    } else {
+        $invalidProfileResponse = postUrl(
+            $profileUrl,
+            [
+                'csrf_token' => $profileCsrf,
+                'first_name' => '',
+                'last_name' => '',
+                'nickname' => '',
+                'email' => 'neplatny-email',
+                'new_pass' => 'short',
+                'new_pass2' => 'jine-heslo',
+                'author_public_enabled' => '1',
+                'author_slug' => '!!!',
+                'author_bio' => '',
+                'author_website' => 'bad url',
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        $invalidProfileBody = $invalidProfileResponse['body'];
+        foreach ([
+            'Profil nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.',
+            'Nové heslo není dostatečně dlouhé. U pole Nové heslo je konkrétní nápověda.',
+            'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.',
+            'Web autora není použitelný. U pole Web autora je konkrétní nápověda.',
+            'Veřejný autorský profil potřebuje použitelný slug. U pole Slug veřejného autora je konkrétní nápověda.',
+        ] as $invalidProfileFragment) {
+            if (!str_contains($invalidProfileBody, $invalidProfileFragment)) {
+                $adminValidationA11yIssues[] = 'Můj profil nezobrazil validační fragment: ' . $invalidProfileFragment;
+            }
+        }
+        foreach (['email', 'new_pass', 'new_pass2', 'author_slug', 'author_website'] as $invalidProfileFieldId) {
+            if (!httpIntegrationFieldHasAriaInvalid($invalidProfileBody, $invalidProfileFieldId)) {
+                $adminValidationA11yIssues[] = 'Můj profil neoznačil pole aria-invalid: ' . $invalidProfileFieldId;
+            }
+        }
+        if (!str_contains($invalidProfileBody, 'id="profile-form-errors" aria-atomic="true"')
+            || !str_contains($invalidProfileBody, 'aria-describedby="profile-form-errors"')) {
+            $adminValidationA11yIssues[] = 'Můj profil nemá text-backed alert a form aria-describedby';
+        }
+
+        $profileTotpSecret = totpGenerateSecret();
+        $profileInvalidTotp = totpCalculate($profileTotpSecret) === '000000' ? '111111' : '000000';
+        $invalidProfileTotpResponse = postUrl(
+            $profileUrl,
+            [
+                'csrf_token' => $profileCsrf,
+                'first_name' => '',
+                'last_name' => '',
+                'nickname' => '',
+                'email' => $adminAccountEmail,
+                'new_pass' => '',
+                'new_pass2' => '',
+                'author_public_enabled' => '0',
+                'author_slug' => '',
+                'author_bio' => '',
+                'author_website' => '',
+                'enable_2fa' => '1',
+                'totp_secret' => $profileTotpSecret,
+                'totp_verify' => $profileInvalidTotp,
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        $invalidProfileTotpBody = $invalidProfileTotpResponse['body'];
+        if (!str_contains($invalidProfileTotpBody, 'Ověřovací kód pro 2FA nesouhlasí. U pole Ověřovací kód je konkrétní nápověda.')
+            || !str_contains($invalidProfileTotpBody, 'Zadejte aktuální šestimístný kód z autentizační aplikace bez mezer.')
+            || !httpIntegrationFieldHasAriaInvalid($invalidProfileTotpBody, 'totp_verify')) {
+            $adminValidationA11yIssues[] = 'Můj profil neověřil 2FA field-level chybu s aria-invalid';
+        }
+    }
+
+    $userFormUrl = $baseUrl . BASE_URL . '/admin/user_form.php';
+    $userSaveUrl = $baseUrl . BASE_URL . '/admin/user_save.php';
+    $userCreatePage = fetchUrl($userFormUrl, $adminAccountValidationSession['cookie'], 0);
+    $userCreateCsrf = extractHiddenInputValue($userCreatePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($userCreatePage) !== 200 || $userCreateCsrf === '') {
+        $adminValidationA11yIssues[] = 'Nový uživatelský účet nevykreslil stránku a csrf_token pro validační průchod';
+    } else {
+        $invalidUserResponse = postUrl(
+            $userSaveUrl,
+            [
+                'csrf_token' => $userCreateCsrf,
+                'email' => 'neplatny-email',
+                'first_name' => '',
+                'last_name' => '',
+                'nickname' => '',
+                'role' => 'author',
+                'new_pass' => 'short',
+                'new_pass2' => 'jine-heslo',
+                'author_public_enabled' => '1',
+                'author_slug' => '!!!',
+                'author_bio' => '',
+                'author_website' => 'bad url',
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($invalidUserResponse) !== 302) {
+            $adminValidationA11yIssues[] = 'Neplatný uživatelský účet nevrátil PRG redirect';
+        }
+        $invalidUserPage = fetchUrl($userFormUrl, $adminAccountValidationSession['cookie'], 0);
+        foreach ([
+            'Uživatelský účet nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.',
+            'Nový účet nejde vytvořit bez hesla dlouhého alespoň 8 znaků.',
+            'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.',
+            'Web autora není použitelný. U pole Web autora je konkrétní nápověda.',
+            'Veřejný autorský profil potřebuje použitelný slug. U pole Slug veřejného autora je konkrétní nápověda.',
+        ] as $invalidUserFragment) {
+            if (!str_contains($invalidUserPage['body'], $invalidUserFragment)) {
+                $adminValidationA11yIssues[] = 'Nový uživatelský účet nezobrazil validační fragment: ' . $invalidUserFragment;
+            }
+        }
+        foreach (['email', 'new_pass', 'new_pass2', 'author_slug', 'author_website'] as $invalidUserFieldId) {
+            if (!httpIntegrationFieldHasAriaInvalid($invalidUserPage['body'], $invalidUserFieldId)) {
+                $adminValidationA11yIssues[] = 'Nový uživatelský účet neoznačil pole aria-invalid: ' . $invalidUserFieldId;
+            }
+        }
+        if (!str_contains($invalidUserPage['body'], 'id="user-form-errors" aria-atomic="true"')
+            || !str_contains($invalidUserPage['body'], 'aria-describedby="user-form-errors"')) {
+            $adminValidationA11yIssues[] = 'Nový uživatelský účet nemá text-backed alert a form aria-describedby';
+        }
+    }
+
+    $themesUrl = $baseUrl . BASE_URL . '/admin/themes.php';
+    $themesValidationSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Themes Validation Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-themes-validation-a11y-' . bin2hex(random_bytes(3)));
+    $themesPage = fetchUrl($themesUrl, $themesValidationSession['cookie'], 0);
+    $themesCsrf = extractHiddenInputValue($themesPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($themesPage) !== 200 || $themesCsrf === '') {
+        $adminValidationA11yIssues[] = 'Vzhled a šablony nevykreslily stránku a csrf_token pro validační průchod';
+    } else {
+        $invalidThemeResponse = postUrl(
+            $themesUrl,
+            [
+                'csrf_token' => $themesCsrf,
+                'form_action' => 'activate_theme',
+                'active_theme' => '__missing_theme__',
+                'preview_redirect' => BASE_URL . '/index.php',
+            ],
+            $themesValidationSession['cookie'],
+            0
+        );
+        $invalidThemeBody = $invalidThemeResponse['body'];
+        $defaultThemeRadioId = 'theme-' . preg_replace('/[^a-z0-9_-]+/i', '-', defaultThemeName());
+        if (!str_contains($invalidThemeBody, 'Vybranou šablonu nejde použít. U výběru aktivní šablony je konkrétní nápověda.')
+            || !str_contains($invalidThemeBody, 'Vyberte některou z dostupných šablon v katalogu.')
+            || !str_contains($invalidThemeBody, 'id="themes-form-errors" aria-atomic="true"')
+            || !str_contains($invalidThemeBody, 'aria-describedby="theme-selection-help active-theme-error"')
+            || !httpIntegrationInputHasAttributes($invalidThemeBody, $defaultThemeRadioId, ['aria-invalid' => 'true'])) {
+            $adminValidationA11yIssues[] = 'Výběr aktivní šablony nemá field-level chybu, alert a aria-describedby';
+        }
+
+        $themeSettingsDefinitions = themeSettingDefinitions(defaultThemeName());
+        $invalidColorSettingKey = '';
+        foreach ($themeSettingsDefinitions as $themeSettingKey => $themeSettingDefinition) {
+            if (($themeSettingDefinition['type'] ?? '') === 'color') {
+                $invalidColorSettingKey = (string)$themeSettingKey;
+                break;
+            }
+        }
+        if ($invalidColorSettingKey === '') {
+            $adminValidationA11yIssues[] = 'Výchozí šablona nemá barvové nastavení pro validační průchod';
+        } else {
+            $themeSettingsFields = [
+                'csrf_token' => $themesCsrf,
+                'form_action' => 'save_theme_settings',
+                'theme_key' => defaultThemeName(),
+                'preview_redirect' => BASE_URL . '/index.php',
+            ];
+            foreach (themeDefaultSettings(defaultThemeName()) as $themeSettingKey => $themeSettingValue) {
+                $themeSettingsFields['theme_settings[' . $themeSettingKey . ']'] = $themeSettingValue;
+            }
+            $themeSettingsFields['theme_settings[' . $invalidColorSettingKey . ']'] = 'not-a-color';
+            $invalidThemeSettingsResponse = postUrl($themesUrl, $themeSettingsFields, $themesValidationSession['cookie'], 0);
+            $invalidThemeSettingsBody = $invalidThemeSettingsResponse['body'];
+            $invalidColorFieldId = 'theme-setting-' . preg_replace('/[^a-z0-9_-]+/i', '-', $invalidColorSettingKey);
+            $invalidColorErrorId = $invalidColorFieldId . '-error';
+            if (!str_contains($invalidThemeSettingsBody, 'nejde uložit. U příslušného nastavení vzhledu je konkrétní nápověda.')
+                || !str_contains($invalidThemeSettingsBody, 'Musí být zadaná platná hex barva. Upravte hodnotu podle nápovědy u pole nebo obnovte výchozí vzhled.')
+                || !str_contains($invalidThemeSettingsBody, 'id="themes-form-errors" aria-atomic="true"')
+                || !str_contains($invalidThemeSettingsBody, 'aria-describedby="themes-form-errors"')
+                || !httpIntegrationInputHasAttributes($invalidThemeSettingsBody, $invalidColorFieldId, [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => $invalidColorFieldId . '-help ' . $invalidColorErrorId,
+                ])) {
+                $adminValidationA11yIssues[] = 'Theme settings nemají field-level chybu, alert a aria-describedby';
+            }
+        }
+
+        $invalidThemePackageResponse = postMultipartUrl(
+            $themesUrl,
+            [
+                'csrf_token' => $themesCsrf,
+                'form_action' => 'import_theme_package',
+            ],
+            [],
+            $themesValidationSession['cookie'],
+            0
+        );
+        $invalidThemePackageBody = $invalidThemePackageResponse['body'];
+        if (!str_contains($invalidThemePackageBody, 'ZIP balíček šablony nejde importovat. U pole Soubor ZIP je konkrétní nápověda.')
+            || !str_contains($invalidThemePackageBody, 'Vyberte portable ZIP balíček s jedním kořenovým adresářem, manifestem theme.json a assets/public.css.')
+            || !httpIntegrationInputHasAttributes($invalidThemePackageBody, 'theme-package', ['aria-invalid' => 'true'])
+            || !str_contains($invalidThemePackageBody, 'aria-describedby="themes-form-errors"')) {
+            $adminValidationA11yIssues[] = 'Import ZIP balíčku šablony nemá field-level chybu, alert a aria-describedby';
+        }
+
+        $invalidThemeExportResponse = postUrl(
+            $themesUrl,
+            [
+                'csrf_token' => $themesCsrf,
+                'form_action' => 'export_theme_package',
+                'export_theme' => '__missing_theme__',
+            ],
+            $themesValidationSession['cookie'],
+            0
+        );
+        $invalidThemeExportBody = $invalidThemeExportResponse['body'];
+        if (!str_contains($invalidThemeExportBody, 'Vybranou šablonu nejde exportovat. U pole Šablona k exportu je konkrétní nápověda.')
+            || !str_contains($invalidThemeExportBody, 'Vyberte některou z dostupných šablon v seznamu a export spusťte znovu.')
+            || !httpIntegrationElementHasAttributes($invalidThemeExportBody, 'select', 'export-theme', ['aria-invalid' => 'true'])
+            || !str_contains($invalidThemeExportBody, 'aria-describedby="themes-form-errors"')) {
+            $adminValidationA11yIssues[] = 'Export ZIP balíčku šablony nemá field-level chybu, alert a aria-describedby';
+        }
+    }
+    httpIntegrationPrintResult('admin_validation_a11y_http', $adminValidationA11yIssues, $failures);
 
     $migrateLoginRedirectIssues = [];
     $migratePath = BASE_URL . '/migrate.php';

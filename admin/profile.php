@@ -51,15 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $totpSetupSecret = trim($_POST['totp_secret'] ?? '');
 
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz.';
+        $errors[] = 'Profil nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.';
         $fieldErrors[] = 'email';
     }
     if ($newPass !== '' && strlen($newPass) < 8) {
-        $errors[] = 'Nové heslo musí mít alespoň 8 znaků.';
+        $errors[] = 'Nové heslo není dostatečně dlouhé. U pole Nové heslo je konkrétní nápověda.';
         $fieldErrors[] = 'new_pass';
     }
     if ($newPass !== $newPass2) {
-        $errors[] = 'Hesla se neshodují.';
+        $errors[] = 'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.';
         $fieldErrors[] = 'new_pass';
         $fieldErrors[] = 'new_pass2';
     }
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duplicateStmt = $pdo->prepare("SELECT id FROM cms_users WHERE email = ? AND id != ?");
         $duplicateStmt->execute([$email, $accountId]);
         if ($duplicateStmt->fetch()) {
-            $errors[] = 'Tento e-mail již používá jiný účet.';
+            $errors[] = 'Tento e-mail už používá jiný účet. U pole E-mail je konkrétní nápověda.';
             $fieldErrors[] = 'email';
         }
     }
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($authorWebsiteInput !== '') {
         $authorWebsite = normalizeAuthorWebsite($authorWebsiteInput);
         if ($authorWebsite === '') {
-            $errors[] = 'Web autora musí být platná veřejná adresa. Lze zadat i doménu bez schématu, CMS ji uloží jako https://.';
+            $errors[] = 'Web autora není použitelný. U pole Web autora je konkrétní nápověda.';
             $fieldErrors[] = 'author_website';
         }
     }
@@ -92,14 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     $authorSlug = authorSlug($authorSlugSource);
     if ($authorSlug === '') {
-        $errors[] = 'Slug veřejného autora je povinný.';
+        $errors[] = 'Veřejný autorský profil potřebuje použitelný slug. U pole Slug veřejného autora je konkrétní nápověda.';
         $fieldErrors[] = 'author_slug';
     }
 
     if (empty($errors) && $accountId) {
         $uniqueAuthorSlug = uniqueAuthorSlug($pdo, $authorSlug, $accountId);
         if ($submittedAuthorSlug !== '' && $uniqueAuthorSlug !== $authorSlug) {
-            $errors[] = 'Zvolený slug veřejného autora už používá jiný účet.';
+            $errors[] = 'Zvolený slug veřejného autora už používá jiný účet. U pole Slug veřejného autora je konkrétní nápověda.';
             $fieldErrors[] = 'author_slug';
         } else {
             $authorSlug = $uniqueAuthorSlug;
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $params[] = $totpSecret;
                 $updatedTotpSecret = $totpSecret;
             } else {
-                $errors[] = 'Ověřovací kód nesouhlasí. 2FA nebylo aktivováno.';
+                $errors[] = 'Ověřovací kód pro 2FA nesouhlasí. U pole Ověřovací kód je konkrétní nápověda.';
                 $fieldErrors[] = 'totp_verify';
             }
         }
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $authorAvatarFilename
             );
             if ($avatarUpload['error'] !== '') {
-                $errors[] = $avatarUpload['error'];
+                $errors[] = 'Avatar autora se nepodařilo uložit. U pole Avatar autora je konkrétní nápověda.';
                 $fieldErrors[] = 'author_avatar';
             } else {
                 $authorAvatarFilename = (string)$avatarUpload['filename'];
@@ -201,12 +201,12 @@ $authorProfileUrl = (string)($currentRow['author_public_path'] ?? '');
 $fieldErrors = array_values(array_unique($fieldErrors));
 $fieldErrorMessages = [
     'email' => 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz. Adresa musí být jedinečná, protože slouží k přihlášení.',
-    'new_pass' => 'Nové heslo musí mít alespoň 8 znaků.',
-    'new_pass2' => 'Kontrolní heslo se musí shodovat s novým heslem.',
-    'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
-    'author_website' => 'Zadejte platnou veřejnou webovou adresu, například https://example.com.',
-    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
-    'totp_verify' => 'Zadejte platný šestimístný ověřovací kód.',
+    'new_pass' => 'Zadejte nové heslo dlouhé alespoň 8 znaků, nebo pole ponechte prázdné, pokud heslo nechcete měnit.',
+    'new_pass2' => 'Zopakujte stejné heslo jako v poli Nové heslo.',
+    'author_slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte jméno či přezdívku pro automatické vytvoření.',
+    'author_website' => 'Zadejte veřejnou http/https adresu, například https://example.com, nebo doménu bez schématu.',
+    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud avatar nechcete měnit, nechte pole prázdné.',
+    'totp_verify' => 'Zadejte aktuální šestimístný kód z autentizační aplikace bez mezer.',
 ];
 
 adminHeader('Můj profil');
@@ -217,7 +217,7 @@ adminHeader('Můj profil');
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
-  <ul class="error" role="alert">
+  <ul class="error" role="alert" id="profile-form-errors" aria-atomic="true">
     <?php foreach ($errors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
   </ul>
 <?php endif; ?>
@@ -228,7 +228,7 @@ adminHeader('Můj profil');
   <p><strong>Role:</strong> <?= h(userRoleLabel((string)($currentRow['role'] ?? currentUserRole()))) ?></p>
 <?php endif; ?>
 
-<form method="post" enctype="multipart/form-data" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate<?= !empty($errors) ? ' aria-describedby="profile-form-errors"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
   <fieldset>

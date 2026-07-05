@@ -38,6 +38,8 @@ function themeAdminCatalogState(): array
 
 $successMessage = '';
 $errors = [];
+$themeFieldErrors = [];
+$themeFieldErrorMessages = [];
 $previewRedirectDefault = BASE_URL . '/index.php';
 
 [
@@ -60,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($formAction === 'activate_theme' || $formAction === 'preview_theme') {
         $selectedTheme = trim((string)($_POST['active_theme'] ?? ''));
         if (!in_array($selectedTheme, $availableThemeKeys, true)) {
-            $errors[] = 'Vybraná šablona není k dispozici.';
+            $errors[] = 'Vybranou šablonu nejde použít. U výběru aktivní šablony je konkrétní nápověda.';
+            $themeFieldErrors[] = 'active_theme';
+            $themeFieldErrorMessages['active_theme'] = 'Vyberte některou z dostupných šablon v katalogu.';
         }
 
         if ($errors === []) {
@@ -95,7 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (in_array($formAction, ['save_theme_settings', 'reset_theme_settings', 'preview_theme_settings'], true)) {
         $postedThemeKey = trim((string)($_POST['theme_key'] ?? ''));
         if (!in_array($postedThemeKey, $availableThemeKeys, true)) {
-            $errors[] = 'Vybraná šablona pro úpravu není k dispozici.';
+            $errors[] = 'Vzhled vybrané šablony nejde uložit, protože šablona už není dostupná. Obnovte stránku a vyberte dostupnou šablonu.';
+            $themeFieldErrors[] = 'theme_key';
+            $themeFieldErrorMessages['theme_key'] = 'Obnovte stránku a upravte některou z dostupných šablon.';
         } else {
             if ($formAction === 'reset_theme_settings') {
                 resetThemeSettings($postedThemeKey);
@@ -114,7 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $definitions = themeSettingDefinitions($postedThemeKey);
                     foreach ($validation['errors'] as $settingKey => $errorMessage) {
                         $label = $definitions[$settingKey]['label'] ?? $settingKey;
-                        $errors[] = $label . ': ' . $errorMessage;
+                        $themeSettingField = 'theme_setting_' . $settingKey;
+                        $errors[] = $label . ' nejde uložit. U příslušného nastavení vzhledu je konkrétní nápověda.';
+                        $themeFieldErrors[] = $themeSettingField;
+                        $themeFieldErrorMessages[$themeSettingField] = (string)$errorMessage . ' Upravte hodnotu podle nápovědy u pole nebo obnovte výchozí vzhled.';
                     }
                 } elseif ($formAction === 'save_theme_settings') {
                     saveThemeSettings($validation['values'], $postedThemeKey);
@@ -134,7 +143,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($formAction === 'import_theme_package') {
         $importResult = themeImportPortablePackageUpload($_FILES['theme_package'] ?? null);
         if (!$importResult['ok']) {
-            $errors = array_merge($errors, $importResult['errors']);
+            $errors[] = 'ZIP balíček šablony nejde importovat. U pole Soubor ZIP je konkrétní nápověda.';
+            $themeFieldErrors[] = 'theme_package';
+            $themeFieldErrorMessages['theme_package'] = implode(' ', array_map('strval', (array)$importResult['errors']))
+                . ' Vyberte portable ZIP balíček s jedním kořenovým adresářem, manifestem theme.json a assets/public.css.';
         } else {
             [
                 'availableThemeKeys' => $availableThemeKeys,
@@ -150,11 +162,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($formAction === 'export_theme_package') {
         $exportThemeKey = trim((string)($_POST['export_theme'] ?? ''));
         if (!in_array($exportThemeKey, $availableThemeKeys, true)) {
-            $errors[] = 'Vybraná šablona pro export není k dispozici.';
+            $errors[] = 'Vybranou šablonu nejde exportovat. U pole Šablona k exportu je konkrétní nápověda.';
+            $themeFieldErrors[] = 'export_theme';
+            $themeFieldErrorMessages['export_theme'] = 'Vyberte některou z dostupných šablon v seznamu a export spusťte znovu.';
         } else {
             $exportResult = themeBuildPortablePackage($exportThemeKey);
             if (!$exportResult['ok']) {
-                $errors = array_merge($errors, $exportResult['errors']);
+                $errors[] = 'ZIP balíček šablony se nepodařilo vytvořit. U pole Šablona k exportu je konkrétní nápověda.';
+                $themeFieldErrors[] = 'export_theme';
+                $themeFieldErrorMessages['export_theme'] = implode(' ', array_map('strval', (array)$exportResult['errors']))
+                    . ' Zkuste vybrat jinou šablonu nebo zkontrolovat soubory šablony.';
             } else {
                 logAction('theme_export', 'theme=' . $exportThemeKey);
                 $exportPath = (string)$exportResult['path'];
@@ -174,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         logAction('theme_preview_stop');
         $successMessage = 'Živý náhled byl ukončen.';
     } else {
-        $errors[] = 'Neplatná akce formuláře.';
+        $errors[] = 'Akce formuláře není platná. Vraťte se na stránku šablon a použijte jedno z dostupných tlačítek.';
     }
 }
 
@@ -198,6 +215,17 @@ $themeSettingValues = $previewIsActive && !empty($previewData['settings'])
 $exportThemeDefault = in_array($selectedTheme, $availableThemeKeys, true)
     ? $selectedTheme
     : ($availableThemeKeys[0] ?? defaultThemeName());
+$themeFieldErrors = array_values(array_unique($themeFieldErrors));
+$activeThemeHasError = adminFieldHasError('active_theme', $themeFieldErrors);
+$themeSettingsHasError = adminFieldHasError('theme_key', $themeFieldErrors);
+foreach ($themeFieldErrors as $themeFieldErrorName) {
+    if (str_starts_with($themeFieldErrorName, 'theme_setting_')) {
+        $themeSettingsHasError = true;
+        break;
+    }
+}
+$themePackageHasError = adminFieldHasError('theme_package', $themeFieldErrors);
+$themeExportHasError = adminFieldHasError('export_theme', $themeFieldErrors);
 
 adminHeader('Vzhled a šablony');
 ?>
@@ -207,7 +235,7 @@ adminHeader('Vzhled a šablony');
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
-  <ul class="error" role="alert">
+  <ul class="error" role="alert" id="themes-form-errors" aria-atomic="true">
     <?php foreach ($errors as $errorMessage): ?>
       <li><?= h($errorMessage) ?></li>
     <?php endforeach; ?>
@@ -235,11 +263,11 @@ adminHeader('Vzhled a šablony');
   bez PHP override souborů a bez zásahu do produkční konfigurace.
 </p>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $activeThemeHasError ? ' aria-describedby="themes-form-errors"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="preview_redirect" value="<?= h($previewRedirectDefault) ?>">
 
-  <fieldset>
+  <fieldset aria-describedby="theme-selection-help<?= $activeThemeHasError ? ' active-theme-error' : '' ?>">
     <legend>Aktivní šablona</legend>
     <p id="theme-selection-help">
       Pokud je v nastavení uložená chybějící nebo neplatná šablona, systém automaticky přejde
@@ -270,7 +298,7 @@ adminHeader('Vzhled a šablony');
               name="active_theme"
               value="<?= h($themeKey) ?>"
               <?= $selectedTheme === $themeKey ? 'checked' : '' ?>
-              aria-describedby="<?= h($metaId) ?>">
+              <?= adminFieldAttributes('active_theme', $themeFieldErrors, [], [$metaId], 'active-theme-error') ?>>
             <label for="<?= h($themeId) ?>" class="theme-card__title">
               <?= h($manifest['name']) ?>
             </label>
@@ -328,6 +356,7 @@ adminHeader('Vzhled a šablony');
     <p class="theme-card__hint">
       Vyberte kartu šablony a potom použijte tlačítka níže pro aktivaci nebo živý náhled.
     </p>
+    <?php adminRenderFieldError('active_theme', $themeFieldErrors, [], $themeFieldErrorMessages['active_theme'] ?? '', 'active-theme-error'); ?>
   </fieldset>
 
   <fieldset class="admin-fieldset-spaced">
@@ -361,12 +390,12 @@ adminHeader('Vzhled a šablony');
   <?php if ($themeSettingDefinitions === []): ?>
     <p>Tato šablona zatím nemá konfigurovatelné vizuální prvky.</p>
   <?php else: ?>
-    <form method="post" novalidate>
+    <form method="post" novalidate<?= $themeSettingsHasError ? ' aria-describedby="themes-form-errors"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="theme_key" value="<?= h($editableTheme) ?>">
       <input type="hidden" name="preview_redirect" value="<?= h($previewRedirectDefault) ?>">
 
-      <fieldset>
+      <fieldset aria-describedby="theme-settings-help">
         <legend>Bezpečné theme settings</legend>
         <p id="theme-settings-help">
           Můžete upravit nejen barvy a typografii, ale i variantu hlavičky a úvodní stránky.
@@ -378,6 +407,8 @@ adminHeader('Vzhled a šablony');
           <?php
               $fieldId = 'theme-setting-' . preg_replace('/[^a-z0-9_-]+/i', '-', $settingKey);
             $helpId = $fieldId . '-help';
+            $errorFieldName = 'theme_setting_' . $settingKey;
+            $errorId = $fieldId . '-error';
             $value = $themeSettingValues[$settingKey] ?? (string)$definition['default'];
             $settingAvailable = themeSettingIsAvailable($definition);
             $requiredModulesText = themeRequiredModulesDescription((array)($definition['requires_modules'] ?? []));
@@ -398,7 +429,7 @@ adminHeader('Vzhled a šablony');
                   id="<?= h($fieldId) ?>"
                   name="theme_settings[<?= h($settingKey) ?>]"
                   value="<?= h($value) ?>"
-                  aria-describedby="<?= h($helpId) ?>">
+                  <?= adminFieldAttributes($errorFieldName, $themeFieldErrors, [], [$helpId], $errorId) ?>>
                 <code><?= h($value) ?></code>
               </div>
               <small id="<?= h($helpId) ?>">
@@ -433,7 +464,7 @@ adminHeader('Vzhled a šablony');
               <select
                 id="<?= h($fieldId) ?>"
                 name="theme_settings[<?= h($settingKey) ?>]"
-                aria-describedby="<?= h($helpId) ?>">
+                <?= adminFieldAttributes($errorFieldName, $themeFieldErrors, [], [$helpId], $errorId) ?>>
                 <?php foreach ($availableOptions as $optionKey => $option): ?>
                   <option value="<?= h($optionKey) ?>" <?= $displayValue === $optionKey ? 'selected' : '' ?>>
                     <?= h($option['label']) ?>
@@ -453,6 +484,7 @@ adminHeader('Vzhled a šablony');
               </small>
               <?php endif; ?>
             <?php endif; ?>
+            <?php adminRenderFieldError($errorFieldName, $themeFieldErrors, [], $themeFieldErrorMessages[$errorFieldName] ?? '', $errorId); ?>
           </div>
         <?php endforeach; ?>
       </fieldset>
@@ -475,7 +507,7 @@ adminHeader('Vzhled a šablony');
   </p>
 
   <div class="theme-package-grid">
-    <form method="post" enctype="multipart/form-data" novalidate class="theme-package-card">
+    <form method="post" enctype="multipart/form-data" novalidate class="theme-package-card"<?= $themePackageHasError ? ' aria-describedby="themes-form-errors"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
       <fieldset>
@@ -486,11 +518,12 @@ adminHeader('Vzhled a šablony');
           id="theme-package"
           name="theme_package"
           accept=".zip,application/zip"
-          aria-describedby="theme-package-help">
+          <?= adminFieldAttributes('theme_package', $themeFieldErrors, [], ['theme-package-help']) ?>>
         <small id="theme-package-help">
           Balíček musí obsahovat jediný kořenový adresář šablony, platný <code>theme.json</code>
           a soubor <code>assets/public.css</code>. Externí URL v CSS a PHP soubory nejsou povolené.
         </small>
+        <?php adminRenderFieldError('theme_package', $themeFieldErrors, [], $themeFieldErrorMessages['theme_package'] ?? ''); ?>
       </fieldset>
 
       <div class="button-row admin-action-row">
@@ -498,13 +531,13 @@ adminHeader('Vzhled a šablony');
       </div>
     </form>
 
-    <form method="post" novalidate class="theme-package-card">
+    <form method="post" novalidate class="theme-package-card"<?= $themeExportHasError ? ' aria-describedby="themes-form-errors"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
 
       <fieldset>
         <legend>Export ZIP balíčku</legend>
         <label for="export-theme">Šablona k exportu</label>
-        <select id="export-theme" name="export_theme" aria-describedby="export-theme-help">
+        <select id="export-theme" name="export_theme"<?= adminFieldAttributes('export_theme', $themeFieldErrors, [], ['export-theme-help']) ?>>
           <?php foreach ($availableThemeKeys as $themeKey): ?>
             <?php $manifest = $themeManifests[$themeKey]; ?>
             <option value="<?= h($themeKey) ?>" <?= $exportThemeDefault === $themeKey ? 'selected' : '' ?>>
@@ -516,6 +549,7 @@ adminHeader('Vzhled a šablony');
           Export vytvoří portable ZIP s manifestem, uloženými výchozími theme settings a statickými assety.
           Runtime PHP override soubory se do balíčku z bezpečnostních důvodů nevkládají.
         </small>
+        <?php adminRenderFieldError('export_theme', $themeFieldErrors, [], $themeFieldErrorMessages['export_theme'] ?? ''); ?>
       </fieldset>
 
       <div class="button-row admin-action-row">

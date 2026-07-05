@@ -485,6 +485,8 @@ Hlavní obsahové editory navazují stejnou smlouvou. Editor článku, správa b
 
 Editory novinek, událostí, míst, položek ke stažení a podcastových epizod používají stejný field-level error pattern jako hlavní obsahové editory. Souhrnný alert je atomický, dotčená pole dostanou `aria-invalid`, `aria-describedby` míří na existující nápovědu nebo chybový text a lokální hláška správci radí konkrétní opravu místo obecného „neplatné“.
 
+Profil správce, správa uživatelských účtů, nastavení webu a správa šablon používají stejný guardrail i pro účetní a konfigurační chyby. E-mail, heslo, kontrolní heslo, veřejný autor, TOTP kód, název webu, veřejný název vývěsky, GitHub repozitář, logo/favicona, aktivní šablona, theme settings a theme ZIP import/export dostávají atomický souhrnný alert i field-level text s praktickou opravou; HTTP integrace `admin_validation_a11y_http` renderuje tyto stavy jako regresní důkaz.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

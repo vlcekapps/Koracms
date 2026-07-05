@@ -30,6 +30,8 @@ Stejný guardrail platí pro hlavní navigační externí odkazy, přesměrován
 
 Hlavní obsahové editory používají stejnou smlouvu pro editor článku, správu blogů, položky vývěsky, jídelní/nápojové lístky a ankety. Chyba má vždy říct, které pole opravit a jak: doplnit titulek nebo název, zvolit jedinečný slug, použít obsah z cílového blogu, vybrat existující kategorii, zadat datum vyvěšení, doplnit možnosti odpovědi nebo opravit limit vícevýběru.
 
+Stejný pattern platí i mimo obsahové editory pro profil správce, správu uživatelských účtů, nastavení webu a správu šablon. Neplatný e-mail, krátké nebo neshodné heslo, TOTP kód, veřejný autor, název webu, veřejný název vývěsky, GitHub repozitář, branding uploady, aktivní šablona, theme settings i ZIP import/export mají mít atomický souhrnný alert, `aria-invalid`, existující `aria-describedby` a konkrétní radu, jak hodnotu opravit.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---

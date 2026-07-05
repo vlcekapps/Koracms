@@ -58,19 +58,19 @@ $roleOptions = staffRoleOptions($accountRole);
 $fieldErrorMessages = [
     'email' => 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz. Adresa musí být jedinečná, protože slouží k přihlášení.',
     'new_pass' => $accountId !== null
-        ? 'Nové heslo musí mít alespoň 8 znaků.'
+        ? 'Zadejte nové heslo dlouhé alespoň 8 znaků, nebo pole ponechte prázdné, pokud heslo nechcete měnit.'
         : 'Zadejte heslo dlouhé alespoň 8 znaků.',
-    'new_pass2' => 'Kontrolní heslo se musí shodovat s heslem.',
-    'author_slug' => 'Zadejte jedinečný slug veřejného autora.',
-    'author_website' => 'Zadejte platnou veřejnou webovou adresu, například https://example.com.',
-    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP.',
+    'new_pass2' => 'Zopakujte stejné heslo jako v poli Heslo.',
+    'author_slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte jméno či přezdívku pro automatické vytvoření.',
+    'author_website' => 'Zadejte veřejnou http/https adresu, například https://example.com, nebo doménu bez schématu.',
+    'author_avatar' => 'Nahrajte avatar ve formátu JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud avatar nechcete měnit, nechte pole prázdné.',
 ];
 
 adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživatelský účet');
 ?>
 
 <?php if (!empty($formErrors)): ?>
-  <ul class="error" role="alert">
+  <ul class="error" role="alert" id="user-form-errors" aria-atomic="true">
     <?php foreach ($formErrors as $error): ?><li><?= h($error) ?></li><?php endforeach; ?>
   </ul>
 <?php endif; ?>
@@ -81,7 +81,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
   <p class="field-help">Veřejná registrace je vypnutá. Nový účet proto může ručně přidávat jen hlavní administrátor.</p>
 <?php endif; ?>
 
-<form method="post" action="user_save.php" enctype="multipart/form-data" novalidate>
+<form method="post" action="user_save.php" enctype="multipart/form-data" novalidate<?= !empty($formErrors) ? ' aria-describedby="user-form-errors"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($accountId !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$account['id'] ?>">

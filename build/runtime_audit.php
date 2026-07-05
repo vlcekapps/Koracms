@@ -16863,6 +16863,8 @@ $adminFieldErrorForms = [
     'gallery photo form' => [$galleryPhotoFormSource, "adminFieldAttributes('slug'", "adminRenderFieldError('slug'"],
     'user form' => [$userFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('author_slug'", "adminFieldAttributes('author_avatar'"],
     'profile form' => [$profileFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('totp_verify'", "adminFieldAttributes('author_slug'"],
+    'settings form' => [$settingsAdminSource, "adminFieldAttributes('site_name'", "adminFieldAttributes('board_public_label'", "adminFieldAttributes('github_issues_repository'", "adminFieldAttributes('site_logo'", 'id="settings-form-errors" aria-atomic="true"'],
+    'theme catalog form' => [$adminThemesSource, "adminFieldAttributes('active_theme'", "adminRenderFieldError('active_theme'", "adminFieldAttributes('theme_package'", "adminFieldAttributes('export_theme'", "theme_setting_' . \$settingKey", 'id="themes-form-errors" aria-atomic="true"'],
     'newsletter form' => [$newsletterFormValidationSource, "adminFieldAttributes('subject'", "adminFieldAttributes('body'", "adminRenderFieldError('body'"],
     'contact topics form' => [$contactTopicsSource, "adminFieldAttributes('name'", "adminFieldAttributes('recipient_email'", "adminRenderFieldError('slug'"],
     'blog series form' => [$blogSeriesAdminSource, "adminFieldAttributes('title', \$seriesFieldErrors", "adminRenderFieldError('title'", 'id="series-title-help"'],
@@ -17287,6 +17289,96 @@ foreach ([
     foreach ($adminValidationCopySpec['forbidden'] as $adminValidationCopyForbiddenFragment) {
         if (str_contains($adminValidationCopySource, $adminValidationCopyForbiddenFragment)) {
             $adminFieldErrorIssues[] = $adminValidationCopyLabel . ' still contains generic validation copy: ' . $adminValidationCopyForbiddenFragment;
+        }
+    }
+}
+foreach ([
+    'profile account validation' => [
+        'source' => $profileFormValidationSource,
+        'required' => [
+            'Profil nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.',
+            'Nové heslo není dostatečně dlouhé. U pole Nové heslo je konkrétní nápověda.',
+            'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.',
+            'Web autora není použitelný. U pole Web autora je konkrétní nápověda.',
+            'Ověřovací kód pro 2FA nesouhlasí. U pole Ověřovací kód je konkrétní nápověda.',
+            'Zadejte aktuální šestimístný kód z autentizační aplikace bez mezer.',
+            '<ul class="error" role="alert" id="profile-form-errors" aria-atomic="true">',
+            'aria-describedby="profile-form-errors"',
+        ],
+        'forbidden' => [
+            '<ul class="error" role="alert">',
+            'Nové heslo musí mít alespoň 8 znaků.',
+            'Hesla se neshodují.',
+            'Neplatný ověřovací kód pro 2FA.',
+        ],
+    ],
+    'user account validation' => [
+        'source' => $userFormValidationSource . "\n" . $userSaveValidationSource,
+        'required' => [
+            'Uživatelský účet nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.',
+            'Nový účet nejde vytvořit bez hesla dlouhého alespoň 8 znaků.',
+            'Nové heslo není dostatečně dlouhé. U pole Heslo je konkrétní nápověda.',
+            'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.',
+            'Web autora není použitelný. U pole Web autora je konkrétní nápověda.',
+            '<ul class="error" role="alert" id="user-form-errors" aria-atomic="true">',
+            'aria-describedby="user-form-errors"',
+        ],
+        'forbidden' => [
+            '<ul class="error" role="alert">',
+            'Vyplňte prosím platný e-mail.',
+            'Heslo musí mít alespoň 8 znaků.',
+            'Hesla se neshodují.',
+        ],
+    ],
+    'settings core validation' => [
+        'source' => $settingsAdminSource . "\n" . $settingsSaveValidationSource . "\n" . $settingsSharedValidationSource,
+        'required' => [
+            'Nastavení webu nejde uložit bez názvu webu. U pole Název webu je konkrétní nápověda.',
+            'Doplňte krátký název webu, například název organizace nebo projektu.',
+            'Veřejný název sekce vývěsky je příliš dlouhý. U pole Veřejný název sekce vývěsky je konkrétní nápověda.',
+            'Zkraťte veřejný název sekce vývěsky na nejvýše 60 znaků, například Úřední deska.',
+            'Výchozí repozitář pro GitHub issue bridge není použitelný. U pole Výchozí repozitář je konkrétní nápověda.',
+            'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms, nebo pole nechte prázdné.',
+            '<ul class="error" role="alert" id="settings-form-errors" aria-atomic="true">',
+            'aria-describedby="settings-form-errors"',
+        ],
+        'forbidden' => [
+            '<ul class="error" role="alert">',
+            'Název webu je povinný.',
+            'Neplatný GitHub repozitář.',
+        ],
+    ],
+    'theme catalog validation' => [
+        'source' => $adminThemesSource,
+        'required' => [
+            'Vybranou šablonu nejde použít. U výběru aktivní šablony je konkrétní nápověda.',
+            'Vyberte některou z dostupných šablon v katalogu.',
+            'Vzhled vybrané šablony nejde uložit, protože šablona už není dostupná. Obnovte stránku a vyberte dostupnou šablonu.',
+            'nejde uložit. U příslušného nastavení vzhledu je konkrétní nápověda.',
+            'Upravte hodnotu podle nápovědy u pole nebo obnovte výchozí vzhled.',
+            'ZIP balíček šablony nejde importovat. U pole Soubor ZIP je konkrétní nápověda.',
+            'Vyberte portable ZIP balíček s jedním kořenovým adresářem, manifestem theme.json a assets/public.css.',
+            'Vybranou šablonu nejde exportovat. U pole Šablona k exportu je konkrétní nápověda.',
+            '<ul class="error" role="alert" id="themes-form-errors" aria-atomic="true">',
+            'aria-describedby="theme-selection-help<?= $activeThemeHasError ? \' active-theme-error\' : \'\' ?>"',
+        ],
+        'forbidden' => [
+            '<ul class="error" role="alert">',
+            'Vyberte platnou šablonu.',
+            'Import šablony se nepodařil.',
+            'Export šablony se nepodařil.',
+        ],
+    ],
+] as $adminAccountValidationLabel => $adminAccountValidationSpec) {
+    $adminAccountValidationSource = (string)$adminAccountValidationSpec['source'];
+    foreach ($adminAccountValidationSpec['required'] as $adminAccountValidationRequiredFragment) {
+        if (!str_contains($adminAccountValidationSource, $adminAccountValidationRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminAccountValidationLabel . ' is missing account/settings validation fragment: ' . $adminAccountValidationRequiredFragment;
+        }
+    }
+    foreach ($adminAccountValidationSpec['forbidden'] as $adminAccountValidationForbiddenFragment) {
+        if (str_contains($adminAccountValidationSource, $adminAccountValidationForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminAccountValidationLabel . ' still contains generic account/settings validation copy: ' . $adminAccountValidationForbiddenFragment;
         }
     }
 }

@@ -53,7 +53,7 @@ adminHeader('Nastavení webu');
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
-  <ul class="error" role="alert" id="settings-form-errors">
+  <ul class="error" role="alert" id="settings-form-errors" aria-atomic="true">
     <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
   </ul>
 <?php endif; ?>

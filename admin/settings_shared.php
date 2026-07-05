@@ -85,12 +85,12 @@ function settingsDefaultFormState(): array
 function settingsFieldErrorMessages(): array
 {
     return [
-        'site_name' => 'Název webu je povinný.',
+        'site_name' => 'Doplňte krátký název webu, například název organizace nebo projektu.',
         'contact_email' => 'Zadejte úplnou kontaktní e-mailovou adresu ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
-        'board_public_label' => 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.',
-        'github_issues_repository' => 'Výchozí repozitář musí být ve formátu owner/repo.',
+        'board_public_label' => 'Zkraťte veřejný název sekce vývěsky na nejvýše 60 znaků, například Úřední deska.',
+        'github_issues_repository' => 'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms, nebo pole nechte prázdné.',
         'comment_notify_email' => 'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
-        'site_favicon' => 'Nahrajte faviconu ve formátu ICO nebo PNG o velikosti nejvýše 256 KB.',
-        'site_logo' => 'Nahrajte logo ve formátu JPEG, PNG, GIF nebo WebP o velikosti nejvýše 2 MB.',
+        'site_favicon' => 'Nahrajte faviconu ve formátu ICO nebo PNG o velikosti nejvýše 256 KB, nebo pole nechte prázdné a stávající faviconu neměňte.',
+        'site_logo' => 'Nahrajte logo ve formátu JPEG, PNG, GIF nebo WebP o velikosti nejvýše 2 MB, nebo pole nechte prázdné a stávající logo neměňte.',
     ];
 }

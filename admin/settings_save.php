@@ -62,15 +62,15 @@ if (isModuleEnabled('blog')) {
 }
 
 if (!isset($siteProfiles[$formState['site_profile']])) {
-    $errors[] = 'Vyberte platný profil webu.';
+    $errors[] = 'Vybraný profil webu není dostupný. Vyberte některý z nabízených profilů.';
     $formState['site_profile'] = currentSiteProfileKey();
 }
 
 $normalizedRepository = normalizeGitHubRepository($formState['github_issues_repository']);
 if ($formState['github_issues_repository'] !== '' && $normalizedRepository === '') {
-    $errors[] = 'Výchozí repozitář pro GitHub issue bridge musí být ve formátu owner/repo.';
+    $errors[] = 'Výchozí repozitář pro GitHub issue bridge není použitelný. U pole Výchozí repozitář je konkrétní nápověda.';
     $fieldErrors[] = 'github_issues_repository';
-    $fieldErrorMessages['github_issues_repository'] = 'Výchozí repozitář pro GitHub issue bridge musí být ve formátu owner/repo.';
+    $fieldErrorMessages['github_issues_repository'] = 'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms, nebo pole nechte prázdné.';
 } else {
     $formState['github_issues_repository'] = $normalizedRepository;
 }
@@ -80,15 +80,15 @@ if ($formState['board_public_label'] === '') {
 }
 
 if ($formState['site_name'] === '') {
-    $errors[] = 'Název webu je povinný.';
+    $errors[] = 'Nastavení webu nejde uložit bez názvu webu. U pole Název webu je konkrétní nápověda.';
     $fieldErrors[] = 'site_name';
-    $fieldErrorMessages['site_name'] = 'Název webu je povinný.';
+    $fieldErrorMessages['site_name'] = 'Doplňte krátký název webu, například název organizace nebo projektu.';
 }
 
 if (mb_strlen($formState['board_public_label'], 'UTF-8') > 60) {
-    $errors[] = 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.';
+    $errors[] = 'Veřejný název sekce vývěsky je příliš dlouhý. U pole Veřejný název sekce vývěsky je konkrétní nápověda.';
     $fieldErrors[] = 'board_public_label';
-    $fieldErrorMessages['board_public_label'] = 'Veřejný název sekce vývěsky může mít nejvýše 60 znaků.';
+    $fieldErrorMessages['board_public_label'] = 'Zkraťte veřejný název sekce vývěsky na nejvýše 60 znaků, například Úřední deska.';
 }
 
 if ($formState['contact_email'] !== '' && !filter_var($formState['contact_email'], FILTER_VALIDATE_EMAIL)) {
@@ -157,7 +157,7 @@ $faviconUpload = $validateUpload(
     'site_favicon',
     'Favicon se nepodařilo zpracovat.',
     'Favicon může mít nejvýše 256 KB.',
-    'Favicon: nepodporovaný formát (povoleno: ICO, PNG).'
+    'Favicon má nepodporovaný formát. Nahrajte ICO nebo PNG, případně pole nechte prázdné.'
 );
 
 $logoUpload = $validateUpload(
@@ -172,7 +172,7 @@ $logoUpload = $validateUpload(
     'site_logo',
     'Logo se nepodařilo zpracovat.',
     'Logo může mít nejvýše 2 MB.',
-    'Logo: nepodporovaný formát (povoleno: JPEG, PNG, GIF, WebP).'
+    'Logo má nepodporovaný formát. Nahrajte JPEG, PNG, GIF nebo WebP, případně pole nechte prázdné.'
 );
 
 if (($faviconUpload !== null || $logoUpload !== null) && !is_dir($siteDir) && !@mkdir($siteDir, 0755, true) && !is_dir($siteDir)) {
