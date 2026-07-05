@@ -5479,7 +5479,7 @@ try {
 
     $previousOutboundMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
     putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
-    runKoraCron($pdo);
+    $cronLog = runKoraCron($pdo);
     $reminderStmt = $pdo->prepare(
         "SELECT reminder_sent_at, reminder_last_error
          FROM cms_res_bookings
@@ -5489,6 +5489,26 @@ try {
     $reminderRow = $reminderStmt->fetch() ?: [];
     if (empty($reminderRow['reminder_sent_at']) || (string)($reminderRow['reminder_last_error'] ?? '') !== '') {
         $reservationIssues[] = 'cron neoznačil připomínku rezervace jako odeslanou bez chyby';
+        $diagnosticBooking = reservationBookingForNotification($pdo, $bookingId) ?? [];
+        $diagnosticDue = $diagnosticBooking !== [] && reservationReminderIsDue($diagnosticBooking) ? 'yes' : 'no';
+        $diagnosticCandidateCount = (int)$pdo->query(
+            "SELECT COUNT(*)
+             FROM cms_res_bookings b
+             JOIN cms_res_resources r ON r.id = b.resource_id
+             WHERE b.status = 'confirmed'
+               AND b.reminder_sent_at IS NULL
+               AND COALESCE(b.reminder_last_error, '') = ''
+               AND r.reminders_enabled = 1
+               AND TIMESTAMP(b.booking_date, b.start_time) > NOW()"
+        )->fetchColumn();
+        $diagnosticDbNow = (string)$pdo->query('SELECT NOW()')->fetchColumn();
+        $reservationIssues[] = 'diagnostika připomínky: module=' . getSetting('module_reservations', '0')
+            . ', due=' . $diagnosticDue
+            . ', candidates=' . $diagnosticCandidateCount
+            . ', db_now=' . $diagnosticDbNow
+            . ', booking_start=' . (string)($diagnosticBooking['booking_date'] ?? '') . ' ' . (string)($diagnosticBooking['start_time'] ?? '')
+            . ', last_error=' . (string)($reminderRow['reminder_last_error'] ?? '')
+            . ', cron_log=' . implode(' | ', $cronLog);
     }
     runKoraCron($pdo);
     if ($previousOutboundMailFlag === false) {
