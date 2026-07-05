@@ -8,6 +8,8 @@ Vývoj nových modulů má vlastní checklist v [docs/developer-modules.md](deve
 
 Stejný checklist nově odkazuje i na accessibility conformance report v `docs/accessibility/wcag-22-aa-conformance.md`, `docs/accessibility/a11y-remediation-backlog.md`, `docs/accessibility/manual-test-protocol.md` a `docs/accessibility/author-content-checklist.md`. Při návrhu nového modulu se proto předem řeší, zda modul mění některý WCAG/ACR předpoklad, jestli potřebuje ruční test se čtečkou nebo klávesnicí a kde končí odpovědnost CMS a začíná ručně dodaný obsah autora.
 
+Obrazovky se sdíleným administračním řazením dávají po přesunu položky textovou zpětnou vazbu k uložení pořadí. Pokud AJAX uložení selže, správce dostane inline chybovou hlášku s doporučením zkontrolovat připojení a zkusit změnu znovu, ne prohlížečový dialog.
+
 Redakční kvalitu ručně vloženého obsahu pokrývá [redakční checklist přístupného obsahu](accessibility/author-content-checklist.md). Používejte ho před publikací článků, stránek, médií a embedů: kontroluje alt texty, přepisy, titulky, jazyk částí, srozumitelné odkazy, nadpisy, tabulky, barvu, vlastní HTML a externí služby. Nález v ručním obsahu se zapisuje jako author-content issue, zatímco chyba výchozího UI, šablony nebo helperu patří do backlogu oprav CMS.
 
 ---

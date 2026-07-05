@@ -15146,6 +15146,26 @@ if (str_contains($adminLayoutSource, '[role="status"]:not(#a11y-live),[role="ale
     $adminFieldErrorIssues[] = 'admin layout still re-announces server-rendered status or alert messages through the client live region';
 }
 foreach ([
+    'var feedback=document.createElement("p");',
+    'feedback.className="field-help field-help--flush";',
+    'feedback.setAttribute("role","status");',
+    'feedback.setAttribute("aria-atomic","true");',
+    'feedbackAnchor.insertAdjacentElement("afterend",feedback);',
+    'function announceSort(message,isError){',
+    'feedback.classList.toggle("field-error",!!isError);',
+    'feedback.setAttribute("role",isError?"alert":"status");',
+    'Uložení pořadí selhalo. Zkontrolujte připojení a zkuste změnu znovu.',
+    'announceSort(msg,!d||!d.ok);',
+    '.catch(function(){announceSort("Pořadí se nepodařilo uložit. Zkontrolujte připojení a zkuste změnu znovu.",true);});',
+] as $sortableFeedbackFragment) {
+    if (!str_contains($uiSource, $sortableFeedbackFragment)) {
+        $adminFieldErrorIssues[] = 'shared sortable feedback is missing text-backed status fragment: ' . $sortableFeedbackFragment;
+    }
+}
+if (str_contains($uiSource, 'alert(msg)')) {
+    $adminFieldErrorIssues[] = 'shared sortable feedback still uses a browser alert on save failure';
+}
+foreach ([
     '.button-row--start',
     '.button-row--between',
     '.btn-muted',
