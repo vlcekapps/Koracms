@@ -12,6 +12,7 @@ $pdo = db_connect();
 $success = false;
 $error = '';
 $fieldErrors = [];
+$fieldErrorMessages = [];
 $formValues = [
     'name' => '',
     'slug' => '',
@@ -54,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     if ($name === '') {
-        $fieldErrors['name'] = 'Název kategorie je povinný.';
+        $fieldErrors['name'] = true;
+        $fieldErrorMessages['name'] = 'Doplňte krátký název kategorie, například Novinky z oboru.';
     } elseif (!canCurrentUserManageBlogTaxonomies($blogId)) {
         $error = 'Vybraný blog nemůžete spravovat.';
     }
@@ -67,14 +69,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($fieldErrors === [] && $error === '') {
         $uniqueSlug = uniqueBlogCategorySlug($pdo, $normalizedSlug, $blogId, $updateId);
         if (!$slugWasGenerated && $uniqueSlug !== $normalizedSlug) {
-            $fieldErrors['slug'] = 'Tento slug už v tomto blogu používá jiná kategorie.';
+            $fieldErrors['slug'] = true;
+            $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
         } else {
             $normalizedSlug = $uniqueSlug;
         }
     }
 
     if ($fieldErrors !== [] && $error === '') {
-        $error = 'Zkontrolujte prosím zvýrazněná pole.';
+        $error = 'Kategorii blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.';
     }
 
     if ($error === '' && $fieldErrors === [] && $updateId !== null) {
@@ -194,7 +197,7 @@ $flatCategories = flattenBlogCategoryTree($blogCatTree);
 adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $currentBlog['name'] : ''));
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="blog.php?blog=<?= (int)$blogId ?>"><span aria-hidden="true">←</span> Zpět na články</a>
@@ -219,7 +222,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
 </form>
 <?php endif; ?>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
   <fieldset>
@@ -230,14 +233,15 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
-               value="<?= h($formValues['name']) ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true" aria-describedby="category-name-error"' : '' ?>>
-        <?php if (isset($fieldErrors['name'])): ?><p id="category-name-error" class="error"><?= h($fieldErrors['name']) ?></p><?php endif; ?>
+               value="<?= h($formValues['name']) ?>" aria-describedby="category-name-help<?= isset($fieldErrors['name']) ? ' category-name-error' : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
+        <small id="category-name-help" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech blogu.</small>
+        <?php if (isset($fieldErrors['name'])): ?><p id="category-name-error" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
       </div>
       <div>
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="150"
                value="<?= h($formValues['slug']) ?>" aria-describedby="category-slug-help<?= isset($fieldErrors['slug']) ? ' category-slug-error' : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
-        <?php if (isset($fieldErrors['slug'])): ?><p id="category-slug-error" class="error"><?= h($fieldErrors['slug']) ?></p><?php endif; ?>
+        <?php if (isset($fieldErrors['slug'])): ?><p id="category-slug-error" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
       </div>
       <div>
         <label for="parent_id">Nadřazená kategorie</label>
@@ -278,7 +282,16 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
         <td><label for="blog-category-select-<?= (int)$category['id'] ?>" class="sr-only">Vybrat <?= h((string)$category['name']) ?></label><input type="checkbox" id="blog-category-select-<?= (int)$category['id'] ?>" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form"></td>
         <td>
           <?php if ($editId === (int)$category['id']): ?>
-            <form method="post" class="form-stack" novalidate>
+            <?php
+            $categoryEditHasErrors = $fieldErrors !== [];
+              $categoryEditName = $categoryEditHasErrors ? $formValues['name'] : (string)$category['name'];
+              $categoryEditSlug = $categoryEditHasErrors ? $formValues['slug'] : (string)($category['slug'] ?? '');
+              $categoryEditParent = $categoryEditHasErrors ? $formValues['parent_id'] : (string)($category['parent_id'] ?? '');
+              $categoryEditDescription = $categoryEditHasErrors ? $formValues['description'] : (string)($category['description'] ?? '');
+              $categoryEditMetaTitle = $categoryEditHasErrors ? $formValues['meta_title'] : (string)($category['meta_title'] ?? '');
+              $categoryEditMetaDescription = $categoryEditHasErrors ? $formValues['meta_description'] : (string)($category['meta_description'] ?? '');
+              ?>
+            <form method="post" class="form-stack" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
@@ -286,12 +299,16 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
                 <div>
                   <label for="edit-name-<?= (int)$category['id'] ?>">Název <span aria-hidden="true">*</span></label>
                   <input type="text" id="edit-name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                         value="<?= h((string)$category['name']) ?>" class="admin-input-auto">
+                         value="<?= h($categoryEditName) ?>" class="admin-input-auto" aria-describedby="edit-category-name-help-<?= (int)$category['id'] ?><?= isset($fieldErrors['name']) ? ' edit-category-name-error-' . (int)$category['id'] : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-category-name-help-<?= (int)$category['id'] ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech blogu.</small>
+                  <?php if (isset($fieldErrors['name'])): ?><p id="edit-category-name-error-<?= (int)$category['id'] ?>" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
                 </div>
                 <div>
                   <label for="edit-slug-<?= (int)$category['id'] ?>">Slug</label>
                   <input type="text" id="edit-slug-<?= (int)$category['id'] ?>" name="slug" maxlength="150"
-                         value="<?= h((string)($category['slug'] ?? '')) ?>" class="admin-input-auto">
+                         value="<?= h($categoryEditSlug) ?>" class="admin-input-auto" aria-describedby="edit-category-slug-help-<?= (int)$category['id'] ?><?= isset($fieldErrors['slug']) ? ' edit-category-slug-error-' . (int)$category['id'] : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-category-slug-help-<?= (int)$category['id'] ?>" class="field-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</small>
+                  <?php if (isset($fieldErrors['slug'])): ?><p id="edit-category-slug-error-<?= (int)$category['id'] ?>" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
                 </div>
                 <div>
                   <label for="edit-parent-<?= (int)$category['id'] ?>">Nadřazená kategorie</label>
@@ -303,21 +320,21 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
                 <div>
                   <label for="edit-meta-title-<?= (int)$category['id'] ?>">Meta title</label>
                   <input type="text" id="edit-meta-title-<?= (int)$category['id'] ?>" name="meta_title" maxlength="160"
-                         value="<?= h((string)($category['meta_title'] ?? '')) ?>" class="admin-input-auto">
+                         value="<?= h($categoryEditMetaTitle) ?>" class="admin-input-auto">
                 </div>
               </div>
               <div>
                 <label for="edit-description-<?= (int)$category['id'] ?>">Popis</label>
-                <textarea id="edit-description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h((string)($category['description'] ?? '')) ?></textarea>
+                <textarea id="edit-description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h($categoryEditDescription) ?></textarea>
               </div>
               <div>
                 <label for="edit-meta-description-<?= (int)$category['id'] ?>">Meta description</label>
-                <textarea id="edit-meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h((string)($category['meta_description'] ?? '')) ?></textarea>
+                <textarea id="edit-meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h($categoryEditMetaDescription) ?></textarea>
               </div>
               <script nonce="<?= cspNonce() ?>">
               (function(){
                 var sel = document.getElementById('edit-parent-<?= (int)$category['id'] ?>');
-                var val = '<?= (int)($category['parent_id'] ?? 0) ?>';
+                var val = '<?= (int)($categoryEditParent !== '' ? $categoryEditParent : 0) ?>';
                 if (val !== '0' && sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === val) { sel.selectedIndex = i; break; } } }
               })();
               </script>

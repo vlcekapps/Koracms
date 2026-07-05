@@ -12,6 +12,7 @@ $pdo = db_connect();
 $success = false;
 $error = '';
 $fieldErrors = [];
+$fieldErrorMessages = [];
 $formValues = [
     'name' => '',
     'slug' => '',
@@ -51,7 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     if ($name === '') {
-        $fieldErrors['name'] = 'Název štítku je povinný.';
+        $fieldErrors['name'] = true;
+        $fieldErrorMessages['name'] = 'Doplňte krátký název štítku, například Rozhovory.';
     } elseif (!canCurrentUserManageBlogTaxonomies($blogId)) {
         $error = 'Vybraný blog nemůžete spravovat.';
     }
@@ -64,14 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($fieldErrors === [] && $error === '') {
         $uniqueSlug = uniqueBlogTagSlug($pdo, $normalizedSlug, $blogId, $updateId);
         if (!$slugWasGenerated && $uniqueSlug !== $normalizedSlug) {
-            $fieldErrors['slug'] = 'Tento slug už v tomto blogu používá jiný štítek.';
+            $fieldErrors['slug'] = true;
+            $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
         } else {
             $normalizedSlug = $uniqueSlug;
         }
     }
 
     if ($fieldErrors !== [] && $error === '') {
-        $error = 'Zkontrolujte prosím zvýrazněná pole.';
+        $error = 'Štítek blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.';
     }
 
     if ($error === '' && $fieldErrors === []) {
@@ -112,7 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )->execute([$name, $normalizedSlug, $blogId, $description, $metaTitle, $metaDescription]);
                 logAction('tag_add', 'name=' . $name . ' blog_id=' . $blogId);
             } catch (\PDOException $e) {
-                $error = 'Štítek s tímto názvem nebo slugem už v tomto blogu existuje.';
+                $error = 'Štítek blogu nejde uložit, protože název nebo slug už v tomto blogu existuje. U zvýrazněných polí je konkrétní nápověda.';
+                $fieldErrors['name'] = true;
+                $fieldErrors['slug'] = true;
+                $fieldErrorMessages['name'] = 'Zadejte jiný název štítku, který se v tomto blogu ještě nepoužívá.';
+                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             }
         }
         if ($error === '') {
@@ -141,7 +148,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
 ?>
 
 <?php if ($success): ?><p class="success" role="status">Štítek uložen.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="blog.php?blog=<?= (int)$blogId ?>"><span aria-hidden="true">←</span> Zpět na články</a>
@@ -166,7 +173,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
 </form>
 <?php endif; ?>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
   <fieldset>
@@ -177,14 +184,15 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="100"
-               value="<?= h($formValues['name']) ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true" aria-describedby="tag-name-error"' : '' ?>>
-        <?php if (isset($fieldErrors['name'])): ?><p id="tag-name-error" class="error"><?= h($fieldErrors['name']) ?></p><?php endif; ?>
+               value="<?= h($formValues['name']) ?>" aria-describedby="tag-name-help<?= isset($fieldErrors['name']) ? ' tag-name-error' : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
+        <small id="tag-name-help" class="field-help">Použijte krátký štítek pro téma článků, například Rozhovory.</small>
+        <?php if (isset($fieldErrors['name'])): ?><p id="tag-name-error" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
       </div>
       <div>
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="100"
                value="<?= h($formValues['slug']) ?>" aria-describedby="tag-slug-help<?= isset($fieldErrors['slug']) ? ' tag-slug-error' : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
-        <?php if (isset($fieldErrors['slug'])): ?><p id="tag-slug-error" class="error"><?= h($fieldErrors['slug']) ?></p><?php endif; ?>
+        <?php if (isset($fieldErrors['slug'])): ?><p id="tag-slug-error" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
       </div>
       <div>
         <label for="meta_title">Meta title</label>
@@ -215,7 +223,15 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
       <tr>
         <td>
           <?php if ($editId === (int)$tag['id']): ?>
-            <form method="post" class="form-stack" novalidate>
+            <?php
+            $tagEditHasErrors = $fieldErrors !== [];
+              $tagEditName = $tagEditHasErrors ? $formValues['name'] : (string)$tag['name'];
+              $tagEditSlug = $tagEditHasErrors ? $formValues['slug'] : (string)$tag['slug'];
+              $tagEditDescription = $tagEditHasErrors ? $formValues['description'] : (string)($tag['description'] ?? '');
+              $tagEditMetaTitle = $tagEditHasErrors ? $formValues['meta_title'] : (string)($tag['meta_title'] ?? '');
+              $tagEditMetaDescription = $tagEditHasErrors ? $formValues['meta_description'] : (string)($tag['meta_description'] ?? '');
+              ?>
+            <form method="post" class="form-stack" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$tag['id'] ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
@@ -223,26 +239,30 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
                 <div>
                   <label for="edit-name-<?= (int)$tag['id'] ?>">Název <span aria-hidden="true">*</span></label>
                   <input type="text" id="edit-name-<?= (int)$tag['id'] ?>" name="name" required aria-required="true" maxlength="100"
-                         value="<?= h((string)$tag['name']) ?>" class="admin-input-auto">
+                         value="<?= h($tagEditName) ?>" class="admin-input-auto" aria-describedby="edit-tag-name-help-<?= (int)$tag['id'] ?><?= isset($fieldErrors['name']) ? ' edit-tag-name-error-' . (int)$tag['id'] : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-tag-name-help-<?= (int)$tag['id'] ?>" class="field-help">Použijte krátký štítek pro téma článků, například Rozhovory.</small>
+                  <?php if (isset($fieldErrors['name'])): ?><p id="edit-tag-name-error-<?= (int)$tag['id'] ?>" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
                 </div>
                 <div>
                   <label for="edit-slug-<?= (int)$tag['id'] ?>">Slug</label>
                   <input type="text" id="edit-slug-<?= (int)$tag['id'] ?>" name="slug" maxlength="100"
-                         value="<?= h((string)$tag['slug']) ?>" class="admin-input-auto">
+                         value="<?= h($tagEditSlug) ?>" class="admin-input-auto" aria-describedby="edit-tag-slug-help-<?= (int)$tag['id'] ?><?= isset($fieldErrors['slug']) ? ' edit-tag-slug-error-' . (int)$tag['id'] : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-tag-slug-help-<?= (int)$tag['id'] ?>" class="field-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</small>
+                  <?php if (isset($fieldErrors['slug'])): ?><p id="edit-tag-slug-error-<?= (int)$tag['id'] ?>" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
                 </div>
                 <div>
                   <label for="edit-meta-title-<?= (int)$tag['id'] ?>">Meta title</label>
                   <input type="text" id="edit-meta-title-<?= (int)$tag['id'] ?>" name="meta_title" maxlength="160"
-                         value="<?= h((string)($tag['meta_title'] ?? '')) ?>" class="admin-input-auto">
+                         value="<?= h($tagEditMetaTitle) ?>" class="admin-input-auto">
                 </div>
               </div>
               <div>
                 <label for="edit-description-<?= (int)$tag['id'] ?>">Popis</label>
-                <textarea id="edit-description-<?= (int)$tag['id'] ?>" name="description" rows="4"><?= h((string)($tag['description'] ?? '')) ?></textarea>
+                <textarea id="edit-description-<?= (int)$tag['id'] ?>" name="description" rows="4"><?= h($tagEditDescription) ?></textarea>
               </div>
               <div>
                 <label for="edit-meta-description-<?= (int)$tag['id'] ?>">Meta description</label>
-                <textarea id="edit-meta-description-<?= (int)$tag['id'] ?>" name="meta_description" rows="3"><?= h((string)($tag['meta_description'] ?? '')) ?></textarea>
+                <textarea id="edit-meta-description-<?= (int)$tag['id'] ?>" name="meta_description" rows="3"><?= h($tagEditMetaDescription) ?></textarea>
               </div>
               <p class="button-row button-row--start">
                 <button type="submit" class="btn">Uložit</button>

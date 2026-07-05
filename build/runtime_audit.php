@@ -16978,6 +16978,70 @@ foreach ([
     }
 }
 foreach ([
+    'blog categories editor' => [
+        'source' => $blogCatsSource,
+        'required' => [
+            '$fieldErrorMessages = [];',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Novinky z oboru.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '$error = \'Kategorii blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            'aria-describedby="category-name-help<?= isset($fieldErrors[\'name\']) ? \' category-name-error\' : \'\' ?>"',
+            '<small id="category-name-help" class="field-help">Použijte krátký název',
+            '<?= h($fieldErrorMessages[\'name\']) ?>',
+            '<?= h($fieldErrorMessages[\'slug\']) ?>',
+            'edit-category-name-error-',
+            'edit-category-slug-error-',
+        ],
+        'forbidden' => [
+            '$fieldErrors[\'name\'] = \'Název kategorie je povinný.\';',
+            '$fieldErrors[\'slug\'] = \'Tento slug už v tomto blogu používá jiná kategorie.\';',
+            '$error = \'Zkontrolujte prosím zvýrazněná pole.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+            'aria-describedby="category-name-error"',
+            '<?= h($fieldErrors[\'name\']) ?>',
+            '<?= h($fieldErrors[\'slug\']) ?>',
+        ],
+    ],
+    'blog tags editor' => [
+        'source' => $blogTagsSource,
+        'required' => [
+            '$fieldErrorMessages = [];',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název štítku, například Rozhovory.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '$error = \'Štítek blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            'aria-describedby="tag-name-help<?= isset($fieldErrors[\'name\']) ? \' tag-name-error\' : \'\' ?>"',
+            '<small id="tag-name-help" class="field-help">Použijte krátký štítek',
+            '<?= h($fieldErrorMessages[\'name\']) ?>',
+            '<?= h($fieldErrorMessages[\'slug\']) ?>',
+            'edit-tag-name-error-',
+            'edit-tag-slug-error-',
+        ],
+        'forbidden' => [
+            '$fieldErrors[\'name\'] = \'Název štítku je povinný.\';',
+            '$fieldErrors[\'slug\'] = \'Tento slug už v tomto blogu používá jiný štítek.\';',
+            '$error = \'Zkontrolujte prosím zvýrazněná pole.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+            'aria-describedby="tag-name-error"',
+            '<?= h($fieldErrors[\'name\']) ?>',
+            '<?= h($fieldErrors[\'slug\']) ?>',
+        ],
+    ],
+] as $blogTaxonomySuggestionLabel => $blogTaxonomySuggestionSpec) {
+    $blogTaxonomySuggestionSource = (string)$blogTaxonomySuggestionSpec['source'];
+    foreach ($blogTaxonomySuggestionSpec['required'] as $blogTaxonomySuggestionFragment) {
+        if (!str_contains($blogTaxonomySuggestionSource, $blogTaxonomySuggestionFragment)) {
+            $adminFieldErrorIssues[] = $blogTaxonomySuggestionLabel . ' is missing actionable field-level error fragment: ' . $blogTaxonomySuggestionFragment;
+        }
+    }
+    foreach ($blogTaxonomySuggestionSpec['forbidden'] as $blogTaxonomyGenericFragment) {
+        if (str_contains($blogTaxonomySuggestionSource, $blogTaxonomyGenericFragment)) {
+            $adminFieldErrorIssues[] = $blogTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
+        }
+    }
+}
+foreach ([
     'JSON import upload error suggestion' => [
         'source' => $importAdminSource,
         'required' => [

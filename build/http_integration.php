@@ -4904,6 +4904,31 @@ try {
         $blogTaxonomyIssues[] = 'admin štítky nezobrazily slug, popis, SEO pole nebo veřejný odkaz';
     }
 
+    $emptyCategoryResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$taxonomyBlogId,
+        'name' => '',
+        'slug' => '',
+        'parent_id' => '',
+        'description' => '',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    foreach ([
+        'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii blogu nejde uložit.',
+        'aria-describedby="category-name-help category-name-error" aria-invalid="true"',
+        'id="category-name-error"',
+        'Doplňte krátký název kategorie, například Novinky z oboru.',
+    ] as $emptyCategoryFragment) {
+        if (!str_contains($emptyCategoryResponse['body'], $emptyCategoryFragment)) {
+            $blogTaxonomyIssues[] = 'prázdná blogová kategorie nezobrazila field-level fragment: ' . $emptyCategoryFragment;
+        }
+    }
+    if (str_contains($emptyCategoryResponse['body'], 'Název kategorie je povinný.')
+        || str_contains($emptyCategoryResponse['body'], 'Zkontrolujte prosím zvýrazněná pole.')) {
+        $blogTaxonomyIssues[] = 'prázdná blogová kategorie pořád používá starý obecný text';
+    }
+
     $duplicateCategoryResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId, [
         'csrf_token' => $adminSession['csrf'],
         'blog_id' => (string)$taxonomyBlogId,
@@ -4914,9 +4939,67 @@ try {
         'meta_title' => '',
         'meta_description' => '',
     ], $adminSession['cookie'], 0);
-    if (httpIntegrationStatusCode($duplicateCategoryResponse) !== 200
-        || !str_contains($duplicateCategoryResponse['body'], 'Tento slug už v tomto blogu používá jiná kategorie.')) {
-        $blogTaxonomyIssues[] = 'admin kategorie neodmítly duplicitní slug v jednom blogu';
+    foreach ([
+        'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii blogu nejde uložit.',
+        'aria-describedby="category-slug-help category-slug-error" aria-invalid="true"',
+        'id="category-slug-error"',
+        'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+    ] as $duplicateCategoryFragment) {
+        if (!str_contains($duplicateCategoryResponse['body'], $duplicateCategoryFragment)) {
+            $blogTaxonomyIssues[] = 'duplicitní slug blogové kategorie nezobrazil field-level fragment: ' . $duplicateCategoryFragment;
+        }
+    }
+    if (str_contains($duplicateCategoryResponse['body'], 'Tento slug už v tomto blogu používá jiná kategorie.')
+        || str_contains($duplicateCategoryResponse['body'], 'Zkontrolujte prosím zvýrazněná pole.')) {
+        $blogTaxonomyIssues[] = 'duplicitní slug blogové kategorie pořád používá starý obecný text';
+    }
+
+    $emptyTagResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$taxonomyBlogId,
+        'name' => '',
+        'slug' => '',
+        'description' => '',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    foreach ([
+        'id="form-error" class="error" role="alert" aria-atomic="true">Štítek blogu nejde uložit.',
+        'aria-describedby="tag-name-help tag-name-error" aria-invalid="true"',
+        'id="tag-name-error"',
+        'Doplňte krátký název štítku, například Rozhovory.',
+    ] as $emptyTagFragment) {
+        if (!str_contains($emptyTagResponse['body'], $emptyTagFragment)) {
+            $blogTaxonomyIssues[] = 'prázdný blogový štítek nezobrazil field-level fragment: ' . $emptyTagFragment;
+        }
+    }
+    if (str_contains($emptyTagResponse['body'], 'Název štítku je povinný.')
+        || str_contains($emptyTagResponse['body'], 'Zkontrolujte prosím zvýrazněná pole.')) {
+        $blogTaxonomyIssues[] = 'prázdný blogový štítek pořád používá starý obecný text';
+    }
+
+    $duplicateTagResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$taxonomyBlogId,
+        'name' => 'HTTP Duplicitní štítek',
+        'slug' => $taxonomyTagSlug,
+        'description' => '',
+        'meta_title' => '',
+        'meta_description' => '',
+    ], $adminSession['cookie'], 0);
+    foreach ([
+        'id="form-error" class="error" role="alert" aria-atomic="true">Štítek blogu nejde uložit.',
+        'aria-describedby="tag-slug-help tag-slug-error" aria-invalid="true"',
+        'id="tag-slug-error"',
+        'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+    ] as $duplicateTagFragment) {
+        if (!str_contains($duplicateTagResponse['body'], $duplicateTagFragment)) {
+            $blogTaxonomyIssues[] = 'duplicitní slug blogového štítku nezobrazil field-level fragment: ' . $duplicateTagFragment;
+        }
+    }
+    if (str_contains($duplicateTagResponse['body'], 'Tento slug už v tomto blogu používá jiný štítek.')
+        || str_contains($duplicateTagResponse['body'], 'Zkontrolujte prosím zvýrazněná pole.')) {
+        $blogTaxonomyIssues[] = 'duplicitní slug blogového štítku pořád používá starý obecný text';
     }
 
     $categoryLandingPath = '/' . rawurlencode($taxonomyBlogSlug) . '/kategorie/' . rawurlencode($taxonomyCategorySlug);
