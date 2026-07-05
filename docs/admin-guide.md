@@ -24,6 +24,8 @@ Při odpovědi z detailu kontaktní zprávy, chat zprávy nebo odpovědi Form Bu
 
 V detailu odpovědi Form Builderu stejný princip platí i pro GitHub issue bridge. Pokud chybí repozitář, název nebo tělo nového issue, případně je neplatná adresa existujícího issue, souhrnný alert doplní konkrétní nápovědu přímo u dotčeného pole.
 
+Stejný field-level pattern používají i další běžná administrační workflow: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Při chybě má souhrnný text zůstat textový a atomický, dotčené pole má mít `aria-invalid`, `aria-describedby` jen na existující nápovědu nebo chybu a lokální text má správci říct konkrétní opravu.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---

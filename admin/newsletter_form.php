@@ -17,15 +17,15 @@ $formErrorFields = $_SESSION['newsletter_form_error_fields'] ?? [];
 unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error'], $_SESSION['newsletter_form_error_fields']);
 
 $fieldErrorMessages = [
-    'subject' => 'Vyplňte předmět newsletteru.',
-    'body' => 'Vyplňte text newsletteru.',
+    'subject' => 'Doplňte krátký předmět, který odběratel uvidí v doručené poště.',
+    'body' => 'Doplňte text rozesílky. Odkaz pro odhlášení CMS přidá automaticky.',
 ];
 
 adminHeader('Nová rozesílka');
 ?>
 
 <?php if ($formError !== ''): ?>
-  <p class="error" role="alert" id="newsletter-form-error"><?= h($formError) ?></p>
+  <p class="error" role="alert" id="newsletter-form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p><a href="newsletter.php">&larr; Zpět na newsletter</a></p>
@@ -45,7 +45,7 @@ adminHeader('Nová rozesílka');
 <?php if ($confirmedCount === 0): ?>
   <p class="error">Zatím nemáte žádné potvrzené odběratele, takže novou rozesílku teď nelze odeslat.</p>
 <?php else: ?>
-  <form method="post" action="newsletter_send.php" novalidate>
+  <form method="post" action="newsletter_send.php" novalidate<?= $formError !== '' ? ' aria-describedby="newsletter-form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <fieldset>
       <legend>Obsah e-mailu</legend>

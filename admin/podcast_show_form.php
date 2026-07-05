@@ -47,13 +47,13 @@ $err = trim((string)($_GET['err'] ?? ''));
 $podcastShowWebsiteUrlErrorMessage = 'Web pořadu musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud web pořadu nechcete vyplnit, nechte pole prázdné.';
 $podcastShowOwnerEmailErrorMessage = 'E-mail vlastníka feedu musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
-    'required' => 'Název pořadu je povinný.',
-    'slug' => 'Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.',
-    'slug_taken' => 'Tento slug už používá jiný pořad.',
+    'required' => 'Podcastový pořad nejde uložit bez názvu. U pole Název pořadu je konkrétní nápověda.',
+    'slug' => 'Slug podcastového pořadu není možné vytvořit. U pole Slug veřejné stránky je konkrétní nápověda.',
+    'slug_taken' => 'Slug podcastového pořadu už používá jiný pořad. U pole Slug veřejné stránky je konkrétní nápověda.',
     'url' => $podcastShowWebsiteUrlErrorMessage,
     'owner_email' => $podcastShowOwnerEmailErrorMessage,
-    'feed_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
-    'cover' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+    'feed_limit' => 'Počet epizod v RSS feedu není použitelný. U pole Počet epizod v RSS feedu je konkrétní nápověda.',
+    'cover' => 'Cover obrázek podcastu není použitelný. U pole Cover obrázek je konkrétní nápověda.',
     default => '',
 };
 $fieldErrorMap = [
@@ -66,12 +66,12 @@ $fieldErrorMap = [
     'cover' => ['cover_image'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Název pořadu je povinný.',
-    'slug' => 'Slug pořadu musí zůstat jedinečný.',
+    'title' => 'Doplňte název pořadu tak, jak se má zobrazit na webu a v podcastových aplikacích.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, například rozhovory-o-obci.',
     'website_url' => $podcastShowWebsiteUrlErrorMessage,
     'owner_email' => $podcastShowOwnerEmailErrorMessage,
-    'feed_episode_limit' => 'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
-    'cover_image' => 'Cover musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+    'feed_episode_limit' => 'Zadejte celé číslo od 1 do 1000; běžně stačí počet posledních epizod, které chcete držet ve feedu.',
+    'cover_image' => 'Nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px, nebo pole nechte beze změny.',
 ];
 $coverHelpIds = (string)$show['cover_url'] !== ''
     ? 'podcast-show-cover-current podcast-show-cover-help'
@@ -81,7 +81,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush">

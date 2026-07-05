@@ -16,6 +16,11 @@ $returnUrl = internalRedirectTarget(
 );
 
 $linkError = '';
+$linkFieldErrors = [];
+$linkFieldErrorMessages = [
+    'title' => 'Doplňte krátký název odkazu, například Ceník služeb.',
+    'url' => 'Zadejte interní cestu začínající lomítkem, například /kontakt, nebo úplnou http/https adresu bez přihlašovacích údajů.',
+];
 $linkForm = [
     'id' => 0,
     'title' => '',
@@ -41,9 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $safeUrl = navigationLinkUrl((string)$linkForm['url']);
 
         if ((string)$linkForm['title'] === '') {
-            $linkError = 'Zadejte název odkazu.';
+            $linkError = 'Externí odkaz blogu nejde uložit bez názvu. U pole Název odkazu je konkrétní nápověda.';
+            $linkFieldErrors[] = 'title';
         } elseif ($safeUrl === '') {
-            $linkError = 'Zadejte interní cestu webu nebo úplnou adresu začínající http:// či https:// bez přihlašovacích údajů.';
+            $linkError = 'Adresa externího odkazu blogu není použitelná. U pole Adresa odkazu je konkrétní nápověda.';
+            $linkFieldErrors[] = 'url';
         } elseif ($linkId > 0) {
             $pdo->prepare(
                 "UPDATE cms_nav_links
@@ -225,22 +232,27 @@ adminHeader('Pořadí stránek blogu');
 
 <p class="admin-description">Tady určujete pořadí statických stránek a externích odkazů blogu <strong><?= h((string)$blog['name']) ?></strong>. Toto pořadí je oddělené od globální hlavní navigace webu.</p>
 
-<form method="post" id="blog-nav-link-form" class="form-card" novalidate>
+<form method="post" id="blog-nav-link-form" class="form-card" novalidate<?= $linkError !== '' ? ' aria-describedby="blog-nav-link-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="action" value="save_link">
   <input type="hidden" name="link_id" value="<?= (int)$linkForm['id'] ?>">
   <fieldset>
     <legend><?= (int)$linkForm['id'] > 0 ? 'Upravit externí odkaz blogu' : 'Přidat externí odkaz blogu' ?></legend>
     <?php if ($linkError !== ''): ?>
-      <p class="error" role="alert"><?= h($linkError) ?></p>
+      <p id="blog-nav-link-error" class="error" role="alert" aria-atomic="true"><?= h($linkError) ?></p>
     <?php endif; ?>
 
     <label for="blog-nav-link-title">Název odkazu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="blog-nav-link-title" name="title" value="<?= h((string)$linkForm['title']) ?>" required aria-required="true" maxlength="255">
+    <input type="text" id="blog-nav-link-title" name="title" value="<?= h((string)$linkForm['title']) ?>" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $linkFieldErrors, [], ['blog-nav-link-title-help']) ?>>
+    <small id="blog-nav-link-title-help" class="field-help">Název se zobrazí v navigaci blogu jako text odkazu.</small>
+    <?php adminRenderFieldError('title', $linkFieldErrors, [], $linkFieldErrorMessages['title']); ?>
 
     <label for="blog-nav-link-url">Adresa odkazu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="url" id="blog-nav-link-url" name="url" value="<?= h((string)$linkForm['url']) ?>" required aria-required="true" maxlength="1000" aria-describedby="blog-nav-link-url-help">
+    <input type="url" id="blog-nav-link-url" name="url" value="<?= h((string)$linkForm['url']) ?>" required aria-required="true" maxlength="1000"
+           <?= adminFieldAttributes('url', $linkFieldErrors, [], ['blog-nav-link-url-help']) ?>>
     <small id="blog-nav-link-url-help" class="field-help">Použijte úplnou adresu začínající <code>https://</code> nebo interní cestu webu, například <code>/kontakt</code>.</small>
+    <?php adminRenderFieldError('url', $linkFieldErrors, [], $linkFieldErrorMessages['url']); ?>
 
     <label for="blog-nav-link-alt">Popis pro čtečky obrazovky</label>
     <input type="text" id="blog-nav-link-alt" name="alt_text" value="<?= h((string)$linkForm['alt_text']) ?>" maxlength="255" aria-describedby="blog-nav-link-alt-help">

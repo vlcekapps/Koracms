@@ -1091,6 +1091,76 @@ try {
     }
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 
+    $podcastAdminValidationIssues = [];
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Podcastový pořad nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte název pořadu tak, jak se má zobrazit na webu a v podcastových aplikacích.',
+            ],
+            'forbidden' => ['Název pořadu je povinný.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug podcastového pořadu není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="podcast-show-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, například rozhovory-o-obci.',
+            ],
+            'forbidden' => ['Slug pořadu musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'slug_taken' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug podcastového pořadu už používá jiný pořad.',
+                'aria-invalid="true" aria-describedby="podcast-show-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, například rozhovory-o-obci.',
+            ],
+            'forbidden' => ['Tento slug už používá jiný pořad.'],
+        ],
+        'feed_limit' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Počet epizod v RSS feedu není použitelný.',
+                'aria-invalid="true" aria-describedby="podcast-show-feed-limit-help feed_episode_limit-error"',
+                'id="feed_episode_limit-error"',
+                'Zadejte celé číslo od 1 do 1000; běžně stačí počet posledních epizod',
+            ],
+            'forbidden' => ['Počet epizod v RSS feedu musí být číslo od 1 do 1000.'],
+        ],
+        'cover' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Cover obrázek podcastu není použitelný.',
+                'aria-invalid="true" aria-describedby="podcast-show-cover-help cover_image-error"',
+                'id="cover_image-error"',
+                'Nahrajte čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px, nebo pole nechte beze změny.',
+            ],
+            'forbidden' => ['Cover musí být čtvercový JPG nebo PNG v rozmezí'],
+        ],
+    ] as $podcastAdminValidationError => $podcastAdminValidationSpec) {
+        $podcastAdminValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_show_form.php?err=' . rawurlencode((string)$podcastAdminValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($podcastAdminValidationResponse) !== 200) {
+            $podcastAdminValidationIssues[] = 'podcast show editor s err=' . (string)$podcastAdminValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$podcastAdminValidationSpec['expected'] as $podcastAdminExpectedFragment) {
+            if (!str_contains($podcastAdminValidationResponse['body'], (string)$podcastAdminExpectedFragment)) {
+                $podcastAdminValidationIssues[] = 'podcast show editor s err=' . (string)$podcastAdminValidationError . ' neobsahuje: ' . (string)$podcastAdminExpectedFragment;
+            }
+        }
+        foreach ((array)$podcastAdminValidationSpec['forbidden'] as $podcastAdminForbiddenFragment) {
+            if (str_contains($podcastAdminValidationResponse['body'], (string)$podcastAdminForbiddenFragment)) {
+                $podcastAdminValidationIssues[] = 'podcast show editor s err=' . (string)$podcastAdminValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+    httpIntegrationPrintResult('podcast_admin_validation_http', $podcastAdminValidationIssues, $failures);
+
     $stateChangingGetEndpointIssues = [];
     $stateChangingGetEndpointUrls = [
         '/confirm_email.php?token=method-guard' => 'confirm_email.php',
@@ -3138,6 +3208,66 @@ try {
 
     httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
 
+    $newsletterComposeIssues = [];
+    $newsletterComposeEmail = 'http-newsletter-compose-' . bin2hex(random_bytes(4)) . '@example.test';
+    $createdSubscriberEmails[] = $newsletterComposeEmail;
+    $pdo->prepare(
+        "INSERT INTO cms_subscribers (email, token, confirmed, created_at)
+         VALUES (?, ?, 1, NOW())"
+    )->execute([$newsletterComposeEmail, bin2hex(random_bytes(16))]);
+    $newsletterComposeSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Newsletter Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-newsletter-compose-' . bin2hex(random_bytes(3)));
+    $newsletterInvalidResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/newsletter_send.php',
+        [
+            'csrf_token' => $newsletterComposeSession['csrf'],
+            'subject' => '',
+            'body' => '',
+        ],
+        $newsletterComposeSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($newsletterInvalidResponse) !== 302) {
+        $newsletterComposeIssues[] = 'neplatný newsletter compose POST nevrátil redirect';
+    }
+    if (!responseHasLocationHeader($newsletterInvalidResponse['headers'], BASE_URL . '/admin/newsletter_form.php', $baseUrl)) {
+        $newsletterComposeIssues[] = 'neplatný newsletter compose POST nemíří zpět na formulář';
+    }
+    $newsletterInvalidRender = fetchUrl($baseUrl . BASE_URL . '/admin/newsletter_form.php', $newsletterComposeSession['cookie'], 0);
+    if (httpIntegrationStatusCode($newsletterInvalidRender) !== 200) {
+        $newsletterComposeIssues[] = 'newsletter compose po validační chybě nevrátil 200';
+    } else {
+        foreach ([
+            'id="newsletter-form-error" aria-atomic="true">Newsletter nejde odeslat bez předmětu nebo textu.',
+            '<form method="post" action="newsletter_send.php" novalidate aria-describedby="newsletter-form-error">',
+            'aria-invalid="true" aria-describedby="subject-error"',
+            'id="subject-error"',
+            'Doplňte krátký předmět, který odběratel uvidí v doručené poště.',
+            'aria-invalid="true" aria-describedby="body-error"',
+            'id="body-error"',
+            'Doplňte text rozesílky. Odkaz pro odhlášení CMS přidá automaticky.',
+        ] as $newsletterComposeExpectedFragment) {
+            if (!str_contains($newsletterInvalidRender['body'], $newsletterComposeExpectedFragment)) {
+                $newsletterComposeIssues[] = 'newsletter compose po validační chybě neobsahuje: ' . $newsletterComposeExpectedFragment;
+            }
+        }
+        foreach ([
+            'Vyplňte prosím předmět i text newsletteru.',
+            'Vyplňte předmět newsletteru.',
+            'Vyplňte text newsletteru.',
+        ] as $newsletterComposeForbiddenFragment) {
+            if (str_contains($newsletterInvalidRender['body'], $newsletterComposeForbiddenFragment)) {
+                $newsletterComposeIssues[] = 'newsletter compose pořád používá starý obecný text';
+            }
+        }
+    }
+    httpIntegrationPrintResult('newsletter_compose_validation_http', $newsletterComposeIssues, $failures);
+
     $publicConsistentHelpIssues = [];
     $publicHelpOriginalContactModule = getSetting('module_contact', '0');
     $publicHelpOriginalChatModule = getSetting('module_chat', '0');
@@ -4810,6 +4940,34 @@ try {
         $blogSeriesIssues[] = 'správa sérií článků nezobrazila formulář a články blogu';
     }
 
+    $seriesInvalidTitleResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, [
+        'csrf_token' => $adminSession['csrf'],
+        'blog_id' => (string)$relatedBlogId,
+        'action' => 'save_series',
+        'series_id' => '0',
+        'title' => '',
+        'slug' => '',
+        'description' => 'Neplatná série pro ověření chybového renderu.',
+        'is_active' => '1',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($seriesInvalidTitleResponse) !== 200) {
+        $blogSeriesIssues[] = 'chybový stav série bez názvu se nevyrenderoval';
+    } else {
+        foreach ([
+            'id="blog-series-error" class="error" role="alert" aria-atomic="true">Sérii článků nejde uložit bez názvu.',
+            'aria-invalid="true" aria-describedby="series-title-help title-error"',
+            'id="title-error"',
+            'Doplňte krátký název série, například Průvodce začátečníka.',
+        ] as $seriesInvalidTitleExpectedFragment) {
+            if (!str_contains($seriesInvalidTitleResponse['body'], $seriesInvalidTitleExpectedFragment)) {
+                $blogSeriesIssues[] = 'chybový stav série bez názvu neobsahuje: ' . $seriesInvalidTitleExpectedFragment;
+            }
+        }
+        if (str_contains($seriesInvalidTitleResponse['body'], 'Zadejte název série.')) {
+            $blogSeriesIssues[] = 'chybový stav série bez názvu pořád používá starý obecný text';
+        }
+    }
+
     $seriesCreateResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, [
         'csrf_token' => $adminSession['csrf'],
         'blog_id' => (string)$relatedBlogId,
@@ -5630,6 +5788,65 @@ try {
         foreach ((array)$reservationAdminValidationExpectation['forbidden'] as $reservationAdminForbiddenFragment) {
             if (str_contains($reservationAdminValidationResponse['body'], (string)$reservationAdminForbiddenFragment)) {
                 $reservationIssues[] = 'chybový stav rezervační administrace ' . $reservationAdminValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
+    foreach ([
+        'name' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Zdroj rezervací nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="name-error"',
+                'id="name-error"',
+                'Doplňte krátký název zdroje, například Konzultační místnost.',
+            ],
+            'forbidden' => ['Název zdroje je povinný.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug zdroje rezervací není možné použít.',
+                'aria-invalid="true" aria-describedby="resource-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, například konzultacni-mistnost.',
+            ],
+            'forbidden' => ['Slug je povinný a musí být unikátní.'],
+        ],
+        'capacity' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Kapacita zdroje rezervací není použitelná.',
+                'aria-invalid="true" aria-describedby="resource-capacity-help capacity-error"',
+                'id="capacity-error"',
+                'Zadejte celé číslo 1 nebo vyšší podle maximálního počtu osob v jedné rezervaci.',
+            ],
+            'forbidden' => ['Kapacita musí být alespoň 1.'],
+        ],
+        'reminder_hours' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Předstih připomínky není použitelný.',
+                'aria-invalid="true" aria-describedby="resource-reminder-hours-help reminder_hours_before-error"',
+                'id="reminder_hours_before-error"',
+                'Zadejte celé číslo 1 nebo vyšší, například 24 pro připomínku den předem.',
+            ],
+            'forbidden' => ['Předstih připomínky musí být alespoň 1 hodina.'],
+        ],
+    ] as $resourceValidationError => $resourceValidationSpec) {
+        $resourceValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/res_resource_form.php?err=' . rawurlencode((string)$resourceValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($resourceValidationResponse) !== 200) {
+            $reservationIssues[] = 'editor rezervačního zdroje s err=' . (string)$resourceValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$resourceValidationSpec['expected'] as $resourceValidationExpectedFragment) {
+            if (!str_contains($resourceValidationResponse['body'], (string)$resourceValidationExpectedFragment)) {
+                $reservationIssues[] = 'editor rezervačního zdroje s err=' . (string)$resourceValidationError . ' neobsahuje: ' . (string)$resourceValidationExpectedFragment;
+            }
+        }
+        foreach ((array)$resourceValidationSpec['forbidden'] as $resourceValidationForbiddenFragment) {
+            if (str_contains($resourceValidationResponse['body'], (string)$resourceValidationForbiddenFragment)) {
+                $reservationIssues[] = 'editor rezervačního zdroje s err=' . (string)$resourceValidationError . ' stále používá starý obecný text';
             }
         }
     }
@@ -8404,6 +8621,65 @@ try {
     }
     if (!str_contains($blogPagesAdminResponse['body'], 'Přidat externí odkaz blogu')) {
         $blogStaticPagesIssues[] = 'správa pořadí blogových stránek nenabízí externí odkazy blogu';
+    }
+
+    foreach ([
+        'title_required' => [
+            'post' => [
+                'action' => 'save_link',
+                'title' => '',
+                'url' => '/kontakt',
+                'alt_text' => '',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="blog-nav-link-error" class="error" role="alert" aria-atomic="true">Externí odkaz blogu nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="blog-nav-link-title-help title-error"',
+                'id="title-error"',
+                'Doplňte krátký název odkazu, například Ceník služeb.',
+            ],
+            'forbidden' => ['Zadejte název odkazu.'],
+        ],
+        'url_invalid' => [
+            'post' => [
+                'action' => 'save_link',
+                'title' => 'Neplatný odkaz blogu',
+                'url' => 'javascript:alert(1)',
+                'alt_text' => '',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="blog-nav-link-error" class="error" role="alert" aria-atomic="true">Adresa externího odkazu blogu není použitelná.',
+                'aria-invalid="true" aria-describedby="blog-nav-link-url-help url-error"',
+                'id="url-error"',
+                'Zadejte interní cestu začínající lomítkem, například /kontakt, nebo úplnou http/https adresu bez přihlašovacích údajů.',
+            ],
+            'forbidden' => ['Zadejte interní cestu webu nebo úplnou adresu začínající http:// či https:// bez přihlašovacích údajů.'],
+        ],
+    ] as $blogLinkValidationLabel => $blogLinkValidationSpec) {
+        $blogLinkValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$blogLinkValidationSpec['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($blogLinkValidationResponse) !== 200) {
+            $blogStaticPagesIssues[] = 'chybový stav blogového odkazu ' . $blogLinkValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$blogLinkValidationSpec['expected'] as $blogLinkExpectedFragment) {
+            if (!str_contains($blogLinkValidationResponse['body'], (string)$blogLinkExpectedFragment)) {
+                $blogStaticPagesIssues[] = 'chybový stav blogového odkazu ' . $blogLinkValidationLabel . ' neobsahuje: ' . (string)$blogLinkExpectedFragment;
+            }
+        }
+        foreach ((array)$blogLinkValidationSpec['forbidden'] as $blogLinkForbiddenFragment) {
+            if (str_contains($blogLinkValidationResponse['body'], (string)$blogLinkForbiddenFragment)) {
+                $blogStaticPagesIssues[] = 'chybový stav blogového odkazu ' . $blogLinkValidationLabel . ' stále používá starý obecný text';
+            }
+        }
     }
 
     $blogExternalLinkTitle = 'HTTP externí odkaz blogu';

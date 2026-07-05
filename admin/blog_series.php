@@ -20,6 +20,10 @@ if (!canCurrentUserWriteToBlog($blogId)) {
 $seriesError = '';
 $message = trim((string)($_GET['msg'] ?? ''));
 $editSeriesId = inputInt('get', 'edit');
+$seriesFieldErrors = [];
+$seriesFieldErrorMessages = [
+    'title' => 'Doplňte krátký název série, například Průvodce začátečníka.',
+];
 $seriesForm = [
     'id' => 0,
     'title' => '',
@@ -112,7 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedArticleOrder = (array)($_POST['article_order'] ?? []);
 
     if ((string)$seriesForm['title'] === '') {
-        $seriesError = 'Zadejte název série.';
+        $seriesError = 'Sérii článků nejde uložit bez názvu. U pole Název série je konkrétní nápověda.';
+        $seriesFieldErrors[] = 'title';
     } else {
         $slugBase = (string)$seriesForm['slug'];
         if ($slugBase === '') {
@@ -294,11 +299,15 @@ adminHeader('Série článků blogu');
   <fieldset>
     <legend><?= (int)$seriesForm['id'] > 0 ? 'Upravit sérii článků' : 'Přidat sérii článků' ?></legend>
     <?php if ($seriesError !== ''): ?>
-      <p id="blog-series-error" class="error" role="alert"><?= h($seriesError) ?></p>
+      <p id="blog-series-error" class="error" role="alert" aria-atomic="true"><?= h($seriesError) ?></p>
     <?php endif; ?>
 
     <label for="series-title">Název série <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="series-title" name="title" required aria-required="true" maxlength="255" value="<?= h((string)$seriesForm['title']) ?>">
+    <input type="text" id="series-title" name="title" required aria-required="true" maxlength="255"
+           value="<?= h((string)$seriesForm['title']) ?>"
+           <?= adminFieldAttributes('title', $seriesFieldErrors, [], ['series-title-help']) ?>>
+    <small id="series-title-help" class="field-help">Použijte krátký název, podle kterého čtenář pozná společné téma článků.</small>
+    <?php adminRenderFieldError('title', $seriesFieldErrors, [], $seriesFieldErrorMessages['title']); ?>
 
     <label for="series-slug">Slug série</label>
     <input type="text" id="series-slug" name="slug" maxlength="255" pattern="[a-z0-9\-]+" value="<?= h((string)$seriesForm['slug']) ?>" aria-describedby="series-slug-help">

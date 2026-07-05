@@ -73,32 +73,29 @@ $resourceHoursErrorMessage = 'Časy dostupnosti musí mít platný začátek i k
 $resourceSlotsErrorMessage = 'Předdefinované sloty musí mít platný čas začátku i konce. Vyberte čas v příslušných polích, nastavte konec později než začátek nebo prázdný slot odstraňte.';
 $resourceBlockedDateErrorMessage = 'Blokované datum musí být platné kalendářní datum. Vyberte datum v poli blokace nebo prázdný řádek odstraňte.';
 $fieldErrorMessages = [
-    'name' => 'Název zdroje je povinný.',
-    'slug' => 'Slug je povinný a musí být unikátní.',
-    'capacity' => 'Kapacita musí být alespoň 1.',
+    'name' => 'Doplňte krátký název zdroje, například Konzultační místnost.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, například konzultacni-mistnost.',
+    'capacity' => 'Zadejte celé číslo 1 nebo vyšší podle maximálního počtu osob v jedné rezervaci.',
     'hours' => $resourceHoursErrorMessage,
     'slots' => $resourceSlotsErrorMessage,
     'blocked_date' => $resourceBlockedDateErrorMessage,
-    'reminder_hours' => 'Předstih připomínky musí být alespoň 1 hodina.',
+    'reminder_hours' => 'Zadejte celé číslo 1 nebo vyšší, například 24 pro připomínku den předem.',
 ];
+$formError = match ($err) {
+    'name' => 'Zdroj rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.',
+    'slug' => 'Slug zdroje rezervací není možné použít. U pole Slug je konkrétní nápověda.',
+    'capacity' => 'Kapacita zdroje rezervací není použitelná. U pole Max. osob na jednu rezervaci je konkrétní nápověda.',
+    'hours' => $resourceHoursErrorMessage,
+    'slots' => $resourceSlotsErrorMessage,
+    'blocked_date' => $resourceBlockedDateErrorMessage,
+    'reminder_hours' => 'Předstih připomínky není použitelný. U pole Předstih připomínky je konkrétní nápověda.',
+    'save' => 'Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.',
+    default => '',
+};
 ?>
 
-<?php if ($err === 'name'): ?>
-  <p role="alert" class="error" id="form-error">Název zdroje je povinný.</p>
-<?php elseif ($err === 'slug'): ?>
-  <p role="alert" class="error" id="form-error">Slug je povinný a musí být unikátní.</p>
-<?php elseif ($err === 'capacity'): ?>
-  <p role="alert" class="error" id="form-error">Kapacita musí být alespoň 1.</p>
-<?php elseif ($err === 'hours'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($resourceHoursErrorMessage) ?></p>
-<?php elseif ($err === 'slots'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($resourceSlotsErrorMessage) ?></p>
-<?php elseif ($err === 'blocked_date'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($resourceBlockedDateErrorMessage) ?></p>
-<?php elseif ($err === 'reminder_hours'): ?>
-  <p role="alert" class="error" id="form-error">Předstih připomínky musí být alespoň 1 hodina.</p>
-<?php elseif ($err === 'save'): ?>
-  <p role="alert" class="error" id="form-error">Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.</p>
+<?php if ($formError !== ''): ?>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="res-resource-intro">

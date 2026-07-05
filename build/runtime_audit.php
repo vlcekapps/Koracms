@@ -14464,7 +14464,12 @@ foreach ([
         $editorialValidationIssues[] = 'reservation resource save is missing validation redirect: ' . $reservationRedirectFragment;
     }
 }
-foreach (["\$err === 'hours'", "\$err === 'slots'", "\$err === 'blocked_date'", "\$err === 'save'"] as $reservationFormFragment) {
+foreach ([
+    "'hours' => \$resourceHoursErrorMessage,",
+    "'slots' => \$resourceSlotsErrorMessage,",
+    "'blocked_date' => \$resourceBlockedDateErrorMessage,",
+    "'save' => 'Zdroj se nepodařilo uložit. Zkontrolujte zadané údaje a zkuste to prosím znovu.',",
+] as $reservationFormFragment) {
     if (!str_contains($reservationFormSource, $reservationFormFragment)) {
         $editorialValidationIssues[] = 'reservation resource form is missing error feedback branch: ' . $reservationFormFragment;
     }
@@ -15062,6 +15067,8 @@ $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup
 $integrityAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/integrity.php');
 $blogsManagementSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blogs.php');
 $blogOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$blogPagesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');
+$blogSeriesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_series.php');
 $blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_message.php');
@@ -16846,12 +16853,114 @@ $adminFieldErrorForms = [
     'profile form' => [$profileFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('totp_verify'", "adminFieldAttributes('author_slug'"],
     'newsletter form' => [$newsletterFormValidationSource, "adminFieldAttributes('subject'", "adminFieldAttributes('body'", "adminRenderFieldError('body'"],
     'contact topics form' => [$contactTopicsSource, "adminFieldAttributes('name'", "adminFieldAttributes('recipient_email'", "adminRenderFieldError('slug'"],
+    'blog series form' => [$blogSeriesAdminSource, "adminFieldAttributes('title', \$seriesFieldErrors", "adminRenderFieldError('title'", 'id="series-title-help"'],
+    'blog pages link form' => [$blogPagesAdminSource, "adminFieldAttributes('title', \$linkFieldErrors", "adminFieldAttributes('url', \$linkFieldErrors", 'id="blog-nav-link-error"'],
 ];
 foreach ($adminFieldErrorForms as $formLabel => $formFragments) {
     $formSource = (string)array_shift($formFragments);
     foreach ($formFragments as $requiredFragment) {
         if (!str_contains($formSource, $requiredFragment)) {
             $adminFieldErrorIssues[] = $formLabel . ' is missing field-level error fragment: ' . $requiredFragment;
+        }
+    }
+}
+foreach ([
+    'blog series editor' => [
+        'source' => $blogSeriesAdminSource,
+        'required' => [
+            '$seriesError = \'Sérii článků nejde uložit bez názvu. U pole Název série je konkrétní nápověda.\';',
+            '$seriesFieldErrorMessages = [',
+            '\'title\' => \'Doplňte krátký název série, například Průvodce začátečníka.\',',
+            '<p id="blog-series-error" class="error" role="alert" aria-atomic="true"><?= h($seriesError) ?></p>',
+            "adminFieldAttributes('title', \$seriesFieldErrors, [], ['series-title-help'])",
+            "adminRenderFieldError('title', \$seriesFieldErrors, [], \$seriesFieldErrorMessages['title']);",
+        ],
+        'forbidden' => [
+            '$seriesError = \'Zadejte název série.\';',
+            '<p id="blog-series-error" class="error" role="alert"><?= h($seriesError) ?></p>',
+        ],
+    ],
+    'blog navigation link editor' => [
+        'source' => $blogPagesAdminSource,
+        'required' => [
+            '$linkError = \'Externí odkaz blogu nejde uložit bez názvu. U pole Název odkazu je konkrétní nápověda.\';',
+            '$linkError = \'Adresa externího odkazu blogu není použitelná. U pole Adresa odkazu je konkrétní nápověda.\';',
+            '\'title\' => \'Doplňte krátký název odkazu, například Ceník služeb.\',',
+            '\'url\' => \'Zadejte interní cestu začínající lomítkem, například /kontakt, nebo úplnou http/https adresu bez přihlašovacích údajů.\',',
+            '<p id="blog-nav-link-error" class="error" role="alert" aria-atomic="true"><?= h($linkError) ?></p>',
+            "adminFieldAttributes('title', \$linkFieldErrors, [], ['blog-nav-link-title-help'])",
+            "adminFieldAttributes('url', \$linkFieldErrors, [], ['blog-nav-link-url-help'])",
+        ],
+        'forbidden' => [
+            '$linkError = \'Zadejte název odkazu.\';',
+            '$linkError = \'Zadejte interní cestu webu nebo úplnou adresu začínající http:// či https:// bez přihlašovacích údajů.\';',
+            '<p class="error" role="alert"><?= h($linkError) ?></p>',
+        ],
+    ],
+    'reservation resource core editor' => [
+        'source' => $reservationFormSource,
+        'required' => [
+            '\'name\' => \'Doplňte krátký název zdroje, například Konzultační místnost.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, například konzultacni-mistnost.\',',
+            '\'capacity\' => \'Zadejte celé číslo 1 nebo vyšší podle maximálního počtu osob v jedné rezervaci.\',',
+            '\'reminder_hours\' => \'Zadejte celé číslo 1 nebo vyšší, například 24 pro připomínku den předem.\',',
+            '\'name\' => \'Zdroj rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.\',',
+            '\'capacity\' => \'Kapacita zdroje rezervací není použitelná. U pole Max. osob na jednu rezervaci je konkrétní nápověda.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+        ],
+        'forbidden' => [
+            'Název zdroje je povinný.',
+            'Slug je povinný a musí být unikátní.',
+            'Kapacita musí být alespoň 1.',
+            'Předstih připomínky musí být alespoň 1 hodina.',
+            '<p role="alert" class="error" id="form-error">Název zdroje je povinný.</p>',
+        ],
+    ],
+    'podcast show core editor' => [
+        'source' => $podcastShowFormSource,
+        'required' => [
+            '\'required\' => \'Podcastový pořad nejde uložit bez názvu. U pole Název pořadu je konkrétní nápověda.\',',
+            '\'slug\' => \'Slug podcastového pořadu není možné vytvořit. U pole Slug veřejné stránky je konkrétní nápověda.\',',
+            '\'slug_taken\' => \'Slug podcastového pořadu už používá jiný pořad. U pole Slug veřejné stránky je konkrétní nápověda.\',',
+            '\'feed_limit\' => \'Počet epizod v RSS feedu není použitelný. U pole Počet epizod v RSS feedu je konkrétní nápověda.\',',
+            '\'title\' => \'Doplňte název pořadu tak, jak se má zobrazit na webu a v podcastových aplikacích.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, například rozhovory-o-obci.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+        ],
+        'forbidden' => [
+            'Název pořadu je povinný.',
+            'Tento slug už používá jiný pořad.',
+            'Počet epizod v RSS feedu musí být číslo od 1 do 1000.',
+            'Cover musí být čtvercový JPG nebo PNG v rozmezí',
+            '<p role="alert" class="error" id="form-error"><?= h($formError) ?></p>',
+        ],
+    ],
+    'newsletter compose flow' => [
+        'source' => $newsletterFormValidationSource . "\n" . $newsletterSendValidationSource,
+        'required' => [
+            '\'subject\' => \'Doplňte krátký předmět, který odběratel uvidí v doručené poště.\',',
+            '\'body\' => \'Doplňte text rozesílky. Odkaz pro odhlášení CMS přidá automaticky.\',',
+            'Newsletter nejde odeslat bez předmětu nebo textu. U zvýrazněných polí je konkrétní nápověda.',
+            '<p class="error" role="alert" id="newsletter-form-error" aria-atomic="true"><?= h($formError) ?></p>',
+            'aria-describedby="newsletter-form-error"',
+        ],
+        'forbidden' => [
+            'Vyplňte prosím předmět i text newsletteru.',
+            '\'subject\' => \'Vyplňte předmět newsletteru.\',',
+            '\'body\' => \'Vyplňte text newsletteru.\',',
+            '<p class="error" role="alert" id="newsletter-form-error"><?= h($formError) ?></p>',
+        ],
+    ],
+] as $adminValidationCopyLabel => $adminValidationCopySpec) {
+    $adminValidationCopySource = (string)$adminValidationCopySpec['source'];
+    foreach ($adminValidationCopySpec['required'] as $adminValidationCopyRequiredFragment) {
+        if (!str_contains($adminValidationCopySource, $adminValidationCopyRequiredFragment)) {
+            $adminFieldErrorIssues[] = $adminValidationCopyLabel . ' is missing actionable field-level validation fragment: ' . $adminValidationCopyRequiredFragment;
+        }
+    }
+    foreach ($adminValidationCopySpec['forbidden'] as $adminValidationCopyForbiddenFragment) {
+        if (str_contains($adminValidationCopySource, $adminValidationCopyForbiddenFragment)) {
+            $adminFieldErrorIssues[] = $adminValidationCopyLabel . ' still contains generic validation copy: ' . $adminValidationCopyForbiddenFragment;
         }
     }
 }

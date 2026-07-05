@@ -477,6 +477,8 @@ Kategorie a série ke stažení mají stejný field-level pattern pro hlavní va
 
 Stejný pattern používají i další administrační taxonomie: kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. Povinný název, nepoužitelný nebo duplicitní slug a příliš dlouhý meta title se naváže na konkrétní pole přes existující `aria-describedby`; u rezervačních číselníků se po chybě zachová rozepsaný název i adresa.
 
+Stejný pattern se rozšířil i na další běžná administrační workflow mimo číselníky: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Souhrnné alerty jsou textové a atomické, field-level texty radí doplnit název, opravit URL, slug, kapacitu, RSS limit, cover obrázek nebo doplnit předmět a text rozesílky.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

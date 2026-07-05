@@ -14,7 +14,7 @@ $_SESSION['newsletter_form_state'] = [
 $_SESSION['newsletter_form_error_fields'] = [];
 
 if ($subject === '' || $body === '') {
-    $_SESSION['newsletter_form_error'] = 'Vyplňte prosím předmět i text newsletteru.';
+    $_SESSION['newsletter_form_error'] = 'Newsletter nejde odeslat bez předmětu nebo textu. U zvýrazněných polí je konkrétní nápověda.';
     $_SESSION['newsletter_form_error_fields'] = array_values(array_filter([
         $subject === '' ? 'subject' : null,
         $body === '' ? 'body' : null,
