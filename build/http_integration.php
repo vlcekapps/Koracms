@@ -3383,6 +3383,18 @@ try {
             || !str_contains($contactDetailResponse['body'], (string)($contactMessage['reference_code'] ?? ''))) {
             $contactCenterIssues[] = 'detail kontaktní zprávy nezobrazil referenci nebo formulář odpovědi';
         } else {
+            $contactInvalidReplyResponse = fetchUrl($contactDetailUrl . '&reply=invalid', $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($contactInvalidReplyResponse) !== 200
+                || !str_contains($contactInvalidReplyResponse['body'], 'role="alert" aria-atomic="true"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'aria-describedby="reply-subject-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'id="reply-subject-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'Zadejte předmět odpovědi, aby příjemce poznal')
+                || !str_contains($contactInvalidReplyResponse['body'], 'aria-describedby="reply-message-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'id="reply-message-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'Doplňte text odpovědi. Nestačí prázdná zpráva.')) {
+                $contactCenterIssues[] = 'detail kontaktní zprávy po neplatné odpovědi nezobrazil field-level návrhy oprav';
+            }
+
             $replySubject = 'Re: ' . $validContactSubject;
             $replyBody = 'HTTP odpověď na kontaktní zprávu.';
             $contactReplyResponse = postUrl(
@@ -3468,17 +3480,19 @@ try {
     }
 
     $approvedChatMessage = 'HTTP schválená připnutá chat zpráva ' . bin2hex(random_bytes(4));
+    $approvedChatEmail = 'http-chat-author-' . bin2hex(random_bytes(4)) . '@example.test';
     $approvedChatId = 0;
     if ($chatTopicId > 0) {
         $pdo->prepare(
             "INSERT INTO cms_chat (
                 topic_id, topic_label, conversation_type, reference_code, name, email, web, message,
                 status, public_visibility, is_pinned, pinned_at, pinned_by_user_id, created_at, updated_at
-             ) VALUES (?, ?, 'public', '', ?, '', '', ?, 'read', 'approved', 1, NOW(), ?, NOW(), NOW())"
+             ) VALUES (?, ?, 'public', '', ?, ?, '', ?, 'read', 'approved', 1, NOW(), ?, NOW(), NOW())"
         )->execute([
             $chatTopicId,
             $chatTopicName,
             'HTTP Chat Autor',
+            $approvedChatEmail,
             $approvedChatMessage,
             $adminUserId,
         ]);
@@ -3550,6 +3564,22 @@ try {
                     || !str_contains($chatDetailAdmin['body'], '/admin/chat_reply_action.php')) {
                     $chatCenterIssues[] = 'admin detail chat zprávy nezobrazil odpověď čekající na moderaci';
                 } else {
+                    $chatInvalidReplyDetail = fetchUrl(
+                        $baseUrl . BASE_URL . '/admin/chat_message.php?id=' . $approvedChatId . '&reply=invalid',
+                        $adminSession['cookie'],
+                        0
+                    );
+                    if (httpIntegrationStatusCode($chatInvalidReplyDetail) !== 200
+                        || !str_contains($chatInvalidReplyDetail['body'], 'role="alert" aria-atomic="true"')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'aria-describedby="reply-subject-error"')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'id="reply-subject-error"')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'Zadejte předmět odpovědi, aby příjemce poznal')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'aria-describedby="reply-message-error"')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'id="reply-message-error"')
+                        || !str_contains($chatInvalidReplyDetail['body'], 'Doplňte text odpovědi. Nestačí prázdná zpráva.')) {
+                        $chatCenterIssues[] = 'admin detail chat zprávy po neplatné odpovědi nezobrazil field-level návrhy oprav';
+                    }
+
                     $replyApproveResponse = postUrl(
                         $baseUrl . BASE_URL . '/admin/chat_reply_action.php',
                         [

@@ -46,6 +46,11 @@ $repliedByLabel = trim((string)($message['replied_by_email'] ?? '')) !== ''
         'nickname' => (string)($message['replied_by_nickname'] ?? ''),
     ])
     : '–';
+$replyFieldErrors = isset($_GET['reply']) && $_GET['reply'] === 'invalid' ? ['reply_subject', 'reply_message'] : [];
+$replyFieldErrorMessages = [
+    'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jaké zprávě se vracíte.',
+    'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
+];
 
 adminHeader('Kontaktní zpráva');
 ?>
@@ -58,7 +63,7 @@ adminHeader('Kontaktní zpráva');
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
   <p class="error" role="alert">U této zprávy není dostupná žádná platná e-mailová adresa pro odpověď.</p>
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
-  <p class="error" role="alert">Vyplňte předmět i text odpovědi.</p>
+  <p class="error" role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text. U obou polí je doplněná konkrétní nápověda.</p>
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
   <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
 <?php endif; ?>
@@ -190,10 +195,12 @@ adminHeader('Kontaktní zpráva');
 
       <label for="reply-subject">Předmět</label>
       <input type="text" id="reply-subject" name="subject" maxlength="255"
-             value="<?= h(trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Re: ' . (string)$message['subject']) ?>">
+             value="<?= h(trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Re: ' . (string)$message['subject']) ?>"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
+      <?php adminRenderFieldError('reply_subject', $replyFieldErrors, [], $replyFieldErrorMessages['reply_subject'], 'reply-subject-error'); ?>
 
       <label for="reply-message">Text odpovědi</label>
-      <textarea id="reply-message" name="message" rows="7"><?= h(trim((string)($message['reply_body'] ?? '')) !== '' ? (string)$message['reply_body'] : "Dobrý den,\n\nděkujeme za vaši zprávu.\n\n") ?></textarea>
+      <textarea id="reply-message" name="message" rows="7"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], [], 'reply-message-error') ?>><?= h(trim((string)($message['reply_body'] ?? '')) !== '' ? (string)$message['reply_body'] : "Dobrý den,\n\nděkujeme za vaši zprávu.\n\n") ?></textarea>
+      <?php adminRenderFieldError('reply_message', $replyFieldErrors, [], $replyFieldErrorMessages['reply_message'], 'reply-message-error'); ?>
 
       <button type="submit" class="btn">Odeslat odpověď</button>
     </fieldset>

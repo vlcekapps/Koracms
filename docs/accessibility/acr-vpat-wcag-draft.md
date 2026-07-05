@@ -88,6 +88,8 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 3.3.8 Accessible Authentication (Minimum) | Supports | Registration and password reset request do not require a math CAPTCHA; they use CSRF, rate limiting and honeypot protection. Runtime and HTTP integration guardrails cover no-CAPTCHA auth rendering, password-manager autocomplete metadata, 2FA one-time-code/numeric metadata and text-backed admin/2FA error alerts. Manual password-manager, TOTP, token reset and error-state behavior was confirmed on 2026-07-04. |
 | 4.1.3 Status Messages | Supports | Status and error messages use live region semantics and guarded roles. The reservation resource editor keeps client-side validation feedback in named inline alert regions, and shared admin AJAX sorting writes save success/failure feedback into inline status/alert text instead of browser alert dialogs. |
 
+Current `3.3.3` evidence note, 2026-07-05: admin contact, chat and Form Builder reply detail screens now attach an invalid reply subject/body state to both controls with `aria-invalid`, existing `aria-describedby` targets and actionable field-level text. Runtime guardrails cover all three source templates; HTTP integration renders the contact and chat invalid-reply states.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

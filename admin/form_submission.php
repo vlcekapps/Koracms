@@ -163,6 +163,11 @@ $hasGitHubIssue = formSubmissionHasGitHubIssue($submission);
 $githubIssueLinkLabel = formSubmissionGitHubIssueLabel($submission);
 $currentAdminUserId = currentUserId();
 $canManageFormIntegrations = currentUserHasCapability('settings_manage');
+$replyFieldErrors = isset($_GET['reply']) && $_GET['reply'] === 'invalid' ? ['reply_subject', 'reply_message'] : [];
+$replyFieldErrorMessages = [
+    'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jakému hlášení se vracíte.',
+    'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
+];
 
 adminHeader('Detail odpovědi formuláře');
 ?>
@@ -175,7 +180,7 @@ adminHeader('Detail odpovědi formuláře');
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
   <p class="error" role="alert">U této odpovědi není dostupná žádná platná e-mailová adresa pro odpověď.</p>
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
-  <p class="error" role="alert">Vyplňte předmět i text odpovědi.</p>
+  <p class="error" role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text. U obou polí je doplněná konkrétní nápověda.</p>
 <?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
   <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
 <?php endif; ?>
@@ -562,12 +567,14 @@ adminHeader('Detail odpovědi formuláře');
       <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)$replyRecipient['field_label']) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
       <div class="form-submission-field">
         <label for="reply-subject">Předmět odpovědi</label>
-        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" class="form-submission-control form-submission-control--md">
+        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
+        <?php adminRenderFieldError('reply_subject', $replyFieldErrors, [], $replyFieldErrorMessages['reply_subject'], 'reply-subject-error'); ?>
       </div>
       <div class="form-submission-field">
         <label for="reply-message">Text odpovědi</label>
-        <textarea id="reply-message" name="message" rows="8" class="form-submission-control form-submission-control--md" aria-describedby="reply-message-help"><?= h($replyMessage) ?></textarea>
+        <textarea id="reply-message" name="message" rows="8" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], ['reply-message-help'], 'reply-message-error') ?>><?= h($replyMessage) ?></textarea>
         <small id="reply-message-help" class="field-help">Tato odpověď se zároveň uloží do interní historie hlášení.</small>
+        <?php adminRenderFieldError('reply_message', $replyFieldErrors, [], $replyFieldErrorMessages['reply_message'], 'reply-message-error'); ?>
       </div>
       <div class="button-row">
         <button type="submit" class="btn btn-primary">Poslat odpověď</button>

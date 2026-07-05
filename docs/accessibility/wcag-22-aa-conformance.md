@@ -90,6 +90,8 @@ Oficiální zdroje:
 | 4.1.2 Name, Role, Value | A | Supports | Ovládací prvky mají labely/role/stavy, dialogy a landmarky jsou pojmenované; command centrum oznamuje otevřený stav přes `aria-expanded`. | Theme view audit, runtime audit, HTTP render command dialogu a ruční potvrzení dialogů bez regrese 2026-07-04. | Při změnách JS dialogů zachovat `aria-expanded`, pojmenování dialogu, focus trap a návrat fokusu. |
 | 4.1.3 Status Messages | AA | Supports | Stavové a chybové hlášky používají `role="status"` / `role="alert"` a pojmenování; editor rezervačního zdroje i sdílené administrační AJAX řazení nahrazují klientské `alert()` textovými inline hláškami. | Runtime guardrails, `admin_field_error_guardrails`, README. | Ručně ověřit, že live regiony nečtou rušivě opakované změny. |
 
+Poznámka k `3.3.3` z 2026-07-05: detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu už při prázdném předmětu nebo textu e-mailové odpovědi nezůstávají jen u souhrnného alertu. Obě pole dostanou `aria-invalid`, existující `aria-describedby` na field-level text a konkrétní návrh opravy; runtime `admin_field_error_guardrails` a HTTP scénáře kontaktu/chatu hlídají návrat patternu.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

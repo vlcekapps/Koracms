@@ -15166,6 +15166,31 @@ if (str_contains($uiSource, 'alert(msg)')) {
     $adminFieldErrorIssues[] = 'shared sortable feedback still uses a browser alert on save failure';
 }
 foreach ([
+    'contact reply detail' => $contactMessageDetailSource,
+    'chat reply detail' => $chatMessageDetailSource,
+    'form submission reply detail' => $formSubmissionDetailSource,
+] as $adminReplyDetailLabel => $adminReplyDetailSource) {
+    foreach ([
+        '$replyFieldErrors = isset($_GET[\'reply\']) && $_GET[\'reply\'] === \'invalid\' ? [\'reply_subject\', \'reply_message\'] : [];',
+        '\'reply_subject\' => \'Zadejte předmět odpovědi, aby příjemce poznal,',
+        '\'reply_message\' => \'Doplňte text odpovědi. Nestačí prázdná zpráva.\',',
+        'role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text.',
+        "adminFieldAttributes('reply_subject', \$replyFieldErrors",
+        "adminRenderFieldError('reply_subject', \$replyFieldErrors",
+        "adminFieldAttributes('reply_message', \$replyFieldErrors",
+        "adminRenderFieldError('reply_message', \$replyFieldErrors",
+        "'reply-subject-error'",
+        "'reply-message-error'",
+    ] as $adminReplyFieldErrorFragment) {
+        if (!str_contains($adminReplyDetailSource, $adminReplyFieldErrorFragment)) {
+            $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' is missing reply field-level error fragment: ' . $adminReplyFieldErrorFragment;
+        }
+    }
+    if (str_contains($adminReplyDetailSource, 'role="alert">Vyplňte předmět i text odpovědi.</p>')) {
+        $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' still uses generic reply validation alert without field-level suggestions';
+    }
+}
+foreach ([
     '.button-row--start',
     '.button-row--between',
     '.btn-muted',

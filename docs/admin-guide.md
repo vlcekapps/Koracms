@@ -20,6 +20,8 @@ Ve spodní části administrační navigace je stálý odkaz **Nápověda a podp
 
 Ve výchozí veřejné šabloně se stejný princip promítá do footeru jako navigace **Pomoc a kontakt**. Pokud je zapnutý modul Kontakt nebo Chat, patička nabídne příslušné odkazy na stejném místě napříč veřejnými stránkami.
 
+Při odpovědi z detailu kontaktní zprávy, chat zprávy nebo odpovědi Form Builderu administrace kontroluje předmět i text e-mailu. Pokud některá část chybí, souhrnná chyba se doplní konkrétní field-level nápovědou u obou polí, aby bylo jasné, co před odesláním opravit.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---
