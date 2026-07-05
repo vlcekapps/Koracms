@@ -5482,6 +5482,8 @@ try {
          ON DUPLICATE KEY UPDATE value = VALUES(value)"
     )->execute();
     clearSettingsCache();
+    $GLOBALS['_CMS_SETTINGS'] = getSettings();
+    $GLOBALS['_CMS_SETTINGS']['module_reservations'] = '1';
     $previousOutboundMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
     putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
     cronProcessReservationReminders($pdo);
