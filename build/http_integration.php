@@ -3851,6 +3851,77 @@ try {
         if ((string)($issuePresetAfterResaveStmt->fetchColumn() ?: '') !== 'email_pro_odpoved') {
             $formPresetIssues[] = 'uložení beze změn u presetu formuláře pro nahlášení chyby nezachovalo uložené pole pro potvrzovací e-mail';
         }
+
+        $issuePresetSubmissionData = json_encode([
+            'email_pro_odpoved' => 'http-issue-' . bin2hex(random_bytes(4)) . '@example.test',
+            'strucny_nazev_problemu' => 'HTTP issue bridge validation',
+        ], JSON_UNESCAPED_UNICODE);
+        if (!is_string($issuePresetSubmissionData)) {
+            $issuePresetSubmissionData = '{}';
+        }
+        $issuePresetSubmissionIpHash = hash('sha256', 'http-issue-' . bin2hex(random_bytes(4)));
+        $pdo->prepare(
+            "INSERT INTO cms_form_submissions (form_id, data, ip_hash, priority, labels, created_at)
+             VALUES (?, ?, ?, 'medium', 'HTTP', NOW())"
+        )->execute([$issuePresetFormId, $issuePresetSubmissionData, $issuePresetSubmissionIpHash]);
+        $issuePresetSubmissionId = (int)$pdo->lastInsertId();
+        if ($issuePresetSubmissionId <= 0) {
+            $formPresetIssues[] = 'nepodařilo se vytvořit testovací odpověď pro render GitHub issue bridge chyb';
+        } else {
+            $createdFormSubmissionIds[] = $issuePresetSubmissionId;
+
+            $issuePresetInvalidDetail = fetchUrl(
+                $baseUrl . BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId . '&issue=invalid',
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($issuePresetInvalidDetail) !== 200) {
+                $formPresetIssues[] = 'detail odpovědi s neplatným GitHub issue návrhem nevrátil 200';
+            } else {
+                foreach ([
+                    'role="alert" aria-atomic="true">Před vytvořením GitHub issue doplňte repozitář, název i text.',
+                    'aria-invalid="true" aria-describedby="github-issue-repository-help github-issue-repository-error"',
+                    'id="github-issue-repository-error"',
+                    'Zadejte repozitář ve formátu owner/repo',
+                    'aria-describedby="github-issue-title-error"',
+                    'id="github-issue-title-error"',
+                    'Doplňte název issue',
+                    'aria-describedby="github-issue-body-help github-issue-body-error"',
+                    'id="github-issue-body-error"',
+                    'Doplňte text issue',
+                ] as $issuePresetInvalidFragment) {
+                    if (!str_contains($issuePresetInvalidDetail['body'], $issuePresetInvalidFragment)) {
+                        $formPresetIssues[] = 'detail odpovědi s neplatným GitHub issue návrhem neobsahuje: ' . $issuePresetInvalidFragment;
+                    }
+                }
+                if (str_contains($issuePresetInvalidDetail['body'], 'Vyplňte repozitář, název i text GitHub issue.')) {
+                    $formPresetIssues[] = 'detail odpovědi s neplatným GitHub issue návrhem stále používá generickou chybu';
+                }
+            }
+
+            $issuePresetInvalidLinkDetail = fetchUrl(
+                $baseUrl . BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId . '&issue=invalid_link',
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($issuePresetInvalidLinkDetail) !== 200) {
+                $formPresetIssues[] = 'detail odpovědi s neplatným odkazem GitHub issue nevrátil 200';
+            } else {
+                foreach ([
+                    'role="alert" aria-atomic="true">Zadejte platnou adresu existujícího GitHub issue.',
+                    'aria-invalid="true" aria-describedby="existing-issue-url-help existing-issue-url-error"',
+                    'id="existing-issue-url-error"',
+                    'Zadejte úplnou adresu issue ve tvaru https://github.com/owner/repo/issues/123.',
+                ] as $issuePresetInvalidLinkFragment) {
+                    if (!str_contains($issuePresetInvalidLinkDetail['body'], $issuePresetInvalidLinkFragment)) {
+                        $formPresetIssues[] = 'detail odpovědi s neplatným odkazem GitHub issue neobsahuje: ' . $issuePresetInvalidLinkFragment;
+                    }
+                }
+                if (str_contains($issuePresetInvalidLinkDetail['body'], 'Zadejte platnou adresu GitHub issue ve formátu')) {
+                    $formPresetIssues[] = 'detail odpovědi s neplatným odkazem GitHub issue stále používá generickou chybu';
+                }
+            }
+        }
     }
     httpIntegrationPrintResult('form_issue_preset_http', $formPresetIssues, $failures);
 

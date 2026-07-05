@@ -164,9 +164,21 @@ $githubIssueLinkLabel = formSubmissionGitHubIssueLabel($submission);
 $currentAdminUserId = currentUserId();
 $canManageFormIntegrations = currentUserHasCapability('settings_manage');
 $replyFieldErrors = isset($_GET['reply']) && $_GET['reply'] === 'invalid' ? ['reply_subject', 'reply_message'] : [];
+$issueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid'
+    ? ['github_issue_repository', 'github_issue_title', 'github_issue_body']
+    : [];
+$existingIssueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid_link'
+    ? ['existing_issue_url']
+    : [];
 $replyFieldErrorMessages = [
     'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jakému hlášení se vracíte.',
     'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
+];
+$issueFieldErrorMessages = [
+    'github_issue_repository' => 'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms.',
+    'github_issue_title' => 'Doplňte název issue, aby šlo problém na GitHubu rychle rozpoznat.',
+    'github_issue_body' => 'Doplňte text issue s popisem problému, očekávaným chováním nebo dalším krokem.',
+    'existing_issue_url' => 'Zadejte úplnou adresu issue ve tvaru https://github.com/owner/repo/issues/123.',
 ];
 
 adminHeader('Detail odpovědi formuláře');
@@ -191,9 +203,9 @@ adminHeader('Detail odpovědi formuláře');
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'exists'): ?>
   <p class="error" role="alert">Toto hlášení už má GitHub issue připojené.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid'): ?>
-  <p class="error" role="alert">Vyplňte repozitář, název i text GitHub issue.</p>
+  <p class="error" role="alert" aria-atomic="true">Před vytvořením GitHub issue doplňte repozitář, název i text. U dotčených polí je konkrétní nápověda.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid_link'): ?>
-  <p class="error" role="alert">Zadejte platnou adresu GitHub issue ve formátu <code>https://github.com/owner/repo/issues/123</code>.</p>
+  <p class="error" role="alert" aria-atomic="true">Zadejte platnou adresu existujícího GitHub issue. U pole je doplněná konkrétní nápověda.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'not_ready'): ?>
   <p class="error" role="alert">Přímé vytvoření GitHub issue teď není dostupné. Zkontrolujte nastavení mostu a přístupový token.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'failed'): ?>
@@ -420,9 +432,9 @@ adminHeader('Detail odpovědi formuláře');
                name="repository"
                value="<?= h($githubIssueDraftRepository) ?>"
                placeholder="owner/repo"
-               class="form-submission-control form-submission-control--sm"
-               aria-describedby="github-issue-repository-help">
+               class="form-submission-control form-submission-control--sm"<?= adminFieldAttributes('github_issue_repository', $issueFieldErrors, [], ['github-issue-repository-help'], 'github-issue-repository-error') ?>>
         <small id="github-issue-repository-help" class="field-help">Můžete ponechat výchozí repozitář z nastavení webu, nebo sem zadat jiný ve formátu <code>owner/repo</code>.</small>
+        <?php adminRenderFieldError('github_issue_repository', $issueFieldErrors, [], $issueFieldErrorMessages['github_issue_repository'], 'github-issue-repository-error'); ?>
       </div>
 
       <div class="form-submission-field">
@@ -432,7 +444,8 @@ adminHeader('Detail odpovědi formuláře');
                name="title"
                value="<?= h($githubIssueDraftTitle) ?>"
                maxlength="180"
-               class="form-submission-control form-submission-control--md">
+               class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('github_issue_title', $issueFieldErrors, [], [], 'github-issue-title-error') ?>>
+        <?php adminRenderFieldError('github_issue_title', $issueFieldErrors, [], $issueFieldErrorMessages['github_issue_title'], 'github-issue-title-error'); ?>
       </div>
 
       <div class="form-submission-field">
@@ -451,9 +464,9 @@ adminHeader('Detail odpovědi formuláře');
         <textarea id="github-issue-body"
                   name="body"
                   rows="18"
-                  class="form-submission-control form-submission-control--lg"
-                  aria-describedby="github-issue-body-help"><?= h($githubIssueDraftBody) ?></textarea>
+                  class="form-submission-control form-submission-control--lg"<?= adminFieldAttributes('github_issue_body', $issueFieldErrors, [], ['github-issue-body-help'], 'github-issue-body-error') ?>><?= h($githubIssueDraftBody) ?></textarea>
         <small id="github-issue-body-help" class="field-help">Interní poznámka správce se do issue nevkládá automaticky. Pokud ji chcete zveřejnit, přidejte ji sem ručně.</small>
+        <?php adminRenderFieldError('github_issue_body', $issueFieldErrors, [], $issueFieldErrorMessages['github_issue_body'], 'github-issue-body-error'); ?>
       </div>
 
       <div class="button-row">
@@ -478,9 +491,9 @@ adminHeader('Detail odpovědi formuláře');
              id="existing-issue-url"
              name="existing_issue_url"
              placeholder="https://github.com/owner/repo/issues/123"
-             class="form-submission-control form-submission-control--md"
-             aria-describedby="existing-issue-url-help">
+             class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('existing_issue_url', $existingIssueFieldErrors, [], ['existing-issue-url-help'], 'existing-issue-url-error') ?>>
       <small id="existing-issue-url-help" class="field-help">To se hodí hlavně tehdy, když si issue otevřete ručně přes tlačítko výše a potom ho chcete k hlášení uložit zpět.</small>
+      <?php adminRenderFieldError('existing_issue_url', $existingIssueFieldErrors, [], $issueFieldErrorMessages['existing_issue_url'], 'existing-issue-url-error'); ?>
       <div class="button-row form-submission-actions--compact">
         <button type="submit" name="issue_action" value="link" class="btn">Připojit issue</button>
       </div>

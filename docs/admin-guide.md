@@ -22,6 +22,8 @@ Ve výchozí veřejné šabloně se stejný princip promítá do footeru jako na
 
 Při odpovědi z detailu kontaktní zprávy, chat zprávy nebo odpovědi Form Builderu administrace kontroluje předmět i text e-mailu. Pokud některá část chybí, souhrnná chyba se doplní konkrétní field-level nápovědou u obou polí, aby bylo jasné, co před odesláním opravit.
 
+V detailu odpovědi Form Builderu stejný princip platí i pro GitHub issue bridge. Pokud chybí repozitář, název nebo tělo nového issue, případně je neplatná adresa existujícího issue, souhrnný alert doplní konkrétní nápovědu přímo u dotčeného pole.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---
@@ -1071,6 +1073,8 @@ Veřejné formuláře s matematickou ověřovací otázkou mají u chybné odpov
 Veřejná custom pole ve Form Builderu mají konkrétní návrhy oprav i mimo ověřovací otázku. Povinná textová, výběrová, souhlasová a souborová pole říkají, co má návštěvník doplnit; e-mail radí úplnou adresu ve tvaru `jmeno@example.cz`, URL radí http/https adresu bez přihlašovacích údajů, nepovolená výběrová hodnota vede uživatele zpět k nabízeným možnostem a upload připomíná povolený typ a velikost souboru.
 
 Validační hlášky v administraci mají u známých oprav říkat, jak pokračovat. URL pole u zajímavých míst a podcastů proto vysvětlují povolený `http://`/`https://` tvar, doménu bez schématu s automatickým uložením jako `https://` a kdy je bezpečné volitelné pole nechat prázdné.
+
+GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
 

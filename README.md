@@ -465,6 +465,8 @@ Administrace postupně zpřesňuje validační texty tak, aby vedle identifikace
 
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
+Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.
+
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů radí zadat úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí připomínají možnost nechat pole prázdné a u přihlašovacího e-mailu jedinečnost adresy.
 
 Běžná datumová pole ve vývěsce, jídelních lístcích a položkách ke stažení radí použít kalendářní datum, volitelné pole nechat prázdné nebo opravit pořadí od/do. Datum vydání u downloadů má field-level chybu napojenou přes `aria-describedby`.

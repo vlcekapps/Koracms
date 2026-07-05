@@ -15191,6 +15191,40 @@ foreach ([
     }
 }
 foreach ([
+    '$issueFieldErrors = isset($_GET[\'issue\']) && $_GET[\'issue\'] === \'invalid\'',
+    '$existingIssueFieldErrors = isset($_GET[\'issue\']) && $_GET[\'issue\'] === \'invalid_link\'',
+    '\'github_issue_repository\' => \'Zadejte repozitář ve formátu owner/repo',
+    '\'github_issue_title\' => \'Doplňte název issue',
+    '\'github_issue_body\' => \'Doplňte text issue',
+    '\'existing_issue_url\' => \'Zadejte úplnou adresu issue ve tvaru https://github.com/owner/repo/issues/123.\',',
+    'role="alert" aria-atomic="true">Před vytvořením GitHub issue doplňte repozitář, název i text.',
+    'role="alert" aria-atomic="true">Zadejte platnou adresu existujícího GitHub issue.',
+    "adminFieldAttributes('github_issue_repository', \$issueFieldErrors",
+    "adminRenderFieldError('github_issue_repository', \$issueFieldErrors",
+    "adminFieldAttributes('github_issue_title', \$issueFieldErrors",
+    "adminRenderFieldError('github_issue_title', \$issueFieldErrors",
+    "adminFieldAttributes('github_issue_body', \$issueFieldErrors",
+    "adminRenderFieldError('github_issue_body', \$issueFieldErrors",
+    "adminFieldAttributes('existing_issue_url', \$existingIssueFieldErrors",
+    "adminRenderFieldError('existing_issue_url', \$existingIssueFieldErrors",
+    "'github-issue-repository-error'",
+    "'github-issue-title-error'",
+    "'github-issue-body-error'",
+    "'existing-issue-url-error'",
+] as $formSubmissionIssueFieldErrorFragment) {
+    if (!str_contains($formSubmissionDetailSource, $formSubmissionIssueFieldErrorFragment)) {
+        $adminFieldErrorIssues[] = 'form submission GitHub issue bridge is missing field-level error fragment: ' . $formSubmissionIssueFieldErrorFragment;
+    }
+}
+foreach ([
+    'role="alert">Vyplňte repozitář, název i text GitHub issue.</p>',
+    'role="alert">Zadejte platnou adresu GitHub issue ve formátu',
+] as $formSubmissionIssueGenericErrorFragment) {
+    if (str_contains($formSubmissionDetailSource, $formSubmissionIssueGenericErrorFragment)) {
+        $adminFieldErrorIssues[] = 'form submission GitHub issue bridge still uses a generic validation alert without field-level suggestions';
+    }
+}
+foreach ([
     '.button-row--start',
     '.button-row--between',
     '.btn-muted',
