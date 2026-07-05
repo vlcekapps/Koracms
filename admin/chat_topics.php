@@ -42,18 +42,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editId = $updateId;
 
         if ($formState['name'] === '') {
-            $fieldErrors['name'] = 'Název tématu je povinný.';
+            $fieldErrors['name'] = 'Doplňte krátký název tématu, například Technická podpora.';
         }
 
         $submittedSlug = chatTopicSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['name']);
         if ($submittedSlug === '') {
-            $fieldErrors['slug'] = 'Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $fieldErrors['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba technicka-podpora.';
         }
 
         if ($fieldErrors === []) {
             $uniqueSlug = uniqueChatTopicSlug($pdo, $submittedSlug, $updateId);
             if ($formState['slug'] !== '' && $uniqueSlug !== $submittedSlug) {
-                $fieldErrors['slug'] = 'Tento slug už používá jiné téma chatu.';
+                $fieldErrors['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             } else {
                 if ($updateId !== null) {
                     $stmt = $pdo->prepare(
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $error = 'Zkontrolujte prosím zvýrazněná pole.';
+        $error = 'Téma chatu nejde uložit. U zvýrazněných polí je konkrétní nápověda.';
     }
 }
 
@@ -122,7 +122,7 @@ adminHeader('Témata chatu');
 ?>
 
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p id="chat-topic-form-error" class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="chat-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="chat.php">Zpět na chat zprávy</a>
@@ -148,7 +148,8 @@ adminHeader('Témata chatu');
       <div class="form-group">
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="150" pattern="[a-z0-9\-]+"
-               value="<?= h($formState['slug']) ?>"<?= adminFieldAttributes('slug', array_keys($fieldErrors), [], ['chat-topic-help']) ?>>
+               value="<?= h($formState['slug']) ?>"<?= adminFieldAttributes('slug', array_keys($fieldErrors), [], ['chat-topic-slug-help']) ?>>
+        <small id="chat-topic-slug-help" class="field-help">Volitelné. Pokud zůstane prázdný, vytvoří se automaticky z názvu.</small>
         <?php adminRenderFieldError('slug', array_keys($fieldErrors), ['slug' => ['slug']], $fieldErrors['slug'] ?? ''); ?>
       </div>
 

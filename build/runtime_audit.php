@@ -16573,7 +16573,7 @@ foreach ([
         'source' => $boardCatsSource,
         'fragments' => [
             '<fieldset>',
-            'aria-describedby="slug-help"',
+            "adminFieldAttributes('slug', \$editId === null ? \$fieldErrors : [], [], ['slug-help'])",
             'boardCategoryPath(',
         ],
     ],
@@ -17038,6 +17038,129 @@ foreach ([
     foreach ($downloadTaxonomySuggestionSpec['forbidden'] as $downloadTaxonomyGenericFragment) {
         if (str_contains($downloadTaxonomySuggestionSource, $downloadTaxonomyGenericFragment)) {
             $adminFieldErrorIssues[] = $downloadTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
+        }
+    }
+}
+foreach ([
+    'board categories editor' => [
+        'source' => $boardCatsSource,
+        'required' => [
+            '$error = \'Kategorii vývěsky nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Úřední oznámení.\';',
+            '$error = \'Slug veřejné kategorie vývěsky není možné vytvořit. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba uredni-oznameni.\';',
+            '$error = \'Slug veřejné kategorie vývěsky už používá jiná kategorie. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '$error = \'Meta title kategorie vývěsky je příliš dlouhý. U pole Meta title je konkrétní nápověda.\';',
+            '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['name-help'])",
+            "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['meta_title'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název kategorie je povinný.\';',
+            '$error = \'Meta title může mít nejvýše 160 znaků.\';',
+            '$error = \'Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$error = \'Tento slug už používá jiná kategorie vývěsky.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'event types editor' => [
+        'source' => $eventTypesAdminSource,
+        'required' => [
+            '$error = \'Typ akce nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'title\'] = \'Doplňte krátký název typu akce, například Workshop.\';',
+            '$error = \'Slug veřejného typu akce není možné vytvořit. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba workshop.\';',
+            '$error = \'Slug veřejného typu akce už používá jiný typ. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.\';',
+            '$error = \'Meta title typu akce je příliš dlouhý. U pole Meta titulek je konkrétní nápověda.\';',
+            '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('title', \$fieldErrors, [], ['event-type-help'])",
+            "adminRenderFieldError('meta_title', \$fieldErrors, [], \$fieldErrorMessages['meta_title'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název typu akce je povinný.\';',
+            '$error = \'Meta title může mít nejvýše 160 znaků.\';',
+            '$error = \'Slug typu akce musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$error = \'Tento slug už používá jiný typ akce.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'contact topics editor' => [
+        'source' => $contactTopicsSource,
+        'required' => [
+            '$fieldErrors[\'name\'] = \'Doplňte krátký název tématu, například Fakturace.\';',
+            '$fieldErrors[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba fakturace.\';',
+            '$fieldErrors[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '$error = \'Téma kontaktu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '<p id="contact-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('slug', array_keys(\$fieldErrors), [], ['contact-topic-slug-help'])",
+            'id="contact-topic-recipient-email-help"',
+        ],
+        'forbidden' => [
+            '$fieldErrors[\'name\'] = \'Název tématu je povinný.\';',
+            '$fieldErrors[\'slug\'] = \'Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$fieldErrors[\'slug\'] = \'Tento slug už používá jiné téma kontaktu.\';',
+            '$error = \'Zkontrolujte prosím zvýrazněná pole.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'chat topics editor' => [
+        'source' => $chatTopicsAdminSource,
+        'required' => [
+            '$fieldErrors[\'name\'] = \'Doplňte krátký název tématu, například Technická podpora.\';',
+            '$fieldErrors[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba technicka-podpora.\';',
+            '$fieldErrors[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '$error = \'Téma chatu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '<p id="chat-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('slug', array_keys(\$fieldErrors), [], ['chat-topic-slug-help'])",
+        ],
+        'forbidden' => [
+            '$fieldErrors[\'name\'] = \'Název tématu je povinný.\';',
+            '$fieldErrors[\'slug\'] = \'Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$fieldErrors[\'slug\'] = \'Tento slug už používá jiné téma chatu.\';',
+            '$error = \'Zkontrolujte prosím zvýrazněná pole.\';',
+            '<p id="chat-topic-form-error" class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'reservation categories editor' => [
+        'source' => $reservationCategoriesSource,
+        'required' => [
+            '$error = \'Kategorii zdrojů rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Konzultace.\';',
+            '<p id="res-category-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['res-category-name-help'])",
+            "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název kategorie je povinný.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'reservation locations editor' => [
+        'source' => $reservationLocationsSource,
+        'required' => [
+            '$error = \'Místo rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název místa, například Zasedací místnost A.\';',
+            '<p id="res-location-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['res-location-name-help'])",
+            "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název místa je povinný.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+] as $adminTaxonomySuggestionLabel => $adminTaxonomySuggestionSpec) {
+    $adminTaxonomySuggestionSource = (string)$adminTaxonomySuggestionSpec['source'];
+    foreach ($adminTaxonomySuggestionSpec['required'] as $adminTaxonomySuggestionFragment) {
+        if (!str_contains($adminTaxonomySuggestionSource, $adminTaxonomySuggestionFragment)) {
+            $adminFieldErrorIssues[] = $adminTaxonomySuggestionLabel . ' is missing actionable field-level error fragment: ' . $adminTaxonomySuggestionFragment;
+        }
+    }
+    foreach ($adminTaxonomySuggestionSpec['forbidden'] as $adminTaxonomyGenericFragment) {
+        if (str_contains($adminTaxonomySuggestionSource, $adminTaxonomyGenericFragment)) {
+            $adminFieldErrorIssues[] = $adminTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
         }
     }
 }

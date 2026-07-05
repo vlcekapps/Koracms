@@ -6,17 +6,30 @@ requireModuleEnabled('reservations');
 $pdo = db_connect();
 $success = false;
 $error = '';
+$fieldErrors = [];
+$fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
 $q = trim($_GET['q'] ?? '');
+$formState = [
+    'name' => '',
+    'sort_order' => '0',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $name = trim($_POST['name'] ?? '');
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
     $updateId = inputInt('post', 'update_id');
+    $formState = [
+        'name' => $name,
+        'sort_order' => (string)$sortOrder,
+    ];
+    $editId = $updateId;
 
     if ($name === '') {
-        $error = 'Název kategorie je povinný.';
+        $error = 'Kategorii zdrojů rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
+        $fieldErrors[] = 'name';
+        $fieldErrorMessages['name'] = 'Doplňte krátký název kategorie, například Konzultace.';
     } elseif ($updateId !== null) {
         $pdo->prepare("UPDATE cms_res_categories SET name = ?, sort_order = ? WHERE id = ?")->execute([$name, $sortOrder, $updateId]);
         logAction('res_cat_edit', "id={$updateId}, name=" . mb_substr($name, 0, 80));
@@ -26,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO cms_res_categories (name, sort_order) VALUES (?, ?)")->execute([$name, $sortOrder]);
         logAction('res_cat_add', "name=" . mb_substr($name, 0, 80));
         $success = true;
+        $formState = [
+            'name' => '',
+            'sort_order' => '0',
+        ];
     }
 }
 
@@ -43,7 +60,7 @@ $categories = $stmt->fetchAll();
 adminHeader('Kategorie zdrojů rezervací');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="res-category-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
@@ -56,18 +73,22 @@ adminHeader('Kategorie zdrojů rezervací');
   <?php endif; ?>
 </form>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="res-category-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
     <div class="button-row button-row--baseline">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
-        <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
+        <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
+               value="<?= h($editId === null ? $formState['name'] : '') ?>"
+               <?= adminFieldAttributes('name', $editId === null ? $fieldErrors : [], [], ['res-category-name-help']) ?>>
+        <small id="res-category-name-help" class="field-help">Zobrazuje se ve filtrech a v editoru rezervačních zdrojů.</small>
+        <?php adminRenderFieldError('name', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? ''); ?>
       </div>
       <div>
         <label for="sort_order">Pořadí</label>
-        <input type="number" id="sort_order" name="sort_order" min="0" class="admin-input-xs" value="0">
+        <input type="number" id="sort_order" name="sort_order" min="0" class="admin-input-xs" value="<?= h($editId === null ? $formState['sort_order'] : '0') ?>">
       </div>
       <button type="submit" class="btn">Přidat kategorii</button>
     </div>
@@ -85,18 +106,25 @@ adminHeader('Kategorie zdrojů rezervací');
     <?php foreach ($categories as $category): ?>
       <tr>
         <?php if ($editId === (int)$category['id']): ?>
+          <?php $editCategoryHasError = $error !== '' && $editId === (int)$category['id']; ?>
           <td colspan="3">
-            <form method="post" class="button-row button-row--baseline" novalidate>
+            <form method="post" novalidate<?= $editCategoryHasError ? ' aria-describedby="res-category-form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
-              <label for="name-<?= (int)$category['id'] ?>" class="sr-only">Název kategorie</label>
-              <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h((string)$category['name']) ?>" class="admin-input-auto">
-              <label for="sort-<?= (int)$category['id'] ?>" class="sr-only">Pořadí</label>
-              <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" class="admin-input-xs"
-                     value="<?= (int)$category['sort_order'] ?>">
-              <button type="submit" class="btn">Uložit</button>
-              <a href="res_categories.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
+              <fieldset class="admin-filter-fieldset button-row button-row--baseline">
+                <legend class="sr-only">Upravit kategorii <?= h((string)$category['name']) ?></legend>
+                <label for="name-<?= (int)$category['id'] ?>" class="sr-only">Název kategorie</label>
+                <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                       value="<?= h($editCategoryHasError ? $formState['name'] : (string)$category['name']) ?>" class="admin-input-auto"
+                       <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['res-category-name-help-' . (int)$category['id']], 'name-error-' . (int)$category['id']) ?>>
+                <small id="res-category-name-help-<?= (int)$category['id'] ?>" class="field-help">Doplňte krátký název kategorie zdrojů rezervací.</small>
+                <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$category['id']); ?>
+                <label for="sort-<?= (int)$category['id'] ?>" class="sr-only">Pořadí</label>
+                <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" class="admin-input-xs"
+                       value="<?= h($editCategoryHasError ? $formState['sort_order'] : (string)$category['sort_order']) ?>">
+                <button type="submit" class="btn">Uložit</button>
+                <a href="res_categories.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
+              </fieldset>
             </form>
           </td>
         <?php else: ?>

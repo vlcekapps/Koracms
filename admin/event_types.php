@@ -5,6 +5,8 @@ requireModuleEnabled('events');
 
 $pdo = db_connect();
 $error = '';
+$fieldErrors = [];
+$fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
 $formState = [
     'title' => '',
@@ -31,17 +33,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $editId = $updateId;
 
     if ($formState['title'] === '') {
-        $error = 'Název typu akce je povinný.';
+        $error = 'Typ akce nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
+        $fieldErrors[] = 'title';
+        $fieldErrorMessages['title'] = 'Doplňte krátký název typu akce, například Workshop.';
     } elseif (mb_strlen($formState['meta_title'], 'UTF-8') > 160) {
-        $error = 'Meta title může mít nejvýše 160 znaků.';
+        $error = 'Meta title typu akce je příliš dlouhý. U pole Meta titulek je konkrétní nápověda.';
+        $fieldErrors[] = 'meta_title';
+        $fieldErrorMessages['meta_title'] = 'Zkraťte meta titulek nejvýše na 160 znaků, nebo pole nechte prázdné.';
     } else {
         $submittedSlug = eventTypeSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['title']);
         if ($submittedSlug === '') {
-            $error = 'Slug typu akce musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $error = 'Slug veřejného typu akce není možné vytvořit. U pole Slug je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
+            $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba workshop.';
         } else {
             $uniqueSlug = uniqueEventTypeSlug($pdo, $submittedSlug, $updateId);
             if ($uniqueSlug !== $submittedSlug) {
-                $error = 'Tento slug už používá jiný typ akce.';
+                $error = 'Slug veřejného typu akce už používá jiný typ. U pole Slug je konkrétní nápověda.';
+                $fieldErrors[] = 'slug';
+                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.';
             } elseif ($updateId !== null) {
                 $existingStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE id = ?");
                 $existingStmt->execute([$updateId]);
@@ -128,13 +138,13 @@ adminHeader('Události – typy akcí');
 ?>
 
 <?php if ($success): ?><p class="success" role="status">Typ akce byl uložen.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="events.php"><span aria-hidden="true">←</span> Zpět na události</a>
 </p>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($editId !== null): ?>
     <input type="hidden" name="update_id" value="<?= (int)$editId ?>">
@@ -147,13 +157,17 @@ adminHeader('Události – typy akcí');
       <div class="form-group">
         <label for="title">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
-               value="<?= h($formState['title']) ?>" aria-describedby="event-type-help">
+               value="<?= h($formState['title']) ?>"
+               <?= adminFieldAttributes('title', $fieldErrors, [], ['event-type-help']) ?>>
+        <?php adminRenderFieldError('title', $fieldErrors, [], $fieldErrorMessages['title'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="150" pattern="[a-z0-9\-]+"
-               value="<?= h($formState['slug']) ?>" aria-describedby="event-type-slug-help">
+               value="<?= h($formState['slug']) ?>"
+               <?= adminFieldAttributes('slug', $fieldErrors, [], ['event-type-slug-help']) ?>>
         <small id="event-type-slug-help" class="field-help">Volitelné. Pokud zůstane prázdný, vytvoří se automaticky z názvu.</small>
+        <?php adminRenderFieldError('slug', $fieldErrors, [], $fieldErrorMessages['slug'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="sort_order">Pořadí</label>
@@ -170,7 +184,9 @@ adminHeader('Události – typy akcí');
     <div class="form-grid">
       <div class="form-group">
         <label for="meta_title">Meta titulek</label>
-        <input type="text" id="meta_title" name="meta_title" maxlength="160" value="<?= h($formState['meta_title']) ?>">
+        <input type="text" id="meta_title" name="meta_title" maxlength="160" value="<?= h($formState['meta_title']) ?>"
+               <?= adminFieldAttributes('meta_title', $fieldErrors) ?>>
+        <?php adminRenderFieldError('meta_title', $fieldErrors, [], $fieldErrorMessages['meta_title'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="meta_description">Meta description</label>

@@ -3204,6 +3204,84 @@ try {
     if (httpIntegrationStatusCode($contactTopicsPage) !== 200 || $contactTopicsCsrf === '') {
         $contactCenterIssues[] = 'správa témat kontaktu nevrátila 200 nebo nevykreslila CSRF token';
     } else {
+        foreach ([
+            'name_required' => [
+                'post' => [
+                    'name' => '',
+                    'slug' => '',
+                    'description' => '',
+                    'recipient_email' => '',
+                    'is_active' => '1',
+                    'sort_order' => '0',
+                ],
+                'expected' => [
+                    'id="contact-topic-form-error" class="error" role="alert" aria-atomic="true">Téma kontaktu nejde uložit.',
+                    'aria-invalid="true" aria-describedby="contact-topic-help name-error"',
+                    'id="name-error"',
+                    'Doplňte krátký název tématu, například Fakturace.',
+                ],
+                'forbidden' => ['Název tématu je povinný.', 'Zkontrolujte prosím zvýrazněná pole.'],
+            ],
+            'slug_empty' => [
+                'post' => [
+                    'name' => '!!!',
+                    'slug' => '',
+                    'description' => '',
+                    'recipient_email' => '',
+                    'is_active' => '1',
+                    'sort_order' => '0',
+                ],
+                'expected' => [
+                    'id="contact-topic-form-error" class="error" role="alert" aria-atomic="true">Téma kontaktu nejde uložit.',
+                    'aria-invalid="true" aria-describedby="contact-topic-slug-help slug-error"',
+                    'id="slug-error"',
+                    'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba fakturace.',
+                ],
+                'forbidden' => ['Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.', 'Zkontrolujte prosím zvýrazněná pole.'],
+            ],
+            'recipient_email_invalid' => [
+                'post' => [
+                    'name' => 'HTTP neplatný e-mail tématu',
+                    'slug' => 'http-neplatny-email-tematu-' . bin2hex(random_bytes(3)),
+                    'description' => '',
+                    'recipient_email' => 'kontakt-bez-zavinace',
+                    'is_active' => '1',
+                    'sort_order' => '0',
+                ],
+                'expected' => [
+                    'id="contact-topic-form-error" class="error" role="alert" aria-atomic="true">Téma kontaktu nejde uložit.',
+                    'aria-invalid="true" aria-describedby="contact-topic-recipient-email-help recipient_email-error"',
+                    'id="recipient_email-error"',
+                    'Zadejte úplný cílový e-mail ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+                ],
+                'forbidden' => ['Zkontrolujte prosím zvýrazněná pole.'],
+            ],
+        ] as $contactTopicValidationLabel => $contactTopicValidationExpectation) {
+            $contactTopicValidationResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/contact_topics.php',
+                array_merge(
+                    ['csrf_token' => $contactTopicsCsrf],
+                    (array)$contactTopicValidationExpectation['post']
+                ),
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($contactTopicValidationResponse) !== 200) {
+                $contactCenterIssues[] = 'chybový stav tématu kontaktu ' . $contactTopicValidationLabel . ' se nevyrenderoval';
+                continue;
+            }
+            foreach ((array)$contactTopicValidationExpectation['expected'] as $contactTopicValidationFragment) {
+                if (!str_contains($contactTopicValidationResponse['body'], (string)$contactTopicValidationFragment)) {
+                    $contactCenterIssues[] = 'chybový stav tématu kontaktu ' . $contactTopicValidationLabel . ' nezobrazil fragment: ' . (string)$contactTopicValidationFragment;
+                }
+            }
+            foreach ((array)$contactTopicValidationExpectation['forbidden'] as $contactTopicForbiddenFragment) {
+                if (str_contains($contactTopicValidationResponse['body'], (string)$contactTopicForbiddenFragment)) {
+                    $contactCenterIssues[] = 'chybový stav tématu kontaktu ' . $contactTopicValidationLabel . ' pořád používá starý obecný text';
+                }
+            }
+        }
+
         $contactTopicCreateResponse = postUrl(
             $baseUrl . BASE_URL . '/admin/contact_topics.php',
             [
@@ -3231,6 +3309,33 @@ try {
         $contactCenterIssues[] = 'uložené téma kontaktu se nepodařilo dohledat podle slugu';
     } else {
         $createdContactTopicIds[] = $contactTopicId;
+        $duplicateContactTopicResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/contact_topics.php',
+            [
+                'csrf_token' => $contactTopicsCsrf,
+                'name' => 'Duplicitní téma kontaktu',
+                'slug' => $contactTopicSlug,
+                'description' => '',
+                'recipient_email' => '',
+                'is_active' => '1',
+                'sort_order' => '11',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        foreach ([
+            'id="contact-topic-form-error" class="error" role="alert" aria-atomic="true">Téma kontaktu nejde uložit.',
+            'aria-invalid="true" aria-describedby="contact-topic-slug-help slug-error"',
+            'id="slug-error"',
+            'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+        ] as $duplicateContactTopicFragment) {
+            if (!str_contains($duplicateContactTopicResponse['body'], $duplicateContactTopicFragment)) {
+                $contactCenterIssues[] = 'duplicitní slug tématu kontaktu nezobrazil field-level fragment: ' . $duplicateContactTopicFragment;
+            }
+        }
+        if (str_contains($duplicateContactTopicResponse['body'], 'Tento slug už používá jiné téma kontaktu.')) {
+            $contactCenterIssues[] = 'duplicitní slug tématu kontaktu pořád používá starý obecný text';
+        }
     }
 
     $prefillPublicEmail = 'http-prefill-public-' . bin2hex(random_bytes(4)) . '@example.test';
@@ -3451,6 +3556,65 @@ try {
     if (httpIntegrationStatusCode($chatTopicsPage) !== 200 || $chatTopicsCsrf === '') {
         $chatCenterIssues[] = 'správa témat chatu nevrátila 200 nebo nevykreslila CSRF token';
     } else {
+        foreach ([
+            'name_required' => [
+                'post' => [
+                    'name' => '',
+                    'slug' => '',
+                    'description' => '',
+                    'is_active' => '1',
+                    'sort_order' => '0',
+                ],
+                'expected' => [
+                    'id="chat-topic-form-error" class="error" role="alert" aria-atomic="true">Téma chatu nejde uložit.',
+                    'aria-invalid="true" aria-describedby="chat-topic-help name-error"',
+                    'id="name-error"',
+                    'Doplňte krátký název tématu, například Technická podpora.',
+                ],
+                'forbidden' => ['Název tématu je povinný.', 'Zkontrolujte prosím zvýrazněná pole.'],
+            ],
+            'slug_empty' => [
+                'post' => [
+                    'name' => '!!!',
+                    'slug' => '',
+                    'description' => '',
+                    'is_active' => '1',
+                    'sort_order' => '0',
+                ],
+                'expected' => [
+                    'id="chat-topic-form-error" class="error" role="alert" aria-atomic="true">Téma chatu nejde uložit.',
+                    'aria-invalid="true" aria-describedby="chat-topic-slug-help slug-error"',
+                    'id="slug-error"',
+                    'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba technicka-podpora.',
+                ],
+                'forbidden' => ['Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.', 'Zkontrolujte prosím zvýrazněná pole.'],
+            ],
+        ] as $chatTopicValidationLabel => $chatTopicValidationExpectation) {
+            $chatTopicValidationResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/chat_topics.php',
+                array_merge(
+                    ['csrf_token' => $chatTopicsCsrf],
+                    (array)$chatTopicValidationExpectation['post']
+                ),
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($chatTopicValidationResponse) !== 200) {
+                $chatCenterIssues[] = 'chybový stav tématu chatu ' . $chatTopicValidationLabel . ' se nevyrenderoval';
+                continue;
+            }
+            foreach ((array)$chatTopicValidationExpectation['expected'] as $chatTopicValidationFragment) {
+                if (!str_contains($chatTopicValidationResponse['body'], (string)$chatTopicValidationFragment)) {
+                    $chatCenterIssues[] = 'chybový stav tématu chatu ' . $chatTopicValidationLabel . ' nezobrazil fragment: ' . (string)$chatTopicValidationFragment;
+                }
+            }
+            foreach ((array)$chatTopicValidationExpectation['forbidden'] as $chatTopicForbiddenFragment) {
+                if (str_contains($chatTopicValidationResponse['body'], (string)$chatTopicForbiddenFragment)) {
+                    $chatCenterIssues[] = 'chybový stav tématu chatu ' . $chatTopicValidationLabel . ' pořád používá starý obecný text';
+                }
+            }
+        }
+
         $chatTopicCreateResponse = postUrl(
             $baseUrl . BASE_URL . '/admin/chat_topics.php',
             [
@@ -3477,6 +3641,32 @@ try {
         $chatCenterIssues[] = 'uložené téma chatu se nepodařilo dohledat podle slugu';
     } else {
         $createdChatTopicIds[] = $chatTopicId;
+        $duplicateChatTopicResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/chat_topics.php',
+            [
+                'csrf_token' => $chatTopicsCsrf,
+                'name' => 'Duplicitní téma chatu',
+                'slug' => $chatTopicSlug,
+                'description' => '',
+                'is_active' => '1',
+                'sort_order' => '11',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        foreach ([
+            'id="chat-topic-form-error" class="error" role="alert" aria-atomic="true">Téma chatu nejde uložit.',
+            'aria-invalid="true" aria-describedby="chat-topic-slug-help slug-error"',
+            'id="slug-error"',
+            'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+        ] as $duplicateChatTopicFragment) {
+            if (!str_contains($duplicateChatTopicResponse['body'], $duplicateChatTopicFragment)) {
+                $chatCenterIssues[] = 'duplicitní slug tématu chatu nezobrazil field-level fragment: ' . $duplicateChatTopicFragment;
+            }
+        }
+        if (str_contains($duplicateChatTopicResponse['body'], 'Tento slug už používá jiné téma chatu.')) {
+            $chatCenterIssues[] = 'duplicitní slug tématu chatu pořád používá starý obecný text';
+        }
     }
 
     $approvedChatMessage = 'HTTP schválená připnutá chat zpráva ' . bin2hex(random_bytes(4));
@@ -5388,6 +5578,62 @@ try {
     saveSetting('module_reservations', '1');
     clearSettingsCache();
 
+    foreach ([
+        'category_name_required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/res_categories.php',
+            'post' => [
+                'name' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="res-category-form-error" class="error" role="alert" aria-atomic="true">Kategorii zdrojů rezervací nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="res-category-name-help name-error"',
+                'id="name-error"',
+                'Doplňte krátký název kategorie, například Konzultace.',
+            ],
+            'forbidden' => ['Název kategorie je povinný.'],
+        ],
+        'location_name_required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/res_locations.php',
+            'post' => [
+                'name' => '',
+                'address' => 'Testovací adresa z neplatného POSTu',
+            ],
+            'expected' => [
+                'id="res-location-form-error" class="error" role="alert" aria-atomic="true">Místo rezervací nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="res-location-name-help name-error"',
+                'id="name-error"',
+                'Doplňte krátký název místa, například Zasedací místnost A.',
+                'value="Testovací adresa z neplatného POSTu"',
+            ],
+            'forbidden' => ['Název místa je povinný.'],
+        ],
+    ] as $reservationAdminValidationLabel => $reservationAdminValidationExpectation) {
+        $reservationAdminValidationResponse = postUrl(
+            (string)$reservationAdminValidationExpectation['url'],
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$reservationAdminValidationExpectation['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($reservationAdminValidationResponse) !== 200) {
+            $reservationIssues[] = 'chybový stav rezervační administrace ' . $reservationAdminValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$reservationAdminValidationExpectation['expected'] as $reservationAdminValidationFragment) {
+            if (!str_contains($reservationAdminValidationResponse['body'], (string)$reservationAdminValidationFragment)) {
+                $reservationIssues[] = 'chybový stav rezervační administrace ' . $reservationAdminValidationLabel . ' nezobrazil fragment: ' . (string)$reservationAdminValidationFragment;
+            }
+        }
+        foreach ((array)$reservationAdminValidationExpectation['forbidden'] as $reservationAdminForbiddenFragment) {
+            if (str_contains($reservationAdminValidationResponse['body'], (string)$reservationAdminForbiddenFragment)) {
+                $reservationIssues[] = 'chybový stav rezervační administrace ' . $reservationAdminValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
     $resourceSlug = 'http-resource-' . bin2hex(random_bytes(4));
     $pdo->prepare(
         "INSERT INTO cms_res_resources
@@ -5605,6 +5851,84 @@ try {
 
     $boardCategorySlug = 'http-board-category-' . bin2hex(random_bytes(4));
     $boardCategoryName = 'HTTP kategorie vývěsky';
+    foreach ([
+        'name_required' => [
+            'post' => [
+                'name' => '',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii vývěsky nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="name-help name-error"',
+                'id="name-error"',
+                'Doplňte krátký název kategorie, například Úřední oznámení.',
+            ],
+            'forbidden' => ['Název kategorie je povinný.'],
+        ],
+        'slug_empty' => [
+            'post' => [
+                'name' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné kategorie vývěsky není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba uredni-oznameni.',
+            ],
+            'forbidden' => ['Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'meta_title_long' => [
+            'post' => [
+                'name' => 'Vývěska kategorie s dlouhým meta titulkem',
+                'slug' => 'board-kategorie-dlouhy-meta-title-' . bin2hex(random_bytes(3)),
+                'description' => '',
+                'meta_title' => str_repeat('Příliš dlouhý meta title vývěsky ', 7),
+                'meta_description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Meta title kategorie vývěsky je příliš dlouhý.',
+                'aria-invalid="true" aria-describedby="meta_title-error"',
+                'id="meta_title-error"',
+                'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Meta title může mít nejvýše 160 znaků.'],
+        ],
+    ] as $boardCategoryValidationLabel => $boardCategoryValidationExpectation) {
+        $boardCategoryValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/board_cats.php',
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$boardCategoryValidationExpectation['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($boardCategoryValidationResponse) !== 200) {
+            $boardIssues[] = 'chybový stav kategorie vývěsky ' . $boardCategoryValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$boardCategoryValidationExpectation['expected'] as $boardCategoryValidationFragment) {
+            if (!str_contains($boardCategoryValidationResponse['body'], (string)$boardCategoryValidationFragment)) {
+                $boardIssues[] = 'chybový stav kategorie vývěsky ' . $boardCategoryValidationLabel . ' nezobrazil fragment: ' . (string)$boardCategoryValidationFragment;
+            }
+        }
+        foreach ((array)$boardCategoryValidationExpectation['forbidden'] as $boardCategoryForbiddenFragment) {
+            if (str_contains($boardCategoryValidationResponse['body'], (string)$boardCategoryForbiddenFragment)) {
+                $boardIssues[] = 'chybový stav kategorie vývěsky ' . $boardCategoryValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
     $boardCategoryResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/board_cats.php',
         [
@@ -5647,8 +5971,18 @@ try {
             $adminSession['cookie'],
             0
         );
-        if (!str_contains($duplicateBoardCategoryResponse['body'], 'Tento slug už používá jiná kategorie vývěsky.')) {
-            $boardIssues[] = 'duplicitní slug kategorie vývěsky nebyl odmítnut';
+        foreach ([
+            'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné kategorie vývěsky už používá jiná kategorie.',
+            'aria-invalid="true" aria-describedby="slug-help slug-error"',
+            'id="slug-error"',
+            'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+        ] as $duplicateBoardCategoryFragment) {
+            if (!str_contains($duplicateBoardCategoryResponse['body'], $duplicateBoardCategoryFragment)) {
+                $boardIssues[] = 'duplicitní slug kategorie vývěsky nezobrazil field-level fragment: ' . $duplicateBoardCategoryFragment;
+            }
+        }
+        if (str_contains($duplicateBoardCategoryResponse['body'], 'Tento slug už používá jiná kategorie vývěsky.')) {
+            $boardIssues[] = 'duplicitní slug kategorie vývěsky pořád používá starý obecný text';
         }
 
         $boardSlug = 'http-board-item-' . bin2hex(random_bytes(4));
@@ -5826,6 +6160,87 @@ try {
         $eventIssues[] = 'správa typů akcí se neotevřela nebo neobsahuje SEO pole';
     }
 
+    foreach ([
+        'title_required' => [
+            'post' => [
+                'title' => '',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Typ akce nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="event-type-help title-error"',
+                'id="title-error"',
+                'Doplňte krátký název typu akce, například Workshop.',
+            ],
+            'forbidden' => ['Název typu akce je povinný.'],
+        ],
+        'slug_empty' => [
+            'post' => [
+                'title' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejného typu akce není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="event-type-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba workshop.',
+            ],
+            'forbidden' => ['Slug typu akce musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'meta_title_long' => [
+            'post' => [
+                'title' => 'Typ akce s dlouhým meta titulkem',
+                'slug' => 'event-type-dlouhy-meta-title-' . bin2hex(random_bytes(3)),
+                'description' => '',
+                'meta_title' => str_repeat('Příliš dlouhý meta title typu akce ', 7),
+                'meta_description' => '',
+                'sort_order' => '0',
+                'is_active' => '1',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Meta title typu akce je příliš dlouhý.',
+                'aria-invalid="true" aria-describedby="meta_title-error"',
+                'id="meta_title-error"',
+                'Zkraťte meta titulek nejvýše na 160 znaků, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Meta title může mít nejvýše 160 znaků.'],
+        ],
+    ] as $eventTypeValidationLabel => $eventTypeValidationExpectation) {
+        $eventTypeValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_types.php',
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$eventTypeValidationExpectation['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($eventTypeValidationResponse) !== 200) {
+            $eventIssues[] = 'chybový stav typu akce ' . $eventTypeValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$eventTypeValidationExpectation['expected'] as $eventTypeValidationFragment) {
+            if (!str_contains($eventTypeValidationResponse['body'], (string)$eventTypeValidationFragment)) {
+                $eventIssues[] = 'chybový stav typu akce ' . $eventTypeValidationLabel . ' nezobrazil fragment: ' . (string)$eventTypeValidationFragment;
+            }
+        }
+        foreach ((array)$eventTypeValidationExpectation['forbidden'] as $eventTypeForbiddenFragment) {
+            if (str_contains($eventTypeValidationResponse['body'], (string)$eventTypeForbiddenFragment)) {
+                $eventIssues[] = 'chybový stav typu akce ' . $eventTypeValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
     $eventTypeResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/event_types.php',
         [
@@ -5870,9 +6285,21 @@ try {
             $adminSession['cookie'],
             0
         );
-        if (httpIntegrationStatusCode($duplicateEventTypeResponse) !== 200
-            || !str_contains($duplicateEventTypeResponse['body'], 'Tento slug už používá jiný typ akce.')) {
-            $eventIssues[] = 'duplicitní slug typu akce nebyl odmítnut';
+        if (httpIntegrationStatusCode($duplicateEventTypeResponse) !== 200) {
+            $eventIssues[] = 'duplicitní slug typu akce nevrátil 200';
+        }
+        foreach ([
+            'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejného typu akce už používá jiný typ.',
+            'aria-invalid="true" aria-describedby="event-type-slug-help slug-error"',
+            'id="slug-error"',
+            'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.',
+        ] as $duplicateEventTypeFragment) {
+            if (!str_contains($duplicateEventTypeResponse['body'], $duplicateEventTypeFragment)) {
+                $eventIssues[] = 'duplicitní slug typu akce nezobrazil field-level fragment: ' . $duplicateEventTypeFragment;
+            }
+        }
+        if (str_contains($duplicateEventTypeResponse['body'], 'Tento slug už používá jiný typ akce.')) {
+            $eventIssues[] = 'duplicitní slug typu akce pořád používá starý obecný text';
         }
 
         $pdo->prepare(

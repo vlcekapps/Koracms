@@ -6,17 +6,30 @@ requireModuleEnabled('reservations');
 $pdo = db_connect();
 $success = false;
 $error = '';
+$fieldErrors = [];
+$fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
 $q = trim($_GET['q'] ?? '');
+$formState = [
+    'name' => '',
+    'address' => '',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $name = trim($_POST['name'] ?? '');
     $address = trim($_POST['address'] ?? '');
     $updateId = inputInt('post', 'update_id');
+    $formState = [
+        'name' => $name,
+        'address' => $address,
+    ];
+    $editId = $updateId;
 
     if ($name === '') {
-        $error = 'Název místa je povinný.';
+        $error = 'Místo rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
+        $fieldErrors[] = 'name';
+        $fieldErrorMessages['name'] = 'Doplňte krátký název místa, například Zasedací místnost A.';
     } elseif ($updateId !== null) {
         $pdo->prepare("UPDATE cms_res_locations SET name = ?, address = ? WHERE id = ?")->execute([$name, $address, $updateId]);
         logAction('res_location_edit', "id={$updateId}, name=" . mb_substr($name, 0, 80));
@@ -26,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("INSERT INTO cms_res_locations (name, address) VALUES (?, ?)")->execute([$name, $address]);
         logAction('res_location_add', "name=" . mb_substr($name, 0, 80));
         $success = true;
+        $formState = [
+            'name' => '',
+            'address' => '',
+        ];
     }
 }
 
@@ -43,7 +60,7 @@ $locations = $stmt->fetchAll();
 adminHeader('Lokality rezervací');
 ?>
 <?php if ($success): ?><p class="success" role="status">Místo uloženo.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="res-location-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
@@ -56,7 +73,7 @@ adminHeader('Lokality rezervací');
   <?php endif; ?>
 </form>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="res-location-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nové místo</legend>
@@ -64,12 +81,15 @@ adminHeader('Lokality rezervací');
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
-               placeholder="např. Dům u Růženky">
+               placeholder="např. Dům u Růženky" value="<?= h($editId === null ? $formState['name'] : '') ?>"
+               <?= adminFieldAttributes('name', $editId === null ? $fieldErrors : [], [], ['res-location-name-help']) ?>>
+        <small id="res-location-name-help" class="field-help">Zobrazuje se v editoru rezervačních zdrojů a veřejných detailech rezervací.</small>
+        <?php adminRenderFieldError('name', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? ''); ?>
       </div>
       <div>
         <label for="address">Adresa</label>
         <input type="text" id="address" name="address" maxlength="500" class="admin-search-input"
-               placeholder="Ulice, číslo domu, PSČ, město">
+               placeholder="Ulice, číslo domu, PSČ, město" value="<?= h($editId === null ? $formState['address'] : '') ?>">
       </div>
       <button type="submit" class="btn">Přidat místo</button>
     </div>
@@ -87,18 +107,25 @@ adminHeader('Lokality rezervací');
     <?php foreach ($locations as $location): ?>
       <tr>
         <?php if ($editId === (int)$location['id']): ?>
+          <?php $editLocationHasError = $error !== '' && $editId === (int)$location['id']; ?>
           <td colspan="3">
-            <form method="post" class="button-row button-row--baseline" novalidate>
+            <form method="post" novalidate<?= $editLocationHasError ? ' aria-describedby="res-location-form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$location['id'] ?>">
-              <label for="name-<?= (int)$location['id'] ?>" class="sr-only">Název místa</label>
-              <input type="text" id="name-<?= (int)$location['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                     value="<?= h((string)$location['name']) ?>" class="admin-input-auto">
-              <label for="addr-<?= (int)$location['id'] ?>" class="sr-only">Adresa místa</label>
-              <input type="text" id="addr-<?= (int)$location['id'] ?>" name="address" maxlength="500"
-                     value="<?= h((string)$location['address']) ?>" class="admin-search-input">
-              <button type="submit" class="btn">Uložit</button>
-              <a href="res_locations.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
+              <fieldset class="admin-filter-fieldset button-row button-row--baseline">
+                <legend class="sr-only">Upravit místo <?= h((string)$location['name']) ?></legend>
+                <label for="name-<?= (int)$location['id'] ?>" class="sr-only">Název místa</label>
+                <input type="text" id="name-<?= (int)$location['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                       value="<?= h($editLocationHasError ? $formState['name'] : (string)$location['name']) ?>" class="admin-input-auto"
+                       <?= adminFieldAttributes('name', $editLocationHasError ? $fieldErrors : [], [], ['res-location-name-help-' . (int)$location['id']], 'name-error-' . (int)$location['id']) ?>>
+                <small id="res-location-name-help-<?= (int)$location['id'] ?>" class="field-help">Doplňte krátký název místa rezervací.</small>
+                <?php adminRenderFieldError('name', $editLocationHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$location['id']); ?>
+                <label for="addr-<?= (int)$location['id'] ?>" class="sr-only">Adresa místa</label>
+                <input type="text" id="addr-<?= (int)$location['id'] ?>" name="address" maxlength="500"
+                       value="<?= h($editLocationHasError ? $formState['address'] : (string)$location['address']) ?>" class="admin-search-input">
+                <button type="submit" class="btn">Uložit</button>
+                <a href="res_locations.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
+              </fieldset>
             </form>
           </td>
         <?php else: ?>

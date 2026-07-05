@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editId = $updateId;
 
         if ($formState['name'] === '') {
-            $fieldErrors['name'] = 'Název tématu je povinný.';
+            $fieldErrors['name'] = 'Doplňte krátký název tématu, například Fakturace.';
         }
         if ($formState['recipient_email'] !== '' && !filter_var($formState['recipient_email'], FILTER_VALIDATE_EMAIL)) {
             $fieldErrors['recipient_email'] = $contactTopicRecipientEmailErrorMessage;
@@ -53,12 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $submittedSlug = contactTopicSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['name']);
         if ($submittedSlug === '') {
-            $fieldErrors['slug'] = 'Slug tématu musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $fieldErrors['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba fakturace.';
         }
         if ($fieldErrors === []) {
             $uniqueSlug = uniqueContactTopicSlug($pdo, $submittedSlug, $updateId);
             if ($formState['slug'] !== '' && $uniqueSlug !== $submittedSlug) {
-                $fieldErrors['slug'] = 'Tento slug už používá jiné téma kontaktu.';
+                $fieldErrors['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             } else {
                 $slug = $uniqueSlug;
                 if ($updateId !== null) {
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $error = 'Zkontrolujte prosím zvýrazněná pole.';
+        $error = 'Téma kontaktu nejde uložit. U zvýrazněných polí je konkrétní nápověda.';
     }
 }
 
@@ -132,13 +132,13 @@ adminHeader('Témata kontaktu');
 ?>
 
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="contact-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="contact.php">Zpět na kontaktní zprávy</a>
 </p>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' ? ' aria-describedby="contact-topic-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($editId !== null): ?>
     <input type="hidden" name="update_id" value="<?= (int)$editId ?>">
@@ -158,14 +158,16 @@ adminHeader('Témata kontaktu');
       <div class="form-group">
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="150"
-               value="<?= h($formState['slug']) ?>"<?= adminFieldAttributes('slug', array_keys($fieldErrors), [], ['contact-topic-help']) ?>>
+               value="<?= h($formState['slug']) ?>"<?= adminFieldAttributes('slug', array_keys($fieldErrors), [], ['contact-topic-slug-help']) ?>>
+        <small id="contact-topic-slug-help" class="field-help">Volitelné. Pokud zůstane prázdný, vytvoří se automaticky z názvu.</small>
         <?php adminRenderFieldError('slug', array_keys($fieldErrors), ['slug' => ['slug']], $fieldErrors['slug'] ?? ''); ?>
       </div>
 
       <div class="form-group">
         <label for="recipient_email">Cílový e-mail</label>
         <input type="email" id="recipient_email" name="recipient_email" maxlength="255"
-               value="<?= h($formState['recipient_email']) ?>"<?= adminFieldAttributes('recipient_email', array_keys($fieldErrors), [], ['contact-topic-help']) ?>>
+               value="<?= h($formState['recipient_email']) ?>"<?= adminFieldAttributes('recipient_email', array_keys($fieldErrors), [], ['contact-topic-recipient-email-help']) ?>>
+        <small id="contact-topic-recipient-email-help" class="field-help">Volitelné. Pokud zůstane prázdný, použije se globální kontaktní e-mail.</small>
         <?php adminRenderFieldError('recipient_email', array_keys($fieldErrors), ['recipient_email' => ['recipient_email']], $fieldErrors['recipient_email'] ?? ''); ?>
       </div>
 

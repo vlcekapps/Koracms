@@ -6,6 +6,8 @@ requireModuleEnabled('board');
 $pdo = db_connect();
 $success = false;
 $error = '';
+$fieldErrors = [];
+$fieldErrorMessages = [];
 
 $editId = inputInt('get', 'edit');
 $formState = [
@@ -31,17 +33,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $editId = $updateId;
 
     if ($formState['name'] === '') {
-        $error = 'Název kategorie je povinný.';
+        $error = 'Kategorii vývěsky nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
+        $fieldErrors[] = 'name';
+        $fieldErrorMessages['name'] = 'Doplňte krátký název kategorie, například Úřední oznámení.';
     } elseif (mb_strlen($formState['meta_title'], 'UTF-8') > 160) {
-        $error = 'Meta title může mít nejvýše 160 znaků.';
+        $error = 'Meta title kategorie vývěsky je příliš dlouhý. U pole Meta title je konkrétní nápověda.';
+        $fieldErrors[] = 'meta_title';
+        $fieldErrorMessages['meta_title'] = 'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.';
     } else {
         $submittedSlug = boardCategorySlug($formState['slug'] !== '' ? $formState['slug'] : $formState['name']);
         if ($submittedSlug === '') {
-            $error = 'Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $error = 'Slug veřejné kategorie vývěsky není možné vytvořit. U pole Slug je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
+            $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba uredni-oznameni.';
         } else {
             $uniqueSlug = uniqueBoardCategorySlug($pdo, $submittedSlug, $updateId);
             if ($formState['slug'] !== '' && $uniqueSlug !== $submittedSlug) {
-                $error = 'Tento slug už používá jiná kategorie vývěsky.';
+                $error = 'Slug veřejné kategorie vývěsky už používá jiná kategorie. U pole Slug je konkrétní nápověda.';
+                $fieldErrors[] = 'slug';
+                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             } else {
                 $slug = $uniqueSlug;
                 if ($updateId !== null) {
@@ -114,9 +124,9 @@ $categories = $pdo->query(
 adminHeader('Vývěska a oznámení – kategorie');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
-<form method="post" novalidate>
+<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
@@ -125,15 +135,17 @@ adminHeader('Vývěska a oznámení – kategorie');
         <label for="name">Název <span aria-hidden="true">*</span></label>
         <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
                value="<?= h($editId === null ? $formState['name'] : '') ?>"
-               aria-describedby="name-help">
+               <?= adminFieldAttributes('name', $editId === null ? $fieldErrors : [], [], ['name-help']) ?>>
         <small id="name-help" class="field-help">Zobrazuje se ve filtrech, na landing stránce i v detailu položky.</small>
+        <?php adminRenderFieldError('name', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="slug">Slug</label>
         <input type="text" id="slug" name="slug" maxlength="150"
                value="<?= h($editId === null ? $formState['slug'] : '') ?>"
-               aria-describedby="slug-help">
+               <?= adminFieldAttributes('slug', $editId === null ? $fieldErrors : [], [], ['slug-help']) ?>>
         <small id="slug-help" class="field-help">Volitelné. Pokud zůstane prázdný, vytvoří se automaticky z názvu.</small>
+        <?php adminRenderFieldError('slug', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="sort_order">Pořadí</label>
@@ -152,7 +164,9 @@ adminHeader('Vývěska a oznámení – kategorie');
       <div class="form-group">
         <label for="meta_title">Meta title</label>
         <input type="text" id="meta_title" name="meta_title" maxlength="160"
-               value="<?= h($editId === null ? $formState['meta_title'] : '') ?>">
+               value="<?= h($editId === null ? $formState['meta_title'] : '') ?>"
+               <?= adminFieldAttributes('meta_title', $editId === null ? $fieldErrors : []) ?>>
+        <?php adminRenderFieldError('meta_title', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="meta_description">Meta description</label>
@@ -183,8 +197,9 @@ adminHeader('Vývěska a oznámení – kategorie');
     <?php foreach ($categories as $category): ?>
       <tr>
         <?php if ($editId === (int)$category['id']): ?>
+          <?php $editCategoryHasError = $error !== '' && $editId === (int)$category['id']; ?>
           <td colspan="4">
-            <form method="post" novalidate>
+            <form method="post" novalidate<?= $editCategoryHasError ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
               <fieldset>
@@ -193,32 +208,40 @@ adminHeader('Vývěska a oznámení – kategorie');
                   <div class="form-group">
                     <label for="name-<?= (int)$category['id'] ?>">Název <span aria-hidden="true">*</span></label>
                     <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                           value="<?= h($formState['name'] !== '' ? $formState['name'] : (string)$category['name']) ?>">
+                           value="<?= h($editCategoryHasError ? $formState['name'] : (string)$category['name']) ?>"
+                           <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['name-help-' . (int)$category['id']], 'name-error-' . (int)$category['id']) ?>>
+                    <small id="name-help-<?= (int)$category['id'] ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech vývěsky.</small>
+                    <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="slug-<?= (int)$category['id'] ?>">Slug</label>
                     <input type="text" id="slug-<?= (int)$category['id'] ?>" name="slug" maxlength="150"
-                           value="<?= h($formState['slug'] !== '' ? $formState['slug'] : (string)$category['slug']) ?>">
+                           value="<?= h($editCategoryHasError ? $formState['slug'] : (string)$category['slug']) ?>"
+                           <?= adminFieldAttributes('slug', $editCategoryHasError ? $fieldErrors : [], [], ['slug-help-' . (int)$category['id']], 'slug-error-' . (int)$category['id']) ?>>
+                    <small id="slug-help-<?= (int)$category['id'] ?>" class="field-help">Volitelné. Když pole necháte prázdné, CMS slug vytvoří z názvu.</small>
+                    <?php adminRenderFieldError('slug', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? '', 'slug-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="sort-<?= (int)$category['id'] ?>">Pořadí</label>
                     <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0"
-                           value="<?= h($formState['sort_order'] !== '0' ? $formState['sort_order'] : (string)$category['sort_order']) ?>">
+                           value="<?= h($editCategoryHasError ? $formState['sort_order'] : (string)$category['sort_order']) ?>">
                   </div>
                 </div>
                 <div class="form-group">
                   <label for="description-<?= (int)$category['id'] ?>">Popis</label>
-                  <textarea id="description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h($formState['description'] !== '' ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                  <textarea id="description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
                 </div>
                 <div class="form-grid">
                   <div class="form-group">
                     <label for="meta-title-<?= (int)$category['id'] ?>">Meta title</label>
                     <input type="text" id="meta-title-<?= (int)$category['id'] ?>" name="meta_title" maxlength="160"
-                           value="<?= h($formState['meta_title'] !== '' ? $formState['meta_title'] : (string)($category['meta_title'] ?? '')) ?>">
+                           value="<?= h($editCategoryHasError ? $formState['meta_title'] : (string)($category['meta_title'] ?? '')) ?>"
+                           <?= adminFieldAttributes('meta_title', $editCategoryHasError ? $fieldErrors : [], [], [], 'meta-title-error-' . (int)$category['id']) ?>>
+                    <?php adminRenderFieldError('meta_title', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? '', 'meta-title-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="meta-description-<?= (int)$category['id'] ?>">Meta description</label>
-                    <textarea id="meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h($formState['meta_description'] !== '' ? $formState['meta_description'] : (string)($category['meta_description'] ?? '')) ?></textarea>
+                    <textarea id="meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h($editCategoryHasError ? $formState['meta_description'] : (string)($category['meta_description'] ?? '')) ?></textarea>
                   </div>
                 </div>
                 <div class="button-row button-row--start">

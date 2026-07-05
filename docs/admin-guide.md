@@ -1088,6 +1088,8 @@ Blogové kategorie a štítky používají stejný princip u povinného názvu a
 
 Kategorie a série ke stažení stejný princip používají u prázdného názvu, nepoužitelného nebo duplicitního slugu a u příliš dlouhého meta title kategorie. Chyba má být napojená na existující text přes `aria-describedby`, pole má být označené jako neplatné a text má správci říct, jakou hodnotu zkusit nebo že může slug nechat prázdný.
 
+Stejný field-level pattern používají kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. U povinného názvu, nepoužitelného nebo duplicitního slugu a příliš dlouhého meta title má souhrnný alert upozornit na dotčené pole, lokální text poradit konkrétní opravu a `aria-describedby` mířit jen na existující nápovědu nebo chybový text. Rezervační kategorie a místa navíc po chybě zachovávají rozepsané hodnoty.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
