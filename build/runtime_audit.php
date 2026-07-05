@@ -16978,6 +16978,70 @@ foreach ([
     }
 }
 foreach ([
+    'download categories editor' => [
+        'source' => $downloadCatsSource,
+        'required' => [
+            '$fieldErrorMessages = [];',
+            '$error = \'Kategorii ke stažení nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Příručky.\';',
+            '$error = \'Meta title kategorie ke stažení je příliš dlouhý. U pole Meta title je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'meta_title\'] = \'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.\';',
+            '$error = \'Slug veřejné kategorie ke stažení není možné vytvořit. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba prirucky.\';',
+            '$error = \'Slug veřejné kategorie ke stažení už používá jiná kategorie. U pole Slug je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['download-category-name-help'])",
+            "adminFieldAttributes('slug', \$editId === null ? \$fieldErrors : [], [], ['download-category-slug-help'])",
+            "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
+            "adminRenderFieldError('slug', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['slug'] ?? '');",
+            "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['meta_title'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název kategorie je povinný.\';',
+            '$error = \'Meta title může mít nejvýše 160 znaků.\';',
+            '$error = \'Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$error = \'Tento slug už používá jiná kategorie ke stažení.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'download series editor' => [
+        'source' => $adminDownloadSeriesSource,
+        'required' => [
+            '$fieldErrorMessages = [];',
+            '$error = \'Sérii ke stažení nejde uložit bez názvu. U pole Název série je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'title\'] = \'Doplňte krátký název série, například Instalační balíčky.\';',
+            '$error = \'Slug veřejné série ke stažení není možné vytvořit. U pole Slug série je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba instalacni-balicky.\';',
+            '$error = \'Slug veřejné série ke stažení už používá jiná série. U pole Slug série je konkrétní nápověda.\';',
+            '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+            '<p id="download-series-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('title', \$fieldErrors, [], ['series-title-help'])",
+            "adminFieldAttributes('slug', \$fieldErrors, [], ['series-slug-help'])",
+            "adminRenderFieldError('title', \$fieldErrors, [], \$fieldErrorMessages['title'] ?? '');",
+            "adminRenderFieldError('slug', \$fieldErrors, [], \$fieldErrorMessages['slug'] ?? '');",
+        ],
+        'forbidden' => [
+            '$error = \'Název série je povinný.\';',
+            '$error = \'Slug série musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+            '$error = \'Tento slug už používá jiná série ke stažení.\';',
+            '<p id="download-series-error" class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+] as $downloadTaxonomySuggestionLabel => $downloadTaxonomySuggestionSpec) {
+    $downloadTaxonomySuggestionSource = (string)$downloadTaxonomySuggestionSpec['source'];
+    foreach ($downloadTaxonomySuggestionSpec['required'] as $downloadTaxonomySuggestionFragment) {
+        if (!str_contains($downloadTaxonomySuggestionSource, $downloadTaxonomySuggestionFragment)) {
+            $adminFieldErrorIssues[] = $downloadTaxonomySuggestionLabel . ' is missing actionable field-level error fragment: ' . $downloadTaxonomySuggestionFragment;
+        }
+    }
+    foreach ($downloadTaxonomySuggestionSpec['forbidden'] as $downloadTaxonomyGenericFragment) {
+        if (str_contains($downloadTaxonomySuggestionSource, $downloadTaxonomyGenericFragment)) {
+            $adminFieldErrorIssues[] = $downloadTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
+        }
+    }
+}
+foreach ([
     'blog categories editor' => [
         'source' => $blogCatsSource,
         'required' => [

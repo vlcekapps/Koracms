@@ -473,6 +473,8 @@ Editor FAQ kategorií pokračuje u názvu, slugu a meta title. Field-level nápo
 
 Editory blogových kategorií a štítků používají stejný princip u povinného názvu a duplicitního slugu. Souhrnný alert je atomický a field-level text radí krátký srozumitelný název, jiný unikátní slug nebo prázdné slug pole pro automatické vytvoření.
 
+Kategorie a série ke stažení mají stejný field-level pattern pro hlavní validační chyby taxonomií. Prázdný název, nepoužitelný nebo duplicitní slug a příliš dlouhý meta title kategorie se oznámí souhrnným alertem i textem u konkrétního pole; HTTP integrace hlídá render těchto stavů v reálném admin HTML.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

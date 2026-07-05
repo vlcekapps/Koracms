@@ -6,6 +6,8 @@ requireModuleEnabled('downloads');
 $pdo = db_connect();
 $message = trim((string)($_GET['msg'] ?? ''));
 $error = '';
+$fieldErrors = [];
+$fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
 $formState = [
     'id' => 0,
@@ -43,15 +45,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $editId = $seriesId;
 
     if ($formState['title'] === '') {
-        $error = 'Název série je povinný.';
+        $error = 'Sérii ke stažení nejde uložit bez názvu. U pole Název série je konkrétní nápověda.';
+        $fieldErrors[] = 'title';
+        $fieldErrorMessages['title'] = 'Doplňte krátký název série, například Instalační balíčky.';
     } else {
         $submittedSlug = downloadSeriesSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['title']);
         if ($submittedSlug === '') {
-            $error = 'Slug série musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $error = 'Slug veřejné série ke stažení není možné vytvořit. U pole Slug série je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
+            $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba instalacni-balicky.';
         } else {
             $uniqueSlug = uniqueDownloadSeriesSlug($pdo, $submittedSlug, $seriesId);
             if ($formState['slug'] !== '' && $uniqueSlug !== $submittedSlug) {
-                $error = 'Tento slug už používá jiná série ke stažení.';
+                $error = 'Slug veřejné série ke stažení už používá jiná série. U pole Slug série je konkrétní nápověda.';
+                $fieldErrors[] = 'slug';
+                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             } elseif ($seriesId !== null) {
                 $existingStmt = $pdo->prepare("SELECT * FROM cms_download_series WHERE id = ?");
                 $existingStmt->execute([$seriesId]);
@@ -137,7 +145,7 @@ adminHeader('Ke stažení – série a verze');
 ?>
 <?php if ($message === 'saved'): ?><p class="success" role="status">Série byla uložena.</p><?php endif; ?>
 <?php if ($message === 'deleted'): ?><p class="success" role="status">Série byla smazána.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p id="download-series-error" class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="download-series-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="downloads.php"><span aria-hidden="true">←</span> Zpět na soubory a položky</a>
@@ -153,11 +161,16 @@ adminHeader('Ke stažení – série a verze');
   <fieldset>
     <legend><?= (int)$formState['id'] > 0 ? 'Upravit sérii' : 'Přidat sérii' ?></legend>
     <label for="series-title">Název série <span aria-hidden="true">*</span></label>
-    <input type="text" id="series-title" name="title" required aria-required="true" maxlength="255" value="<?= h((string)$formState['title']) ?>">
+    <input type="text" id="series-title" name="title" required aria-required="true" maxlength="255" value="<?= h((string)$formState['title']) ?>"
+           <?= adminFieldAttributes('title', $fieldErrors, [], ['series-title-help']) ?>>
+    <small id="series-title-help" class="field-help">Použijte krátký název, který správci i návštěvníci poznají v katalogu ke stažení.</small>
+    <?php adminRenderFieldError('title', $fieldErrors, [], $fieldErrorMessages['title'] ?? ''); ?>
 
     <label for="series-slug">Slug série</label>
-    <input type="text" id="series-slug" name="slug" maxlength="150" pattern="[a-z0-9\-]+" value="<?= h((string)$formState['slug']) ?>" aria-describedby="series-slug-help">
+    <input type="text" id="series-slug" name="slug" maxlength="150" pattern="[a-z0-9\-]+" value="<?= h((string)$formState['slug']) ?>"
+           <?= adminFieldAttributes('slug', $fieldErrors, [], ['series-slug-help']) ?>>
     <small id="series-slug-help" class="field-help">Volitelné. Veřejná adresa bude mít tvar <code>/downloads/serie/slug-serie</code>.</small>
+    <?php adminRenderFieldError('slug', $fieldErrors, [], $fieldErrorMessages['slug'] ?? ''); ?>
 
     <label for="series-description">Popis série</label>
     <textarea id="series-description" name="description" rows="4" aria-describedby="series-description-help"><?= h((string)$formState['description']) ?></textarea>

@@ -6260,6 +6260,154 @@ try {
         $downloadIssues[] = 'správa sérií ke stažení nezobrazuje slug, popis nebo veřejný odkaz';
     }
 
+    foreach ([
+        'category_name_required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/dl_cats.php',
+            'post' => [
+                'name' => '',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii ke stažení nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="download-category-name-help name-error"',
+                'id="name-error"',
+                'Doplňte krátký název kategorie, například Příručky.',
+            ],
+            'forbidden' => ['Název kategorie je povinný.'],
+        ],
+        'category_slug_empty' => [
+            'url' => $baseUrl . BASE_URL . '/admin/dl_cats.php',
+            'post' => [
+                'name' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné kategorie ke stažení není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="download-category-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba prirucky.',
+            ],
+            'forbidden' => ['Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'category_meta_title_long' => [
+            'url' => $baseUrl . BASE_URL . '/admin/dl_cats.php',
+            'post' => [
+                'name' => 'Download kategorie s dlouhým meta titulkem',
+                'slug' => 'download-kategorie-dlouhy-meta-title-' . bin2hex(random_bytes(3)),
+                'description' => '',
+                'meta_title' => str_repeat('Příliš dlouhý meta title download kategorie ', 6),
+                'meta_description' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Meta title kategorie ke stažení je příliš dlouhý.',
+                'aria-invalid="true" aria-describedby="meta_title-error"',
+                'id="meta_title-error"',
+                'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Meta title může mít nejvýše 160 znaků.'],
+        ],
+        'category_duplicate_slug' => [
+            'url' => $baseUrl . BASE_URL . '/admin/dl_cats.php',
+            'post' => [
+                'name' => 'Duplicitní kategorie ke stažení',
+                'slug' => $downloadCategorySlug,
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné kategorie ke stažení už používá jiná kategorie.',
+                'aria-invalid="true" aria-describedby="download-category-slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+            ],
+            'forbidden' => ['Tento slug už používá jiná kategorie ke stažení.'],
+        ],
+        'series_title_required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/download_series.php',
+            'post' => [
+                'action' => 'save',
+                'title' => '',
+                'slug' => '',
+                'description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="download-series-error" class="error" role="alert" aria-atomic="true">Sérii ke stažení nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="series-title-help title-error"',
+                'id="title-error"',
+                'Doplňte krátký název série, například Instalační balíčky.',
+            ],
+            'forbidden' => ['Název série je povinný.'],
+        ],
+        'series_slug_empty' => [
+            'url' => $baseUrl . BASE_URL . '/admin/download_series.php',
+            'post' => [
+                'action' => 'save',
+                'title' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="download-series-error" class="error" role="alert" aria-atomic="true">Slug veřejné série ke stažení není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="series-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba instalacni-balicky.',
+            ],
+            'forbidden' => ['Slug série musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'series_duplicate_slug' => [
+            'url' => $baseUrl . BASE_URL . '/admin/download_series.php',
+            'post' => [
+                'action' => 'save',
+                'title' => 'Duplicitní série ke stažení',
+                'slug' => $downloadSeriesSlug,
+                'description' => '',
+                'sort_order' => '0',
+            ],
+            'expected' => [
+                'id="download-series-error" class="error" role="alert" aria-atomic="true">Slug veřejné série ke stažení už používá jiná série.',
+                'aria-invalid="true" aria-describedby="series-slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+            ],
+            'forbidden' => ['Tento slug už používá jiná série ke stažení.'],
+        ],
+    ] as $downloadTaxonomyValidationLabel => $downloadTaxonomyValidationExpectation) {
+        $downloadTaxonomyValidationPost = array_merge(
+            ['csrf_token' => $adminSession['csrf']],
+            (array)$downloadTaxonomyValidationExpectation['post']
+        );
+        $downloadTaxonomyValidationResponse = postUrl(
+            (string)$downloadTaxonomyValidationExpectation['url'],
+            $downloadTaxonomyValidationPost,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($downloadTaxonomyValidationResponse) !== 200) {
+            $downloadIssues[] = 'download taxonomy chybový stav ' . $downloadTaxonomyValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+
+        foreach ((array)$downloadTaxonomyValidationExpectation['expected'] as $downloadTaxonomyValidationFragment) {
+            if (!str_contains($downloadTaxonomyValidationResponse['body'], (string)$downloadTaxonomyValidationFragment)) {
+                $downloadIssues[] = 'download taxonomy chybový stav ' . $downloadTaxonomyValidationLabel . ' nezobrazil fragment: ' . (string)$downloadTaxonomyValidationFragment;
+            }
+        }
+        foreach ((array)$downloadTaxonomyValidationExpectation['forbidden'] as $downloadTaxonomyForbiddenFragment) {
+            if (str_contains($downloadTaxonomyValidationResponse['body'], (string)$downloadTaxonomyForbiddenFragment)) {
+                $downloadIssues[] = 'download taxonomy chybový stav ' . $downloadTaxonomyValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
     $downloadCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/downloads/kategorie/' . $downloadCategorySlug, '', 0);
     if (httpIntegrationStatusCode($downloadCategoryResponse) !== 200
         || !str_contains($downloadCategoryResponse['body'], 'HTTP Kategorie ke stažení')
