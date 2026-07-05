@@ -16886,6 +16886,39 @@ foreach ([
     }
 }
 foreach ([
+    '\'title\' => \'Doplňte název stránky. Použije se v administraci',
+    '\'blog\' => \'Vyberte dostupný blog ze seznamu',
+    '$pagePublishAtErrorMessage = \'Znovu vyberte plánované publikování',
+    '$pageUnpublishAtErrorMessage = \'Znovu vyberte plánované zrušení publikace',
+    '$pageSlugErrorMessage = \'Slug stránky je už obsazený. Zadejte jiný slug',
+    '$pageSlugErrorMessage = \'Tento slug už v tomto blogu používá jiná stránka. Zadejte jiný slug',
+    '$pageSlugErrorMessage = \'Tento slug už používá jiná globální stránka. Zadejte jiný slug',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Stránku nejde uložit bez názvu.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Slug stránky není možné použít.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Vybraný blog není dostupný.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Plánované publikování nemá platné datum a čas.',
+    'role="alert" class="error" id="form-error" aria-atomic="true">Plánované zrušení publikace nemá platné datum a čas.',
+    "adminFieldAttributes('blog_id', \$err, \$fieldErrorMap, ['page-blog-help', 'page-blog-order-help'])",
+    "adminRenderFieldError('blog_id', \$err, \$fieldErrorMap, \$fieldErrorMessages['blog']);",
+    "adminFieldAttributes('slug', \$err, \$fieldErrorMap, ['page-slug-help'])",
+    "adminRenderFieldError('slug', \$err, \$fieldErrorMap, \$fieldErrorMessages['slug']);",
+] as $pageEditorSuggestionFragment) {
+    if (!str_contains($pageFormSource, $pageEditorSuggestionFragment)) {
+        $adminFieldErrorIssues[] = 'page editor is missing actionable field-level error fragment: ' . $pageEditorSuggestionFragment;
+    }
+}
+foreach ([
+    '<p role="alert" class="error" id="form-error">Název stránky je povinný.</p>',
+    '<p role="alert" class="error" id="form-error"><?= h($pageSlugErrorMessage) ?></p>',
+    '<p role="alert" class="error" id="form-error">Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.</p>',
+    '<p role="alert" class="error" id="form-error"><?= h($pagePublishAtErrorMessage) ?></p>',
+    '<p role="alert" class="error" id="form-error"><?= h($pageUnpublishAtErrorMessage) ?></p>',
+] as $pageEditorGenericErrorFragment) {
+    if (str_contains($pageFormSource, $pageEditorGenericErrorFragment)) {
+        $adminFieldErrorIssues[] = 'page editor still uses a generic validation alert without actionable field-level context';
+    }
+}
+foreach ([
     'JSON import upload error suggestion' => [
         'source' => $importAdminSource,
         'required' => [
@@ -17311,8 +17344,10 @@ foreach ([
     'page scheduling error suggestion' => [
         'source' => $pageFormSource,
         'required' => [
+            '$pagePublishAtErrorMessage',
             '$pageUnpublishAtErrorMessage',
-            'Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.',
+            'Znovu vyberte plánované publikování v poli datum a čas',
+            'Znovu vyberte plánované zrušení publikace v poli datum a čas',
         ],
         'forbidden' => [
             'Plánované zrušení publikace má neplatný formát data a času.',

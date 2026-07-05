@@ -7437,6 +7437,82 @@ try {
     $blogPagesAdminUrl = $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId;
     $blogStaticIndexUrl = $baseUrl . BASE_URL . '/' . rawurlencode($blogStaticMainSlug) . '/';
 
+    foreach ([
+        'required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=required',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Stránku nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte název stránky.',
+            ],
+        ],
+        'slug_global' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=slug_global',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug stránky není možné použít.',
+                'aria-invalid="true" aria-describedby="page-slug-help slug-error"',
+                'id="slug-error"',
+                'Tento slug už používá jiná globální stránka. Zadejte jiný slug',
+            ],
+        ],
+        'slug_blog' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=slug_blog&blog_id=' . $blogStaticMainId,
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug stránky není možné použít.',
+                'aria-invalid="true" aria-describedby="page-slug-help slug-error"',
+                'id="slug-error"',
+                'Tento slug už v tomto blogu používá jiná stránka. Zadejte jiný slug',
+            ],
+        ],
+        'blog' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=blog&blog_id=999999999',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Vybraný blog není dostupný.',
+                'aria-invalid="true" aria-describedby="page-blog-help page-blog-order-help blog_id-error"',
+                'id="blog_id-error"',
+                'Vyberte dostupný blog ze seznamu, nebo pole ponechte prázdné',
+            ],
+        ],
+        'publish_at' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=publish_at',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Plánované publikování nemá platné datum a čas.',
+                'aria-invalid="true" aria-describedby="publish-at-help publish_at-error"',
+                'id="publish_at-error"',
+                'Znovu vyberte plánované publikování v poli datum a čas',
+            ],
+        ],
+        'unpublish_at' => [
+            'url' => $baseUrl . BASE_URL . '/admin/page_form.php?err=unpublish_at',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Plánované zrušení publikace nemá platné datum a čas.',
+                'aria-invalid="true" aria-describedby="unpublish-at-help unpublish_at-error"',
+                'id="unpublish_at-error"',
+                'Znovu vyberte plánované zrušení publikace v poli datum a čas',
+            ],
+        ],
+    ] as $pageEditorErrorCode => $pageEditorErrorSpec) {
+        $pageEditorErrorResponse = fetchUrl((string)$pageEditorErrorSpec['url'], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($pageEditorErrorResponse) !== 200) {
+            $blogStaticPagesIssues[] = 'editor statických stránek s err=' . $pageEditorErrorCode . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$pageEditorErrorSpec['expected'] as $pageEditorExpectedFragment) {
+            if (!str_contains($pageEditorErrorResponse['body'], $pageEditorExpectedFragment)) {
+                $blogStaticPagesIssues[] = 'editor statických stránek s err=' . $pageEditorErrorCode . ' neobsahuje: ' . $pageEditorExpectedFragment;
+            }
+        }
+        foreach ([
+            '<p role="alert" class="error" id="form-error">Název stránky je povinný.</p>',
+            '<p role="alert" class="error" id="form-error">Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.</p>',
+        ] as $pageEditorForbiddenFragment) {
+            if (str_contains($pageEditorErrorResponse['body'], $pageEditorForbiddenFragment)) {
+                $blogStaticPagesIssues[] = 'editor statických stránek s err=' . $pageEditorErrorCode . ' stále používá starý obecný text: ' . $pageEditorForbiddenFragment;
+            }
+        }
+    }
+
     $blogPageOneTitle = 'HTTP Blogová stránka A';
     $blogPageOneSlug = 'http-blog-page-a-' . bin2hex(random_bytes(4));
     $blogPageOneContent = '<p>Obsah první blogové stránky pro HTTP integration test.</p>';

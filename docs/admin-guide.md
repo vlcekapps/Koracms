@@ -1076,6 +1076,8 @@ Validační hlášky v administraci mají u známých oprav říkat, jak pokrač
 
 Editor Form Builderu se drží stejného pravidla u názvu, slugu, notifikačního e-mailu, potvrzovacího e-mailového pole a webhook URL. Chyba má správci říct konkrétní další krok: doplnit název, zvolit jiný nebo prázdný slug, zadat úplnou e-mailovou adresu, přidat/vybrat e-mailové pole formuláře nebo použít veřejně dostupný HTTPS webhook endpoint.
 
+Editor statických stránek používá stejný field-level pattern pro název, slug, přiřazený blog a plánovaná data publikování/skrytí. Souhrnný alert upozorní, které pole potřebuje opravu, a lokální text poradí konkrétní další krok.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.

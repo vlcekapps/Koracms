@@ -97,13 +97,13 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $pageTitle = $id ? 'Upravit statickou stránku' : 'Nová statická stránka';
 $err = trim($_GET['err'] ?? '');
 $publicPath = ((int)($page['is_published'] ?? 0) === 1 && trim((string)($page['slug'] ?? '')) !== '') ? pagePublicPath($page) : '';
-$pagePublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
-$pageUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
-$pageSlugErrorMessage = 'Slug stránky je už obsazený. Zvolte prosím jiný.';
+$pagePublishAtErrorMessage = 'Znovu vyberte plánované publikování v poli datum a čas, nebo pole nechte prázdné pro okamžité zveřejnění.';
+$pageUnpublishAtErrorMessage = 'Znovu vyberte plánované zrušení publikace v poli datum a čas, nebo pole nechte prázdné bez automatického skrytí.';
+$pageSlugErrorMessage = 'Slug stránky je už obsazený. Zadejte jiný slug z malých písmen, číslic a pomlček.';
 if ($err === 'slug_blog') {
-    $pageSlugErrorMessage = 'Tento slug už v tomto blogu používá jiná stránka.';
+    $pageSlugErrorMessage = 'Tento slug už v tomto blogu používá jiná stránka. Zadejte jiný slug pro tuto blogovou stránku.';
 } elseif ($err === 'slug_global') {
-    $pageSlugErrorMessage = 'Tento slug už používá jiná globální stránka.';
+    $pageSlugErrorMessage = 'Tento slug už používá jiná globální stránka. Zadejte jiný slug nebo stránku přiřaďte ke konkrétnímu blogu, kde může být slug volný.';
 }
 $formatDateTimeLocalValue = static function ($value): string {
     $text = trim((string)$value);
@@ -124,9 +124,9 @@ $fieldErrorMap = [
     'unpublish_at' => ['unpublish_at'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Název stránky je povinný.',
+    'title' => 'Doplňte název stránky. Použije se v administraci, nadpisu veřejné stránky i navigaci.',
     'slug' => $pageSlugErrorMessage,
-    'blog' => 'Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.',
+    'blog' => 'Vyberte dostupný blog ze seznamu, nebo pole ponechte prázdné pro globální statickou stránku.',
     'publish_at' => $pagePublishAtErrorMessage,
     'unpublish_at' => $pageUnpublishAtErrorMessage,
 ];
@@ -157,15 +157,15 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <?php if ($err === 'required'): ?>
-  <p role="alert" class="error" id="form-error">Název stránky je povinný.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Stránku nejde uložit bez názvu. U pole Název je konkrétní nápověda.</p>
 <?php elseif (in_array($err, ['slug', 'slug_blog', 'slug_global'], true)): ?>
-  <p role="alert" class="error" id="form-error"><?= h($pageSlugErrorMessage) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Slug stránky není možné použít. U pole Slug (URL) je konkrétní nápověda.</p>
 <?php elseif ($err === 'blog'): ?>
-  <p role="alert" class="error" id="form-error">Vybraný blog už neexistuje nebo pro tuto stránku není dostupný.</p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Vybraný blog není dostupný. U pole Patří k blogu je konkrétní nápověda.</p>
 <?php elseif ($err === 'publish_at'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($pagePublishAtErrorMessage) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Plánované publikování nemá platné datum a čas. U pole je konkrétní nápověda.</p>
 <?php elseif ($err === 'unpublish_at'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($pageUnpublishAtErrorMessage) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true">Plánované zrušení publikace nemá platné datum a čas. U pole je konkrétní nápověda.</p>
 <?php endif; ?>
 
 <p class="button-row button-row--start">
