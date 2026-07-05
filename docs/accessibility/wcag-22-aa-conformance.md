@@ -98,6 +98,8 @@ Poznámka k `3.3.3` z 2026-07-05: editor Form Builderu má zpřesněné chybové
 
 Poznámka k `3.3.3` z 2026-07-05: editor statických stránek má zpřesněné chybové stavy pro název, slug, přiřazený blog, plánované publikování a plánované zrušení publikace. Souhrnný `role="alert"` ukazuje na dotčené pole a field-level text radí doplnit název, zvolit jiný slug, vybrat dostupný blog nebo znovu vybrat datum/čas; runtime `admin_field_error_guardrails` a HTTP scénář blogových statických stránek hlídají zdroj i render.
 
+Poznámka k `3.3.3` z 2026-07-05: editor FAQ má zpřesněné chybové stavy pro otázku, odpověď a slug veřejné stránky. Souhrnný `role="alert"` je atomický, pole otázky a slugu dostávají `aria-invalid` a `aria-describedby` na existující field-level text a odpověď má konkrétní lokální návrh opravy; runtime `admin_field_error_guardrails` a HTTP scénář `faq_categories_feedback_http` hlídají zdroj i render.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

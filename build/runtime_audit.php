@@ -16919,6 +16919,32 @@ foreach ([
     }
 }
 foreach ([
+    '\'required\' => \'FAQ položku nejde uložit bez otázky a odpovědi.',
+    '\'slug\' => \'Slug veřejné FAQ stránky není možné použít.',
+    '\'question\' => \'Doplňte otázku tak, jak ji má návštěvník hledat ve znalostní bázi.',
+    '\'answer\' => \'Doplňte odpověď. Stačí stručný text, ale pole nesmí zůstat prázdné.',
+    '\'slug\' => \'Zadejte unikátní slug z malých písmen, číslic a pomlček, například reset-hesla.',
+    '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+    "adminFieldAttributes('question', \$err, \$fieldErrorMap)",
+    "adminFieldAttributes('slug', \$err, \$fieldErrorMap, ['faq-slug-help'])",
+    "adminRenderFieldError('answer', \$err, \$fieldErrorMap, \$fieldErrorMessages['answer']);",
+] as $faqEditorSuggestionFragment) {
+    if (!str_contains($faqFormSource, $faqEditorSuggestionFragment)) {
+        $adminFieldErrorIssues[] = 'FAQ editor is missing actionable field-level error fragment: ' . $faqEditorSuggestionFragment;
+    }
+}
+foreach ([
+    '\'required\' => \'Vyplňte prosím otázku a odpověď.\',',
+    '\'slug\' => \'Slug FAQ je povinný a musí být unikátní.\',',
+    '\'question\' => \'Otázka FAQ je povinná.\',',
+    '\'answer\' => \'Odpověď FAQ je povinná.\',',
+    '<p role="alert" class="error" id="form-error"><?= h($formError) ?></p>',
+] as $faqEditorGenericErrorFragment) {
+    if (str_contains($faqFormSource, $faqEditorGenericErrorFragment)) {
+        $adminFieldErrorIssues[] = 'FAQ editor still uses a generic validation alert or field-level message without actionable context';
+    }
+}
+foreach ([
     'JSON import upload error suggestion' => [
         'source' => $importAdminSource,
         'required' => [

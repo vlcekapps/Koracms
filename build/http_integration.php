@@ -6233,6 +6233,52 @@ try {
     $faqCategoryName = 'HTTP FAQ kategorie';
     $faqQuestion = 'Jak funguje HTTP test FAQ kategorií?';
 
+    foreach ([
+        'required' => [
+            'url' => $baseUrl . BASE_URL . '/admin/faq_form.php?err=required',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">FAQ položku nejde uložit bez otázky a odpovědi.',
+                'aria-invalid="true" aria-describedby="question-error"',
+                'id="question-error"',
+                'Doplňte otázku tak, jak ji má návštěvník hledat ve znalostní bázi.',
+                'id="answer-error"',
+                'Doplňte odpověď. Stačí stručný text, ale pole nesmí zůstat prázdné.',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Vyplňte prosím otázku a odpověď.</p>',
+            ],
+        ],
+        'slug' => [
+            'url' => $baseUrl . BASE_URL . '/admin/faq_form.php?err=slug',
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug veřejné FAQ stránky není možné použít.',
+                'aria-invalid="true" aria-describedby="faq-slug-help slug-error"',
+                'id="slug-error"',
+                'Zadejte unikátní slug z malých písmen, číslic a pomlček, například reset-hesla.',
+            ],
+            'forbidden' => [
+                '<p role="alert" class="error" id="form-error">Slug FAQ je povinný a musí být unikátní.</p>',
+            ],
+        ],
+    ] as $faqValidationLabel => $faqValidationExpectation) {
+        $faqValidationResponse = fetchUrl((string)$faqValidationExpectation['url'], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($faqValidationResponse) !== 200) {
+            $faqIssues[] = 'FAQ editor chybový stav ' . $faqValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+
+        foreach ((array)$faqValidationExpectation['expected'] as $faqValidationFragment) {
+            if (!str_contains($faqValidationResponse['body'], (string)$faqValidationFragment)) {
+                $faqIssues[] = 'FAQ editor chybový stav ' . $faqValidationLabel . ' nezobrazil fragment: ' . (string)$faqValidationFragment;
+            }
+        }
+        foreach ((array)$faqValidationExpectation['forbidden'] as $faqForbiddenFragment) {
+            if (str_contains($faqValidationResponse['body'], (string)$faqForbiddenFragment)) {
+                $faqIssues[] = 'FAQ editor chybový stav ' . $faqValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
     $faqCategoryCreateResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/faq_cats.php',
         [

@@ -59,8 +59,8 @@ $categories = $pdo->query("SELECT id, name FROM cms_faq_categories ORDER BY sort
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím otázku a odpověď.',
-    'slug' => 'Slug FAQ je povinný a musí být unikátní.',
+    'required' => 'FAQ položku nejde uložit bez otázky a odpovědi. U obou polí je konkrétní nápověda.',
+    'slug' => 'Slug veřejné FAQ stránky není možné použít. U pole Slug veřejné stránky je konkrétní nápověda.',
     default => '',
 };
 $fieldErrorMap = [
@@ -68,9 +68,9 @@ $fieldErrorMap = [
     'slug' => ['slug'],
 ];
 $fieldErrorMessages = [
-    'question' => 'Otázka FAQ je povinná.',
-    'answer' => 'Odpověď FAQ je povinná.',
-    'slug' => 'Slug FAQ je povinný a musí být unikátní.',
+    'question' => 'Doplňte otázku tak, jak ji má návštěvník hledat ve znalostní bázi.',
+    'answer' => 'Doplňte odpověď. Stačí stručný text, ale pole nesmí zůstat prázdné.',
+    'slug' => 'Zadejte unikátní slug z malých písmen, číslic a pomlček, například reset-hesla.',
 ];
 
 adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostní báze');
@@ -104,7 +104,7 @@ adminHeader($id ? 'Upravit položku znalostní báze' : 'Nová položka znalostn
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush">

@@ -467,6 +467,8 @@ Editor Form Builderu má stejný pattern u hlavních chyb ukládání. Název, s
 
 Editor statických stránek navazuje u chyb názvu, slugu, přiřazeného blogu a plánovacích datumů. Alert nahoře správci řekne, které pole opravit, a field-level text radí konkrétní akci: doplnit název, zvolit jiný slug, vybrat dostupný blog nebo znovu vybrat datum a čas.
 
+Editor FAQ stejný pattern používá pro povinnou otázku, odpověď a slug veřejné stránky. Souhrnný alert je textový a atomický, konkrétní field-level nápověda radí doplnit otázku tak, jak ji návštěvník hledá, doplnit odpověď nebo zadat unikátní slug z malých písmen, číslic a pomlček.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

@@ -1078,6 +1078,8 @@ Editor Form Builderu se drží stejného pravidla u názvu, slugu, notifikační
 
 Editor statických stránek používá stejný field-level pattern pro název, slug, přiřazený blog a plánovaná data publikování/skrytí. Souhrnný alert upozorní, které pole potřebuje opravu, a lokální text poradí konkrétní další krok.
 
+Editor FAQ používá stejný field-level pattern pro povinnou otázku, odpověď a slug veřejné stránky. Souhrnný alert je atomický a lokální text poradí, jak otázku formulovat pro návštěvníka, doplnit odpověď nebo zadat unikátní slug z malých písmen, číslic a pomlček.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.
