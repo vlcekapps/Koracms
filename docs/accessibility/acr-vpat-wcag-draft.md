@@ -39,7 +39,7 @@ Kora CMS is an authoring and publishing system. This ACR separates CMS responsib
 | 2.1.1 Keyboard | Partially Supports | Core patterns support keyboard use; command center, widget dialog and content/media picker have automated guardrails for Escape, Tab focus cycling and focus return, with manual no-regression confirmation on 2026-07-04. Dense admin workflows still need manual coverage. |
 | 2.1.2 No Keyboard Trap | Supports | Core dialogs are designed with focus trap and focus return; command center, widget dialog and content/media picker were manually confirmed without regression on 2026-07-04. |
 | 2.1.4 Character Key Shortcuts | Supports | Global command shortcut uses `Ctrl+K` and is disabled in form fields. |
-| 2.2.1 Timing Adjustable | Partially Supports | Content lock refresh reduces data loss; auth/session timeout behavior needs manual assessment. |
+| 2.2.1 Timing Adjustable | Partially Supports | Admin content-lock refresh now returns a guarded JSON 401 on expired sessions, long admin forms keep a local autosave recovery copy when submitted, and the standalone admin login announces return-to-page/recovery context. Real timeout, multi-tab, 2FA pending and browser storage edge cases still need manual assessment. |
 | 2.2.2 Pause, Stop, Hide | Supports | Core does not generate moving or auto-updating visual content requiring pause controls. |
 | 2.3.1 Three Flashes or Below Threshold | Supports | Core does not generate flashing content. |
 | 2.4.1 Bypass Blocks | Supports | Skip links and main content anchors are present in public/admin/system layouts. |
@@ -95,6 +95,8 @@ Additional `3.3.3` ACR evidence, 2026-07-05: news, event, place, download item a
 Additional `3.3.3` ACR evidence, 2026-07-05: admin profile, user-account creation/editing, site settings and theme management now expose atomic form alerts and actionable field-level suggestions for account e-mail/password/TOTP errors, author profile metadata, settings basics and branding uploads, active theme selection, theme settings validation and portable theme ZIP import/export. Runtime `admin_field_error_guardrails` and HTTP `admin_validation_a11y_http` cover both static source contracts and rendered invalid states.
 
 Additional visual accessibility evidence, 2026-07-06: admin CSS and runtime guardrails now cover dark-mode info-panel and inline-badge contrast, forced-colors fallback, focused/target scroll-margin, disabled controls without opacity dimming, checkbox/radio minimum size, 28 px compact sort controls and narrow-width collapse for theme/checkbox/summary grids and selected flex rows. This strengthens automated evidence for `1.4.3`, `1.4.10`, `1.4.11`, `2.4.11` and `2.5.8`; manual 400 % zoom, custom module and assistive-technology combinations remain required.
+
+Additional `2.2.1` ACR evidence, 2026-07-06: admin autosave keeps a recovery copy during submit, content-lock heartbeat reports expired sessions through JSON 401 and the existing live region, and the admin login page renders a return notice tied to the login form when a protected admin URL triggered re-auth. Runtime `session_security_guardrails` and HTTP scenarios `admin_json_post_only_endpoints_http` and `admin_login_redirect_http` cover the automated evidence. Manual NVDA/keyboard-only confirmation with a real timeout, 2FA, multiple tabs and disabled/private browser storage remains required.
 
 ## Current Summary
 

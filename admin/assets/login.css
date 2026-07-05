@@ -10,6 +10,9 @@
   --login-btn-bg: #f8fafc;
   --login-btn-text: #102a43;
   --login-btn-border: #6b7280;
+  --login-info-bg: #eef4fb;
+  --login-info-border: #1565c0;
+  --login-info-text: #143f66;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,6 +28,9 @@
     --login-btn-bg: #252540;
     --login-btn-text: #e0e0e0;
     --login-btn-border: #73799a;
+    --login-info-bg: #102a43;
+    --login-info-border: #4da6ff;
+    --login-info-text: #b8dcff;
   }
 }
 
@@ -64,6 +70,19 @@ button {
 
 .error {
   color: var(--login-error);
+}
+
+.login-info {
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  color: var(--login-info-text);
+  background: var(--login-info-bg);
+  border: 1px solid var(--login-info-border);
+  border-radius: 0.5rem;
+}
+
+.login-info p {
+  margin: 0.35rem 0;
 }
 
 :focus-visible {

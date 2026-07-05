@@ -1900,6 +1900,23 @@ try {
             break;
         }
     }
+    $contentLockExpiredSession = koraPrimeTestSession([], 'kora-http-content-lock-expired-' . bin2hex(random_bytes(3)));
+    $contentLockExpiredResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/content_lock_refresh.php',
+        [
+            'csrf_token' => 'expired-session-token',
+            'entity_type' => 'article',
+            'entity_id' => '1',
+        ],
+        $contentLockExpiredSession['cookie'],
+        0
+    );
+    $contentLockExpiredPayload = json_decode($contentLockExpiredResponse['body'], true);
+    if (httpIntegrationStatusCode($contentLockExpiredResponse) !== 401
+        || !is_array($contentLockExpiredPayload)
+        || ($contentLockExpiredPayload['ok'] ?? null) !== false) {
+        $adminJsonPostOnlyEndpointIssues[] = 'content lock heartbeat po vypršení session nevrátil JSON 401 bez ztráty lokálního konceptu';
+    }
     httpIntegrationPrintResult('admin_json_post_only_endpoints_http', $adminJsonPostOnlyEndpointIssues, $failures);
 
     $cspReportIssues = [];
@@ -2324,6 +2341,12 @@ try {
     }
     if ($widgetsLoginRedirect !== $widgetsPath) {
         $adminLoginRedirectIssues[] = 'admin login stránka pro widgets redirect nezachovala hidden redirect';
+    }
+    if (!str_contains($widgetsLoginPage['body'], 'id="admin-login-return-info"')
+        || !str_contains($widgetsLoginPage['body'], 'Po přihlášení vás vrátíme na původní administrační stránku.')
+        || !str_contains($widgetsLoginPage['body'], 'lokální záložní koncept')
+        || !str_contains($widgetsLoginPage['body'], 'aria-describedby="admin-login-return-info"')) {
+        $adminLoginRedirectIssues[] = 'admin login stránka pro návrat po re-auth nevykreslila textovou informaci o návratu a lokálním konceptu';
     }
 
     $widgetsLoginResponse = postUrl(

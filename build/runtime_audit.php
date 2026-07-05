@@ -10031,11 +10031,17 @@ foreach ([
     'name="redirect"',
     "header('Location: ' . \$redirect);",
     'adminLoginStylesheetTag()',
+    '$showReturnNotice = $redirect !== BASE_URL . \'/admin/index.php\';',
+    '$loginDescriptionIds[] = \'admin-login-return-info\';',
+    'id="admin-login-return-info" class="login-info" role="status" aria-atomic="true"',
+    'Po přihlášení vás vrátíme na původní administrační stránku.',
+    'lokální záložní koncept',
+    'aria-describedby="<?= h(implode(\' \', $loginDescriptionIds)) ?>"',
     'autocomplete="username"',
     'autocomplete="current-password"',
     'id="admin-login-errors" class="error" role="alert" aria-atomic="true" aria-labelledby="admin-login-errors-heading"',
     '<p id="admin-login-errors-heading"><?= h($error) ?></p>',
-    'aria-describedby="admin-login-errors"',
+    '$loginDescriptionIds[] = \'admin-login-errors\';',
 ] as $adminLoginFragment) {
     if (!str_contains($adminLoginSource, $adminLoginFragment)) {
         $adminLoginRedirectIssues[] = 'admin login is missing redirect fragment: ' . $adminLoginFragment;
@@ -10068,6 +10074,8 @@ foreach ([
     '.totp-code-input',
     'letter-spacing: 0.3rem',
     '.login-secondary-action',
+    '.login-info',
+    'var(--login-info-text)',
     '.skip-link:focus',
 ] as $adminLoginCssFragment) {
     if (!str_contains($adminLoginCssSource, $adminLoginCssFragment)) {
@@ -10096,6 +10104,8 @@ if ($adminHttpIntegrationSource === '') {
     foreach ([
         "httpIntegrationPrintResult('admin_login_redirect_http'",
         "httpIntegrationPrintResult('migrate_login_redirect_http'",
+        'admin login stránka pro návrat po re-auth nevykreslila textovou informaci o návratu a lokálním konceptu',
+        'aria-describedby="admin-login-return-info"',
     ] as $httpLoginRedirectFragment) {
         if (!str_contains($adminHttpIntegrationSource, $httpLoginRedirectFragment)) {
             $adminLoginRedirectIssues[] = 'http integration is missing admin redirect scenario: ' . $httpLoginRedirectFragment;
@@ -10209,6 +10219,18 @@ foreach ([
     'auth.php' => [$adminAuthSource, 'function verifyCsrf(bool $rotate = true): void', 'if ($rotate)'],
     'content_lock_refresh.php' => [$adminContentLockRefreshSource, 'verifyCsrf(false);', "'csrf_token' => csrfToken()"],
     'admin/layout.php' => [$adminLayoutSource, 'function adminRenderContentLockRefreshScript', 'syncCsrfToken', 'input[name="csrf_token"]'],
+    'admin/layout.php autosave recovery' => [
+        $adminLayoutSource,
+        'notifySessionExpired',
+        'response.status===401',
+        'Přihlášení pravděpodobně vypršelo. Rozepsaný obsah se dál ukládá lokálně; před odesláním se znovu přihlaste.',
+        'var recoveryKey=key+"_submitted";',
+        'input[type="email"][name],input[type="url"][name],input[type="number"][name],input[type="date"][name],input[type="time"][name]',
+        'function saveDraft(targetKey)',
+        'Nalezen záložní koncept z posledního odeslání',
+        'saveDraft(recoveryKey);',
+        'localStorage.removeItem(recoveryKey)',
+    ],
     'admin/blog_form.php' => [$blogFormSource, "adminRenderContentLockRefreshScript('article', \$id)"],
     'admin/page_form.php' => [$pageFormSource, "adminRenderContentLockRefreshScript('page', \$id)"],
     'admin/news_form.php' => [$newsFormSource, "adminRenderContentLockRefreshScript('news', \$id)"],
@@ -10225,6 +10247,10 @@ foreach ([
 if (!str_contains($httpIntegrationBuildSource, 'contentLockHeartbeatAttempt <= 3')
     || !str_contains($httpIntegrationBuildSource, 'opakovaný content lock heartbeat se stejným CSRF tokenem')) {
     $sessionSecurityIssues[] = 'build/http_integration.php is missing repeated content-lock CSRF heartbeat coverage';
+}
+if (!str_contains($httpIntegrationBuildSource, 'contentLockExpiredResponse')
+    || !str_contains($httpIntegrationBuildSource, 'content lock heartbeat po vypršení session nevrátil JSON 401 bez ztráty lokálního konceptu')) {
+    $sessionSecurityIssues[] = 'build/http_integration.php is missing expired-session content-lock heartbeat coverage';
 }
 if ($sessionSecurityIssues === []) {
     echo "OK\n";
@@ -14720,6 +14746,9 @@ $loginLight = [
     'btn-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-bg'),
     'btn-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-text'),
     'btn-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-border'),
+    'info-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-bg'),
+    'info-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-border'),
+    'info-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-text'),
 ];
 $loginDark = [
     'bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-bg', 'last'),
@@ -14732,6 +14761,9 @@ $loginDark = [
     'btn-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-bg', 'last'),
     'btn-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-text', 'last'),
     'btn-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-btn-border', 'last'),
+    'info-bg' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-bg', 'last'),
+    'info-border' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-border', 'last'),
+    'info-text' => $contrastCssHexVariable($contrastAdminLoginCssSource, 'login-info-text', 'last'),
 ];
 $public = [
     'bg-main' => $contrastCssHexVariable($contrastPublicCssSource, 'bg-main'),
@@ -14806,9 +14838,11 @@ foreach ([
     'admin dark info inline badge' => [$adminDark['inline-info-text'], $adminDark['inline-info-bg'], 4.5],
     'admin login light text' => [$loginLight['text'], $loginLight['bg'], 4.5],
     'admin login light button text' => [$loginLight['btn-text'], $loginLight['btn-bg'], 4.5],
+    'admin login light reauth info' => [$loginLight['info-text'], $loginLight['info-bg'], 4.5],
     'admin login light skip link text' => [$loginLight['skip-text'], $loginLight['skip-bg'], 4.5],
     'admin login dark text' => [$loginDark['text'], $loginDark['bg'], 4.5],
     'admin login dark button text' => [$loginDark['btn-text'], $loginDark['btn-bg'], 4.5],
+    'admin login dark reauth info' => [$loginDark['info-text'], $loginDark['info-bg'], 4.5],
     'admin login dark skip link text' => [$loginDark['skip-text'], $loginDark['skip-bg'], 4.5],
     'public body text on background' => [$public['text-main'], $public['bg-main'], 4.5],
     'public body text on surface' => [$public['text-main'], $public['surface'], 4.5],
@@ -14843,9 +14877,11 @@ foreach ([
     'admin login light focus ring' => [$loginLight['focus'], $loginLight['bg'], 3.0],
     'admin login light input border' => [$loginLight['input-border'], $loginLight['input-bg'], 3.0],
     'admin login light button border' => [$loginLight['btn-border'], $loginLight['btn-bg'], 3.0],
+    'admin login light reauth info border' => [$loginLight['info-border'], $loginLight['info-bg'], 3.0],
     'admin login dark focus ring' => [$loginDark['focus'], $loginDark['bg'], 3.0],
     'admin login dark input border' => [$loginDark['input-border'], $loginDark['input-bg'], 3.0],
     'admin login dark button border' => [$loginDark['btn-border'], $loginDark['btn-bg'], 3.0],
+    'admin login dark reauth info border' => [$loginDark['info-border'], $loginDark['info-bg'], 3.0],
     'public core focus ring' => ['#005fcc', '#ffffff', 3.0],
     'public default focus ring on surface' => [$public['accent'], $public['surface'], 3.0],
     'public default focus ring on page background' => [$public['accent'], $public['bg-main'], 3.0],

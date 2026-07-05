@@ -25,6 +25,11 @@ if (isLoggedIn()) {
 }
 
 $error = '';
+$showReturnNotice = $redirect !== BASE_URL . '/admin/index.php';
+$loginDescriptionIds = [];
+if ($showReturnNotice) {
+    $loginDescriptionIds[] = 'admin-login-return-info';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('login', 5, 300);
@@ -91,6 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     sleep(1);
     $error = 'Nesprávný e-mail nebo heslo.';
 }
+if ($error !== '') {
+    $loginDescriptionIds[] = 'admin-login-errors';
+}
 ?>
 <!DOCTYPE html>
 <html lang="cs">
@@ -111,7 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   <?php endif; ?>
 
-  <form method="post" novalidate<?php if ($error !== ''): ?> aria-describedby="admin-login-errors"<?php endif; ?>>
+  <?php if ($showReturnNotice): ?>
+    <div id="admin-login-return-info" class="login-info" role="status" aria-atomic="true">
+      <p><strong>Po přihlášení vás vrátíme na původní administrační stránku.</strong></p>
+      <p>Pokud se přihlašujete po vypršení session, rozepsaný formulář může po návratu nabídnout lokální záložní koncept.</p>
+    </div>
+  <?php endif; ?>
+
+  <form method="post" novalidate<?php if ($loginDescriptionIds !== []): ?> aria-describedby="<?= h(implode(' ', $loginDescriptionIds)) ?>"<?php endif; ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
     <fieldset>
