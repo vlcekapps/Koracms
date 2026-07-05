@@ -328,7 +328,7 @@ $fieldErrorMessages = [
       <small id="slots-error" class="field-help field-error"><?= h($fieldErrorMessages['slots']) ?></small>
     <?php endif; ?>
 
-    <fieldset class="res-resource-generator">
+    <fieldset class="res-resource-generator" aria-describedby="res-resource-generator-error">
       <legend>Hromadné přidání slotů</legend>
       <div class="res-resource-inline-grid">
         <div>
@@ -349,6 +349,7 @@ $fieldErrorMessages = [
         </div>
         <button type="button" id="btn-generate" class="btn res-resource-inline-button">Generovat sloty</button>
       </div>
+      <p id="res-resource-generator-error" class="field-help field-error" role="alert" aria-atomic="true" hidden></p>
     </fieldset>
 
     <?php for ($d = 0; $d < 7; $d++): ?>
@@ -386,7 +387,7 @@ $fieldErrorMessages = [
     <div class="res-resource-inline-grid res-resource-blocked-grid">
       <div>
         <label for="block_date">Datum</label>
-        <input type="date" id="block_date" class="res-resource-inline-control">
+        <input type="date" id="block_date" class="res-resource-inline-control" aria-describedby="res-resource-block-date-error">
       </div>
       <div>
         <label for="block_reason">Důvod</label>
@@ -394,6 +395,7 @@ $fieldErrorMessages = [
       </div>
       <button type="button" id="btn-add-blocked" class="btn res-resource-inline-button">Přidat</button>
     </div>
+    <p id="res-resource-block-date-error" class="field-help field-error" role="alert" aria-atomic="true" hidden></p>
     <input type="hidden" name="deleted_blocked_ids" id="deleted_blocked_ids" value="">
     <div id="blocked-list">
       <?php foreach ($blocked as $bi => $bl): ?>
@@ -422,6 +424,27 @@ $fieldErrorMessages = [
 <script nonce="<?= cspNonce() ?>">
 (function () {
   var live = document.getElementById('a11y-live');
+  var generatorError = document.getElementById('res-resource-generator-error');
+  var blockedDateError = document.getElementById('res-resource-block-date-error');
+
+  function showClientError(errorNode, message, focusTarget) {
+    if (!errorNode) {
+      return;
+    }
+    errorNode.textContent = message;
+    errorNode.hidden = false;
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      focusTarget.focus();
+    }
+  }
+
+  function clearClientError(errorNode) {
+    if (!errorNode) {
+      return;
+    }
+    errorNode.textContent = '';
+    errorNode.hidden = true;
+  }
 
   // ── Slug auto-generation ──
   var nameInput = document.getElementById('name');
@@ -514,13 +537,20 @@ $fieldErrorMessages = [
 
   // ── Bulk generator ──
   document.getElementById('btn-generate').addEventListener('click', function () {
-    var from   = document.getElementById('gen_from').value;
-    var length = parseInt(document.getElementById('gen_length').value, 10);
+    var fromInput = document.getElementById('gen_from');
+    var lengthInput = document.getElementById('gen_length');
+    var untilInput = document.getElementById('gen_until');
+    var from   = fromInput.value;
+    var length = parseInt(lengthInput.value, 10);
     var gap    = parseInt(document.getElementById('gen_gap').value, 10);
-    var until  = document.getElementById('gen_until').value;
+    var until  = untilInput.value;
+    if (isNaN(gap) || gap < 0) {
+      gap = 0;
+    }
 
     if (!from || !until || !length || length < 1) {
-      alert('Vyplňte všechny parametry generátoru.');
+      var focusTarget = !from ? fromInput : (!until ? untilInput : lengthInput);
+      showClientError(generatorError, 'Vyplňte první čas, poslední čas a délku alespoň 1 minutu.', focusTarget);
       return;
     }
 
@@ -537,10 +567,11 @@ $fieldErrorMessages = [
     }
 
     if (generated.length === 0) {
-      alert('Nelze vygenerovat žádné sloty s danými parametry.');
+      showClientError(generatorError, 'Upravte časy generátoru tak, aby se mezi první začátek a poslední konec vešel alespoň jeden slot zadané délky.', untilInput);
       return;
     }
 
+    clearClientError(generatorError);
     for (var d = 0; d < 7; d++) {
       var container = document.getElementById('day-slots-' + d);
       container.innerHTML = '';
@@ -569,9 +600,15 @@ $fieldErrorMessages = [
   var deletedBlockedIds = [];
 
   document.getElementById('btn-add-blocked').addEventListener('click', function () {
-    var dateVal   = document.getElementById('block_date').value;
-    var reasonVal = document.getElementById('block_reason').value;
-    if (!dateVal) { alert('Zadejte datum.'); return; }
+    var blockDateInput = document.getElementById('block_date');
+    var blockReasonInput = document.getElementById('block_reason');
+    var dateVal   = blockDateInput.value;
+    var reasonVal = blockReasonInput.value;
+    if (!dateVal) {
+      showClientError(blockedDateError, 'Vyberte datum blokovaného dne, nebo řádek nepřidávejte.', blockDateInput);
+      return;
+    }
+    clearClientError(blockedDateError);
 
     var idx = blockedCounter++;
     var dateFieldId = 'blocked-date-new-' + idx;
@@ -587,9 +624,9 @@ $fieldErrorMessages = [
       '<button type="button" class="btn btn-danger" data-remove-blocked>Odebrat<span class="sr-only"> blokovaný den</span></button>';
     blockedList.appendChild(div);
 
-    document.getElementById('block_date').value = '';
-    document.getElementById('block_reason').value = '';
-    document.getElementById('block_date').focus();
+    blockDateInput.value = '';
+    blockReasonInput.value = '';
+    blockDateInput.focus();
     if (live) live.textContent = 'Blokovaný den přidán';
   });
 

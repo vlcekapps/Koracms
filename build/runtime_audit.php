@@ -16692,6 +16692,28 @@ if (str_contains($reservationFormSource, 'title="Max. rezervací"')) {
     $adminFieldErrorIssues[] = 'reservation resource slot max field still uses title instead of a real label';
 }
 foreach ([
+    'reservation resource generator error target' => 'id="res-resource-generator-error" class="field-help field-error" role="alert" aria-atomic="true" hidden',
+    'reservation resource generator describedby' => 'aria-describedby="res-resource-generator-error"',
+    'reservation resource blocked date error target' => 'id="res-resource-block-date-error" class="field-help field-error" role="alert" aria-atomic="true" hidden',
+    'reservation resource blocked date describedby' => 'aria-describedby="res-resource-block-date-error"',
+    'reservation resource client error helper' => 'function showClientError(errorNode, message, focusTarget)',
+    'reservation resource generator clears client error' => 'clearClientError(generatorError);',
+    'reservation resource blocked date clears client error' => 'clearClientError(blockedDateError);',
+] as $reservationClientValidationLabel => $reservationClientValidationFragment) {
+    if (!str_contains($reservationFormSource, $reservationClientValidationFragment)) {
+        $adminFieldErrorIssues[] = $reservationClientValidationLabel . ' is missing text-backed client validation feedback';
+    }
+}
+foreach ([
+    "alert('Vyplňte všechny parametry generátoru.');",
+    "alert('Nelze vygenerovat žádné sloty s danými parametry.');",
+    "alert('Zadejte datum.');",
+] as $reservationClientAlertFragment) {
+    if (str_contains($reservationFormSource, $reservationClientAlertFragment)) {
+        $adminFieldErrorIssues[] = 'reservation resource form still uses browser alert for client validation: ' . $reservationClientAlertFragment;
+    }
+}
+foreach ([
     'poll option remove button' => [
         $pollFormValidationSource,
         [

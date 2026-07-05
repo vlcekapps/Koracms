@@ -132,6 +132,8 @@ Veřejný booking flow nově používá stejnou přísnější logiku i pro samo
 
 Editor zdrojů rezervací používá i u existujících a dynamicky přidávaných blokovaných dnů skutečné skryté popisky polí (`label` + `id`) pro datum a důvod, takže čtečka obrazovky nepřijde o kontext ani po přidání řádku JavaScriptem.
 
+Klientské chyby v hromadném generátoru slotů a při přidání blokovaného dne bez data se zobrazují jako inline text u dané části formuláře, ne jako prohlížečové modální okno. Text radí, co opravit, a focus se vrací na pole, které vyžaduje zásah.
+
 To je důležité hlavně po ručních úpravách nebo importech, kdy se nejčastěji objeví překlep v datu, obrácený rozsah nebo neplatný čas.
 
 ---
