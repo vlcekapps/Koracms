@@ -108,6 +108,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Stabilnější Full CI pro modulové validační scénáře** – HTTP integrační test validace Vývěsky si nově sám zapne modul `board`, takže výsledek nezávisí na tom, jaký profil nebo výchozí modulové nastavení má čisté testovací prostředí.
 
 ### Opraveno
+- **Full CI na čisté instalaci** – sitemap dotazy pro veřejné landing stránky kategorií/témat/typů jsou kompatibilní s MySQL 8 `ONLY_FULL_GROUP_BY` a HTTP integrační test rezervačních připomínek už nezávisí na lokálním SMTP/from nastavení.
 - **Slugy blogových statických stránek** – statické stránky přiřazené ke konkrétnímu blogu mohou mít stejný slug jako stránka v jiném blogu, protože veřejná URL obsahuje i slug blogu. Globální stránky zůstávají unikátní mezi globálními stránkami a formulář po validační chybě už neztratí rozepsaný obsah.
 - **Error suggestion pro importní formuláře** – JSON import, WordPress WXR, eStránky XML import a downloader fotek z eStránek už u prázdného nebo neplatného souboru/URL zobrazují chybový alert a field-level chybu s `aria-describedby`; HTTP integrace hlídá návrat těchto stavů.
 - **Error suggestion pro veřejná custom pole Form Builderu** – povinná textová, výběrová, souhlasová a souborová pole, neplatný e-mail, neplatná URL, nepovolená hodnota select/radio/checkbox group a upload s nepovoleným typem nebo velikostí mají akční field-level text; unit testy, runtime audit a HTTP integrace hlídají návrat patternu.

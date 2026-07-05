@@ -5384,6 +5384,7 @@ try {
     httpIntegrationPrintResult('author_content_hub_http', $authorHubIssues, $failures);
 
     $reservationIssues = [];
+    saveSetting('contact_email', 'http-reservations@example.test');
     saveSetting('module_reservations', '1');
     clearSettingsCache();
 
@@ -5701,7 +5702,7 @@ try {
         }
 
         $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
-        if (!str_contains($sitemapResponse['body'], h(boardCategoryUrl($boardCategory)))) {
+        if (!str_contains($sitemapResponse['body'], h($baseUrl . boardCategoryPath($boardCategory)))) {
             $boardIssues[] = 'sitemap neobsahuje veřejnou kategorii vývěsky s publikovanou položkou';
         }
 
@@ -6047,7 +6048,7 @@ try {
         }
 
         $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
-        if (!str_contains($sitemapResponse['body'], h(eventTypeUrl($eventType)))) {
+        if (!str_contains($sitemapResponse['body'], h($baseUrl . eventTypePath($eventType)))) {
             $eventIssues[] = 'sitemap neobsahuje veřejný typ akce s publikovanou událostí';
         }
     }

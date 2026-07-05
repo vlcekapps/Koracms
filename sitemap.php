@@ -115,7 +115,7 @@ if (isModuleEnabled('blog')) {
                 AND a.status = 'published'
                 AND (a.publish_at IS NULL OR a.publish_at <= NOW())
              WHERE c.slug <> ''
-             GROUP BY c.id, c.name, c.slug, c.blog_id, b.slug, c.created_at, c.updated_at
+             GROUP BY c.id, c.name, c.slug, c.blog_id, b.slug, b.sort_order, c.created_at, c.updated_at
              ORDER BY b.sort_order ASC, c.name ASC"
         )->fetchAll();
         foreach ($categoryList as $category) {
@@ -146,7 +146,7 @@ if (isModuleEnabled('blog')) {
                 AND a.status = 'published'
                 AND (a.publish_at IS NULL OR a.publish_at <= NOW())
              WHERE t.slug <> ''
-             GROUP BY t.id, t.name, t.slug, t.blog_id, b.slug, t.created_at, t.updated_at
+             GROUP BY t.id, t.name, t.slug, t.blog_id, b.slug, b.sort_order, t.created_at, t.updated_at
              ORDER BY b.sort_order ASC, t.name ASC"
         )->fetchAll();
         foreach ($tagList as $tag) {
@@ -225,7 +225,7 @@ if (isModuleEnabled('chat')) {
                 AND c.conversation_type = 'public'
                 AND c.public_visibility = 'approved'
              WHERE t.is_active = 1
-             GROUP BY t.id, t.slug, t.created_at, t.updated_at
+             GROUP BY t.id, t.name, t.slug, t.sort_order, t.created_at, t.updated_at
              ORDER BY t.sort_order ASC, t.name ASC"
         )->fetchAll();
         foreach ($chatTopics as $topic) {
@@ -269,7 +269,7 @@ if (isModuleEnabled('board')) {
              INNER JOIN cms_board b ON b.category_id = c.id
                 AND " . boardPublicVisibilitySql('b') . "
              WHERE c.slug <> ''
-             GROUP BY c.id, c.name, c.slug, c.created_at, c.updated_at
+             GROUP BY c.id, c.name, c.slug, c.sort_order, c.created_at, c.updated_at
              ORDER BY c.sort_order ASC, c.name ASC"
         )->fetchAll();
         foreach ($boardCategories as $category) {
@@ -362,7 +362,7 @@ if (isModuleEnabled('faq')) {
              INNER JOIN cms_faqs f ON f.category_id = c.id
                 AND " . faqPublicVisibilitySql('f') . "
              WHERE c.slug <> ''
-             GROUP BY c.id, c.slug, c.created_at, c.updated_at
+             GROUP BY c.id, c.name, c.slug, c.sort_order, c.created_at, c.updated_at
              ORDER BY c.sort_order ASC, c.name ASC"
         )->fetchAll();
         foreach ($faqCategories as $category) {
@@ -439,7 +439,7 @@ if (isModuleEnabled('events')) {
              INNER JOIN cms_events e ON e.event_type_id = t.id
              WHERE t.is_active = 1
                AND " . eventPublicVisibilitySql('e') . "
-             GROUP BY t.id, t.slug, t.updated_at
+             GROUP BY t.id, t.title, t.slug, t.sort_order, t.updated_at
              ORDER BY t.sort_order, t.title"
         )->fetchAll();
         foreach ($eventTypes as $eventType) {
