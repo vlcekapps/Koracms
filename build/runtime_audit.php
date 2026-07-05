@@ -18142,6 +18142,50 @@ if ($widgetRenderIssues === []) {
     }
 }
 
+echo "=== public_consistent_help_guardrails ===\n";
+$publicConsistentHelpIssues = [];
+$publicConsistentHelpCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
+foreach ([
+    'footer help navigation markup' => [
+        'source' => $uiSource,
+        'fragments' => [
+            '$footerHelpLinks',
+            '$footerHelpNavigation',
+            "isModuleEnabled('contact')",
+            "isModuleEnabled('chat')",
+            '/contact/index.php',
+            '/chat/index.php',
+            'class="footer-help-nav" aria-labelledby="site-footer-help-heading"',
+            'id="site-footer-help-heading">Pomoc a kontakt</h2>',
+            '$footerWidgets',
+        ],
+    ],
+    'footer help navigation CSS' => [
+        'source' => $publicConsistentHelpCssSource,
+        'fragments' => [
+            '.footer-help-nav',
+            '.footer-help-nav h2',
+            '.footer-help-nav ul',
+            '.footer-help-nav a',
+            'min-height: 2rem',
+        ],
+    ],
+] as $publicConsistentHelpLabel => $publicConsistentHelpGuardrail) {
+    foreach ($publicConsistentHelpGuardrail['fragments'] as $publicConsistentHelpFragment) {
+        if (!str_contains($publicConsistentHelpGuardrail['source'], $publicConsistentHelpFragment)) {
+            $publicConsistentHelpIssues[] = $publicConsistentHelpLabel . ' is missing fragment: ' . $publicConsistentHelpFragment;
+        }
+    }
+}
+if ($publicConsistentHelpIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($publicConsistentHelpIssues as $publicConsistentHelpIssue) {
+        echo '- ' . $publicConsistentHelpIssue . "\n";
+    }
+}
+
 echo "=== blog_static_pages_guardrails ===\n";
 $blogStaticPageIssues = [];
 $blogStaticPageControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/page.php');

@@ -3138,6 +3138,56 @@ try {
 
     httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
 
+    $publicConsistentHelpIssues = [];
+    $publicHelpOriginalContactModule = getSetting('module_contact', '0');
+    $publicHelpOriginalChatModule = getSetting('module_chat', '0');
+    saveSetting('module_contact', '1');
+    saveSetting('module_chat', '1');
+    clearSettingsCache();
+
+    $publicHelpResponses = [
+        'homepage' => fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0),
+        'search' => fetchUrl($baseUrl . BASE_URL . '/search.php?q=kontakt', $publicWidgetSession['cookie'], 0),
+    ];
+    foreach ($publicHelpResponses as $publicHelpLabel => $publicHelpResponse) {
+        $publicHelpBody = $publicHelpResponse['body'];
+        if (httpIntegrationStatusCode($publicHelpResponse) !== 200) {
+            $publicConsistentHelpIssues[] = $publicHelpLabel . ' nevrátila 200 pro kontrolu veřejné help navigace';
+            continue;
+        }
+        foreach ([
+            'class="footer-help-nav" aria-labelledby="site-footer-help-heading"',
+            '<h2 id="site-footer-help-heading">Pomoc a kontakt</h2>',
+            'href="' . BASE_URL . '/contact/index.php"',
+            'href="' . BASE_URL . '/chat/index.php"',
+        ] as $publicHelpNeedle) {
+            if (!str_contains($publicHelpBody, $publicHelpNeedle)) {
+                $publicConsistentHelpIssues[] = $publicHelpLabel . ' neobsahuje očekávaný fragment veřejné help navigace: ' . $publicHelpNeedle;
+            }
+        }
+        $publicHelpFooterPosition = strpos($publicHelpBody, 'class="footer-help-nav"');
+        $publicHelpFooterSearchOffset = $publicHelpFooterPosition !== false ? $publicHelpFooterPosition : 0;
+        $publicHelpContactPosition = strpos($publicHelpBody, 'href="' . BASE_URL . '/contact/index.php"', $publicHelpFooterSearchOffset);
+        $publicHelpChatPosition = strpos($publicHelpBody, 'href="' . BASE_URL . '/chat/index.php"', $publicHelpFooterSearchOffset);
+        if ($publicHelpContactPosition === false || $publicHelpChatPosition === false || $publicHelpContactPosition > $publicHelpChatPosition) {
+            $publicConsistentHelpIssues[] = $publicHelpLabel . ' nemá stabilní pořadí veřejné help navigace Kontakt, Chat';
+        }
+    }
+
+    saveSetting('module_contact', '0');
+    saveSetting('module_chat', '0');
+    clearSettingsCache();
+    $publicHelpDisabledResponse = fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0);
+    if (httpIntegrationStatusCode($publicHelpDisabledResponse) !== 200 || str_contains($publicHelpDisabledResponse['body'], 'footer-help-nav')) {
+        $publicConsistentHelpIssues[] = 'veřejná help navigace se vykreslila i bez zapnutého kontaktu nebo chatu';
+    }
+
+    saveSetting('module_contact', $publicHelpOriginalContactModule);
+    saveSetting('module_chat', $publicHelpOriginalChatModule);
+    clearSettingsCache();
+
+    httpIntegrationPrintResult('public_consistent_help_http', $publicConsistentHelpIssues, $failures);
+
     $contactCenterIssues = [];
     $contactOriginalModule = getSetting('module_contact', '0');
     $contactOriginalEmail = getSetting('contact_email', '');

@@ -13,6 +13,7 @@ Aktuální ruční evidence:
 - 2026-07-04: auth flow pro WCAG 2.2 `3.3.8 Accessible Authentication (Minimum)` potvrzen jako funkční se správcem hesel, TOTP jednorázovým kódem, tokenovým resetem a chybovými stavy; opakovat při změnách auth/session chování.
 - 2026-07-04: command centrum, widget dialog a content/media picker potvrzené bez regrese při ručním keyboard-only/NVDA průchodu; opakovat při změnách JS dialogů, focus trapu nebo admin layoutu.
 - 2026-07-05: administrace má jednotnou stránku `Nápověda a podpora` ve stabilní spodní navigaci. Runtime `admin_consistent_help_guardrails` a HTTP `admin_consistent_help_http` hlídají link order, read-only route guard, nadpisové sekce a inventář podpory; ručně zbývá potvrdit průchod s klávesnicí/NVDA a veřejné/theme help mechanismy.
+- 2026-07-05: výchozí veřejná šablona má ve footeru navigaci `Pomoc a kontakt` pro Kontakt a Chat podle zapnutých modulů. Runtime `public_consistent_help_guardrails` a HTTP `public_consistent_help_http` hlídají default public baseline; ručně zbývá potvrdit čtení a focus ve footeru a projít custom theme varianty.
 - 2026-07-04: automatizované guardraily pro WCAG 2.2 `1.3.5 Identify Input Purpose` pokrývají auth flow, veřejný kontakt, food objednávky, guest rezervace a Form Builder renderer. Ručně zbývá ověřit, že Firefox/Chrome a používaný správce hesel nebo autofill tato metadata skutečně nabízejí bez matoucích návrhů.
 - 2026-07-04: automatizovaný guardrail pro WCAG 2.2 `3.3.7 Redundant Entry` pokrývá veřejný kontakt a Food objednávku: `currentUserContactDefaults()` čte jméno, e-mail a telefon z profilu, HTTP integrace ověřuje předvyplnění v renderu a POST chybové stavy dál zachovávají ručně upravené hodnoty. Ručně zbývá projít širší auth/rezervační/objednávková/custom flow a potvrdit, že předvyplnění není matoucí na sdíleném zařízení.
 - 2026-07-04: runtime `text_spacing_guardrails` hlídá core CSS proti zápornému `letter-spacing`, textovému ořezu přes ellipsis/line clamp a `!important` zámkům na text-spacing vlastnostech. Ručně zbývá browser průchod s text-spacing override.
@@ -63,16 +64,17 @@ p {
 
 1. Otevřít homepage a přes skip link přejít na obsah.
 2. Projít hlavní navigaci, vyhledávání, footer widgety a sociální odkazy jen klávesnicí.
-3. Otevřít blog index, článek s osnovou, kategorii, štítek a sérii.
-4. Odeslat komentář se správnými i chybnými hodnotami.
-5. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U prázdného povinného textu, výběru, souhlasu a uploadu, neplatného e-mailu, neplatné URL, nepovolené výběrové hodnoty, chybné přílohy a chybné ověřovací otázky ověřit, že čtečka oznámí field-level text s konkrétním návrhem opravy.
-6. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
-7. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů. U přímého videa s WebVTT titulky a audio-description stopou ověřit, že prohlížeč nabízí stopy se správným jazykem a názvem; u audio/video snippetu s `transcript` ověřit dosažitelný odkaz na přepis.
-8. Otevřít podcastovou epizodu s vyplněným přepisem a ověřit, že čtečka oznámí sekci `Přepis epizody` jako textovou alternativu audia; u externích video embedů ověřit titulky nebo popsanou odpovědnost autora.
-9. Projít reprezentativní článek nebo stránku podle `author-content-checklist.md`: obrázky s alt textem, obrázky s textem, cizojazyčný úsek s `lang`, srozumitelné odkazy, nadpisy, tabulky, barvu, vlastní HTML a externí embed.
-10. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe; jako přihlášený veřejný uživatel ověřit, že kontaktní formulář předvyplní známé jméno a e-mail, ale dovolí hodnoty upravit a po validační chybě je nepřepíše zpět profilem.
-11. Otevřít board, downloads, events, places, reservations a food detail; u guest rezervace vyvolat chybnou ověřovací otázku a ověřit field-level text s návrhem opravy u pole captcha. U Food objednávky jako přihlášený veřejný uživatel ověřit předvyplněné jméno, e-mail a telefon, ruční úpravu a zachování upravených hodnot po chybě.
-12. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
+3. Ve footeru ověřit navigaci `Pomoc a kontakt`: čtečka má ohlásit nadpis, odkazy Kontakt a Chat mají být ve stejném pořadí na homepage i na jiné veřejné stránce a nemají se zobrazit, pokud jsou oba moduly vypnuté.
+4. Otevřít blog index, článek s osnovou, kategorii, štítek a sérii.
+5. Odeslat komentář se správnými i chybnými hodnotami.
+6. Otevřít Form Builder formulář, způsobit chybu, opravit ji a odeslat; u polí pro jméno, e-mail, telefon, URL a firmu ověřit, že prohlížeč nebo správce hesel nabídne odpovídající autofill. U prázdného povinného textu, výběru, souhlasu a uploadu, neplatného e-mailu, neplatné URL, nepovolené výběrové hodnoty, chybné přílohy a chybné ověřovací otázky ověřit, že čtečka oznámí field-level text s konkrétním návrhem opravy.
+7. Otevřít galerie album a detail fotografie, ověřit alt text, figcaption a metadata.
+8. Otevřít media/PDF/audio/video snippet a ověřit názvy iframe/playerů. U přímého videa s WebVTT titulky a audio-description stopou ověřit, že prohlížeč nabízí stopy se správným jazykem a názvem; u audio/video snippetu s `transcript` ověřit dosažitelný odkaz na přepis.
+9. Otevřít podcastovou epizodu s vyplněným přepisem a ověřit, že čtečka oznámí sekci `Přepis epizody` jako textovou alternativu audia; u externích video embedů ověřit titulky nebo popsanou odpovědnost autora.
+10. Projít reprezentativní článek nebo stránku podle `author-content-checklist.md`: obrázky s alt textem, obrázky s textem, cizojazyčný úsek s `lang`, srozumitelné odkazy, nadpisy, tabulky, barvu, vlastní HTML a externí embed.
+11. Otevřít ankety, FAQ feedback, chat, kontakt a newsletter subscribe; jako přihlášený veřejný uživatel ověřit, že kontaktní formulář předvyplní známé jméno a e-mail, ale dovolí hodnoty upravit a po validační chybě je nepřepíše zpět profilem.
+12. Otevřít board, downloads, events, places, reservations a food detail; u guest rezervace vyvolat chybnou ověřovací otázku a ověřit field-level text s návrhem opravy u pole captcha. U Food objednávky jako přihlášený veřejný uživatel ověřit předvyplněné jméno, e-mail a telefon, ruční úpravu a zachování upravených hodnot po chybě.
+13. Ověřit 404, 429, potvrzení e-mailu, odhlášení newsletteru a maintenance stránku.
 
 ## Scénáře administrace
 
@@ -128,6 +130,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Admin nápověda je dostupná ze stabilního místa v navigaci, má smysluplné nadpisy a nevyžaduje hledání odlišné podpory na každé obrazovce.
+- Veřejný footer default šablony má stabilní `Pomoc a kontakt` navigaci a custom theme nezavádí odlišný, hůře dostupný help/contact vzor.
 - Tabulky mají caption nebo pojmenování přes skutečný nadpis.
 - Odkazy otevírané v novém okně to oznamují ve svém přístupném názvu.
 - Při zoomu 200 % a 400 % nedochází ke ztrátě obsahu nebo vodorovnému scrollu mimo povolené výjimky.

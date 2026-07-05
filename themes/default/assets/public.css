@@ -2249,6 +2249,31 @@ body.theme-public textarea.form-control {
   color: #f1c98c;
 }
 
+.footer-help-nav {
+  margin: 0 0 1rem;
+}
+
+.footer-help-nav h2 {
+  margin: 0 0 0.5rem;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.footer-help-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.footer-help-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+}
+
 .visitor-counter-block {
   margin: 0 0 0.8rem;
 }

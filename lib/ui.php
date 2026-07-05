@@ -15,6 +15,22 @@ function siteFooter(): string
     $versionHtml = h($version);
 
     $footerWidgets = renderZone('footer', 'footer-widgets');
+    $footerHelpLinks = [];
+    if (isModuleEnabled('contact')) {
+        $footerHelpLinks[] = "<li><a href=\"{$b}/contact/index.php\">Kontakt</a></li>";
+    }
+    if (isModuleEnabled('chat')) {
+        $footerHelpLinks[] = "<li><a href=\"{$b}/chat/index.php\">Chat</a></li>";
+    }
+    $footerHelpNavigation = '';
+    if ($footerHelpLinks !== []) {
+        $footerHelpNavigation = '  <nav class="footer-help-nav" aria-labelledby="site-footer-help-heading">' . "\n"
+            . '    <h2 id="site-footer-help-heading">Pomoc a kontakt</h2>' . "\n"
+            . "    <ul>\n"
+            . '      ' . implode("\n      ", $footerHelpLinks) . "\n"
+            . "    </ul>\n"
+            . "  </nav>\n";
+    }
     $accountLinks = '';
     if (isModuleEnabled('reservations')) {
         if (isLoggedIn() && isPublicUser()) {
@@ -31,6 +47,7 @@ function siteFooter(): string
 
     return "<footer>\n"
          . $footerWidgets
+         . $footerHelpNavigation
          . "  <p>&copy; {$year} {$siteName}</p>\n"
          . "  <p><a href=\"{$b}/feed.php\">RSS</a></p>\n"
          . ($accountLinks !== '' ? "  <p>{$accountLinks}</p>\n" : '')
