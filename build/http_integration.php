@@ -5484,7 +5484,7 @@ try {
     clearSettingsCache();
     $previousOutboundMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
     putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
-    runKoraCron($pdo);
+    cronProcessReservationReminders($pdo);
     $reminderStmt = $pdo->prepare(
         "SELECT reminder_sent_at, reminder_last_error
          FROM cms_res_bookings
@@ -5495,7 +5495,7 @@ try {
     if (empty($reminderRow['reminder_sent_at']) || (string)($reminderRow['reminder_last_error'] ?? '') !== '') {
         $reservationIssues[] = 'cron neoznačil připomínku rezervace jako odeslanou bez chyby';
     }
-    runKoraCron($pdo);
+    cronProcessReservationReminders($pdo);
     if ($previousOutboundMailFlag === false) {
         putenv('KORA_DISABLE_OUTBOUND_MAIL');
     } else {
