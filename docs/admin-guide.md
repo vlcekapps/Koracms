@@ -1080,6 +1080,8 @@ Editor statických stránek používá stejný field-level pattern pro název, s
 
 Editor FAQ používá stejný field-level pattern pro povinnou otázku, odpověď a slug veřejné stránky. Souhrnný alert je atomický a lokální text poradí, jak otázku formulovat pro návštěvníka, doplnit odpověď nebo zadat unikátní slug z malých písmen, číslic a pomlček.
 
+Editor FAQ kategorií navazuje u názvu, slugu a meta title. Chyba má správci poradit krátký název kategorie, slug s použitelným písmenem nebo číslem, jiný unikátní slug nebo zkrácení meta title na 160 znaků.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.

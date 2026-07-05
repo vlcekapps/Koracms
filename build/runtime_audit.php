@@ -16945,6 +16945,39 @@ foreach ([
     }
 }
 foreach ([
+    '$fieldErrorMessages = [];',
+    '$error = \'Kategorii FAQ nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
+    '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Účet a přihlášení.\';',
+    '$error = \'Meta title kategorie FAQ je příliš dlouhý. U pole Meta title je konkrétní nápověda.\';',
+    '$fieldErrorMessages[\'meta_title\'] = \'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.\';',
+    '$error = \'Slug veřejné FAQ kategorie není možné vytvořit. U pole Slug je konkrétní nápověda.\';',
+    '$fieldErrorMessages[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba ucet-prihlaseni.\';',
+    '$error = \'Slug veřejné FAQ kategorie už používá jiná kategorie. U pole Slug je konkrétní nápověda.\';',
+    '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
+    '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+    "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
+    "adminRenderFieldError('slug', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['slug'] ?? '');",
+    "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['meta_title'] ?? '');",
+] as $faqCategorySuggestionFragment) {
+    if (!str_contains($faqCatsSource, $faqCategorySuggestionFragment)) {
+        $adminFieldErrorIssues[] = 'FAQ categories editor is missing actionable field-level error fragment: ' . $faqCategorySuggestionFragment;
+    }
+}
+foreach ([
+    '$error = \'Název kategorie je povinný.\';',
+    '$error = \'Meta title může mít nejvýše 160 znaků.\';',
+    '$error = \'Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.\';',
+    '$error = \'Tento slug už používá jiná kategorie FAQ.\';',
+    '<p id="form-error" class="error" role="alert"><?= h($error) ?></p>',
+    "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$error);",
+    "adminRenderFieldError('slug', \$editId === null ? \$fieldErrors : [], [], \$error);",
+    "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$error);",
+] as $faqCategoryGenericErrorFragment) {
+    if (str_contains($faqCatsSource, $faqCategoryGenericErrorFragment)) {
+        $adminFieldErrorIssues[] = 'FAQ categories editor still uses a generic validation alert or field-level message without actionable context';
+    }
+}
+foreach ([
     'JSON import upload error suggestion' => [
         'source' => $importAdminSource,
         'required' => [

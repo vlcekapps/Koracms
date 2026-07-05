@@ -7,6 +7,7 @@ $pdo = db_connect();
 $success = false;
 $error = '';
 $fieldErrors = [];
+$fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
 $formState = [
     'name' => '',
@@ -65,21 +66,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($formState['name'] === '') {
-        $error = 'Název kategorie je povinný.';
+        $error = 'Kategorii FAQ nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
         $fieldErrors[] = 'name';
+        $fieldErrorMessages['name'] = 'Doplňte krátký název kategorie, například Účet a přihlášení.';
     } elseif (mb_strlen($formState['meta_title'], 'UTF-8') > 160) {
-        $error = 'Meta title může mít nejvýše 160 znaků.';
+        $error = 'Meta title kategorie FAQ je příliš dlouhý. U pole Meta title je konkrétní nápověda.';
         $fieldErrors[] = 'meta_title';
+        $fieldErrorMessages['meta_title'] = 'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.';
     } else {
         $submittedSlug = faqCategorySlug($formState['slug'] !== '' ? $formState['slug'] : $formState['name']);
         if ($submittedSlug === '') {
-            $error = 'Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.';
+            $error = 'Slug veřejné FAQ kategorie není možné vytvořit. U pole Slug je konkrétní nápověda.';
             $fieldErrors[] = 'slug';
+            $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba ucet-prihlaseni.';
         } else {
             $uniqueSlug = uniqueFaqCategorySlug($pdo, $submittedSlug, $updateId);
             if ($formState['slug'] !== '' && $uniqueSlug !== $submittedSlug) {
-                $error = 'Tento slug už používá jiná kategorie FAQ.';
+                $error = 'Slug veřejné FAQ kategorie už používá jiná kategorie. U pole Slug je konkrétní nápověda.';
                 $fieldErrors[] = 'slug';
+                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.';
             } elseif ($updateId !== null) {
                 $existingStmt = $pdo->prepare("SELECT * FROM cms_faq_categories WHERE id = ?");
                 $existingStmt->execute([$updateId]);
@@ -162,7 +167,7 @@ foreach ($categories as $cat) {
 adminHeader('Kategorie znalostní báze');
 ?>
 <?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -175,7 +180,7 @@ adminHeader('Kategorie znalostní báze');
                value="<?= h($editId === null ? $formState['name'] : '') ?>"
                <?= adminFieldAttributes('name', $editId === null ? $fieldErrors : [], [], ['faq-category-name-help']) ?>>
         <small id="faq-category-name-help" class="field-help">Zobrazuje se ve filtrech, na landing stránce i v drobečkové navigaci.</small>
-        <?php adminRenderFieldError('name', $editId === null ? $fieldErrors : [], [], $error); ?>
+        <?php adminRenderFieldError('name', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="slug">Slug</label>
@@ -183,7 +188,7 @@ adminHeader('Kategorie znalostní báze');
                value="<?= h($editId === null ? $formState['slug'] : '') ?>"
                <?= adminFieldAttributes('slug', $editId === null ? $fieldErrors : [], [], ['faq-category-slug-help']) ?>>
         <small id="faq-category-slug-help" class="field-help">Volitelné. Veřejná adresa bude mít tvar <code>/faq/kategorie/slug-kategorie</code>.</small>
-        <?php adminRenderFieldError('slug', $editId === null ? $fieldErrors : [], [], $error); ?>
+        <?php adminRenderFieldError('slug', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="parent_id">Nadřazená kategorie</label>
@@ -209,7 +214,7 @@ adminHeader('Kategorie znalostní báze');
         <input type="text" id="meta_title" name="meta_title" class="admin-input-auto" maxlength="160"
                value="<?= h($editId === null ? $formState['meta_title'] : '') ?>"
                <?= adminFieldAttributes('meta_title', $editId === null ? $fieldErrors : []) ?>>
-        <?php adminRenderFieldError('meta_title', $editId === null ? $fieldErrors : [], [], $error); ?>
+        <?php adminRenderFieldError('meta_title', $editId === null ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? ''); ?>
       </div>
       <div class="form-group">
         <label for="meta_description">Meta description</label>
@@ -254,14 +259,14 @@ adminHeader('Kategorie znalostní báze');
                     <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" class="admin-input-auto" required aria-required="true" maxlength="255"
                            value="<?= h($formState['name'] !== '' ? $formState['name'] : (string)$category['name']) ?>"
                            <?= adminFieldAttributes('name', $editId === (int)$category['id'] ? $fieldErrors : [], [], [], 'name-error-' . (int)$category['id']) ?>>
-                    <?php adminRenderFieldError('name', $editId === (int)$category['id'] ? $fieldErrors : [], [], $error, 'name-error-' . (int)$category['id']); ?>
+                    <?php adminRenderFieldError('name', $editId === (int)$category['id'] ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="slug-<?= (int)$category['id'] ?>">Slug</label>
                     <input type="text" id="slug-<?= (int)$category['id'] ?>" name="slug" class="admin-input-auto" maxlength="150" pattern="[a-z0-9\-]+"
                            value="<?= h($formState['slug'] !== '' ? $formState['slug'] : (string)$category['slug']) ?>"
                            <?= adminFieldAttributes('slug', $editId === (int)$category['id'] ? $fieldErrors : [], [], [], 'slug-error-' . (int)$category['id']) ?>>
-                    <?php adminRenderFieldError('slug', $editId === (int)$category['id'] ? $fieldErrors : [], [], $error, 'slug-error-' . (int)$category['id']); ?>
+                    <?php adminRenderFieldError('slug', $editId === (int)$category['id'] ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? '', 'slug-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="parent-<?= (int)$category['id'] ?>">Nadřazená kategorie</label>
@@ -284,7 +289,7 @@ adminHeader('Kategorie znalostní báze');
                     <input type="text" id="meta-title-<?= (int)$category['id'] ?>" name="meta_title" class="admin-input-auto" maxlength="160"
                            value="<?= h($formState['meta_title'] !== '' ? $formState['meta_title'] : (string)($category['meta_title'] ?? '')) ?>"
                            <?= adminFieldAttributes('meta_title', $editId === (int)$category['id'] ? $fieldErrors : [], [], [], 'meta-title-error-' . (int)$category['id']) ?>>
-                    <?php adminRenderFieldError('meta_title', $editId === (int)$category['id'] ? $fieldErrors : [], [], $error, 'meta-title-error-' . (int)$category['id']); ?>
+                    <?php adminRenderFieldError('meta_title', $editId === (int)$category['id'] ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? '', 'meta-title-error-' . (int)$category['id']); ?>
                   </div>
                   <div class="form-group">
                     <label for="meta-description-<?= (int)$category['id'] ?>">Meta description</label>

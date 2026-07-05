@@ -6234,6 +6234,89 @@ try {
     $faqQuestion = 'Jak funguje HTTP test FAQ kategorií?';
 
     foreach ([
+        'name_required' => [
+            'post' => [
+                'name' => '',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+                'parent_id' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii FAQ nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="faq-category-name-help name-error"',
+                'id="name-error"',
+                'Doplňte krátký název kategorie, například Účet a přihlášení.',
+            ],
+            'forbidden' => ['Název kategorie je povinný.'],
+        ],
+        'slug_empty' => [
+            'post' => [
+                'name' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'sort_order' => '0',
+                'parent_id' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné FAQ kategorie není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="faq-category-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba ucet-prihlaseni.',
+            ],
+            'forbidden' => ['Slug kategorie musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'meta_title_long' => [
+            'post' => [
+                'name' => 'FAQ kategorie s dlouhým meta titulkem',
+                'slug' => 'faq-kategorie-dlouhy-meta-title-' . bin2hex(random_bytes(3)),
+                'description' => '',
+                'meta_title' => str_repeat('Příliš dlouhý meta title FAQ kategorie ', 6),
+                'meta_description' => '',
+                'sort_order' => '0',
+                'parent_id' => '',
+            ],
+            'expected' => [
+                'id="form-error" class="error" role="alert" aria-atomic="true">Meta title kategorie FAQ je příliš dlouhý.',
+                'aria-invalid="true" aria-describedby="meta_title-error"',
+                'id="meta_title-error"',
+                'Zkraťte meta title nejvýše na 160 znaků, nebo pole nechte prázdné.',
+            ],
+            'forbidden' => ['Meta title může mít nejvýše 160 znaků.'],
+        ],
+    ] as $faqCategoryValidationLabel => $faqCategoryValidationExpectation) {
+        $faqCategoryValidationPost = array_merge(
+            ['csrf_token' => $adminSession['csrf']],
+            (array)$faqCategoryValidationExpectation['post']
+        );
+        $faqCategoryValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/faq_cats.php',
+            $faqCategoryValidationPost,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($faqCategoryValidationResponse) !== 200) {
+            $faqIssues[] = 'FAQ kategorie chybový stav ' . $faqCategoryValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+
+        foreach ((array)$faqCategoryValidationExpectation['expected'] as $faqCategoryValidationFragment) {
+            if (!str_contains($faqCategoryValidationResponse['body'], (string)$faqCategoryValidationFragment)) {
+                $faqIssues[] = 'FAQ kategorie chybový stav ' . $faqCategoryValidationLabel . ' nezobrazil fragment: ' . (string)$faqCategoryValidationFragment;
+            }
+        }
+        foreach ((array)$faqCategoryValidationExpectation['forbidden'] as $faqCategoryForbiddenFragment) {
+            if (str_contains($faqCategoryValidationResponse['body'], (string)$faqCategoryForbiddenFragment)) {
+                $faqIssues[] = 'FAQ kategorie chybový stav ' . $faqCategoryValidationLabel . ' pořád používá starý obecný text';
+            }
+        }
+    }
+
+    foreach ([
         'required' => [
             'url' => $baseUrl . BASE_URL . '/admin/faq_form.php?err=required',
             'expected' => [
@@ -6324,8 +6407,18 @@ try {
             $adminSession['cookie'],
             0
         );
-        if (!str_contains($duplicateFaqCategoryResponse['body'], 'Tento slug už používá jiná kategorie FAQ.')) {
-            $faqIssues[] = 'duplicitní slug FAQ kategorie nebyl odmítnut';
+        foreach ([
+            'id="form-error" class="error" role="alert" aria-atomic="true">Slug veřejné FAQ kategorie už používá jiná kategorie.',
+            'aria-invalid="true" aria-describedby="faq-category-slug-help slug-error"',
+            'id="slug-error"',
+            'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.',
+        ] as $duplicateFaqCategoryFragment) {
+            if (!str_contains($duplicateFaqCategoryResponse['body'], $duplicateFaqCategoryFragment)) {
+                $faqIssues[] = 'duplicitní slug FAQ kategorie nezobrazil field-level fragment: ' . $duplicateFaqCategoryFragment;
+            }
+        }
+        if (str_contains($duplicateFaqCategoryResponse['body'], 'Tento slug už používá jiná kategorie FAQ.')) {
+            $faqIssues[] = 'duplicitní slug FAQ kategorie pořád používá starý obecný text';
         }
 
         $oldFaqCategoryPath = faqCategoryPath($faqCategory);
