@@ -5474,6 +5474,8 @@ try {
         $reservationIssues[] = 'neplatný kalendářový token nevrátil bezpečnou 404/no-store odpověď';
     }
 
+    $previousOutboundMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
+    putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
     runKoraCron($pdo);
     $reminderStmt = $pdo->prepare(
         "SELECT reminder_sent_at, reminder_last_error
@@ -5486,6 +5488,11 @@ try {
         $reservationIssues[] = 'cron neoznačil připomínku rezervace jako odeslanou bez chyby';
     }
     runKoraCron($pdo);
+    if ($previousOutboundMailFlag === false) {
+        putenv('KORA_DISABLE_OUTBOUND_MAIL');
+    } else {
+        putenv('KORA_DISABLE_OUTBOUND_MAIL=' . $previousOutboundMailFlag);
+    }
     $reminderEventsStmt = $pdo->prepare(
         "SELECT COUNT(*)
          FROM cms_res_booking_events
