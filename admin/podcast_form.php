@@ -75,13 +75,14 @@ $err = trim((string)($_GET['err'] ?? ''));
 $podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
 $podcastEpisodePublishAtErrorMessage = 'Plánované zveřejnění musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro zveřejnění po uložení či schválení.';
 $podcastEpisodeAudioUploadErrorMessage = 'Audio soubor se nepodařilo nahrát. Nahrajte MP3, OGG, WAV, M4A nebo AAC; pokud používáte externí audio odkaz, nechte pole souboru prázdné.';
+$podcastEpisodeImageErrorMessage = 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px. Nahrajte vhodný čtvercový obrázek, nebo pole nechte prázdné a použijte cover pořadu.';
 $formError = match ($err) {
-    'required' => 'Název epizody je povinný.',
-    'slug' => 'Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.',
-    'slug_taken' => 'Tento slug už v rámci pořadu používá jiná epizoda.',
+    'required' => 'Epizodu podcastu nejde uložit bez názvu. U pole Název epizody je konkrétní nápověda.',
+    'slug' => 'Slug epizody není použitelný. U pole Slug veřejné stránky je konkrétní nápověda.',
+    'slug_taken' => 'Slug epizody už v rámci pořadu používá jiná epizoda. U pole Slug veřejné stránky je konkrétní nápověda.',
     'url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio' => $podcastEpisodeAudioUploadErrorMessage,
-    'image' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px.',
+    'image' => $podcastEpisodeImageErrorMessage,
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
     default => '',
 };
@@ -95,11 +96,11 @@ $fieldErrorMap = [
     'publish_at' => ['publish_at'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Název epizody je povinný.',
-    'slug' => 'Slug epizody musí zůstat jedinečný v rámci pořadu.',
+    'title' => 'Doplňte název epizody tak, jak se má zobrazit na webu a v podcastových aplikacích.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček v rámci aktuálního pořadu.',
     'audio_url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio_file' => $podcastEpisodeAudioUploadErrorMessage,
-    'image_file' => 'Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.',
+    'image_file' => $podcastEpisodeImageErrorMessage,
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
 ];
 $imageHelpIds = (string)$episode['image_url'] !== ''
@@ -110,7 +111,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na epizody podcastu</a></p>

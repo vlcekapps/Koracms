@@ -50,11 +50,11 @@ $placeUrlErrorMessage = 'Webový odkaz musí být platná http/https adresa. Lze
 $placeContactEmailErrorMessage = 'Kontaktní e-mail místa musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $placeImageUploadErrorMessage = 'Hlavní obrázek místa se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím povinné pole názvu místa.',
-    'slug' => 'Slug místa je povinný a musí být unikátní.',
+    'required' => 'Místo nejde uložit bez názvu. U pole Název je konkrétní nápověda.',
+    'slug' => 'Slug místa není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.',
     'url' => $placeUrlErrorMessage,
     'email' => $placeContactEmailErrorMessage,
-    'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
+    'coordinates' => 'Souřadnice místa nejsou použitelné. U polí zeměpisné šířky a délky je konkrétní nápověda.',
     'image' => $placeImageUploadErrorMessage,
     default => '',
 };
@@ -67,11 +67,11 @@ $fieldErrorMap = [
     'image' => ['place_image'],
 ];
 $fieldErrorMessages = [
-    'name' => 'Název místa je povinný.',
-    'slug' => 'Slug místa je povinný a musí být unikátní.',
+    'name' => 'Doplňte krátký název místa, například Obecní knihovna.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
     'url' => $placeUrlErrorMessage,
     'contact_email' => $placeContactEmailErrorMessage,
-    'coordinates' => 'Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.',
+    'coordinates' => 'Vyplňte obě souřadnice jako čísla v rozsahu -90 až 90 pro šířku a -180 až 180 pro délku, nebo obě pole nechte prázdná.',
     'image' => $placeImageUploadErrorMessage,
 ];
 
@@ -83,7 +83,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush">

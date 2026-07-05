@@ -58,6 +58,8 @@ $createdResourceIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
 $createdSubscriberEmails = [];
+$createdPodcastShowIds = [];
+$createdPodcastEpisodeIds = [];
 $createdContactTopicIds = [];
 $createdContactMessageIds = [];
 $createdChatTopicIds = [];
@@ -1152,6 +1154,18 @@ try {
     httpIntegrationPrintResult('discovery_endpoints_http', $discoveryEndpointIssues, $failures);
 
     $podcastAdminValidationIssues = [];
+    $podcastEpisodeValidationShowSlug = 'http-podcast-episode-validation-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_shows (title, slug, description, language, status, is_published, created_at, updated_at)
+         VALUES (?, ?, ?, 'cs', 'published', 1, NOW(), NOW())"
+    )->execute([
+        'HTTP podcast pro validaci epizod',
+        $podcastEpisodeValidationShowSlug,
+        '<p>Pořad pro HTTP render validačních chyb epizody.</p>',
+    ]);
+    $podcastEpisodeValidationShowId = (int)$pdo->lastInsertId();
+    $createdPodcastShowIds[] = $podcastEpisodeValidationShowId;
+
     foreach ([
         'required' => [
             'expected' => [
@@ -1216,6 +1230,64 @@ try {
         foreach ((array)$podcastAdminValidationSpec['forbidden'] as $podcastAdminForbiddenFragment) {
             if (str_contains($podcastAdminValidationResponse['body'], (string)$podcastAdminForbiddenFragment)) {
                 $podcastAdminValidationIssues[] = 'podcast show editor s err=' . (string)$podcastAdminValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Epizodu podcastu nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte název epizody tak, jak se má zobrazit na webu a v podcastových aplikacích.',
+            ],
+            'forbidden' => ['Název epizody je povinný.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug epizody není použitelný.',
+                'aria-invalid="true" aria-describedby="podcast-episode-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček v rámci aktuálního pořadu.',
+            ],
+            'forbidden' => ['Slug epizody musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'slug_taken' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug epizody už v rámci pořadu používá jiná epizoda.',
+                'aria-invalid="true" aria-describedby="podcast-episode-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček v rámci aktuálního pořadu.',
+            ],
+            'forbidden' => ['Tento slug už v rámci pořadu používá jiná epizoda.'],
+        ],
+        'image' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Obrázek epizody musí být čtvercový JPG nebo PNG',
+                'aria-invalid="true" aria-describedby="podcast-episode-image-help image_file-error"',
+                'id="image_file-error"',
+                'Nahrajte vhodný čtvercový obrázek, nebo pole nechte prázdné a použijte cover pořadu.',
+            ],
+            'forbidden' => ['Obrázek epizody musí být čtvercový JPG nebo PNG v požadovaném rozměru.'],
+        ],
+    ] as $podcastEpisodeValidationError => $podcastEpisodeValidationSpec) {
+        $podcastEpisodeValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_form.php?show_id=' . $podcastEpisodeValidationShowId . '&err=' . rawurlencode((string)$podcastEpisodeValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($podcastEpisodeValidationResponse) !== 200) {
+            $podcastAdminValidationIssues[] = 'podcast episode editor s err=' . (string)$podcastEpisodeValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$podcastEpisodeValidationSpec['expected'] as $podcastEpisodeExpectedFragment) {
+            if (!str_contains($podcastEpisodeValidationResponse['body'], (string)$podcastEpisodeExpectedFragment)) {
+                $podcastAdminValidationIssues[] = 'podcast episode editor s err=' . (string)$podcastEpisodeValidationError . ' neobsahuje: ' . (string)$podcastEpisodeExpectedFragment;
+            }
+        }
+        foreach ((array)$podcastEpisodeValidationSpec['forbidden'] as $podcastEpisodeForbiddenFragment) {
+            if (str_contains($podcastEpisodeValidationResponse['body'], (string)$podcastEpisodeForbiddenFragment)) {
+                $podcastAdminValidationIssues[] = 'podcast episode editor s err=' . (string)$podcastEpisodeValidationError . ' stále používá starý obecný text';
             }
         }
     }
@@ -3411,6 +3483,54 @@ try {
         }
     }
     httpIntegrationPrintResult('newsletter_compose_validation_http', $newsletterComposeIssues, $failures);
+
+    $newsEditorValidationIssues = [];
+    saveSetting('module_news', '1');
+    clearSettingsCache();
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Novinku nejde uložit bez titulku a textu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte krátký titulek novinky, například Uzavírka knihovny.',
+                'aria-invalid="true" aria-describedby="news-content-help content-error"',
+                'id="content-error"',
+                'Doplňte text novinky. Pokud ještě není hotová, uložte ji jako koncept.',
+            ],
+            'forbidden' => ['Titulek a text novinky jsou povinné.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug novinky není použitelný nebo už existuje.',
+                'aria-invalid="true" aria-describedby="news-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Slug novinky je povinný a musí být unikátní.'],
+        ],
+    ] as $newsEditorValidationError => $newsEditorValidationSpec) {
+        $newsEditorValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/news_form.php?err=' . rawurlencode((string)$newsEditorValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($newsEditorValidationResponse) !== 200) {
+            $newsEditorValidationIssues[] = 'editor novinky s err=' . (string)$newsEditorValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$newsEditorValidationSpec['expected'] as $newsEditorExpectedFragment) {
+            if (!str_contains($newsEditorValidationResponse['body'], (string)$newsEditorExpectedFragment)) {
+                $newsEditorValidationIssues[] = 'editor novinky s err=' . (string)$newsEditorValidationError . ' neobsahuje: ' . (string)$newsEditorExpectedFragment;
+            }
+        }
+        foreach ((array)$newsEditorValidationSpec['forbidden'] as $newsEditorForbiddenFragment) {
+            if (str_contains($newsEditorValidationResponse['body'], (string)$newsEditorForbiddenFragment)) {
+                $newsEditorValidationIssues[] = 'editor novinky s err=' . (string)$newsEditorValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+    httpIntegrationPrintResult('news_editor_validation_http', $newsEditorValidationIssues, $failures);
 
     $publicConsistentHelpIssues = [];
     $publicHelpOriginalContactModule = getSetting('module_contact', '0');
@@ -7264,6 +7384,96 @@ try {
             $eventIssues[] = 'formulář události neobsahuje typ akce, místo a opakování';
         }
 
+        foreach ([
+            'required' => [
+                'url' => $baseUrl . BASE_URL . '/admin/event_form.php?err=required',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Událost nejde uložit bez názvu a data začátku.',
+                    'aria-invalid="true" aria-describedby="title-error"',
+                    'id="title-error"',
+                    'Doplňte krátký název události, například Letní koncert v parku.',
+                    'id="event-dates-error"',
+                    'Vyberte datum začátku události.',
+                ],
+                'forbidden' => ['Vyplňte prosím všechna povinná pole. Událost musí mít název a datum začátku.'],
+            ],
+            'slug' => [
+                'url' => $baseUrl . BASE_URL . '/admin/event_form.php?err=slug',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Slug události není použitelný nebo už existuje.',
+                    'aria-invalid="true" aria-describedby="event-slug-help slug-error"',
+                    'id="slug-error"',
+                    'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+                ],
+                'forbidden' => ['Slug události je povinný a musí být unikátní.'],
+            ],
+            'place' => [
+                'url' => $baseUrl . BASE_URL . '/admin/event_form.php?err=place',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Vybrané místo není dostupné.',
+                    'aria-invalid="true" aria-describedby="event-place-help place_id-error"',
+                    'id="place_id-error"',
+                    'Vyberte dostupné spravované místo, nebo vazbu na místo ponechte prázdnou',
+                ],
+                'forbidden' => ['Vybrané místo neexistuje nebo není dostupné.'],
+            ],
+            'recurrence' => [
+                'url' => $baseUrl . BASE_URL . '/admin/event_form.php?err=recurrence',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Opakování události není použitelné.',
+                    'id="event-recurrence-error"',
+                    'Vyberte typ opakování, interval 1 až 12 a počet termínů 2 až 52.',
+                ],
+                'forbidden' => ['Opakování musí mít platný typ, interval a počet termínů od 2 do 52.'],
+            ],
+            'place_form_required' => [
+                'url' => $baseUrl . BASE_URL . '/admin/place_form.php?err=required',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Místo nejde uložit bez názvu.',
+                    'aria-invalid="true" aria-describedby="name-error"',
+                    'id="name-error"',
+                    'Doplňte krátký název místa, například Obecní knihovna.',
+                ],
+                'forbidden' => ['Vyplňte prosím povinné pole názvu místa.'],
+            ],
+            'place_form_slug' => [
+                'url' => $baseUrl . BASE_URL . '/admin/place_form.php?err=slug',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Slug místa není použitelný nebo už existuje.',
+                    'aria-invalid="true" aria-describedby="place-slug-help slug-error"',
+                    'id="slug-error"',
+                    'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+                ],
+                'forbidden' => ['Slug místa je povinný a musí být unikátní.'],
+            ],
+            'place_form_coordinates' => [
+                'url' => $baseUrl . BASE_URL . '/admin/place_form.php?err=coordinates',
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Souřadnice místa nejsou použitelné.',
+                    'aria-invalid="true" aria-describedby="place-coordinates-help place-coordinates-error"',
+                    'id="place-coordinates-error"',
+                    'Vyplňte obě souřadnice jako čísla v rozsahu -90 až 90 pro šířku a -180 až 180 pro délku, nebo obě pole nechte prázdná.',
+                ],
+                'forbidden' => ['Zeměpisnou šířku a délku vyplňte obě a ve správném číselném rozsahu.'],
+            ],
+        ] as $eventPlaceValidationLabel => $eventPlaceValidationSpec) {
+            $eventPlaceValidationResponse = fetchUrl((string)$eventPlaceValidationSpec['url'], $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($eventPlaceValidationResponse) !== 200) {
+                $eventIssues[] = 'event/place chybový stav ' . $eventPlaceValidationLabel . ' nevrátil 200';
+                continue;
+            }
+            foreach ((array)$eventPlaceValidationSpec['expected'] as $eventPlaceExpectedFragment) {
+                if (!str_contains($eventPlaceValidationResponse['body'], (string)$eventPlaceExpectedFragment)) {
+                    $eventIssues[] = 'event/place chybový stav ' . $eventPlaceValidationLabel . ' neobsahuje: ' . (string)$eventPlaceExpectedFragment;
+                }
+            }
+            foreach ((array)$eventPlaceValidationSpec['forbidden'] as $eventPlaceForbiddenFragment) {
+                if (str_contains($eventPlaceValidationResponse['body'], (string)$eventPlaceForbiddenFragment)) {
+                    $eventIssues[] = 'event/place chybový stav ' . $eventPlaceValidationLabel . ' stále používá starý obecný text';
+                }
+            }
+        }
+
         $eventDate = (new DateTimeImmutable('+45 days'))->format('Y-m-d');
         $eventResponse = postUrl(
             $baseUrl . BASE_URL . '/admin/event_save.php',
@@ -7448,6 +7658,65 @@ try {
 
     saveSetting('module_downloads', '1');
     clearSettingsCache();
+
+    foreach ([
+        'required' => [
+            'expected' => [
+                'class="error" role="alert" id="form-error" aria-atomic="true">Položku ke stažení nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte krátký název položky, například Instalační balíček Kora CMS 2.4.',
+            ],
+            'forbidden' => ['Název položky je povinný.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'class="error" role="alert" id="form-error" aria-atomic="true">Slug položky ke stažení není použitelný.',
+                'aria-invalid="true" aria-describedby="download-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Slug položky musí obsahovat alespoň jedno písmeno nebo číslo.'],
+        ],
+        'slug_taken' => [
+            'expected' => [
+                'class="error" role="alert" id="form-error" aria-atomic="true">Slug položky ke stažení už používá jiná položka.',
+                'aria-invalid="true" aria-describedby="download-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Tento slug už používá jiná položka ke stažení.'],
+        ],
+        'series' => [
+            'expected' => [
+                'class="error" role="alert" id="form-error" aria-atomic="true">Vybraná série ke stažení není dostupná.',
+                'aria-invalid="true" aria-describedby="download-series-help download_series_id-error"',
+                'id="download_series_id-error"',
+                'Vyberte existující sérii ke stažení, nebo položku ponechte bez série.',
+            ],
+            'forbidden' => ['Vybraná série ke stažení neexistuje.'],
+        ],
+    ] as $downloadItemValidationError => $downloadItemValidationSpec) {
+        $downloadItemValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/download_form.php?err=' . rawurlencode((string)$downloadItemValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($downloadItemValidationResponse) !== 200) {
+            $downloadIssues[] = 'editor položky ke stažení s err=' . (string)$downloadItemValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$downloadItemValidationSpec['expected'] as $downloadItemExpectedFragment) {
+            if (!str_contains($downloadItemValidationResponse['body'], (string)$downloadItemExpectedFragment)) {
+                $downloadIssues[] = 'editor položky ke stažení s err=' . (string)$downloadItemValidationError . ' neobsahuje: ' . (string)$downloadItemExpectedFragment;
+            }
+        }
+        foreach ((array)$downloadItemValidationSpec['forbidden'] as $downloadItemForbiddenFragment) {
+            if (str_contains($downloadItemValidationResponse['body'], (string)$downloadItemForbiddenFragment)) {
+                $downloadIssues[] = 'editor položky ke stažení s err=' . (string)$downloadItemValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
 
     $pdo->prepare(
         "INSERT INTO cms_dl_categories (name, slug, description, meta_title, meta_description, created_at, updated_at)
@@ -10994,6 +11263,15 @@ try {
 
     foreach ($createdSubscriberEmails as $subscriberEmailToDelete) {
         $pdo->prepare("DELETE FROM cms_subscribers WHERE email = ?")->execute([$subscriberEmailToDelete]);
+    }
+    foreach ($createdPodcastEpisodeIds as $podcastEpisodeIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_podcasts WHERE id = ?")->execute([$podcastEpisodeIdToDelete]);
+    }
+    foreach ($createdPodcastShowIds as $podcastShowIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$podcastShowIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_podcast_shows WHERE id = ?")->execute([$podcastShowIdToDelete]);
     }
 
     foreach ($createdContactMessageIds as $contactMessageIdToDelete) {

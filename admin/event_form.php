@@ -89,17 +89,17 @@ $eventUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být plat
 $eventOrganizerEmailErrorMessage = 'E-mail pořadatele musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $eventImageUploadErrorMessage = 'Obrázek události se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím všechna povinná pole. Událost musí mít název a datum začátku.',
-    'slug' => 'Slug události je povinný a musí být unikátní.',
-    'dates' => 'Konec akce nesmí být dříve než její začátek.',
-    'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
+    'required' => 'Událost nejde uložit bez názvu a data začátku. U obou polí je konkrétní nápověda.',
+    'slug' => 'Slug události není použitelný nebo už existuje. U pole Slug (URL události) je konkrétní nápověda.',
+    'dates' => 'Konec akce nesmí být dříve než její začátek. U polí termínu je konkrétní nápověda.',
+    'registration_url' => 'Registrační odkaz není použitelný. U pole Registrační odkaz je konkrétní nápověda.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
     'image' => $eventImageUploadErrorMessage,
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
-    'event_type' => 'Vyberte platný typ akce.',
-    'place' => 'Vybrané místo neexistuje nebo není dostupné.',
-    'recurrence' => 'Opakování musí mít platný typ, interval a počet termínů od 2 do 52.',
+    'event_type' => 'Typ akce není dostupný. U pole Typ akce je konkrétní nápověda.',
+    'place' => 'Vybrané místo není dostupné. U pole Spravované místo konání je konkrétní nápověda.',
+    'recurrence' => 'Opakování události není použitelné. U polí opakování je konkrétní nápověda.',
     default => '',
 };
 $fieldErrorMap = [
@@ -116,18 +116,18 @@ $fieldErrorMap = [
     'recurrence' => ['recurrence_frequency', 'recurrence_interval', 'recurrence_count'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Událost musí mít název.',
-    'event_date' => 'Událost musí mít datum začátku.',
-    'slug' => 'Slug události je povinný a musí být unikátní.',
-    'dates' => 'Konec akce nesmí být dříve než její začátek.',
-    'registration_url' => 'Registrační odkaz musí být platná adresa začínající na http:// nebo https://.',
+    'title' => 'Doplňte krátký název události, například Letní koncert v parku.',
+    'event_date' => 'Vyberte datum začátku události.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+    'dates' => 'Upravte začátek nebo konec tak, aby konec akce byl později než začátek.',
+    'registration_url' => 'Zadejte úplnou http/https adresu registrace, nebo pole nechte prázdné.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
     'image' => $eventImageUploadErrorMessage,
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
-    'event_type' => 'Vyberte platný typ akce.',
-    'place' => 'Vybrané místo neexistuje nebo není dostupné.',
-    'recurrence' => 'Zkontrolujte typ opakování, interval a počet termínů.',
+    'event_type' => 'Vyberte některý z dostupných typů akce, nebo typ nejdřív vytvořte ve správě typů.',
+    'place' => 'Vyberte dostupné spravované místo, nebo vazbu na místo ponechte prázdnou a doplňte ručně psané místo.',
+    'recurrence' => 'Vyberte typ opakování, interval 1 až 12 a počet termínů 2 až 52.',
 ];
 
 adminHeader($id ? 'Upravit událost' : 'Nová událost');
@@ -149,7 +149,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush admin-description--muted">

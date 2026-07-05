@@ -1100,6 +1100,8 @@ Hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie 
 
 Editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety už u hlavních chyb nemají zůstat u obecného „povinné“ nebo „neplatné“. Souhrnný alert má být atomický a lokální text má poradit konkrétní opravu: doplnit titulek/název/text, zvolit jedinečný slug, vybrat položky ze stejného cílového blogu, opravit kategorii, datum vyvěšení, možnosti odpovědi nebo limit vícevýběru.
 
+Editory novinek, událostí, míst, položek ke stažení a podcastových epizod navazují na stejný vzor. Chyba má správci poradit doplnění názvu nebo textu, jedinečný slug, opravu termínů a opakování akce, výběr existujícího typu/místa/série, souřadnice v platném rozsahu nebo vhodný čtvercový obrázek epizody.
+
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 
 E-mailová pole ve vývěsce, událostech, jídelních lístcích, Form Builderu, tématech kontaktu, místech, podcastech, nastavení, profilu a správě uživatelů nepoužívají pouze obecný „platný formát“. Chyba má správci poradit úplnou adresu ve tvaru `jmeno@example.cz`; u volitelných polí možnost pole vynechat a u přihlašovacího e-mailu jedinečnost adresy.

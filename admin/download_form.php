@@ -63,33 +63,40 @@ $downloadChecksumErrorMessage = 'SHA-256 checksum musí mít přesně 64 znaků 
 $downloadFileErrorMessage = 'Nahrajte soubor v povoleném formátu dokumentu, archivu nebo instalačního balíčku, případně místo uploadu vyplňte externí odkaz.';
 $downloadImageUploadErrorMessage = 'Náhledový obrázek položky se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $errorMessage = match ($err) {
-    'required' => 'Název položky je povinný.',
-    'slug' => 'Slug položky musí obsahovat alespoň jedno písmeno nebo číslo.',
-    'slug_taken' => 'Tento slug už používá jiná položka ke stažení.',
+    'required' => 'Položku ke stažení nejde uložit bez názvu. U pole Název je konkrétní nápověda.',
+    'slug' => 'Slug položky ke stažení není použitelný. U pole Slug je konkrétní nápověda.',
+    'slug_taken' => 'Slug položky ke stažení už používá jiná položka. U pole Slug je konkrétní nápověda.',
     'source' => $downloadSourceErrorMessage,
     'url' => $downloadExternalUrlErrorMessage,
     'project_url' => $downloadProjectUrlErrorMessage,
     'release_date' => $downloadReleaseDateErrorMessage,
-    'series' => 'Vybraná série ke stažení neexistuje.',
+    'series' => 'Vybraná série ke stažení není dostupná. U pole Série / řada verzí je konkrétní nápověda.',
     'checksum' => $downloadChecksumErrorMessage,
     'image' => $downloadImageUploadErrorMessage,
     'file' => $downloadFileErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
+    'required' => ['title'],
+    'slug' => ['slug'],
+    'slug_taken' => ['slug'],
     'source' => ['file', 'external_url'],
     'url' => ['external_url'],
     'project_url' => ['project_url'],
     'release_date' => ['release_date'],
+    'series' => ['download_series_id'],
     'checksum' => ['checksum_sha256'],
     'image' => ['download_image'],
     'file' => ['file'],
 ];
 $fieldErrorMessages = [
+    'title' => 'Doplňte krátký název položky, například Instalační balíček Kora CMS 2.4.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
     'source' => $downloadSourceErrorMessage,
     'external_url' => $downloadExternalUrlErrorMessage,
     'project_url' => $downloadProjectUrlErrorMessage,
     'release_date' => $downloadReleaseDateErrorMessage,
+    'series' => 'Vyberte existující sérii ke stažení, nebo položku ponechte bez série.',
     'checksum_sha256' => $downloadChecksumErrorMessage,
     'download_image' => $downloadImageUploadErrorMessage,
     'file' => $downloadFileErrorMessage,
@@ -107,7 +114,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 ?>
 
 <?php if ($errorMessage !== ''): ?>
-  <p class="error" role="alert" id="form-error"><?= h($errorMessage) ?></p>
+  <p class="error" role="alert" id="form-error" aria-atomic="true"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
 <?php if ($id !== null): ?>
@@ -130,13 +137,16 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
     <label for="title">Název <span aria-hidden="true">*</span></label>
     <input type="text" id="title" name="title" required aria-required="true" maxlength="255"
+           <?= adminFieldAttributes('title', $err, $fieldErrorMap) ?>
            value="<?= h((string)$download['title']) ?>">
+    <?php adminRenderFieldError('title', $err, $fieldErrorMap, $fieldErrorMessages['title']); ?>
 
     <label for="slug">Slug <span aria-hidden="true">*</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="255"
-           pattern="[a-z0-9\-]+" aria-describedby="download-slug-help"
+           pattern="[a-z0-9\-]+"<?= adminFieldAttributes('slug', $err, $fieldErrorMap, ['download-slug-help']) ?>
            value="<?= h((string)$download['slug']) ?>">
     <small id="download-slug-help" class="field-help">Adresa se vyplní automaticky podle názvu položky. Pokud ji upravíte ručně, použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $err, $fieldErrorMap, $fieldErrorMessages['slug']); ?>
 
     <label for="download_type">Typ položky</label>
     <select id="download_type" name="download_type">
@@ -245,7 +255,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <?php adminRenderFieldError('checksum_sha256', $err, $fieldErrorMap, $fieldErrorMessages['checksum_sha256'], 'download-checksum-error'); ?>
 
     <label for="download_series_id">Série / řada verzí</label>
-    <select id="download_series_id" name="download_series_id" aria-describedby="download-series-help">
+    <select id="download_series_id" name="download_series_id"<?= adminFieldAttributes('download_series_id', $err, $fieldErrorMap, ['download-series-help']) ?>>
       <option value="">– bez série –</option>
       <?php foreach ($downloadSeriesOptions as $seriesOption): ?>
         <option value="<?= (int)$seriesOption['id'] ?>"<?= (int)($download['download_series_id'] ?? 0) === (int)$seriesOption['id'] ? ' selected' : '' ?>>
@@ -254,6 +264,7 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
       <?php endforeach; ?>
     </select>
     <small id="download-series-help" class="field-help">Série propojí více vydání stejného dokumentu, aplikace nebo balíčku. Spravovat je můžete v části <a href="download_series.php">Série a verze</a>.</small>
+    <?php adminRenderFieldError('download_series_id', $err, $fieldErrorMap, $fieldErrorMessages['series']); ?>
 
     <div class="admin-field-row">
       <label class="admin-checkbox-label">

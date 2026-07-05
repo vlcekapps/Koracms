@@ -483,6 +483,8 @@ Stejné field-level guardraily platí i pro hlavní navigační externí odkazy,
 
 Hlavní obsahové editory navazují stejnou smlouvou. Editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety používají atomický souhrnný alert a field-level texty pro chybějící titulek nebo název, nepoužitelný slug, cílové taxonomie, související články, série, datum vyvěšení, možnosti ankety a vícevýběrové limity.
 
+Editory novinek, událostí, míst, položek ke stažení a podcastových epizod používají stejný field-level error pattern jako hlavní obsahové editory. Souhrnný alert je atomický, dotčená pole dostanou `aria-invalid`, `aria-describedby` míří na existující nápovědu nebo chybový text a lokální hláška správci radí konkrétní opravu místo obecného „neplatné“.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

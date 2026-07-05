@@ -114,6 +114,8 @@ Poznámka k `3.3.3` z 2026-07-05: hlavní navigační externí odkazy, přesměr
 
 Poznámka k `3.3.3` z 2026-07-05: editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety mají zpřesněné souhrnné i field-level chyby. Alerty jsou atomické, dotčená pole dostávají `aria-invalid` a `aria-describedby` na existující nápovědu nebo field-level text; HTTP scénáře `blog_related_articles_http`, `blog_management_validation_http`, `board_save_http`, `food_structured_items_http` a `poll_voting_modes_http` hlídají render a zákaz návratu starých obecných hlášek.
 
+Poznámka k `3.3.3` z 2026-07-05: editory novinek, událostí, míst, položek ke stažení a podcastových epizod mají zpřesněné souhrnné i field-level chyby. Alerty jsou atomické, dotčená pole dostávají `aria-invalid` a `aria-describedby` na existující nápovědu nebo field-level text; HTTP scénáře `news_editor_validation_http`, `events_types_places_recurrence_http`, `downloads_catalog_versions_http` a `podcast_admin_validation_http` hlídají render a zákaz návratu starých obecných hlášek.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

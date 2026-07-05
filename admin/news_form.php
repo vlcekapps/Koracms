@@ -31,8 +31,8 @@ if ($item) {
 $err = trim((string)($_GET['err'] ?? ''));
 $newsUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $formError = match ($err) {
-    'required' => 'Titulek a text novinky jsou povinné.',
-    'slug' => 'Slug novinky je povinný a musí být unikátní.',
+    'required' => 'Novinku nejde uložit bez titulku a textu. U obou polí je konkrétní nápověda.',
+    'slug' => 'Slug novinky není použitelný nebo už existuje. U pole Slug (URL novinky) je konkrétní nápověda.',
     'unpublish_at' => $newsUnpublishAtErrorMessage,
     default => '',
 };
@@ -42,9 +42,9 @@ $fieldErrorMap = [
     'unpublish_at' => ['unpublish_at'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Titulek novinky je povinný.',
-    'content' => 'Text novinky je povinný.',
-    'slug' => 'Slug novinky je povinný a musí být unikátní.',
+    'title' => 'Doplňte krátký titulek novinky, například Uzavírka knihovny.',
+    'content' => 'Doplňte text novinky. Pokud ještě není hotová, uložte ji jako koncept.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.',
     'unpublish_at' => $newsUnpublishAtErrorMessage,
 ];
 
@@ -89,7 +89,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <?php if ($authorName !== ''): ?>
