@@ -63,11 +63,11 @@ $err = trim((string)($_GET['err'] ?? ''));
 $pollTimingErrorMessage = 'Začátek a konec ankety musí být platné datum a čas. Vyplňte datum a čas v příslušných polích, nebo časové omezení nechte prázdné.';
 $pollRangeErrorMessage = 'Konec ankety musí být později než začátek. Upravte datum nebo čas začátku či konce.';
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.',
-    'max_options' => 'Maximální počet možností je 10.',
-    'max_choices' => 'U vícevýběrové ankety zadejte limit od 2 do počtu možností.',
-    'has_votes' => 'Nelze odebrat možnosti, které už mají hlasy.',
-    'slug' => 'Slug ankety je povinný a musí být unikátní.',
+    'required' => 'Anketu nejde uložit bez otázky a alespoň dvou možností odpovědi. U zvýrazněných polí je konkrétní nápověda.',
+    'max_options' => 'Anketa má příliš mnoho možností odpovědi. U sekce Možnosti odpovědi je konkrétní nápověda.',
+    'max_choices' => 'Limit vícevýběrové ankety není použitelný. U pole Maximální počet vybraných možností je konkrétní nápověda.',
+    'has_votes' => 'Možnosti s uloženými hlasy nejde odebrat. U sekce Možnosti odpovědi je konkrétní nápověda.',
+    'slug' => 'Slug ankety není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.',
     'dates' => $pollTimingErrorMessage,
     'range' => $pollRangeErrorMessage,
     'save' => 'Anketu se nepodařilo uložit. Zkuste to prosím znovu.',
@@ -83,16 +83,16 @@ $fieldErrorMap = [
     'range' => ['start_date', 'start_time', 'end_date', 'end_time'],
 ];
 $fieldErrorMessages = [
-    'question' => 'Otázka ankety je povinná.',
-    'slug' => 'Slug ankety je povinný a musí být unikátní.',
-    'max_choices' => 'Limit musí být alespoň 2 a nejvýše tolik, kolik má anketa možností.',
+    'question' => 'Doplňte otázku tak, jak ji návštěvník uvidí na webu.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte otázku pro automatické vytvoření.',
+    'max_choices' => 'Zadejte celé číslo alespoň 2 a nejvýše tolik, kolik má anketa možností.',
     'dates' => $pollTimingErrorMessage,
     'range' => $pollRangeErrorMessage,
 ];
 $optionsErrorMessage = match ($err) {
-    'required' => 'Doplňte alespoň 2 možnosti odpovědi.',
-    'max_options' => 'Maximální počet možností odpovědi je 10.',
-    'has_votes' => 'Možnosti s hlasy nelze odebrat.',
+    'required' => 'Doplňte alespoň dvě neprázdné možnosti odpovědi.',
+    'max_options' => 'Nechte nejvýše deset možností odpovědi a přebytečné řádky odeberte.',
+    'has_votes' => 'Možnosti, které už mají hlasy, ponechte v anketě nebo anketu uzavřete a vytvořte novou.',
     default => '',
 };
 
@@ -104,7 +104,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush">

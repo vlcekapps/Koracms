@@ -60,12 +60,12 @@ $boardDateRangeErrorMessage = 'Datum sejmutí nesmí být dříve než datum vyv
 $boardImageUploadErrorMessage = 'Obrázek oznámení se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
 $boardAttachmentUploadErrorMessage = 'Přílohu se nepodařilo nahrát. Nahrajte PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, ZIP nebo TXT. Pokud přílohu nechcete měnit, nechte pole prázdné.';
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).',
+    'required' => 'Položku vývěsky nejde uložit bez nadpisu a data vyvěšení. U obou polí je konkrétní nápověda.',
     'posted_date' => $boardPostedDateErrorMessage,
     'removal_date' => $boardRemovalDateErrorMessage,
     'dates' => $boardDateRangeErrorMessage,
-    'slug' => 'Slug položky je povinný a musí být unikátní.',
-    'category' => 'Vybraná kategorie neexistuje.',
+    'slug' => 'Slug položky vývěsky není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.',
+    'category' => 'Vybraná kategorie vývěsky není použitelná. U pole Kategorie je konkrétní nápověda.',
     'contact_email' => $boardContactEmailErrorMessage,
     'image' => $boardImageUploadErrorMessage,
     'file' => $boardAttachmentUploadErrorMessage,
@@ -83,13 +83,13 @@ $fieldErrorMap = [
     'file' => ['file'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Nadpis položky je povinný.',
-    'posted_date' => 'Datum vyvěšení je povinné.',
+    'title' => 'Doplňte krátký nadpis položky, například Zápis ze zastupitelstva.',
+    'posted_date' => 'Vyberte datum vyvěšení, od kterého se má položka zobrazovat.',
     'posted_date_invalid' => $boardPostedDateErrorMessage,
     'removal_date' => $boardRemovalDateErrorMessage,
     'dates' => $boardDateRangeErrorMessage,
-    'slug' => 'Slug položky je povinný a musí být unikátní.',
-    'category' => 'Vybraná kategorie neexistuje.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte nadpis pro automatické vytvoření.',
+    'category' => 'Vyberte existující kategorii vývěsky, nebo ponechte položku bez kategorie.',
     'contact_email' => $boardContactEmailErrorMessage,
     'image' => $boardImageUploadErrorMessage,
     'file' => $boardAttachmentUploadErrorMessage,
@@ -108,7 +108,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <?php if ($id): ?>

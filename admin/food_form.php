@@ -41,8 +41,8 @@ $foodValidToErrorMessage = 'Datum „Platí do“ musí být platné kalendářn
 $foodValidRangeErrorMessage = 'Datum „Platí do“ nesmí být dříve než datum „Platí od“. Upravte jedno z dat nebo datum „Platí do“ nechte prázdné.';
 $foodOrderEmailErrorMessage = 'E-mail pro objednávky musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $formError = match ($err) {
-    'required' => 'Vyplňte prosím název lístku.',
-    'slug' => 'Slug lístku je povinný a musí být unikátní.',
+    'required' => 'Lístek nejde uložit bez názvu. U pole Název je konkrétní nápověda.',
+    'slug' => 'Slug lístku není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.',
     'valid_from' => $foodValidFromErrorMessage,
     'valid_to' => $foodValidToErrorMessage,
     'valid_range' => $foodValidRangeErrorMessage,
@@ -58,8 +58,8 @@ $fieldErrorMap = [
     'order_email' => ['order_email'],
 ];
 $fieldErrorMessages = [
-    'title' => 'Název lístku je povinný.',
-    'slug' => 'Slug lístku je povinný a musí být unikátní.',
+    'title' => 'Doplňte název lístku, například Týdenní menu 17.–23. března 2026.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
     'valid_from' => $foodValidFromErrorMessage,
     'valid_to' => $foodValidToErrorMessage,
     'valid_range' => $foodValidRangeErrorMessage,
@@ -80,7 +80,7 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 <?php endif; ?>
 
 <?php if ($formError !== ''): ?>
-  <p role="alert" class="error" id="form-error"><?= h($formError) ?></p>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
 <?php endif; ?>
 
 <p class="admin-description admin-description--flush">

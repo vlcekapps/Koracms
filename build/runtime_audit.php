@@ -14394,9 +14394,21 @@ foreach (["'publish_at'", "'unpublish_at'", "'publish_range'"] as $blogErrorFrag
 if (!str_contains($blogSaveSource, "'publish_at' => \$publishAtSql") || !str_contains($blogSaveSource, "'unpublish_at' => \$unpublishAtSql")) {
     $editorialValidationIssues[] = 'blog save revision snapshot is missing publish_at or unpublish_at';
 }
-foreach (["\$err === 'publish_at'", "\$err === 'unpublish_at'", "\$err === 'publish_range'"] as $blogFormFragment) {
-    if (!str_contains($blogFormSource, $blogFormFragment)) {
-        $editorialValidationIssues[] = 'blog form is missing validation message branch: ' . $blogFormFragment;
+$blogFormValidationFeedback = [
+    'publish_at' => ["\$err === 'publish_at'", "'publish_at' => \$blogPublishAtErrorMessage"],
+    'unpublish_at' => ["\$err === 'unpublish_at'", "'unpublish_at' => \$blogUnpublishAtErrorMessage"],
+    'publish_range' => ["\$err === 'publish_range'", "'publish_range' => \$blogPublishRangeErrorMessage"],
+];
+foreach ($blogFormValidationFeedback as $blogFormError => $blogFormAcceptableFragments) {
+    $blogFormHasFeedback = false;
+    foreach ($blogFormAcceptableFragments as $blogFormFragment) {
+        if (str_contains($blogFormSource, $blogFormFragment)) {
+            $blogFormHasFeedback = true;
+            break;
+        }
+    }
+    if (!$blogFormHasFeedback) {
+        $editorialValidationIssues[] = 'blog form is missing validation message branch: ' . $blogFormError;
     }
 }
 if (!str_contains($blogSaveSource, 'uploadArticleImage(') || str_contains($blogSaveSource, 'new finfo(FILEINFO_MIME_TYPE)') || str_contains($blogSaveSource, 'move_uploaded_file(')) {
@@ -16855,6 +16867,7 @@ $adminFieldErrorForms = [
     'contact topics form' => [$contactTopicsSource, "adminFieldAttributes('name'", "adminFieldAttributes('recipient_email'", "adminRenderFieldError('slug'"],
     'blog series form' => [$blogSeriesAdminSource, "adminFieldAttributes('title', \$seriesFieldErrors", "adminRenderFieldError('title'", 'id="series-title-help"'],
     'blog pages link form' => [$blogPagesAdminSource, "adminFieldAttributes('title', \$linkFieldErrors", "adminFieldAttributes('url', \$linkFieldErrors", 'id="blog-nav-link-error"'],
+    'blog management form' => [$blogsManagementSource, "adminFieldAttributes('name', \$fieldErrors", "adminFieldAttributes('slug', \$fieldErrors", 'id="blog-form-error"'],
     'main navigation link form' => [$menuOverviewSource, "adminFieldAttributes('title', \$linkFieldErrors", "adminFieldAttributes('url', \$linkFieldErrors", 'id="nav-link-error"'],
     'redirects form' => [$redirectsAdminSource, "adminFieldAttributes('old_path'", "adminFieldAttributes('new_path'", 'id="redirect-form-error"'],
     'reservation booking add form' => [$reservationBookingAddFormSource, "adminFieldAttributes('resource_id'", "adminFieldAttributes('user_id'", "adminFieldAttributes('booking_date'"],
@@ -16898,6 +16911,110 @@ foreach ([
             '$linkError = \'Zadejte název odkazu.\';',
             '$linkError = \'Zadejte interní cestu webu nebo úplnou adresu začínající http:// či https:// bez přihlašovacích údajů.\';',
             '<p class="error" role="alert"><?= h($linkError) ?></p>',
+        ],
+    ],
+    'blog article core editor' => [
+        'source' => $blogFormSource,
+        'required' => [
+            '\'required\' => \'Článek nejde uložit bez titulku a textu. U obou polí je konkrétní nápověda.\',',
+            '\'slug\' => \'Slug článku není použitelný nebo už existuje. U pole Slug (URL článku) je konkrétní nápověda.\',',
+            '\'title\' => \'Doplňte krátký titulek článku, například Nové hřiště otevřeno.\',',
+            '\'content\' => \'Doplňte text článku. Pokud ještě není hotový, uložte ho jako koncept.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.\',',
+            '\'category_target\' => \'Vyberte kategorii z aktuálního cílového blogu, nebo ponechte článek bez kategorie.\',',
+            '\'related_articles_target\' => \'Vyberte jen publikované články ze stejného cílového blogu, nebo ruční doporučení nechte prázdné.\',',
+            '\'series_target\' => \'Vyberte jen série aktuálního blogu, nebo zařazení do série odeberte.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formErrorMessages[$err]) ?></p>',
+        ],
+        'forbidden' => [
+            '\'title\' => \'Vyplňte prosím název článku.\',',
+            '\'content\' => \'Vyplňte prosím obsah článku.\',',
+            '\'slug\' => \'Slug článku je povinný a musí být unikátní.\',',
+            '<p role="alert" class="error" id="form-error">Slug článku je povinný a musí být unikátní.</p>',
+            '<p role="alert" class="error" id="form-error">Vyplňte prosím název článku i jeho obsah.</p>',
+            '<p role="alert" class="error" id="form-error">Vybraná kategorie nepatří do cílového blogu.</p>',
+            '<p role="alert" class="error" id="form-error">Vybrané související články nepatří do cílového blogu.</p>',
+        ],
+    ],
+    'blog management core form' => [
+        'source' => $blogsManagementSource,
+        'required' => [
+            '$error = \'Blog nejde uložit bez názvu. U pole Název blogu je konkrétní nápověda.\';',
+            '$error = \'Slug blogu není možné vytvořit. U pole Slug (URL) je konkrétní nápověda.\';',
+            '$error = \'Slug blogu je vyhrazený pro systémovou stránku. U pole Slug (URL) je konkrétní nápověda.\';',
+            '? \'Slug blogu už používá jiný blog. U pole Slug (URL) je konkrétní nápověda.\'',
+            '\'name\' => \'Doplňte krátký název blogu, například Novinky školy.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, například novinky-skoly.\',',
+            '<p id="blog-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+            "adminFieldAttributes('name', \$fieldErrors)",
+            "adminFieldAttributes('slug', \$fieldErrors, [], ['blog-slug-help'])",
+        ],
+        'forbidden' => [
+            '$error = \'Název blogu je povinný.\';',
+            '$error = \'Slug blogu je povinný.\';',
+            '$error = str_contains($e->getMessage(), \'Duplicate\') ? \'Slug blogu je už obsazený.\' : \'Chyba při ukládání.\';',
+            '<p class="error" role="alert"><?= h($error) ?></p>',
+        ],
+    ],
+    'board item core editor' => [
+        'source' => $boardFormSource,
+        'required' => [
+            '\'required\' => \'Položku vývěsky nejde uložit bez nadpisu a data vyvěšení. U obou polí je konkrétní nápověda.\',',
+            '\'slug\' => \'Slug položky vývěsky není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.\',',
+            '\'category\' => \'Vybraná kategorie vývěsky není použitelná. U pole Kategorie je konkrétní nápověda.\',',
+            '\'title\' => \'Doplňte krátký nadpis položky, například Zápis ze zastupitelstva.\',',
+            '\'posted_date\' => \'Vyberte datum vyvěšení, od kterého se má položka zobrazovat.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte nadpis pro automatické vytvoření.\',',
+            '\'category\' => \'Vyberte existující kategorii vývěsky, nebo ponechte položku bez kategorie.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+        ],
+        'forbidden' => [
+            '\'required\' => \'Vyplňte prosím všechna povinná pole (nadpis a datum vyvěšení).\',',
+            '\'title\' => \'Nadpis položky je povinný.\',',
+            '\'posted_date\' => \'Datum vyvěšení je povinné.\',',
+            '\'slug\' => \'Slug položky je povinný a musí být unikátní.\',',
+            '\'category\' => \'Vybraná kategorie neexistuje.\',',
+            '<p role="alert" class="error" id="form-error"><?= h($formError) ?></p>',
+        ],
+    ],
+    'food card core editor' => [
+        'source' => $foodFormSource,
+        'required' => [
+            '\'required\' => \'Lístek nejde uložit bez názvu. U pole Název je konkrétní nápověda.\',',
+            '\'slug\' => \'Slug lístku není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.\',',
+            '\'title\' => \'Doplňte název lístku, například Týdenní menu 17.–23. března 2026.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+        ],
+        'forbidden' => [
+            '\'required\' => \'Vyplňte prosím název lístku.\',',
+            '\'title\' => \'Název lístku je povinný.\',',
+            '\'slug\' => \'Slug lístku je povinný a musí být unikátní.\',',
+            '<p role="alert" class="error" id="form-error"><?= h($formError) ?></p>',
+        ],
+    ],
+    'poll core editor' => [
+        'source' => $pollFormValidationSource,
+        'required' => [
+            '\'required\' => \'Anketu nejde uložit bez otázky a alespoň dvou možností odpovědi. U zvýrazněných polí je konkrétní nápověda.\',',
+            '\'max_options\' => \'Anketa má příliš mnoho možností odpovědi. U sekce Možnosti odpovědi je konkrétní nápověda.\',',
+            '\'max_choices\' => \'Limit vícevýběrové ankety není použitelný. U pole Maximální počet vybraných možností je konkrétní nápověda.\',',
+            '\'has_votes\' => \'Možnosti s uloženými hlasy nejde odebrat. U sekce Možnosti odpovědi je konkrétní nápověda.\',',
+            '\'slug\' => \'Slug ankety není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.\',',
+            '\'question\' => \'Doplňte otázku tak, jak ji návštěvník uvidí na webu.\',',
+            '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte otázku pro automatické vytvoření.\',',
+            '\'max_choices\' => \'Zadejte celé číslo alespoň 2 a nejvýše tolik, kolik má anketa možností.\',',
+            '\'required\' => \'Doplňte alespoň dvě neprázdné možnosti odpovědi.\',',
+            '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>',
+        ],
+        'forbidden' => [
+            '\'required\' => \'Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.\',',
+            '\'max_options\' => \'Maximální počet možností je 10.\',',
+            '\'max_choices\' => \'U vícevýběrové ankety zadejte limit od 2 do počtu možností.\',',
+            '\'has_votes\' => \'Nelze odebrat možnosti, které už mají hlasy.\',',
+            '\'question\' => \'Otázka ankety je povinná.\',',
+            '\'slug\' => \'Slug ankety je povinný a musí být unikátní.\',',
+            '<p role="alert" class="error" id="form-error"><?= h($formError) ?></p>',
         ],
     ],
     'reservation resource core editor' => [

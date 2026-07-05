@@ -8,6 +8,25 @@ $pdo = db_connect();
 $success = '';
 $error   = '';
 $message = trim($_GET['msg'] ?? '');
+$fieldErrors = [];
+$createFormHasError = false;
+$fieldErrorMessages = [
+    'name' => 'Doplňte krátký název blogu, například Novinky školy.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, například novinky-skoly.',
+];
+$blogFormValues = [
+    'name' => '',
+    'slug' => '',
+    'description' => '',
+    'intro_content' => '',
+    'meta_title' => '',
+    'meta_description' => '',
+    'rss_subtitle' => '',
+    'feed_item_limit' => 20,
+    'logo_alt_text' => '',
+    'comments_default' => 1,
+    'show_in_nav' => 1,
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
@@ -22,6 +41,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $feedItemLimit = max(1, min(100, (int)($_POST['feed_item_limit'] ?? 20)));
     $showInNav = isset($_POST['show_in_nav']) ? 1 : 0;
     $updateId  = inputInt('post', 'update_id');
+    $submittedBlogFormValues = [
+        'name' => $name,
+        'slug' => trim((string)($_POST['slug'] ?? '')),
+        'description' => $desc,
+        'intro_content' => $introContent,
+        'meta_title' => $metaTitle,
+        'meta_description' => $metaDescription,
+        'rss_subtitle' => $rssSubtitle,
+        'feed_item_limit' => $feedItemLimit,
+        'logo_alt_text' => trim((string)($_POST['logo_alt_text'] ?? '')),
+        'comments_default' => $commentsDefault,
+        'show_in_nav' => $showInNav,
+    ];
 
     $existingBlog = null;
     if ($updateId !== null) {
@@ -35,13 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($error === '') {
         if ($name === '') {
-            $error = 'Název blogu je povinný.';
+            $error = 'Blog nejde uložit bez názvu. U pole Název blogu je konkrétní nápověda.';
+            $fieldErrors[] = 'name';
         } elseif ($slug === '') {
-            $error = 'Slug blogu je povinný.';
+            $error = 'Slug blogu není možné vytvořit. U pole Slug (URL) je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
         } elseif (in_array($slug, reservedBlogSlugs(), true)) {
-            $error = 'Slug „' . $slug . '“ je rezervovaný a nelze ho použít.';
+            $error = 'Slug blogu je vyhrazený pro systémovou stránku. U pole Slug (URL) je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
         } elseif (is_dir(__DIR__ . '/../' . $slug) && ($updateId === null || getBlogBySlug($slug) === null || (int)getBlogBySlug($slug)['id'] !== $updateId)) {
-            $error = 'Slug „' . $slug . '“ koliduje s existujícím adresářem na serveru.';
+            $error = 'Slug blogu koliduje s existujícím adresářem na serveru. U pole Slug (URL) je konkrétní nápověda.';
+            $fieldErrors[] = 'slug';
         }
     }
 
@@ -75,7 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             clearBlogCache();
             $success = 'Blog upraven.';
         } catch (\PDOException $e) {
-            $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
+            $error = str_contains($e->getMessage(), 'Duplicate')
+                ? 'Slug blogu už používá jiný blog. U pole Slug (URL) je konkrétní nápověda.'
+                : 'Blog se nepodařilo uložit. Zkontrolujte zadané hodnoty a zkuste to znovu.';
+            $fieldErrors = str_contains($e->getMessage(), 'Duplicate') ? ['slug'] : ['name', 'slug'];
         }
     } elseif ($error === '') {
         $sortOrder = (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn();
@@ -102,8 +141,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($logoUpload['uploaded']) && $logoFile !== '') {
                 deleteBlogLogoFile($logoFile);
             }
-            $error = str_contains($e->getMessage(), 'Duplicate') ? 'Slug blogu je už obsazený.' : 'Chyba při ukládání.';
+            $error = str_contains($e->getMessage(), 'Duplicate')
+                ? 'Slug blogu už používá jiný blog. U pole Slug (URL) je konkrétní nápověda.'
+                : 'Blog se nepodařilo uložit. Zkontrolujte zadané hodnoty a zkuste to znovu.';
+            $fieldErrors = str_contains($e->getMessage(), 'Duplicate') ? ['slug'] : ['name', 'slug'];
         }
+    }
+
+    if ($updateId === null && $error !== '') {
+        $blogFormValues = $submittedBlogFormValues;
+        $createFormHasError = true;
+    } elseif ($updateId !== null) {
+        $fieldErrors = [];
     }
 }
 
@@ -125,49 +174,54 @@ adminHeader('Správa blogů');
   <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
 <?php endif; ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="blog-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="blog.php"><span aria-hidden="true">←</span> Zpět na články</a>
 </p>
 
-<form method="post" enctype="multipart/form-data" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate<?= $createFormHasError ? ' aria-describedby="blog-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset class="blog-admin-fieldset">
     <legend>Základní údaje blogu</legend>
     <label for="name">Název blogu <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
-    <input type="text" id="name" name="name" required aria-required="true" maxlength="255">
+    <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
+           value="<?= h((string)$blogFormValues['name']) ?>"<?= adminFieldAttributes('name', $fieldErrors) ?>>
+    <?php adminRenderFieldError('name', $fieldErrors, [], $fieldErrorMessages['name']); ?>
 
     <label for="slug">Slug (URL) <span aria-hidden="true">*</span><span class="sr-only">(povinné)</span></label>
     <input type="text" id="slug" name="slug" required aria-required="true" maxlength="100"
            pattern="[a-z0-9\-]+"
-           aria-describedby="blog-slug-help">
+           value="<?= h((string)$blogFormValues['slug']) ?>"<?= adminFieldAttributes('slug', $fieldErrors, [], ['blog-slug-help']) ?>>
     <small id="blog-slug-help" class="field-help">Slug se použije jako adresa blogu, např. <code>/recepty/</code>. Vyplní se automaticky z názvu. Použijte malá písmena, číslice a pomlčky.</small>
+    <?php adminRenderFieldError('slug', $fieldErrors, [], $fieldErrorMessages['slug']); ?>
 
     <label for="description">Popis</label>
-    <textarea id="description" name="description" rows="2" aria-describedby="blog-description-help"></textarea>
+    <textarea id="description" name="description" rows="2" aria-describedby="blog-description-help"><?= h((string)$blogFormValues['description']) ?></textarea>
     <small id="blog-description-help" class="field-help">Popis se zobrazí jako úvod blogu na veřejném webu.</small>
   </fieldset>
 
   <fieldset class="blog-admin-fieldset">
     <legend>Obsah a metadata blogu</legend>
     <label for="intro_content">Rozšířený úvod blogu</label>
-    <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"></textarea>
+    <textarea id="intro_content" name="intro_content" rows="5" aria-describedby="blog-intro-help"><?= h((string)$blogFormValues['intro_content']) ?></textarea>
     <small id="blog-intro-help" class="field-help">Volitelné. Delší text nebo HTML blok pod názvem a popisem blogu, vhodný třeba pro úvod, CTA nebo vysvětlení zaměření blogu. <?= adminHtmlSnippetSupportMarkup() ?></small>
     <?php renderAdminContentReferencePicker('intro_content'); ?>
 
     <label for="meta_title">Meta titulek</label>
-    <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-meta-help">
+    <input type="text" id="meta_title" name="meta_title" maxlength="160" aria-describedby="blog-meta-help"
+           value="<?= h((string)$blogFormValues['meta_title']) ?>">
 
     <label for="meta_description">Meta popis</label>
-    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="blog-meta-help"></textarea>
+    <textarea id="meta_description" name="meta_description" rows="2" aria-describedby="blog-meta-help"><?= h((string)$blogFormValues['meta_description']) ?></textarea>
     <small id="blog-meta-help" class="field-help">Volitelně. Když je nevyplníte, blog použije svůj název a popis.</small>
 
     <label for="rss_subtitle">Podtitulek RSS feedu</label>
-    <input type="text" id="rss_subtitle" name="rss_subtitle" maxlength="255" aria-describedby="blog-feed-help">
+    <input type="text" id="rss_subtitle" name="rss_subtitle" maxlength="255" aria-describedby="blog-feed-help"
+           value="<?= h((string)$blogFormValues['rss_subtitle']) ?>">
 
     <label for="feed_item_limit">Počet článků v RSS feedu</label>
-    <input type="number" id="feed_item_limit" class="blog-admin-control-auto" name="feed_item_limit" min="1" max="100" value="20" aria-describedby="blog-feed-help">
+    <input type="number" id="feed_item_limit" class="blog-admin-control-auto" name="feed_item_limit" min="1" max="100" value="<?= (int)$blogFormValues['feed_item_limit'] ?>" aria-describedby="blog-feed-help">
     <small id="blog-feed-help" class="field-help">Použije se pro samostatný feed konkrétního blogu.</small>
   </fieldset>
 
@@ -178,15 +232,16 @@ adminHeader('Správa blogů');
     <small id="blog-logo-help" class="field-help">Volitelné. Logo se zobrazí nad popisem blogu na jeho veřejném indexu. Podporované jsou JPEG, PNG, GIF a WebP; pevný rozměr není nutný.</small>
 
     <label for="logo_alt_text">Alternativní text loga</label>
-    <input type="text" id="logo_alt_text" name="logo_alt_text" maxlength="255" aria-describedby="blog-logo-alt-help">
+    <input type="text" id="logo_alt_text" name="logo_alt_text" maxlength="255" aria-describedby="blog-logo-alt-help"
+           value="<?= h((string)$blogFormValues['logo_alt_text']) ?>">
     <small id="blog-logo-alt-help" class="field-help">Volitelné. Pokud pole necháte prázdné, logo zůstane dekorativní a čtečky obrazovek ho přeskočí. Vyplňte ho jen tehdy, když logo nese smysluplnou informaci.</small>
 
     <div class="blog-admin-check-row">
-      <label><input type="checkbox" name="comments_default" value="1" checked> Ve výchozím stavu povolit komentáře u nových článků</label>
+      <label><input type="checkbox" name="comments_default" value="1"<?= (int)$blogFormValues['comments_default'] === 1 ? ' checked' : '' ?>> Ve výchozím stavu povolit komentáře u nových článků</label>
     </div>
 
     <div class="blog-admin-check-row">
-      <label><input type="checkbox" name="show_in_nav" value="1" checked> Zobrazit v navigaci webu</label>
+      <label><input type="checkbox" name="show_in_nav" value="1"<?= (int)$blogFormValues['show_in_nav'] === 1 ? ' checked' : '' ?>> Zobrazit v navigaci webu</label>
     </div>
   </fieldset>
   <div class="button-row blog-admin-form-actions">

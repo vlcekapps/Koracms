@@ -315,19 +315,33 @@ $blogPublishAtErrorMessage = 'Plánované publikování musí být platné datum
 $blogUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $blogPublishRangeErrorMessage = 'Plánované zrušení publikace musí být později než plánované publikování. Upravte jeden z časů nebo zrušení publikace nechte prázdné.';
 $blogImageUploadErrorMessage = 'Náhledový obrázek se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
-$fieldErrorMessages = [
-    'title' => 'Vyplňte prosím název článku.',
-    'content' => 'Vyplňte prosím obsah článku.',
-    'slug' => 'Slug článku je povinný a musí být unikátní.',
+$formErrorMessages = [
+    'required' => 'Článek nejde uložit bez titulku a textu. U obou polí je konkrétní nápověda.',
+    'slug' => 'Slug článku není použitelný nebo už existuje. U pole Slug (URL článku) je konkrétní nápověda.',
     'publish_at' => $blogPublishAtErrorMessage,
     'unpublish_at' => $blogUnpublishAtErrorMessage,
     'publish_range' => $blogPublishRangeErrorMessage,
-    'category_target' => 'Vybraná kategorie nepatří do cílového blogu.',
-    'tags_target' => 'Vybrané štítky nepatří do cílového blogu.',
-    'related_articles_target' => 'Vybrané související články nepatří do cílového blogu.',
-    'series_target' => 'Vybraná série článků nepatří do cílového blogu.',
-    'missing_category_action' => 'Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
-    'missing_tags_action' => 'Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.',
+    'category_target' => 'Vybraná kategorie nepatří do cílového blogu. U pole Kategorie je konkrétní nápověda.',
+    'tags_target' => 'Vybrané štítky nepatří do cílového blogu. U sekce Štítky článku je konkrétní nápověda.',
+    'related_articles_target' => 'Vybrané související články nepatří do cílového blogu. U pole Ruční výběr souvisejících článků je konkrétní nápověda.',
+    'series_target' => 'Vybraná série článků nepatří do cílového blogu. U pole Zařazení do série je konkrétní nápověda.',
+    'missing_category_action' => 'Chybějící kategorii v cílovém blogu není možné vytvořit. U volby chybějící kategorie je konkrétní nápověda.',
+    'missing_tags_action' => 'Chybějící štítky v cílovém blogu není možné vytvořit. U volby chybějících štítků je konkrétní nápověda.',
+    'image_upload' => $blogImageUploadErrorMessage,
+];
+$fieldErrorMessages = [
+    'title' => 'Doplňte krátký titulek článku, například Nové hřiště otevřeno.',
+    'content' => 'Doplňte text článku. Pokud ještě není hotový, uložte ho jako koncept.',
+    'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.',
+    'publish_at' => $blogPublishAtErrorMessage,
+    'unpublish_at' => $blogUnpublishAtErrorMessage,
+    'publish_range' => $blogPublishRangeErrorMessage,
+    'category_target' => 'Vyberte kategorii z aktuálního cílového blogu, nebo ponechte článek bez kategorie.',
+    'tags_target' => 'Vyberte jen štítky aktuálního cílového blogu, nebo štítky odeberte.',
+    'related_articles_target' => 'Vyberte jen publikované články ze stejného cílového blogu, nebo ruční doporučení nechte prázdné.',
+    'series_target' => 'Vyberte jen série aktuálního blogu, nebo zařazení do série odeberte.',
+    'missing_category_action' => 'Zvolte Bez kategorie, nebo požádejte správce taxonomií cílového blogu o vytvoření kategorie.',
+    'missing_tags_action' => 'Zvolte Bez chybějících štítků, nebo požádejte správce taxonomií cílového blogu o jejich vytvoření.',
     'image_upload' => $blogImageUploadErrorMessage,
 ];
 $publishAtInput = '';
@@ -394,30 +408,8 @@ adminHeader($pageTitle);
   </p>
 <?php endif; ?>
 
-<?php if ($err === 'slug'): ?>
-  <p role="alert" class="error" id="form-error">Slug článku je povinný a musí být unikátní.</p>
-<?php elseif ($err === 'required'): ?>
-  <p role="alert" class="error" id="form-error">Vyplňte prosím název článku i jeho obsah.</p>
-<?php elseif ($err === 'publish_at'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['publish_at']) ?></p>
-<?php elseif ($err === 'unpublish_at'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['unpublish_at']) ?></p>
-<?php elseif ($err === 'publish_range'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($fieldErrorMessages['publish_range']) ?></p>
-<?php elseif ($err === 'category_target'): ?>
-  <p role="alert" class="error" id="form-error">Vybraná kategorie nepatří do cílového blogu.</p>
-<?php elseif ($err === 'tags_target'): ?>
-  <p role="alert" class="error" id="form-error">Vybrané štítky nepatří do cílového blogu.</p>
-<?php elseif ($err === 'related_articles_target'): ?>
-  <p role="alert" class="error" id="form-error">Vybrané související články nepatří do cílového blogu.</p>
-<?php elseif ($err === 'series_target'): ?>
-  <p role="alert" class="error" id="form-error">Vybraná série článků nepatří do cílového blogu.</p>
-<?php elseif ($err === 'missing_category_action'): ?>
-  <p role="alert" class="error" id="form-error">Chybějící kategorii v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
-<?php elseif ($err === 'missing_tags_action'): ?>
-  <p role="alert" class="error" id="form-error">Chybějící štítky v cílovém blogu může vytvořit jen správce taxonomií tohoto blogu.</p>
-<?php elseif ($err === 'image_upload'): ?>
-  <p role="alert" class="error" id="form-error"><?= h($blogImageUploadErrorMessage) ?></p>
+<?php if (isset($formErrorMessages[$err])): ?>
+  <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formErrorMessages[$err]) ?></p>
 <?php endif; ?>
 
 <form method="post" action="blog_save.php" enctype="multipart/form-data" novalidate<?= $err !== '' ? ' aria-describedby="form-error"' : '' ?>>

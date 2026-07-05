@@ -835,6 +835,66 @@ try {
     saveSetting('module_polls', '1');
     clearSettingsCache();
 
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Anketu nejde uložit bez otázky a alespoň dvou možností odpovědi.',
+                'aria-invalid="true" aria-describedby="question-error"',
+                'id="question-error"',
+                'Doplňte otázku tak, jak ji návštěvník uvidí na webu.',
+                'id="poll-options-error"',
+                'Doplňte alespoň dvě neprázdné možnosti odpovědi.',
+            ],
+            'forbidden' => ['Vyplňte prosím otázku a alespoň 2 možnosti odpovědi.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug ankety není použitelný nebo už existuje.',
+                'aria-invalid="true" aria-describedby="poll-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte otázku pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Slug ankety je povinný a musí být unikátní.'],
+        ],
+        'max_choices' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Limit vícevýběrové ankety není použitelný.',
+                'aria-invalid="true" aria-describedby="poll-max-choices-help max_choices-error"',
+                'id="max_choices-error"',
+                'Zadejte celé číslo alespoň 2 a nejvýše tolik, kolik má anketa možností.',
+            ],
+            'forbidden' => ['U vícevýběrové ankety zadejte limit od 2 do počtu možností.'],
+        ],
+        'max_options' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Anketa má příliš mnoho možností odpovědi.',
+                'id="poll-options-error"',
+                'Nechte nejvýše deset možností odpovědi a přebytečné řádky odeberte.',
+            ],
+            'forbidden' => ['Maximální počet možností je 10.'],
+        ],
+    ] as $pollValidationError => $pollValidationSpec) {
+        $pollValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/polls_form.php?err=' . rawurlencode((string)$pollValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($pollValidationResponse) !== 200) {
+            $pollVotingModeIssues[] = 'editor ankety s err=' . (string)$pollValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$pollValidationSpec['expected'] as $pollExpectedFragment) {
+            if (!str_contains($pollValidationResponse['body'], (string)$pollExpectedFragment)) {
+                $pollVotingModeIssues[] = 'editor ankety s err=' . (string)$pollValidationError . ' neobsahuje: ' . (string)$pollExpectedFragment;
+            }
+        }
+        foreach ((array)$pollValidationSpec['forbidden'] as $pollForbiddenFragment) {
+            if (str_contains($pollValidationResponse['body'], (string)$pollForbiddenFragment)) {
+                $pollVotingModeIssues[] = 'editor ankety s err=' . (string)$pollValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+
     $pollMultipleSlug = 'http-multiple-poll-' . bin2hex(random_bytes(4));
     $pollMultipleQuestion = 'HTTP vícevýběrová anketa ' . bin2hex(random_bytes(3));
     $pollCreateResponse = postUrl(
@@ -5013,6 +5073,128 @@ try {
 
     httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
 
+    $blogManagementValidationIssues = [];
+    $existingBlogValidationSlug = 'http-blog-validation-existing-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP Blog pro validační chyby', $existingBlogValidationSlug, $adminUserId]);
+    $createdBlogs[] = (int)$pdo->lastInsertId();
+
+    foreach ([
+        'name_required' => [
+            'post' => [
+                'name' => '',
+                'slug' => 'http-blog-bez-nazvu',
+                'description' => 'Popis zůstane zachovaný.',
+                'intro_content' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'rss_subtitle' => '',
+                'feed_item_limit' => '20',
+                'logo_alt_text' => '',
+                'comments_default' => '1',
+                'show_in_nav' => '1',
+            ],
+            'expected' => [
+                'id="blog-form-error" class="error" role="alert" aria-atomic="true">Blog nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="name-error"',
+                'id="name-error"',
+                'Doplňte krátký název blogu, například Novinky školy.',
+                'value="http-blog-bez-nazvu"',
+            ],
+            'forbidden' => ['Název blogu je povinný.'],
+        ],
+        'slug_empty' => [
+            'post' => [
+                'name' => '!!!',
+                'slug' => '',
+                'description' => '',
+                'intro_content' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'rss_subtitle' => '',
+                'feed_item_limit' => '20',
+                'logo_alt_text' => '',
+                'comments_default' => '1',
+                'show_in_nav' => '1',
+            ],
+            'expected' => [
+                'id="blog-form-error" class="error" role="alert" aria-atomic="true">Slug blogu není možné vytvořit.',
+                'aria-invalid="true" aria-describedby="blog-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, například novinky-skoly.',
+            ],
+            'forbidden' => ['Slug blogu je povinný.'],
+        ],
+        'slug_reserved' => [
+            'post' => [
+                'name' => 'Rezervovaný blog',
+                'slug' => 'admin',
+                'description' => '',
+                'intro_content' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'rss_subtitle' => '',
+                'feed_item_limit' => '20',
+                'logo_alt_text' => '',
+                'comments_default' => '1',
+                'show_in_nav' => '1',
+            ],
+            'expected' => [
+                'id="blog-form-error" class="error" role="alert" aria-atomic="true">Slug blogu je vyhrazený pro systémovou stránku.',
+                'aria-invalid="true" aria-describedby="blog-slug-help slug-error"',
+                'value="admin"',
+            ],
+            'forbidden' => ['je rezervovaný a nelze ho použít.'],
+        ],
+        'slug_duplicate' => [
+            'post' => [
+                'name' => 'Duplicitní blog',
+                'slug' => $existingBlogValidationSlug,
+                'description' => '',
+                'intro_content' => '',
+                'meta_title' => '',
+                'meta_description' => '',
+                'rss_subtitle' => '',
+                'feed_item_limit' => '20',
+                'logo_alt_text' => '',
+                'comments_default' => '1',
+                'show_in_nav' => '1',
+            ],
+            'expected' => [
+                'id="blog-form-error" class="error" role="alert" aria-atomic="true">Slug blogu už používá jiný blog.',
+                'aria-invalid="true" aria-describedby="blog-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, například novinky-skoly.',
+            ],
+            'forbidden' => ['Slug blogu je už obsazený.'],
+        ],
+    ] as $blogManagementValidationLabel => $blogManagementValidationSpec) {
+        $blogManagementValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blogs.php',
+            array_merge(
+                ['csrf_token' => $adminSession['csrf']],
+                (array)$blogManagementValidationSpec['post']
+            ),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($blogManagementValidationResponse) !== 200) {
+            $blogManagementValidationIssues[] = 'chybový stav správy blogů ' . $blogManagementValidationLabel . ' se nevyrenderoval';
+            continue;
+        }
+        foreach ((array)$blogManagementValidationSpec['expected'] as $blogManagementExpectedFragment) {
+            if (!str_contains($blogManagementValidationResponse['body'], (string)$blogManagementExpectedFragment)) {
+                $blogManagementValidationIssues[] = 'chybový stav správy blogů ' . $blogManagementValidationLabel . ' neobsahuje: ' . (string)$blogManagementExpectedFragment;
+            }
+        }
+        foreach ((array)$blogManagementValidationSpec['forbidden'] as $blogManagementForbiddenFragment) {
+            if (str_contains($blogManagementValidationResponse['body'], (string)$blogManagementForbiddenFragment)) {
+                $blogManagementValidationIssues[] = 'chybový stav správy blogů ' . $blogManagementValidationLabel . ' stále používá starý obecný text';
+            }
+        }
+    }
+    httpIntegrationPrintResult('blog_management_validation_http', $blogManagementValidationIssues, $failures);
+
     $blogRelatedIssues = [];
     saveSetting('module_blog', '1');
     clearSettingsCache();
@@ -5084,6 +5266,67 @@ try {
     );
     if (!str_contains($relatedFormResponse['body'], 'Související články') || !str_contains($relatedFormResponse['body'], $manualRelatedTitle)) {
         $blogRelatedIssues[] = 'editor článku nezobrazil ruční výběr souvisejících článků';
+    }
+
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Článek nejde uložit bez titulku a textu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte krátký titulek článku, například Nové hřiště otevřeno.',
+                'id="content-error"',
+                'Doplňte text článku. Pokud ještě není hotový, uložte ho jako koncept.',
+            ],
+            'forbidden' => ['Vyplňte prosím název článku i jeho obsah.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug článku není použitelný nebo už existuje.',
+                'aria-invalid="true" aria-describedby="blog-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Slug článku je povinný a musí být unikátní.'],
+        ],
+        'related_articles_target' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Vybrané související články nepatří do cílového blogu.',
+                'aria-invalid="true" aria-describedby="blog-related-help blog-related-empty blog-related-error"',
+                'id="blog-related-error"',
+                'Vyberte jen publikované články ze stejného cílového blogu, nebo ruční doporučení nechte prázdné.',
+            ],
+            'forbidden' => ['<p role="alert" class="error" id="form-error">Vybrané související články nepatří do cílového blogu.</p>'],
+        ],
+        'series_target' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Vybraná série článků nepatří do cílového blogu.',
+                'aria-invalid="true" aria-describedby="blog-series-help blog-series-empty blog-series-error"',
+                'id="blog-series-error"',
+                'Vyberte jen série aktuálního blogu, nebo zařazení do série odeberte.',
+            ],
+            'forbidden' => ['<p role="alert" class="error" id="form-error">Vybraná série článků nepatří do cílového blogu.</p>'],
+        ],
+    ] as $blogArticleValidationError => $blogArticleValidationSpec) {
+        $blogArticleValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $mainRelatedArticleId . '&err=' . rawurlencode((string)$blogArticleValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($blogArticleValidationResponse) !== 200) {
+            $blogRelatedIssues[] = 'editor článku s err=' . (string)$blogArticleValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$blogArticleValidationSpec['expected'] as $blogArticleExpectedFragment) {
+            if (!str_contains($blogArticleValidationResponse['body'], (string)$blogArticleExpectedFragment)) {
+                $blogRelatedIssues[] = 'editor článku s err=' . (string)$blogArticleValidationError . ' neobsahuje: ' . (string)$blogArticleExpectedFragment;
+            }
+        }
+        foreach ((array)$blogArticleValidationSpec['forbidden'] as $blogArticleForbiddenFragment) {
+            if (str_contains($blogArticleValidationResponse['body'], (string)$blogArticleForbiddenFragment)) {
+                $blogRelatedIssues[] = 'editor článku s err=' . (string)$blogArticleValidationError . ' stále používá starý obecný text';
+            }
+        }
     }
 
     $relatedSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
@@ -6622,6 +6865,58 @@ try {
             $boardIssues[] = 'duplicitní slug kategorie vývěsky pořád používá starý obecný text';
         }
 
+        foreach ([
+            'required' => [
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Položku vývěsky nejde uložit bez nadpisu a data vyvěšení.',
+                    'aria-invalid="true" aria-describedby="title-error"',
+                    'id="title-error"',
+                    'Doplňte krátký nadpis položky, například Zápis ze zastupitelstva.',
+                    'id="board-posted-date-error"',
+                    'Vyberte datum vyvěšení, od kterého se má položka zobrazovat.',
+                ],
+                'forbidden' => ['Vyplňte prosím všechna povinná pole'],
+            ],
+            'slug' => [
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Slug položky vývěsky není použitelný nebo už existuje.',
+                    'aria-invalid="true" aria-describedby="board-slug-help slug-error"',
+                    'id="slug-error"',
+                    'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte nadpis pro automatické vytvoření.',
+                ],
+                'forbidden' => ['Slug položky je povinný a musí být unikátní.'],
+            ],
+            'category' => [
+                'expected' => [
+                    'role="alert" class="error" id="form-error" aria-atomic="true">Vybraná kategorie vývěsky není použitelná.',
+                    'aria-invalid="true" aria-describedby="category_id-error"',
+                    'id="category_id-error"',
+                    'Vyberte existující kategorii vývěsky, nebo ponechte položku bez kategorie.',
+                ],
+                'forbidden' => ['Vybraná kategorie neexistuje.'],
+            ],
+        ] as $boardItemValidationError => $boardItemValidationSpec) {
+            $boardItemValidationResponse = fetchUrl(
+                $baseUrl . BASE_URL . '/admin/board_form.php?err=' . rawurlencode((string)$boardItemValidationError),
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($boardItemValidationResponse) !== 200) {
+                $boardIssues[] = 'editor položky vývěsky s err=' . (string)$boardItemValidationError . ' nevrátil 200';
+                continue;
+            }
+            foreach ((array)$boardItemValidationSpec['expected'] as $boardItemExpectedFragment) {
+                if (!str_contains($boardItemValidationResponse['body'], (string)$boardItemExpectedFragment)) {
+                    $boardIssues[] = 'editor položky vývěsky s err=' . (string)$boardItemValidationError . ' neobsahuje: ' . (string)$boardItemExpectedFragment;
+                }
+            }
+            foreach ((array)$boardItemValidationSpec['forbidden'] as $boardItemForbiddenFragment) {
+                if (str_contains($boardItemValidationResponse['body'], (string)$boardItemForbiddenFragment)) {
+                    $boardIssues[] = 'editor položky vývěsky s err=' . (string)$boardItemValidationError . ' stále používá starý obecný text';
+                }
+            }
+        }
+
         $boardSlug = 'http-board-item-' . bin2hex(random_bytes(4));
         $boardTitle = 'HTTP položka vývěsky';
         $validBoardResponse = postUrl(
@@ -7884,6 +8179,56 @@ try {
     httpIntegrationPrintResult('faq_categories_feedback_http', $faqIssues, $failures);
 
     $foodStructuredIssues = [];
+    foreach ([
+        'required' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Lístek nejde uložit bez názvu.',
+                'aria-invalid="true" aria-describedby="title-error"',
+                'id="title-error"',
+                'Doplňte název lístku, například Týdenní menu 17.–23. března 2026.',
+            ],
+            'forbidden' => ['Vyplňte prosím název lístku.'],
+        ],
+        'slug' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Slug lístku není použitelný nebo už existuje.',
+                'aria-invalid="true" aria-describedby="food-slug-help slug-error"',
+                'id="slug-error"',
+                'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte název pro automatické vytvoření.',
+            ],
+            'forbidden' => ['Slug lístku je povinný a musí být unikátní.'],
+        ],
+        'valid_range' => [
+            'expected' => [
+                'role="alert" class="error" id="form-error" aria-atomic="true">Datum „Platí do“ nesmí být dříve než datum „Platí od“.',
+                'aria-invalid="true" aria-describedby="food-valid-from-error"',
+                'aria-invalid="true" aria-describedby="food-valid-to-help food-valid-to-error"',
+                'Upravte jedno z dat nebo datum „Platí do“ nechte prázdné.',
+            ],
+            'forbidden' => ['Datum „Platí do“ má neplatný formát.'],
+        ],
+    ] as $foodCardValidationError => $foodCardValidationSpec) {
+        $foodCardValidationResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/food_form.php?err=' . rawurlencode((string)$foodCardValidationError),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($foodCardValidationResponse) !== 200) {
+            $foodStructuredIssues[] = 'editor lístku s err=' . (string)$foodCardValidationError . ' nevrátil 200';
+            continue;
+        }
+        foreach ((array)$foodCardValidationSpec['expected'] as $foodCardExpectedFragment) {
+            if (!str_contains($foodCardValidationResponse['body'], (string)$foodCardExpectedFragment)) {
+                $foodStructuredIssues[] = 'editor lístku s err=' . (string)$foodCardValidationError . ' neobsahuje: ' . (string)$foodCardExpectedFragment;
+            }
+        }
+        foreach ((array)$foodCardValidationSpec['forbidden'] as $foodCardForbiddenFragment) {
+            if (str_contains($foodCardValidationResponse['body'], (string)$foodCardForbiddenFragment)) {
+                $foodStructuredIssues[] = 'editor lístku s err=' . (string)$foodCardValidationError . ' stále používá starý obecný text';
+            }
+        }
+    }
+
     $foodSlug = uniqueFoodCardSlug($pdo, 'http-strukturovany-listek-' . bin2hex(random_bytes(4)));
     $foodTitle = 'HTTP Strukturovaný lístek';
     $foodContent = '<p>Poznámka k lístku pro HTTP integration.</p>';

@@ -28,6 +28,8 @@ Stejný field-level pattern používají i další běžná administrační work
 
 Stejný guardrail platí pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace. Chyby mají správci poradit doplnění názvu, opravu interní cesty nebo URL, jiný slug, platné nadřazené album, platnou licenci, kalendářní datum pořízení, výběr zdroje nebo uživatele, doplnění údajů hosta, opravu času a řešení kolize rezervace.
 
+Hlavní obsahové editory používají stejnou smlouvu pro editor článku, správu blogů, položky vývěsky, jídelní/nápojové lístky a ankety. Chyba má vždy říct, které pole opravit a jak: doplnit titulek nebo název, zvolit jedinečný slug, použít obsah z cílového blogu, vybrat existující kategorii, zadat datum vyvěšení, doplnit možnosti odpovědi nebo opravit limit vícevýběru.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---
@@ -1095,6 +1097,8 @@ Kategorie a série ke stažení stejný princip používají u prázdného názv
 Stejný field-level pattern používají kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. U povinného názvu, nepoužitelného nebo duplicitního slugu a příliš dlouhého meta title má souhrnný alert upozornit na dotčené pole, lokální text poradit konkrétní opravu a `aria-describedby` mířit jen na existující nápovědu nebo chybový text. Rezervační kategorie a místa navíc po chybě zachovávají rozepsané hodnoty.
 
 Hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace navazují na stejný pattern. U navigace a redirectů má chyba vysvětlit povinný název, interní cestu začínající lomítkem nebo úplnou http/https adresu bez přihlašovacích údajů. U galerie má poradit jedinečný slug, platné nadřazené album, úplnou URL licence nebo skutečné kalendářní datum pořízení. U ruční rezervace má správce dostat konkrétní informaci k výběru zdroje, uživatele nebo hosta, data, času a konfliktu rezervace.
+
+Editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety už u hlavních chyb nemají zůstat u obecného „povinné“ nebo „neplatné“. Souhrnný alert má být atomický a lokální text má poradit konkrétní opravu: doplnit titulek/název/text, zvolit jedinečný slug, vybrat položky ze stejného cílového blogu, opravit kategorii, datum vyvěšení, možnosti odpovědi nebo limit vícevýběru.
 
 GitHub issue bridge v detailu odpovědi Form Builderu používá stejný field-level pattern. Chybějící repozitář, název nebo tělo issue a neplatná URL existujícího issue mají vedle souhrnného alertu konkrétní opravu přímo u pole.
 

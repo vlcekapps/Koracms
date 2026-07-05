@@ -481,6 +481,8 @@ Stejný pattern se rozšířil i na další běžná administrační workflow mi
 
 Stejné field-level guardraily platí i pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace v administraci. Chyba vždy zůstává u konkrétního pole přes existující `aria-describedby`, nastaví `aria-invalid` a radí praktický další krok: doplnit název, opravit interní cestu nebo URL, zvolit jiný slug, vybrat platné nadřazené album, opravit licenci či datum pořízení, případně doplnit zdroj, uživatele/hosta, datum a čas rezervace nebo vyřešit konflikt termínu.
 
+Hlavní obsahové editory navazují stejnou smlouvou. Editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety používají atomický souhrnný alert a field-level texty pro chybějící titulek nebo název, nepoužitelný slug, cílové taxonomie, související články, série, datum vyvěšení, možnosti ankety a vícevýběrové limity.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.
