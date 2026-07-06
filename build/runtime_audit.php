@@ -15899,6 +15899,23 @@ if (str_contains($backupAdminSource, 'style=')) {
 if (!str_contains($backupAdminSource, 'class="admin-description"')) {
     $adminFieldErrorIssues[] = 'admin backup page is missing shared description styling';
 }
+foreach ([
+    'function renderDatabaseBackupForm(bool $confirmBackupError = false): void',
+    '$backupConfirmErrorMessage',
+    'SQL zálohu nejde stáhnout bez potvrzení kontroly dopadu',
+    'id="database-backup-form-error" class="error" role="alert" aria-atomic="true"',
+    'id="database-backup-review-help" class="field-help field-help--flush"',
+    'confirm_database_backup',
+    "adminFieldAttributes('confirm_database_backup', \$backupErrorFields, [], ['database-backup-review-help'], 'confirm-database-backup-error')",
+    "adminRenderFieldError('confirm_database_backup'",
+    "\$confirmDatabaseBackup = isset(\$_POST['confirm_database_backup'])",
+    '!$confirmDatabaseBackup',
+    'renderDatabaseBackupForm(true);',
+] as $databaseBackupPreventionFragment) {
+    if (!str_contains($backupAdminSource, $databaseBackupPreventionFragment)) {
+        $adminFieldErrorIssues[] = 'admin backup page is missing database backup error-prevention fragment: ' . $databaseBackupPreventionFragment;
+    }
+}
 if (str_contains($integrityAdminSource, '<style') || str_contains($integrityAdminSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin integrity page still contains local style blocks or inline style attributes';
 }
@@ -18063,6 +18080,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzené schválení rezervace změnilo stav nebo zapsalo historii')
     || !str_contains($httpIntegrationSource, 'confirm-reservation-status-approve')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing reservation status error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('database_backup_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzená SQL záloha nevrátila field-level chybu nebo zapsala export')
+    || !str_contains($httpIntegrationSource, 'confirm_database_backup')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing database backup error-prevention coverage';
 }
 foreach ([
     'blog article image upload error suggestion' => [

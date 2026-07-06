@@ -497,6 +497,8 @@ Hromadné akce nad odběrateli newsletteru navazují stejnou pojistkou. Potvrzen
 
 Změny stavu rezervace používají stejný error-prevention princip. Detail rezervace pro schválení, zamítnutí, zrušení, dokončení a no-show ukazuje review dopadu, vyžaduje potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle notifikaci.
 
+Ruční SQL záloha databáze má vlastní review krok pro citlivý export. Formulář popisuje, že záloha obsahuje kompletní data CMS, vyžaduje potvrzení oprávnění ke stažení a server bez potvrzení neodešle soubor ani nezapíše audit log; HTTP integrace hlídá odmítnutí i potvrzený download pro WCAG `3.3.4`.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.
@@ -617,7 +619,7 @@ Cron každý den vytvoří SQL zálohu databáze do privátního úložiště (`
 
 ### Ruční záloha
 
-V administraci: **Import / Export → Záloha databáze**. Stáhne aktuální SQL export.
+V administraci: **Import / Export → Záloha databáze**. Stránka nejdřív zobrazí review citlivosti exportu a vyžaduje potvrzení oprávnění ke stažení. Bez potvrzení server vrátí textovou chybu u checkboxu a SQL soubor neodešle; po potvrzení stáhne aktuální SQL export.
 
 Automatické i ruční SQL zálohy validují názvy tabulek a sloupců přes allowlist identifikátorů. Exportují se jen očekávané tabulky CMS s názvem `cms_*`.
 

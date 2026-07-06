@@ -1942,6 +1942,84 @@ try {
     }
     httpIntegrationPrintResult('admin_html_cache_headers_http', $adminHtmlCacheHeaderIssues, $failures);
 
+    $databaseBackupErrorPreventionIssues = [];
+    $databaseBackupPageResponse = fetchUrl($baseUrl . BASE_URL . '/admin/backup.php', $adminSession['cookie'], 0);
+    $databaseBackupCsrf = extractHiddenInputValue($databaseBackupPageResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($databaseBackupPageResponse) !== 200
+        || $databaseBackupCsrf === ''
+        || !str_contains($databaseBackupPageResponse['body'], 'SQL záloha obsahuje kompletní strukturu a data CMS')
+        || !httpIntegrationInputHasAttributes(
+            $databaseBackupPageResponse['body'],
+            'confirm_database_backup',
+            [
+                'name' => 'confirm_database_backup',
+                'aria-describedby' => 'database-backup-review-help',
+            ]
+        )) {
+        $databaseBackupErrorPreventionIssues[] = 'admin záloha databáze neobsahuje review text a potvrzovací checkbox';
+    }
+
+    $databaseBackupLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'database_backup'")->fetchColumn();
+    $databaseBackupMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/backup.php',
+        [
+            'csrf_token' => $databaseBackupCsrf,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $databaseBackupLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'database_backup'")->fetchColumn();
+    if (httpIntegrationStatusCode($databaseBackupMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($databaseBackupMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || str_contains($databaseBackupMissingConfirmResponse['body'], '-- Kora CMS database backup')
+        || !str_contains($databaseBackupMissingConfirmResponse['body'], 'id="database-backup-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($databaseBackupMissingConfirmResponse['body'], 'id="confirm-database-backup-error"')
+        || !httpIntegrationInputHasAttributes(
+            $databaseBackupMissingConfirmResponse['body'],
+            'confirm_database_backup',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'database-backup-review-help confirm-database-backup-error',
+            ]
+        )
+        || $databaseBackupLogCountAfterMissingConfirm !== $databaseBackupLogCountBefore) {
+        $databaseBackupErrorPreventionIssues[] = 'nepotvrzená SQL záloha nevrátila field-level chybu nebo zapsala export';
+    }
+
+    $databaseBackupConfirmedCsrf = extractHiddenInputValue($databaseBackupMissingConfirmResponse['body'], 'csrf_token');
+    if ($databaseBackupConfirmedCsrf === '') {
+        $databaseBackupErrorPreventionIssues[] = 'nepotvrzená SQL záloha nevrátila nový csrf_token pro opravené odeslání';
+        $databaseBackupConfirmedCsrf = $databaseBackupCsrf;
+    }
+    $databaseBackupConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/backup.php',
+        [
+            'csrf_token' => $databaseBackupConfirmedCsrf,
+            'confirm_database_backup' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $databaseBackupLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'database_backup'")->fetchColumn();
+    if (httpIntegrationStatusCode($databaseBackupConfirmedResponse) !== 200
+        || !httpIntegrationHeaderContains($databaseBackupConfirmedResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($databaseBackupConfirmedResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($databaseBackupConfirmedResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($databaseBackupConfirmedResponse, 'X-Content-Type-Options', 'nosniff')
+        || !str_contains($databaseBackupConfirmedResponse['body'], '-- Kora CMS database backup')
+        || !str_contains($databaseBackupConfirmedResponse['body'], 'SET NAMES utf8mb4;')
+        || $databaseBackupLogCountAfterConfirmed !== $databaseBackupLogCountBefore + 1) {
+        $databaseBackupErrorPreventionIssues[] = 'potvrzená SQL záloha nevrátila bezpečný attachment nebo nezapsala audit log';
+    }
+    $databaseBackupFreshTokenPage = fetchUrl($baseUrl . BASE_URL . '/admin/settings.php', $adminSession['cookie'], 0);
+    $databaseBackupFreshCsrf = extractHiddenInputValue($databaseBackupFreshTokenPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($databaseBackupFreshTokenPage) !== 200 || $databaseBackupFreshCsrf === '') {
+        $databaseBackupErrorPreventionIssues[] = 'po potvrzené SQL záloze nešlo obnovit aktuální csrf_token pro další administrační scénáře';
+    } else {
+        $adminSession['csrf'] = $databaseBackupFreshCsrf;
+    }
+    httpIntegrationPrintResult('database_backup_error_prevention_http', $databaseBackupErrorPreventionIssues, $failures);
+
     $adminDownloadHeaderIssues = [];
     $adminExportDownloadResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
     if (
