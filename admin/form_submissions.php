@@ -1,13 +1,10 @@
 <?php
 require_once __DIR__ . '/layout.php';
 
+$isCsvExport = isset($_GET['export']) && $_GET['export'] === 'csv';
+$requestMethod = requireHttpMethods($isCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);
 $pdo = db_connect();
 $formId = inputInt('get', 'id');
-$isCsvExport = isset($_GET['export']) && $_GET['export'] === 'csv';
-$isCsvExportHeadRequest = false;
-if ($isCsvExport) {
-    $isCsvExportHeadRequest = requireReadOnlyHttpMethod();
-}
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 if ($formId === null) {
@@ -132,14 +129,103 @@ if ($query !== '') {
 }
 $currentRedirect = BASE_URL . appendUrlQuery('/admin/form_submissions.php', $currentParams);
 
+$renderCsvExportForm = static function (bool $confirmExportError = false) use (
+    $currentParams,
+    $form,
+    $submissionCount,
+    $allSubmissionCount,
+    $statusFilter,
+    $priorityFilter,
+    $assignedFilter,
+    $githubFilter,
+    $query
+): void {
+    $exportErrorFields = $confirmExportError ? ['confirm_form_submissions_csv_export'] : [];
+    $exportConfirmErrorMessage = 'CSV export odpovědí formuláře nejde stáhnout bez potvrzení kontroly citlivosti exportu. U pole Potvrzení stažení je konkrétní nápověda.';
+    $activeFilters = [];
+    if ($statusFilter !== 'all') {
+        $activeFilters[] = 'stav ' . formSubmissionStatusLabel($statusFilter);
+    }
+    if ($priorityFilter !== 'all') {
+        $activeFilters[] = 'priorita ' . formSubmissionPriorityLabel($priorityFilter);
+    }
+    if ($assignedFilter === 'mine') {
+        $activeFilters[] = 'jen moje přiřazené odpovědi';
+    } elseif ($assignedFilter === 'unassigned') {
+        $activeFilters[] = 'jen nepřiřazené odpovědi';
+    }
+    if ($githubFilter === 'linked') {
+        $activeFilters[] = 'jen odpovědi s GitHub issue';
+    } elseif ($githubFilter === 'unlinked') {
+        $activeFilters[] = 'jen odpovědi bez GitHub issue';
+    }
+    if ($query !== '') {
+        $activeFilters[] = 'vyhledávání „' . $query . '“';
+    }
+    $filterSummary = $activeFilters !== []
+        ? 'Aktivní filtr: ' . implode(', ', $activeFilters) . '.'
+        : 'Export zahrne aktuálně zobrazený základní výběr odpovědí.';
+
+    adminHeader('Export odpovědí formuláře');
+    ?>
+    <p class="admin-description">
+      Připraví CSV export odpovědí formuláře <strong><?= h((string)$form['title']) ?></strong>.
+    </p>
+
+    <?php if ($confirmExportError): ?>
+      <p id="form-submissions-csv-export-form-error" class="error" role="alert" aria-atomic="true"><?= h($exportConfirmErrorMessage) ?></p>
+    <?php endif; ?>
+
+    <form method="post" action="<?= h(appendUrlQuery('form_submissions.php', array_merge($currentParams, ['export' => 'csv']))) ?>" novalidate<?= $confirmExportError ? ' aria-describedby="form-submissions-csv-export-form-error"' : '' ?>>
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <fieldset class="admin-fieldset-card">
+        <legend>Export odpovědí formuláře</legend>
+        <p id="form-submissions-csv-export-review-help" class="field-help field-help--flush">
+          CSV export může obsahovat jména, e-maily, telefony, zprávy, interní poznámky, štítky, přiřazení a další údaje z odpovědí návštěvníků.
+          Export zahrne <?= (int)$submissionCount ?> z <?= (int)$allSubmissionCount ?> odpovědí tohoto formuláře. <?= h($filterSummary) ?>
+          Soubor ukládejte jen do oprávněného a bezpečného úložiště.
+        </p>
+        <label for="confirm_form_submissions_csv_export" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_form_submissions_csv_export" name="confirm_form_submissions_csv_export" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_form_submissions_csv_export', $exportErrorFields, [], ['form-submissions-csv-export-review-help'], 'confirm-form-submissions-csv-export-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) citlivost CSV exportu odpovědí a mám oprávnění jej stáhnout.
+        </label>
+        <?php adminRenderFieldError('confirm_form_submissions_csv_export', $exportErrorFields, [], 'Před stažením CSV exportu potvrďte, že rozumíte citlivosti odpovědí formuláře a máte oprávnění soubor stáhnout.', 'confirm-form-submissions-csv-export-error'); ?>
+        <div class="admin-field-row">
+          <button type="submit" class="btn" data-confirm="Stáhnout CSV export odpovědí formuláře? Soubor může obsahovat osobní nebo provozní údaje.">Stáhnout CSV export</button>
+        </div>
+      </fieldset>
+    </form>
+
+    <p><a href="<?= h(appendUrlQuery('form_submissions.php', $currentParams)) ?>"><span aria-hidden="true">←</span> Zpět na odpovědi formuláře</a></p>
+    <?php
+    adminFooter();
+};
+
 if ($isCsvExport) {
+    if ($requestMethod === 'HEAD') {
+        header('Content-Type: text/html; charset=UTF-8');
+        sendAdminNoStoreHeaders();
+        exit;
+    }
+
+    if ($requestMethod !== 'POST') {
+        $renderCsvExportForm();
+        exit;
+    }
+
+    verifyCsrf();
+    $confirmCsvExport = isset($_POST['confirm_form_submissions_csv_export'])
+        && (string)$_POST['confirm_form_submissions_csv_export'] === '1';
+    if (!$confirmCsvExport) {
+        $renderCsvExportForm(true);
+        exit;
+    }
+
     sendAdminAttachmentHeaders(
         'text/csv; charset=utf-8',
         'formular-' . (string)$form['slug'] . '-' . date('Y-m-d') . '.csv'
     );
-    if ($isCsvExportHeadRequest) {
-        exit;
-    }
+    logAction('form_submissions_export_csv', 'form_id=' . $formId . ' count=' . $submissionCount);
 
     $out = fopen('php://output', 'w');
     fprintf($out, "\xEF\xBB\xBF");
@@ -215,7 +301,7 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     <a href="<?= h(formPublicPath($form)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
   <?php endif; ?>
   <?php if ($submissionCount > 0): ?>
-    <a href="<?= h(appendUrlQuery('form_submissions.php', array_merge($currentParams, ['export' => 'csv']))) ?>" class="btn btn-primary">Exportovat CSV</a>
+    <a href="<?= h(appendUrlQuery('form_submissions.php', array_merge($currentParams, ['export' => 'csv']))) ?>" class="btn btn-primary">Přejít na kontrolu CSV exportu</a>
   <?php endif; ?>
 </div>
 

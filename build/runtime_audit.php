@@ -3962,7 +3962,7 @@ foreach ($pages as $page) {
             'GitHub',
             'Přehled odpovědí formuláře',
             'Hledat v odpovědích',
-            'Exportovat CSV',
+            'Přejít na kontrolu CSV exportu',
             'Reference',
             'Priorita',
             'Štítky',
@@ -7988,11 +7988,6 @@ $adminFormSubmissionFileCapabilityPosition = strpos($adminFormSubmissionFileSour
 $adminFormSubmissionFileMethodGuardBeforeCapability = is_int($adminFormSubmissionFileMethodGuardPosition)
     && is_int($adminFormSubmissionFileCapabilityPosition)
     && $adminFormSubmissionFileMethodGuardPosition < $adminFormSubmissionFileCapabilityPosition;
-$adminFormSubmissionsMethodGuardPosition = strpos($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();');
-$adminFormSubmissionsCapabilityPosition = strpos($adminFormSubmissionsSource, "requireCapability('content_manage_shared'");
-$adminFormSubmissionsMethodGuardBeforeCapability = is_int($adminFormSubmissionsMethodGuardPosition)
-    && is_int($adminFormSubmissionsCapabilityPosition)
-    && $adminFormSubmissionsMethodGuardPosition < $adminFormSubmissionsCapabilityPosition;
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -9173,14 +9168,22 @@ $foundationChecks = [
         && str_contains($adminFormSubmissionFileSource, 'sendAdminAttachmentHeaders($mimeType, $originalName, $fileSize)')
         && !str_contains($adminFormSubmissionFileSource, 'http_response_code(404)')
         && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)')
-        && str_contains($adminFormSubmissionsSource, '$isCsvExportHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminFormSubmissionsSource, 'if ($isCsvExportHeadRequest)')
         && $adminFormSubmissionFileMethodGuardBeforeCapability
-        && $adminFormSubmissionsMethodGuardBeforeCapability
         && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)')
         && str_contains($adminPollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminPollResultsExportSource, 'if ($isHeadRequest)'),
+    'admin form submissions CSV export requires review confirmation' => str_contains($adminFormSubmissionsSource, "\$requestMethod = requireHttpMethods(\$isCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);")
+        && str_contains($adminFormSubmissionsSource, 'CSV export odpovědí formuláře nejde stáhnout bez potvrzení kontroly citlivosti exportu')
+        && str_contains($adminFormSubmissionsSource, 'id="form-submissions-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
+        && str_contains($adminFormSubmissionsSource, 'id="form-submissions-csv-export-review-help" class="field-help field-help--flush"')
+        && str_contains($adminFormSubmissionsSource, 'confirm_form_submissions_csv_export')
+        && str_contains($adminFormSubmissionsSource, "adminFieldAttributes('confirm_form_submissions_csv_export', \$exportErrorFields, [], ['form-submissions-csv-export-review-help'], 'confirm-form-submissions-csv-export-error')")
+        && str_contains($adminFormSubmissionsSource, "adminRenderFieldError('confirm_form_submissions_csv_export'")
+        && str_contains($adminFormSubmissionsSource, "\$confirmCsvExport = isset(\$_POST['confirm_form_submissions_csv_export'])")
+        && str_contains($adminFormSubmissionsSource, '!$confirmCsvExport')
+        && str_contains($adminFormSubmissionsSource, "logAction('form_submissions_export_csv'")
+        && str_contains($adminFormSubmissionsSource, 'Přejít na kontrolu CSV exportu'),
     'admin JSON export requires review confirmation' => str_contains($adminExportSource, "requireCapability('import_export_manage'")
         && str_contains($adminExportSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD', 'POST']);")
         && str_contains($adminExportSource, 'function renderJsonExportForm(bool $confirmExportError = false): void')
@@ -9493,7 +9496,7 @@ foreach ($fileMethodGuardUrls as $fileMethodGuardUrl => $fileMethodGuardLabel) {
 
 $adminReadOnlyMethodGuardUrls = [
     '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
-    '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
+    '/admin/form_submissions.php?id=0' => 'admin/form_submissions.php overview',
     '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
 ];
 foreach ($adminReadOnlyMethodGuardUrls as $adminReadOnlyMethodGuardUrl => $adminReadOnlyMethodGuardLabel) {
@@ -18102,6 +18105,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený JSON export nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_json_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing JSON export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_csv_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export odpovědí nevrátil field-level chybu nebo zapsal export')
+    || !str_contains($httpIntegrationSource, 'confirm_form_submissions_csv_export')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions CSV export error-prevention coverage';
 }
 foreach ([
     'blog article image upload error suggestion' => [

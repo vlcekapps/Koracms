@@ -1558,7 +1558,7 @@ try {
     $adminReadOnlyEndpointIssues = [];
     $adminReadOnlyEndpointUrls = [
         '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
-        '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
+        '/admin/form_submissions.php?id=0' => 'admin/form_submissions.php overview',
         '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
         '/admin/help.php' => 'admin/help.php',
     ];
@@ -2146,6 +2146,127 @@ try {
     httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $jsonExportErrorPreventionIssues, 'potvrzený JSON export');
     httpIntegrationPrintResult('json_export_error_prevention_http', $jsonExportErrorPreventionIssues, $failures);
 
+    $formSubmissionsCsvErrorPreventionIssues = [];
+    $formSubmissionsCsvTitle = 'HTTP CSV EXPORT FORM ' . bin2hex(random_bytes(3));
+    $formSubmissionsCsvSlug = uniqueFormSlug($pdo, 'http-csv-export-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_email, notification_subject,
+            redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label,
+            success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot,
+            submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject,
+            submitter_confirmation_message, show_in_nav, is_active
+        )
+         VALUES (?, ?, 'Dočasný formulář pro ověření CSV exportu odpovědí.', '', 'Odeslat formulář', '', '', '', 'message', '', '', '', '', 0, '', '', '', 1, 0, '', '', '', 0, 1)"
+    )->execute([
+        $formSubmissionsCsvTitle,
+        $formSubmissionsCsvSlug,
+    ]);
+    $formSubmissionsCsvFormId = (int)$pdo->lastInsertId();
+    $createdFormIds[] = $formSubmissionsCsvFormId;
+
+    $formSubmissionsCsvFieldStmt = $pdo->prepare(
+        "INSERT INTO cms_form_fields (
+            form_id, field_type, label, name, placeholder, default_value, help_text, options,
+            accept_types, max_file_size_mb, allow_multiple, layout_width, start_new_row,
+            show_if_field, show_if_operator, show_if_value, is_required, sort_order
+        )
+        VALUES (?, ?, ?, ?, '', '', '', '', '', 10, 0, 'full', 0, '', '', '', 1, ?)"
+    );
+    $formSubmissionsCsvFieldStmt->execute([$formSubmissionsCsvFormId, 'email', 'E-mail pro odpověď', 'email_pro_odpoved', 10]);
+    $formSubmissionsCsvFieldStmt->execute([$formSubmissionsCsvFormId, 'textarea', 'Popis požadavku', 'popis_pozadavku', 20]);
+
+    $formSubmissionsCsvEmail = 'csv-export-' . bin2hex(random_bytes(4)) . '@example.test';
+    $formSubmissionsCsvData = json_encode([
+        'email_pro_odpoved' => $formSubmissionsCsvEmail,
+        'popis_pozadavku' => 'Citlivá odpověď pro CSV export.',
+    ], JSON_UNESCAPED_UNICODE);
+    if (!is_string($formSubmissionsCsvData)) {
+        $formSubmissionsCsvData = '{}';
+    }
+    $pdo->prepare(
+        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, status, priority, labels, internal_note, created_at)
+         VALUES (?, ?, ?, 'new', 'high', 'Citlivé', 'Interní poznámka k CSV exportu', NOW())"
+    )->execute([
+        $formSubmissionsCsvFormId,
+        $formSubmissionsCsvData,
+        hash('sha256', 'csv-export-' . bin2hex(random_bytes(4))),
+    ]);
+    $createdFormSubmissionIds[] = (int)$pdo->lastInsertId();
+
+    $formSubmissionsCsvUrl = $baseUrl . BASE_URL . '/admin/form_submissions.php?id=' . $formSubmissionsCsvFormId . '&status=all&export=csv';
+    $formSubmissionsCsvReviewResponse = fetchUrl($formSubmissionsCsvUrl, $adminSession['cookie'], 0);
+    $formSubmissionsCsvCsrf = extractHiddenInputValue($formSubmissionsCsvReviewResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($formSubmissionsCsvReviewResponse) !== 200
+        || $formSubmissionsCsvCsrf === ''
+        || httpIntegrationHeaderContains($formSubmissionsCsvReviewResponse, 'Content-Disposition', 'attachment')
+        || !str_contains($formSubmissionsCsvReviewResponse['body'], 'CSV export může obsahovat jména, e-maily, telefony')
+        || !httpIntegrationInputHasAttributes(
+            $formSubmissionsCsvReviewResponse['body'],
+            'confirm_form_submissions_csv_export',
+            [
+                'name' => 'confirm_form_submissions_csv_export',
+                'aria-describedby' => 'form-submissions-csv-export-review-help',
+            ]
+        )) {
+        $formSubmissionsCsvErrorPreventionIssues[] = 'CSV export odpovědí formuláře nevykreslil review text a potvrzovací checkbox místo přímého downloadu';
+    }
+
+    $formSubmissionsCsvLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submissions_export_csv'")->fetchColumn();
+    $formSubmissionsCsvMissingConfirmResponse = postUrl(
+        $formSubmissionsCsvUrl,
+        [
+            'csrf_token' => $formSubmissionsCsvCsrf,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionsCsvLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submissions_export_csv'")->fetchColumn();
+    if (httpIntegrationStatusCode($formSubmissionsCsvMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($formSubmissionsCsvMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || str_contains($formSubmissionsCsvMissingConfirmResponse['body'], $formSubmissionsCsvEmail)
+        || !str_contains($formSubmissionsCsvMissingConfirmResponse['body'], 'id="form-submissions-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($formSubmissionsCsvMissingConfirmResponse['body'], 'id="confirm-form-submissions-csv-export-error"')
+        || !httpIntegrationInputHasAttributes(
+            $formSubmissionsCsvMissingConfirmResponse['body'],
+            'confirm_form_submissions_csv_export',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'form-submissions-csv-export-review-help confirm-form-submissions-csv-export-error',
+            ]
+        )
+        || $formSubmissionsCsvLogCountAfterMissingConfirm !== $formSubmissionsCsvLogCountBefore) {
+        $formSubmissionsCsvErrorPreventionIssues[] = 'nepotvrzený CSV export odpovědí nevrátil field-level chybu nebo zapsal export';
+    }
+
+    $formSubmissionsCsvConfirmedCsrf = extractHiddenInputValue($formSubmissionsCsvMissingConfirmResponse['body'], 'csrf_token');
+    if ($formSubmissionsCsvConfirmedCsrf === '') {
+        $formSubmissionsCsvErrorPreventionIssues[] = 'nepotvrzený CSV export odpovědí nevrátil nový csrf_token pro opravené odeslání';
+        $formSubmissionsCsvConfirmedCsrf = $formSubmissionsCsvCsrf;
+    }
+    $formSubmissionsCsvDownloadResponse = postUrl(
+        $formSubmissionsCsvUrl,
+        [
+            'csrf_token' => $formSubmissionsCsvConfirmedCsrf,
+            'confirm_form_submissions_csv_export' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionsCsvLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submissions_export_csv'")->fetchColumn();
+    if (httpIntegrationStatusCode($formSubmissionsCsvDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !str_contains($formSubmissionsCsvDownloadResponse['body'], 'Reference;Datum;Stav')
+        || !str_contains($formSubmissionsCsvDownloadResponse['body'], $formSubmissionsCsvEmail)
+        || $formSubmissionsCsvLogCountAfterConfirmed !== $formSubmissionsCsvLogCountBefore + 1) {
+        $formSubmissionsCsvErrorPreventionIssues[] = 'potvrzený CSV export odpovědí nevrátil bezpečný attachment nebo nezapsal audit log';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $formSubmissionsCsvErrorPreventionIssues, 'potvrzený CSV export odpovědí');
+    httpIntegrationPrintResult('form_submissions_csv_error_prevention_http', $formSubmissionsCsvErrorPreventionIssues, $failures);
+
     $adminDownloadHeaderIssues = [];
     if (httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
@@ -2157,6 +2278,16 @@ try {
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Referrer-Policy', 'no-referrer')
     ) {
         $adminDownloadHeaderIssues[] = 'admin/export.php neposlal bezpečné sdílené download hlavičky';
+    }
+    if (httpIntegrationStatusCode($formSubmissionsCsvDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Referrer-Policy', 'no-referrer')) {
+        $adminDownloadHeaderIssues[] = 'admin/form_submissions.php CSV export neposlal bezpečné sdílené download hlavičky';
     }
     httpIntegrationPrintResult('admin_download_headers_http', $adminDownloadHeaderIssues, $failures);
 
