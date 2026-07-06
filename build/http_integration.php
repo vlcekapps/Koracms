@@ -1114,21 +1114,83 @@ try {
     }
 
     if ($pollMultipleId > 0) {
-        $pollCsvResponse = fetchUrl($baseUrl . BASE_URL . '/admin/polls_results_export.php?id=' . $pollMultipleId, $adminSession['cookie'], 0);
-        if (httpIntegrationStatusCode($pollCsvResponse) !== 200 || !httpIntegrationHeaderContains($pollCsvResponse, 'Content-Type', 'text/csv')) {
-            $pollVotingModeIssues[] = 'CSV export výsledků ankety nevrátil text/csv odpověď';
+        $pollCsvUrl = $baseUrl . BASE_URL . '/admin/polls_results_export.php?id=' . $pollMultipleId;
+        $pollCsvReviewResponse = fetchUrl($pollCsvUrl, $adminSession['cookie'], 0);
+        $pollCsvCsrf = extractHiddenInputValue($pollCsvReviewResponse['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($pollCsvReviewResponse) !== 200
+            || $pollCsvCsrf === ''
+            || httpIntegrationHeaderContains($pollCsvReviewResponse, 'Content-Disposition', 'attachment')
+            || !str_contains($pollCsvReviewResponse['body'], 'CSV export obsahuje otázku ankety')
+            || !httpIntegrationInputHasAttributes(
+                $pollCsvReviewResponse['body'],
+                'confirm_poll_results_csv_export',
+                [
+                    'name' => 'confirm_poll_results_csv_export',
+                    'aria-describedby' => 'poll-results-csv-export-review-help',
+                ]
+            )) {
+            $pollVotingModeIssues[] = 'CSV export výsledků ankety nevykreslil review text a potvrzovací checkbox místo přímého downloadu';
         }
+
+        $pollCsvLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'poll_results_export_csv'")->fetchColumn();
+        $pollCsvMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/polls_results_export.php',
+            [
+                'csrf_token' => $pollCsvCsrf,
+                'poll_id' => (string)$pollMultipleId,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $pollCsvLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'poll_results_export_csv'")->fetchColumn();
         if (
-            !str_contains($pollCsvResponse['body'], 'Vybraných odpovědí')
-            || !str_contains($pollCsvResponse['body'], 'První odpověď')
-            || str_contains($pollCsvResponse['body'], 'ip_hash')
-            || str_contains($pollCsvResponse['body'], 'voter_hash')
+            httpIntegrationStatusCode($pollCsvMissingConfirmResponse) !== 200
+            || httpIntegrationHeaderContains($pollCsvMissingConfirmResponse, 'Content-Disposition', 'attachment')
+            || !str_contains($pollCsvMissingConfirmResponse['body'], 'id="poll-results-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
+            || !str_contains($pollCsvMissingConfirmResponse['body'], 'id="confirm-poll-results-csv-export-error"')
+            || !httpIntegrationInputHasAttributes(
+                $pollCsvMissingConfirmResponse['body'],
+                'confirm_poll_results_csv_export',
+                [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'poll-results-csv-export-review-help confirm-poll-results-csv-export-error',
+                ]
+            )
+            || $pollCsvLogCountAfterMissingConfirm !== $pollCsvLogCountBefore
         ) {
-            $pollVotingModeIssues[] = 'CSV export výsledků neobsahuje agregované výsledky nebo obsahuje raw hash údaje';
+            $pollVotingModeIssues[] = 'nepotvrzený CSV export výsledků ankety nevrátil field-level chybu nebo zapsal export';
         }
-        if (!httpIntegrationHeaderContains($pollCsvResponse, 'X-Content-Type-Options', 'nosniff') || !httpIntegrationHeaderContains($pollCsvResponse, 'Cache-Control', 'no-store')) {
-            $pollVotingModeIssues[] = 'CSV export výsledků nemá bezpečné no-store/nosniff hlavičky';
+
+        $pollCsvConfirmedCsrf = extractHiddenInputValue($pollCsvMissingConfirmResponse['body'], 'csrf_token');
+        if ($pollCsvConfirmedCsrf === '') {
+            $pollVotingModeIssues[] = 'nepotvrzený CSV export výsledků ankety nevrátil nový csrf_token pro opravené odeslání';
+            $pollCsvConfirmedCsrf = $pollCsvCsrf;
         }
+        $pollCsvDownloadResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/polls_results_export.php',
+            [
+                'csrf_token' => $pollCsvConfirmedCsrf,
+                'poll_id' => (string)$pollMultipleId,
+                'confirm_poll_results_csv_export' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $pollCsvLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'poll_results_export_csv'")->fetchColumn();
+        if (httpIntegrationStatusCode($pollCsvDownloadResponse) !== 200
+            || !httpIntegrationHeaderContains($pollCsvDownloadResponse, 'Content-Type', 'text/csv')
+            || !httpIntegrationHeaderContains($pollCsvDownloadResponse, 'Content-Disposition', 'attachment')
+            || !httpIntegrationHeaderContains($pollCsvDownloadResponse, 'Content-Disposition', 'filename*=')
+            || !httpIntegrationHeaderContains($pollCsvDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+            || !httpIntegrationHeaderContains($pollCsvDownloadResponse, 'Cache-Control', 'no-store')
+            || !str_contains($pollCsvDownloadResponse['body'], 'Vybraných odpovědí')
+            || !str_contains($pollCsvDownloadResponse['body'], 'První odpověď')
+            || str_contains($pollCsvDownloadResponse['body'], 'ip_hash')
+            || str_contains($pollCsvDownloadResponse['body'], 'voter_hash')
+            || $pollCsvLogCountAfterConfirmed !== $pollCsvLogCountBefore + 1) {
+            $pollVotingModeIssues[] = 'potvrzený CSV export výsledků ankety nevrátil bezpečný agregovaný attachment nebo nezapsal audit log';
+        }
+        httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $pollVotingModeIssues, 'potvrzený CSV export výsledků ankety');
     }
 
     httpIntegrationPrintResult('poll_voting_modes_http', $pollVotingModeIssues, $failures);

@@ -342,7 +342,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
       <a href="<?= h(pollPublicPath($poll)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <?php if ($id !== null): ?>
-      <a href="polls_results_export.php?id=<?= (int)$id ?>">Stáhnout výsledky CSV</a>
+      <a href="polls_results_export.php?id=<?= (int)$id ?>">Přejít na kontrolu CSV exportu výsledků</a>
     <?php endif; ?>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
   </div>

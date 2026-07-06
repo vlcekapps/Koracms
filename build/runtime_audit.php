@@ -9175,9 +9175,19 @@ $foundationChecks = [
         && str_contains($adminFormSubmissionFileSource, 'if ($isHeadRequest)')
         && $adminFormSubmissionFileMethodGuardBeforeCapability
         && str_contains($adminContentReferenceSearchSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)')
-        && str_contains($adminPollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminPollResultsExportSource, 'if ($isHeadRequest)'),
+        && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)'),
+    'admin poll results CSV export requires review confirmation' => str_contains($adminPollResultsExportSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD', 'POST']);")
+        && str_contains($adminPollResultsExportSource, 'function renderPollResultsCsvExportForm(')
+        && str_contains($adminPollResultsExportSource, 'CSV export výsledků ankety nejde stáhnout bez potvrzení kontroly agregovaných výsledků')
+        && str_contains($adminPollResultsExportSource, 'id="poll-results-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
+        && str_contains($adminPollResultsExportSource, 'id="poll-results-csv-export-review-help" class="field-help field-help--flush"')
+        && str_contains($adminPollResultsExportSource, 'confirm_poll_results_csv_export')
+        && str_contains($adminPollResultsExportSource, "adminFieldAttributes('confirm_poll_results_csv_export', \$exportErrorFields, [], ['poll-results-csv-export-review-help'], 'confirm-poll-results-csv-export-error')")
+        && str_contains($adminPollResultsExportSource, "adminRenderFieldError('confirm_poll_results_csv_export'")
+        && str_contains($adminPollResultsExportSource, "\$confirmPollResultsCsvExport = isset(\$_POST['confirm_poll_results_csv_export'])")
+        && str_contains($adminPollResultsExportSource, '!$confirmPollResultsCsvExport')
+        && str_contains($adminPollResultsExportSource, "logAction('poll_results_export_csv'")
+        && !str_contains($adminPollResultsExportSource, 'requireReadOnlyHttpMethod();'),
     'admin form submissions CSV export requires review confirmation' => str_contains($adminFormSubmissionsSource, "\$requestMethod = requireHttpMethods(\$isCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);")
         && str_contains($adminFormSubmissionsSource, 'CSV export odpovědí formuláře nejde stáhnout bez potvrzení kontroly citlivosti exportu')
         && str_contains($adminFormSubmissionsSource, 'id="form-submissions-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
@@ -13490,11 +13500,14 @@ foreach (['vote_mode', 'max_choices', 'results_visibility'] as $pollConfigFieldF
         $pollSourceIssues[] = 'poll import/export is missing voting config field: ' . $pollConfigFieldFragment;
     }
 }
-if (!str_contains($pollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+if (!str_contains($pollResultsExportSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD', 'POST']);")
+    || !str_contains($pollResultsExportSource, 'renderPollResultsCsvExportForm(')
+    || !str_contains($pollResultsExportSource, 'confirm_poll_results_csv_export')
     || !str_contains($pollResultsExportSource, "sendAdminAttachmentHeaders('text/csv; charset=UTF-8'")
+    || !str_contains($pollResultsExportSource, "logAction('poll_results_export_csv'")
     || !str_contains($pollResultsExportSource, 'Hlasujících')
     || !str_contains($pollResultsExportSource, 'Vybraných odpovědí')) {
-    $pollSourceIssues[] = 'poll CSV export is missing read-only aggregate export guardrails';
+    $pollSourceIssues[] = 'poll CSV export is missing review-confirm aggregate export guardrails';
 }
 if (str_contains($pollResultsExportSource, "fputcsv(\$output, ['ip_hash'")
     || str_contains($pollResultsExportSource, "fputcsv(\$output, ['voter_hash'")) {
@@ -18118,6 +18131,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export odpovědí nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions CSV export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('poll_voting_modes_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export výsledků ankety nevrátil field-level chybu nebo zapsal export')
+    || !str_contains($httpIntegrationSource, 'confirm_poll_results_csv_export')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing poll results CSV export error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http'")
