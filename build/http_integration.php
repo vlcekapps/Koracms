@@ -12419,10 +12419,11 @@ try {
     };
 
     $usedMedia = $uploadMediaFixture('used');
+    $deleteUnusedMedia = $uploadMediaFixture('delete');
     $bulkUnusedMedia = $uploadMediaFixture('unused');
 
-    if ($usedMedia === null || $bulkUnusedMedia === null) {
-        $mediaIssues[] = 'nepodařilo se připravit HTTP fixture pro scénáře used/unused média';
+    if ($usedMedia === null || $deleteUnusedMedia === null || $bulkUnusedMedia === null) {
+        $mediaIssues[] = 'nepodařilo se připravit HTTP fixture pro scénáře used/delete/unused média';
     } else {
         $usedPageSlug = 'http-media-page-' . bin2hex(random_bytes(4));
         $pdo->prepare(
@@ -12483,6 +12484,108 @@ try {
         }
         if (httpIntegrationFetchMediaById($pdo, (int)$usedMedia['id']) === null) {
             $mediaIssues[] = 'delete použitého média přesto smazal záznam';
+        }
+
+        $deleteUnusedMediaId = (int)$deleteUnusedMedia['id'];
+        $deleteUnusedMediaOriginalName = (string)($deleteUnusedMedia['original_name'] ?? '');
+        $deleteUnusedMediaPath = mediaOriginalPath($deleteUnusedMedia);
+        $deleteUnusedListPath = BASE_URL . '/admin/media.php?q=' . rawurlencode($deleteUnusedMediaOriginalName);
+        $deleteUnusedPage = fetchUrl($baseUrl . $deleteUnusedListPath, $adminSession['cookie'], 0);
+        $deleteUnusedCsrf = extractHiddenInputValue($deleteUnusedPage['body'], 'csrf_token');
+        $deleteUnusedConfirmField = 'confirm_media_delete_' . $deleteUnusedMediaId;
+        $deleteUnusedConfirmId = 'confirm-media-delete-' . $deleteUnusedMediaId;
+        $deleteUnusedReviewId = 'media-delete-review-' . $deleteUnusedMediaId;
+        $deleteUnusedFieldErrorId = 'confirm-media-delete-error-' . $deleteUnusedMediaId;
+        if (httpIntegrationStatusCode($deleteUnusedPage) !== 200
+            || $deleteUnusedCsrf === ''
+            || !str_contains($deleteUnusedPage['body'], 'Smazání odstraní soubor')
+            || !str_contains($deleteUnusedPage['body'], 'jeho metadata a odvozené miniatury')
+            || !str_contains($deleteUnusedPage['body'], 'form="delete-media-' . $deleteUnusedMediaId . '"')
+            || !str_contains($deleteUnusedPage['body'], '<legend>Smazání média ' . h($deleteUnusedMediaOriginalName) . '</legend>')
+            || !httpIntegrationInputHasAttributes($deleteUnusedPage['body'], $deleteUnusedConfirmId, [
+                'name' => $deleteUnusedConfirmField,
+                'aria-describedby' => $deleteUnusedReviewId,
+            ])) {
+            $mediaIssues[] = 'přehled médií nevykreslil individuální delete review a checkbox pro nepoužité médium';
+        }
+
+        $mediaDeleteLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'media_delete'")->fetchColumn();
+        $mediaDeleteMissingConfirmResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $deleteUnusedCsrf,
+                'action' => 'delete',
+                'media_id' => (string)$deleteUnusedMediaId,
+                'return_to' => $deleteUnusedListPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $mediaDeleteMissingConfirmPage = fetchUrl($baseUrl . $deleteUnusedListPath, $adminSession['cookie'], 0);
+        $mediaDeleteStillExists = httpIntegrationFetchMediaById($pdo, $deleteUnusedMediaId) !== null;
+        $mediaDeleteLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'media_delete'")->fetchColumn();
+        if ($deleteUnusedMediaPath !== '') {
+            clearstatcache(true, $deleteUnusedMediaPath);
+        }
+        if (httpIntegrationStatusCode($mediaDeleteMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader($mediaDeleteMissingConfirmResponse['headers'], $deleteUnusedListPath, $baseUrl)
+            || !str_contains($mediaDeleteMissingConfirmPage['body'], '<p class="error" role="alert" aria-atomic="true">Před smazáním zaškrtněte potvrzení kontroly konkrétního souboru.')
+            || !str_contains($mediaDeleteMissingConfirmPage['body'], 'id="' . $deleteUnusedFieldErrorId . '"')
+            || !httpIntegrationInputHasAttributes($mediaDeleteMissingConfirmPage['body'], $deleteUnusedConfirmId, [
+                'aria-invalid' => 'true',
+                'aria-describedby' => $deleteUnusedReviewId . ' ' . $deleteUnusedFieldErrorId,
+            ])
+            || !$mediaDeleteStillExists
+            || ($deleteUnusedMediaPath !== '' && !is_file($deleteUnusedMediaPath))
+            || $mediaDeleteLogCountAfterMissingConfirm !== $mediaDeleteLogCountBefore) {
+            $mediaIssues[] = 'individuální delete média bez potvrzení nezobrazil field-level chybu nebo změnil DB/soubor/audit log';
+        }
+
+        $mediaDeleteConfirmedCsrf = extractHiddenInputValue($mediaDeleteMissingConfirmPage['body'], 'csrf_token');
+        $mediaDeleteConfirmedResponse = postUrl(
+            $mediaAdminUrl,
+            [
+                'csrf_token' => $mediaDeleteConfirmedCsrf,
+                'action' => 'delete',
+                'media_id' => (string)$deleteUnusedMediaId,
+                $deleteUnusedConfirmField => '1',
+                'return_to' => $deleteUnusedListPath,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $mediaDeleteSuccessPage = fetchUrl($baseUrl . $deleteUnusedListPath, $adminSession['cookie'], 0);
+        $mediaDeleteLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'media_delete'")->fetchColumn();
+        $mediaDeleteConfirmedFileOk = true;
+        if ($deleteUnusedMediaPath !== '') {
+            $mediaDeleteConfirmedFileOk = false;
+            for ($mediaDeleteFileAttempt = 0; $mediaDeleteFileAttempt < 20; $mediaDeleteFileAttempt++) {
+                clearstatcache(true, $deleteUnusedMediaPath);
+                if (!is_file($deleteUnusedMediaPath)) {
+                    $mediaDeleteConfirmedFileOk = true;
+                    break;
+                }
+                usleep(50000);
+            }
+        }
+        $mediaDeleteConfirmedStatusOk = httpIntegrationStatusCode($mediaDeleteConfirmedResponse) === 302;
+        $mediaDeleteConfirmedLocationOk = responseHasLocationHeader($mediaDeleteConfirmedResponse['headers'], $deleteUnusedListPath, $baseUrl);
+        $mediaDeleteConfirmedFlashOk = str_contains($mediaDeleteSuccessPage['body'], '<p class="success" role="status">Soubor byl smazán.</p>');
+        $mediaDeleteConfirmedDbOk = httpIntegrationFetchMediaById($pdo, $deleteUnusedMediaId) === null;
+        $mediaDeleteConfirmedLogOk = $mediaDeleteLogCountAfterConfirmed === $mediaDeleteLogCountBefore + 1;
+        if (!$mediaDeleteConfirmedStatusOk
+            || !$mediaDeleteConfirmedLocationOk
+            || !$mediaDeleteConfirmedFlashOk
+            || !$mediaDeleteConfirmedDbOk
+            || !$mediaDeleteConfirmedFileOk
+            || !$mediaDeleteConfirmedLogOk) {
+            $mediaIssues[] = 'potvrzený individuální delete média nevrátil PRG stav, nesmazal DB/soubor nebo nezapsal audit log'
+                . ' (status=' . ($mediaDeleteConfirmedStatusOk ? 'ok' : (string)httpIntegrationStatusCode($mediaDeleteConfirmedResponse))
+                . ', location=' . ($mediaDeleteConfirmedLocationOk ? 'ok' : 'fail')
+                . ', flash=' . ($mediaDeleteConfirmedFlashOk ? 'ok' : 'fail')
+                . ', db=' . ($mediaDeleteConfirmedDbOk ? 'ok' : 'fail')
+                . ', file=' . ($mediaDeleteConfirmedFileOk ? 'ok' : 'fail')
+                . ', log=' . ($mediaDeleteConfirmedLogOk ? 'ok' : ($mediaDeleteLogCountAfterConfirmed . '/' . ($mediaDeleteLogCountBefore + 1))) . ')';
         }
 
         $bulkPrivateResponse = postUrl(

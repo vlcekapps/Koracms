@@ -267,6 +267,7 @@ button:disabled, input[type=button]:disabled, input[type=submit]:disabled, input
 .media-card__placeholder { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:#f0f2f5; color:#334155; font-weight:700; }
 .media-card__body { padding:.75rem; display:grid; gap:.45rem; }
 .media-card__title { display:block; word-break:break-word; }
+.media-delete-review, .media-delete-confirm { flex:1 1 100%; }
 .media-edit-section { margin-top:2rem; border-top:1px solid #d6d6d6; padding-top:1.5rem; }
 .media-edit-title { margin-top:0; }
 .media-edit-grid { display:grid; grid-template-columns:minmax(260px,1fr) minmax(260px,1fr); gap:1.5rem; }

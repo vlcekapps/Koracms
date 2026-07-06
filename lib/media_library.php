@@ -451,32 +451,47 @@ function mediaMoveFile(string $sourcePath, string $targetPath): bool
 
 /**
  * @param array<string,mixed> $media
+ * @return bool True, pokud všechny fyzické soubory chybí nebo se je podařilo odstranit.
  */
-function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): void
+function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool
 {
+    $deleted = true;
     $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
     if ($originalPath !== '') {
-        mediaDeleteFile(mediaWebpPath($originalPath), 'delete_derived_webp');
+        if (!mediaDeleteFile(mediaWebpPath($originalPath), 'delete_derived_webp')) {
+            $deleted = false;
+        }
     }
 
     $thumbPath = mediaThumbPath($media, $visibilityOverride, $filenameOverride);
     if ($thumbPath !== '') {
-        mediaDeleteFile($thumbPath, 'delete_thumb');
-        mediaDeleteFile(mediaWebpPath($thumbPath), 'delete_thumb_webp');
+        if (!mediaDeleteFile($thumbPath, 'delete_thumb')) {
+            $deleted = false;
+        }
+        if (!mediaDeleteFile(mediaWebpPath($thumbPath), 'delete_thumb_webp')) {
+            $deleted = false;
+        }
     }
+
+    return $deleted;
 }
 
 /**
  * @param array<string,mixed> $media
+ * @return bool True, pokud všechny fyzické soubory chybí nebo se je podařilo odstranit.
  */
-function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): void
+function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool
 {
-    mediaDeleteDerivedFiles($media, $visibilityOverride, $filenameOverride);
+    $deleted = mediaDeleteDerivedFiles($media, $visibilityOverride, $filenameOverride);
 
     $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
     if ($originalPath !== '') {
-        mediaDeleteFile($originalPath, 'delete_original');
+        if (!mediaDeleteFile($originalPath, 'delete_original')) {
+            $deleted = false;
+        }
     }
+
+    return $deleted;
 }
 
 /**

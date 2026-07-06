@@ -13670,6 +13670,33 @@ if (!str_contains($mediaAdminSource, '$mediaDeleteDisabledReason = \'Použité m
 if (str_contains($mediaAdminSource, 'title="Použité médium nelze smazat."')) {
     $mediaLibraryIssues[] = 'media admin delete disabled button still uses title instead of hidden button text';
 }
+$mediaDeleteConfirmPosition = strpos($mediaAdminSource, "\$confirmFieldName = 'confirm_media_delete_' . \$mediaId;");
+$mediaDeletePhysicalPosition = strpos($mediaAdminSource, 'mediaDeletePhysicalFiles($media)');
+if ($mediaDeleteConfirmPosition === false
+    || $mediaDeletePhysicalPosition === false
+    || $mediaDeleteConfirmPosition > $mediaDeletePhysicalPosition
+    || !str_contains($mediaAdminSource, '$mediaDeleteConfirmErrorMessage')
+    || !str_contains($mediaAdminSource, '$mediaDeleteFilesystemErrorMessage')
+    || !str_contains($mediaHelperSource, 'function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool')
+    || !str_contains($mediaHelperSource, 'return $deleted;')
+    || !str_contains($mediaAdminSource, 'if (!mediaDeletePhysicalFiles($media))')
+    || !str_contains($mediaAdminSource, "mediaFlashSetFieldError(\$confirmFieldName, \$mediaDeleteConfirmErrorMessage)")
+    || !str_contains($mediaAdminSource, 'role="alert" aria-atomic="true"')
+    || !str_contains($mediaAdminSource, "'confirm_media_delete_' . \$mediaId")
+    || !str_contains($mediaAdminSource, "'media-delete-review-' . \$mediaId")
+    || !str_contains($mediaAdminSource, 'form="delete-media-<?= $mediaId ?>"')
+    || !str_contains($mediaAdminSource, "adminFieldAttributes(\$mediaDeleteConfirmField, \$mediaFieldErrorNames, [], [\$mediaDeleteReviewId], \$mediaDeleteErrorId)")
+    || !str_contains($mediaAdminSource, "adminRenderFieldError(\$mediaDeleteConfirmField, \$mediaFieldErrorNames, [], \$mediaFieldErrors[\$mediaDeleteConfirmField] ?? '', \$mediaDeleteErrorId)")
+    || !str_contains($mediaAdminSource, 'method="post" hidden novalidate')
+    || !str_contains($mediaAdminSource, '<legend>Smazání média <?= h((string)$item[\'original_name\']) ?></legend>')) {
+    $mediaLibraryIssues[] = 'media admin individual delete is missing server-side confirm checkbox, review text or field-level error wiring';
+}
+if (!str_contains($mediaHttpIntegrationSource, 'individuální delete média bez potvrzení')
+    || !str_contains($mediaHttpIntegrationSource, 'confirm_media_delete_')
+    || !str_contains($mediaHttpIntegrationSource, "cms_log WHERE action = 'media_delete'")
+    || !str_contains($mediaHttpIntegrationSource, 'potvrzený individuální delete média')) {
+    $mediaLibraryIssues[] = 'HTTP integration is missing individual media delete error-prevention coverage';
+}
 foreach ([
     'media flash field error helper' => [
         'source' => $mediaHelperSource,

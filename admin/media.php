@@ -5,6 +5,8 @@ requireCapability('content_manage_shared', 'Přístup odepřen.');
 $pdo = db_connect();
 $perPage = 24;
 $mediaDeleteDisabledReason = 'Použité médium nelze smazat.';
+$mediaDeleteConfirmErrorMessage = 'Před smazáním zaškrtněte potvrzení kontroly konkrétního souboru. Soubor i jeho miniatury se z knihovny odstraní.';
+$mediaDeleteFilesystemErrorMessage = 'Soubor se nepodařilo bezpečně odstranit z úložiště. Záznam zůstal v knihovně, zkontrolujte oprávnění úložiště a zkuste akci znovu.';
 $mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do 10 MB: JPEG, PNG, GIF, WebP, audio, video, WebVTT titulky nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
 $mediaUploadFileErrorMessage = 'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát, není SVG a nepřekračuje 10 MB.';
 $mediaReplacementFileErrorMessage = 'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině jako původní médium; u veřejného souboru zachovejte stejnou příponu. SVG knihovna nepřijímá.';
@@ -568,7 +570,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mediaAdminRedirectWithFlash($target);
         }
 
-        mediaDeletePhysicalFiles($media);
+        $confirmFieldName = 'confirm_media_delete_' . $mediaId;
+        $confirmMediaDelete = isset($_POST[$confirmFieldName])
+            && (string)$_POST[$confirmFieldName] === '1';
+        if (!$confirmMediaDelete) {
+            mediaFlashSet('error', $mediaDeleteConfirmErrorMessage);
+            mediaFlashSetFieldError($confirmFieldName, $mediaDeleteConfirmErrorMessage);
+            mediaAdminRedirectWithFlash($target);
+        }
+
+        if (!mediaDeletePhysicalFiles($media)) {
+            mediaFlashSet('error', $mediaDeleteFilesystemErrorMessage);
+            mediaAdminRedirectWithFlash($target);
+        }
         $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]);
         mediaFlashSet('success', 'Soubor byl smazán.');
         logAction('media_delete', 'id=' . $mediaId);
@@ -666,7 +680,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $blockedCount++;
                     continue;
                 }
-                mediaDeletePhysicalFiles($media);
+                if (!mediaDeletePhysicalFiles($media)) {
+                    $blockedCount++;
+                    continue;
+                }
                 $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]);
                 $deletedCount++;
             }
@@ -730,7 +747,7 @@ adminHeader('Knihovna médií');
   <p class="success" role="status"><?= h($message) ?></p>
 <?php endforeach; ?>
 <?php foreach ($errorMessages as $message): ?>
-  <p class="error" role="alert"><?= h($message) ?></p>
+  <p class="error" role="alert" aria-atomic="true"><?= h($message) ?></p>
 <?php endforeach; ?>
 
 <form method="post" enctype="multipart/form-data" novalidate class="media-upload-form">
@@ -982,6 +999,10 @@ adminHeader('Knihovna médií');
             $isPublic = mediaIsPublic($item);
             $isSvg = mediaIsSvgMime((string)$item['mime_type']);
             $editUrl = mediaAdminPath(array_merge($state, ['edit' => $mediaId]));
+            $mediaDeleteConfirmField = 'confirm_media_delete_' . $mediaId;
+            $mediaDeleteConfirmId = 'confirm-media-delete-' . $mediaId;
+            $mediaDeleteReviewId = 'media-delete-review-' . $mediaId;
+            $mediaDeleteErrorId = 'confirm-media-delete-error-' . $mediaId;
             ?>
           <article class="media-card">
             <div class="media-card__header">
@@ -1037,6 +1058,21 @@ adminHeader('Knihovna médií');
               </div>
 
               <div class="button-row">
+                <?php if (!$isUsed): ?>
+                  <p id="<?= h($mediaDeleteReviewId) ?>" class="field-help media-delete-review">Smazání odstraní soubor <?= h((string)$item['original_name']) ?>, jeho metadata a odvozené miniatury z knihovny médií. Nejprve zkontrolujte, že soubor není potřeba v obsahu ani v redakčním archivu.</p>
+                  <label for="<?= h($mediaDeleteConfirmId) ?>" class="admin-checkbox-label media-delete-confirm">
+                    <input type="checkbox"
+                           id="<?= h($mediaDeleteConfirmId) ?>"
+                           name="<?= h($mediaDeleteConfirmField) ?>"
+                           value="1"
+                           required
+                           aria-required="true"
+                           form="delete-media-<?= $mediaId ?>"
+                           <?= adminFieldAttributes($mediaDeleteConfirmField, $mediaFieldErrorNames, [], [$mediaDeleteReviewId], $mediaDeleteErrorId) ?>>
+                    Potvrzuji kontrolu a chci médium smazat.
+                  </label>
+                  <?php adminRenderFieldError($mediaDeleteConfirmField, $mediaFieldErrorNames, [], $mediaFieldErrors[$mediaDeleteConfirmField] ?? '', $mediaDeleteErrorId); ?>
+                <?php endif; ?>
                 <button type="submit"
                         form="delete-media-<?= $mediaId ?>"
                         class="btn btn-danger"
@@ -1051,11 +1087,14 @@ adminHeader('Knihovna médií');
   </form>
 
   <?php foreach ($items as $item): ?>
-    <form id="delete-media-<?= (int)$item['id'] ?>" method="post" hidden>
-      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-      <input type="hidden" name="action" value="delete">
-      <input type="hidden" name="media_id" value="<?= (int)$item['id'] ?>">
-      <input type="hidden" name="return_to" value="<?= h(mediaAdminPath(array_merge($state, ['edit' => 0]))) ?>">
+    <form id="delete-media-<?= (int)$item['id'] ?>" method="post" hidden novalidate>
+      <fieldset>
+        <legend>Smazání média <?= h((string)$item['original_name']) ?></legend>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="media_id" value="<?= (int)$item['id'] ?>">
+        <input type="hidden" name="return_to" value="<?= h(mediaAdminPath(array_merge($state, ['edit' => 0]))) ?>">
+      </fieldset>
     </form>
   <?php endforeach; ?>
 
