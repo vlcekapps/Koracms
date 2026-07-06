@@ -934,6 +934,8 @@ Přehled rezervací nabízí filtr **Připomínka**, který rozlišuje odeslané
 
 Detail rezervace obsahuje sekci **Historie rezervace**. Zapisuje vytvoření, schválení, zamítnutí, zrušení, dokončení, no-show, automatické dokončení a odeslání nebo chybu připomínky. Historie je provozní audit pro administraci; není to veřejná časová osa.
 
+Změny stavů v detailu rezervace mají ochranu před nechtěným dopadem na zákazníka. Schválení, zamítnutí, zrušení, dokončení i označení no-show zobrazují review text, vyžadují potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle e-mailovou notifikaci.
+
 ### Veřejný kalendářový soubor
 
 V části **Moje rezervace** se u budoucích potvrzených rezervací zobrazí odkaz **Stáhnout do kalendáře**. Odkaz vede na tokenový endpoint `/reservations/calendar.php?token=...`, který vrací `.ics` soubor s názvem zdroje, datem, časem, lokalitou, jménem zákazníka a bezpečným storno odkazem, pokud existuje.
@@ -1219,7 +1221,7 @@ Vývojové kontroly:
 - Import, historie newsletteru a 2FA přihlášení v administraci používají CSS třídy pro odsazení akcí, zalomení dlouhého obsahu newsletteru a vzhled 2FA kódu místo lokálních `style` atributů; runtime audit hlídá, aby se tyto drobné prezentační styly nevracely přímo do HTML atributů.
 - Kategorie vývěsky, FAQ a stažení v administraci používají sdílené utility třídy pro přidání, inline editaci a mazání kategorií místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto menších taxonomií nevracely.
 - Kategorie a lokality rezervací v administraci používají sdílené utility třídy pro filtry, přidávací formuláře, inline editaci a mazání místo lokálních `style` atributů; runtime audit hlídá, aby se čistě prezentační inline styly do těchto rezervačních číselníků nevracely.
-- Přehled rezervací, ruční vytvoření rezervace, detail rezervace a editor zdrojů rezervací v administraci používají sdílené admin CSS třídy a atribut `hidden` pro přepínané části formulářů místo lokálního `<style>` bloku, lokálních `style` atributů nebo JS `element.style` mutací; runtime audit hlídá návrat starého vzoru i u dynamicky přidávaných slotů a blokovaných dnů.
+- Přehled rezervací, ruční vytvoření rezervace, detail rezervace a editor zdrojů rezervací v administraci používají sdílené admin CSS třídy a atribut `hidden` pro přepínané části formulářů místo lokálního `<style>` bloku, lokálních `style` atributů nebo JS `element.style` mutací; runtime audit hlídá návrat starého vzoru i u dynamicky přidávaných slotů a blokovaných dnů. Detail rezervace zároveň používá pro stavové změny review text a serverově ověřený potvrzovací checkbox, aby nepotvrzený POST nezměnil stav ani historii.
 - Knihovna médií v administraci používá sdílené admin CSS třídy pro upload, filtry, grid médií, hromadné akce, detail metadat a přehled použití místo lokálních `style` atributů; runtime audit hlídá návrat starého vzoru.
 - Kategorie a štítky blogu v administraci používají sdílené utility třídy pro výběr blogu, inline editaci taxonomií, tlačítka a mazací formuláře místo lokálních `style` atributů. Stejný směr drží i sdílený helper hromadných akcí, který používá `admin-fieldset-card` a `field-help--flush`.
 - Pořadí stránek a odkazů blogu v administraci používá sdílené utility třídy pro popis, řadicí seznam, stavové poznámky, formulář externího odkazu a tlačítkový řádek místo lokálních `style` atributů. Stav přetahování se přepíná CSS třídou a runtime audit hlídá, aby se inline styly do obrazovky nevracely.

@@ -51,6 +51,35 @@ $canComplete = in_array($booking['status'], ['pending', 'confirmed'], true) && $
 $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
 $eventLabels = reservationBookingEventLabels();
 $bookingEvents = [];
+$statusActionError = trim((string)($_GET['error'] ?? '')) === 'status_confirm_required';
+$statusActionErrorParam = trim((string)($_GET['action'] ?? ''));
+$statusActionErrorAction = in_array($statusActionErrorParam, ['approve', 'reject', 'cancel', 'complete', 'no_show'], true)
+    ? $statusActionErrorParam
+    : '';
+$statusActionErrorMessage = $statusActionError
+    ? 'Změnu stavu rezervace nejde provést bez potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.'
+    : '';
+$statusActionFormErrorAttributes = static function (string $action) use ($statusActionErrorAction, $statusActionErrorMessage): string {
+    return $statusActionErrorMessage !== '' && $statusActionErrorAction === $action
+        ? ' aria-describedby="reservation-status-error"'
+        : '';
+};
+$renderStatusConfirmation = static function (string $action, string $reviewText) use ($statusActionErrorAction): void {
+    $actionId = str_replace('_', '-', $action);
+    $fieldName = 'confirm_reservation_status_' . $action;
+    $fieldId = 'confirm-reservation-status-' . $actionId;
+    $reviewId = 'reservation-status-review-' . $actionId;
+    $errorId = 'reservation-status-confirm-' . $actionId . '-error';
+    $fieldErrors = $statusActionErrorAction === $action ? [$fieldName] : [];
+    ?>
+    <p id="<?= h($reviewId) ?>" class="field-help field-help--flush"><?= h($reviewText) ?></p>
+    <label for="<?= h($fieldId) ?>" class="admin-checkbox-label">
+      <input type="checkbox" id="<?= h($fieldId) ?>" name="<?= h($fieldName) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($fieldName, $fieldErrors, [], [$reviewId], $errorId) ?>>
+      Potvrzuji, že jsem zkontroloval(a) rezervaci, nový stav a dopad na zákazníka.
+    </label>
+    <?php adminRenderFieldError($fieldName, $fieldErrors, [], 'Před změnou stavu zaškrtněte potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.', $errorId); ?>
+    <?php
+};
 try {
     $eventsStmt = $pdo->prepare(
         "SELECT e.*, COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS actor_label
@@ -69,6 +98,11 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
 ?>
 <?php if (isset($_GET['ok'])): ?>
   <p role="status" class="success">Rezervace byla úspěšně aktualizována.</p>
+<?php endif; ?>
+<?php if ($statusActionErrorMessage !== ''): ?>
+  <div class="error" role="alert" aria-atomic="true" aria-labelledby="reservation-status-error">
+    <p id="reservation-status-error"><?= h($statusActionErrorMessage) ?></p>
+  </div>
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled rezervací</a></p>
@@ -146,21 +180,28 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
 
 <?php if ($booking['status'] === 'pending'): ?>
   <div class="button-row button-row--top res-booking-actions">
-    <form action="res_booking_save.php" method="post">
+    <form action="res_booking_save.php" method="post"<?= $statusActionFormErrorAttributes('approve') ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
       <input type="hidden" name="action" value="approve">
       <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-      <button type="submit" class="btn btn-success">Schválit</button>
+      <fieldset class="res-booking-fieldset">
+        <legend>Schválení rezervace</legend>
+        <?php $renderStatusConfirmation('approve', 'Schválení změní stav na Potvrzená, doplní kalendářový token a odešle potvrzení na kontakt rezervace, pokud je e-mail k dispozici.'); ?>
+        <div class="res-booking-action-row">
+          <button type="submit" class="btn btn-success" data-confirm="Schválit rezervaci? Tato akce může odeslat potvrzení zákazníkovi.">Schválit</button>
+        </div>
+      </fieldset>
     </form>
 
-    <form action="res_booking_save.php" method="post">
+    <form action="res_booking_save.php" method="post"<?= $statusActionFormErrorAttributes('reject') ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
       <input type="hidden" name="action" value="reject">
       <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
       <fieldset class="res-booking-fieldset">
         <legend>Zamítnutí</legend>
+        <?php $renderStatusConfirmation('reject', 'Zamítnutí změní stav na Zamítnutá a odešle informační e-mail na kontakt rezervace, pokud je e-mail k dispozici.'); ?>
         <label for="admin_note_reject">Poznámka</label>
         <textarea id="admin_note_reject" name="admin_note" rows="3" class="res-booking-textarea--reject" aria-describedby="admin-note-reject-help"></textarea>
         <small id="admin-note-reject-help" class="field-help">Nepovinné pole.</small>
@@ -173,40 +214,51 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
 <?php endif; ?>
 
 <?php if ($booking['status'] === 'confirmed'): ?>
-  <form action="res_booking_save.php" method="post" class="res-booking-form">
+  <form action="res_booking_save.php" method="post" class="res-booking-form"<?= $statusActionFormErrorAttributes('cancel') ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="cancel">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-    <label for="admin_note_cancel">Poznámka</label>
-    <textarea id="admin_note_cancel" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-cancel-help"></textarea>
-    <small id="admin-note-cancel-help" class="field-help">Nepovinné pole.</small>
-    <div class="res-booking-action-row">
-      <button type="submit" class="btn btn-danger" data-confirm="Zrušit rezervaci?">Zrušit</button>
-    </div>
+    <fieldset class="res-booking-fieldset">
+      <legend>Zrušení rezervace</legend>
+      <?php $renderStatusConfirmation('cancel', 'Zrušení změní stav na Zrušená, nastaví čas zrušení a odešle informační e-mail na kontakt rezervace, pokud je e-mail k dispozici.'); ?>
+      <label for="admin_note_cancel">Poznámka</label>
+      <textarea id="admin_note_cancel" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-cancel-help"></textarea>
+      <small id="admin-note-cancel-help" class="field-help">Nepovinné pole.</small>
+      <div class="res-booking-action-row">
+        <button type="submit" class="btn btn-danger" data-confirm="Zrušit rezervaci?">Zrušit</button>
+      </div>
+    </fieldset>
   </form>
 <?php endif; ?>
 
 <?php if ($canComplete): ?>
-  <form action="res_booking_save.php" method="post" class="res-booking-form">
+  <form action="res_booking_save.php" method="post" class="res-booking-form"<?= $statusActionFormErrorAttributes('complete') ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="complete">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
-    <button type="submit" class="btn res-booking-complete-button">Označit jako dokončenou</button>
+    <fieldset class="res-booking-fieldset">
+      <legend>Dokončení rezervace</legend>
+      <?php $renderStatusConfirmation('complete', 'Dokončení změní stav na Dokončená a zapíše změnu do historie rezervace. Použijte ho až po skutečném konci termínu.'); ?>
+      <div class="res-booking-action-row">
+        <button type="submit" class="btn res-booking-complete-button">Označit jako dokončenou</button>
+      </div>
+    </fieldset>
   </form>
 <?php elseif (in_array($booking['status'], ['pending', 'confirmed'], true)): ?>
   <p class="res-booking-pending-note">Označit jako dokončenou bude možné po <?= h($bookingEndDt->format('d.m.Y H:i')) ?>.</p>
 <?php endif; ?>
 
 <?php if (in_array($booking['status'], ['confirmed', 'completed'], true) && (string)$booking['booking_date'] < date('Y-m-d')): ?>
-  <form action="res_booking_save.php" method="post" class="res-booking-form">
+  <form action="res_booking_save.php" method="post" class="res-booking-form"<?= $statusActionFormErrorAttributes('no_show') ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
     <input type="hidden" name="action" value="no_show">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL . '/admin/res_booking_detail.php?id=' . (int)$booking['id'] . '&redirect=' . rawurlencode($redirect)) ?>">
     <fieldset class="res-booking-fieldset">
       <legend>Neomluvená absence</legend>
+      <?php $renderStatusConfirmation('no_show', 'Označení absence změní stav na Neomluvená absence a zapíše změnu do historie rezervace.'); ?>
       <label for="admin_note_noshow">Poznámka</label>
       <textarea id="admin_note_noshow" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-noshow-help"></textarea>
       <small id="admin-note-noshow-help" class="field-help">Nepovinné pole.</small>

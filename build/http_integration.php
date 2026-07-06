@@ -7429,6 +7429,109 @@ try {
         $reservationIssues[] = 'admin detail rezervace nezobrazuje historii změn a připomínek';
     }
 
+    $statusGuardConfirmationToken = bin2hex(random_bytes(16));
+    $pdo->prepare(
+        "INSERT INTO cms_res_bookings
+         (resource_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
+          party_size, notes, status, confirmation_token, calendar_token, created_at, updated_at)
+         VALUES (?, 'HTTP Pending Host', 'reservation-status-guard@example.test', '', ?, '11:00:00', '12:00:00',
+                 1, 'HTTP reservation status guard', 'pending', ?, NULL, NOW(), NOW())"
+    )->execute([$resourceId, $bookingDate, $statusGuardConfirmationToken]);
+    $statusGuardBookingId = (int)$pdo->lastInsertId();
+    $statusGuardDetailPath = BASE_URL . '/admin/res_booking_detail.php?id=' . $statusGuardBookingId;
+    $statusGuardDetailResponse = fetchUrl(
+        $baseUrl . $statusGuardDetailPath,
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($statusGuardDetailResponse) !== 200
+        || !str_contains($statusGuardDetailResponse['body'], 'Schválení změní stav na Potvrzená')
+        || !httpIntegrationInputHasAttributes(
+            $statusGuardDetailResponse['body'],
+            'confirm-reservation-status-approve',
+            [
+                'name' => 'confirm_reservation_status_approve',
+                'aria-describedby' => 'reservation-status-review-approve',
+            ]
+        )) {
+        $reservationIssues[] = 'admin detail pending rezervace neobsahuje error-prevention potvrzení schválení';
+    }
+
+    $statusGuardEventsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_res_booking_events WHERE booking_id = ?");
+    $statusGuardEventsStmt->execute([$statusGuardBookingId]);
+    $statusGuardEventsBefore = (int)$statusGuardEventsStmt->fetchColumn();
+    $statusGuardStatusStmt = $pdo->prepare("SELECT status FROM cms_res_bookings WHERE id = ?");
+    $unconfirmedApproveResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_booking_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'booking_id' => (string)$statusGuardBookingId,
+            'action' => 'approve',
+            'redirect' => $statusGuardDetailPath,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $statusGuardStatusStmt->execute([$statusGuardBookingId]);
+    $unconfirmedStatus = (string)$statusGuardStatusStmt->fetchColumn();
+    $statusGuardEventsStmt->execute([$statusGuardBookingId]);
+    $unconfirmedEvents = (int)$statusGuardEventsStmt->fetchColumn();
+    if (httpIntegrationStatusCode($unconfirmedApproveResponse) !== 302
+        || !responseHasLocationHeader($unconfirmedApproveResponse['headers'], $statusGuardDetailPath . '&error=status_confirm_required&action=approve', $baseUrl)
+        || $unconfirmedStatus !== 'pending'
+        || $unconfirmedEvents !== $statusGuardEventsBefore) {
+        $reservationIssues[] = 'nepotvrzené schválení rezervace změnilo stav nebo zapsalo historii';
+    }
+
+    $statusGuardErrorPage = fetchUrl(
+        $baseUrl . $statusGuardDetailPath . '&error=status_confirm_required&action=approve',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($statusGuardErrorPage) !== 200
+        || !str_contains($statusGuardErrorPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="reservation-status-error"')
+        || !str_contains($statusGuardErrorPage['body'], 'id="reservation-status-confirm-approve-error"')
+        || !httpIntegrationInputHasAttributes(
+            $statusGuardErrorPage['body'],
+            'confirm-reservation-status-approve',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'reservation-status-review-approve reservation-status-confirm-approve-error',
+            ]
+        )) {
+        $reservationIssues[] = 'chybový stav schválení rezervace bez potvrzení neobsahuje alert nebo field-level chybu';
+    }
+
+    $reservationStatusMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
+    putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
+    $confirmedApproveResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_booking_save.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'booking_id' => (string)$statusGuardBookingId,
+            'action' => 'approve',
+            'redirect' => $statusGuardDetailPath,
+            'confirm_reservation_status_approve' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if ($reservationStatusMailFlag === false) {
+        putenv('KORA_DISABLE_OUTBOUND_MAIL');
+    } else {
+        putenv('KORA_DISABLE_OUTBOUND_MAIL=' . $reservationStatusMailFlag);
+    }
+    $statusGuardStatusStmt->execute([$statusGuardBookingId]);
+    $confirmedStatus = (string)$statusGuardStatusStmt->fetchColumn();
+    $statusGuardEventsStmt->execute([$statusGuardBookingId]);
+    $confirmedEvents = (int)$statusGuardEventsStmt->fetchColumn();
+    if (httpIntegrationStatusCode($confirmedApproveResponse) !== 302
+        || !responseHasLocationHeader($confirmedApproveResponse['headers'], $statusGuardDetailPath . '&ok=1', $baseUrl)
+        || $confirmedStatus !== 'confirmed'
+        || $confirmedEvents !== $statusGuardEventsBefore + 1) {
+        $reservationIssues[] = 'potvrzené schválení rezervace neuložilo stav nebo historii';
+    }
+
     $guestBookingUrl = $baseUrl . BASE_URL . '/reservations/book.php?slug=' . rawurlencode($resourceSlug) . '&date=' . rawurlencode($bookingDate);
     $guestBookingSession = koraPrimeTestSession([], 'kora-http-reservation-invalid-captcha-' . bin2hex(random_bytes(3)));
     $guestBookingPage = fetchUrl($guestBookingUrl, $guestBookingSession['cookie'], 0);

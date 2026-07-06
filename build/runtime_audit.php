@@ -18025,8 +18025,44 @@ foreach ([
         }
     }
 }
+foreach ([
+    'reservation status detail error prevention' => [
+        'source' => $reservationBookingDetailSource,
+        'required' => [
+            '$statusActionErrorMessage =',
+            'Změnu stavu rezervace nejde provést bez potvrzení kontroly rezervace',
+            '$renderStatusConfirmation = static function',
+            'confirm_reservation_status_',
+            'reservation-status-review-',
+            'aria-labelledby="reservation-status-error"',
+            'adminFieldAttributes($fieldName, $fieldErrors, [], [$reviewId], $errorId)',
+            'adminRenderFieldError($fieldName, $fieldErrors, [], \'Před změnou stavu zaškrtněte potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.\', $errorId);',
+        ],
+    ],
+    'reservation status save error prevention' => [
+        'source' => $adminResBookingSaveSource,
+        'required' => [
+            '$statusActionConfirmationField = \'confirm_reservation_status_\' . $action;',
+            '$statusActionConfirmed = isset($_POST[$statusActionConfirmationField])',
+            '!$statusActionConfirmed',
+            '\'error\' => \'status_confirm_required\'',
+            '\'action\' => $action',
+        ],
+    ],
+] as $reservationStatusPreventionLabel => $reservationStatusPreventionSpec) {
+    foreach ($reservationStatusPreventionSpec['required'] as $reservationStatusPreventionFragment) {
+        if (!str_contains((string)$reservationStatusPreventionSpec['source'], $reservationStatusPreventionFragment)) {
+            $adminFieldErrorIssues[] = $reservationStatusPreventionLabel . ' is missing error-prevention fragment: ' . $reservationStatusPreventionFragment;
+        }
+    }
+}
 if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, 'validní JSON import bez potvrzení nevrátil field-level chybu nebo změnil data')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing JSON import error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, 'nepotvrzené schválení rezervace změnilo stav nebo zapsalo historii')
+    || !str_contains($httpIntegrationSource, 'confirm-reservation-status-approve')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing reservation status error-prevention coverage';
 }
 foreach ([
     'blog article image upload error suggestion' => [

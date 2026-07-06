@@ -61,6 +61,17 @@ if ($action === 'complete') {
     }
 }
 
+$statusActionConfirmationField = 'confirm_reservation_status_' . $action;
+$statusActionConfirmed = isset($_POST[$statusActionConfirmationField])
+    && (string)$_POST[$statusActionConfirmationField] === '1';
+if (!$statusActionConfirmed) {
+    header('Location: ' . appendUrlQuery($detailRedirect, [
+        'error' => 'status_confirm_required',
+        'action' => $action,
+    ]));
+    exit;
+}
+
 // ── Nový stav ──
 $statusMap = [
     'approve'  => 'confirmed',
