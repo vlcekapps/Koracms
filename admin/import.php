@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
-requireLogin(BASE_URL . '/admin/login.php');
+requireCapability('import_export_manage', 'Přístup odepřen. Pro import a export dat nemáte potřebné oprávnění.');
 
 $errors  = [];
 $fieldErrors = [];
@@ -1812,7 +1812,7 @@ adminHeader('Import / Export dat');
    Osobní rezervace ani jejich historie se z důvodu ochrany soukromí do JSON exportu nepřenášejí.
    Nahrané soubory (obrázky, audio, přílohy) je třeba přenést ručně ze složky <code>uploads/</code>.</p>
 <p>
-  <a href="export.php" class="btn">Stáhnout zálohu (JSON)</a>
+  <a href="export.php" class="btn">Přejít na kontrolu exportu (JSON)</a>
 </p>
 
 <h2>Import dat</h2>

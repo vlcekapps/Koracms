@@ -9168,9 +9168,7 @@ $foundationChecks = [
         && str_contains($defaultNotFoundViewSource, '<?= h((string)($message ??')
         && $publicNotFoundEndpointHelperUsageOk
         && $blogRouterNotFoundHelperDependencyOk,
-    'admin read-only endpoints enforce HTTP methods' => str_contains($adminExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
-        && str_contains($adminExportSource, 'if ($isHeadRequest)')
-        && str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    'admin read-only endpoints enforce HTTP methods' => str_contains($adminFormSubmissionFileSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminFormSubmissionFileSource, "sendFileDownloadNotFound('Příloha nebyla nalezena.', \$isHeadRequest);")
         && str_contains($adminFormSubmissionFileSource, 'sendAdminAttachmentHeaders($mimeType, $originalName, $fileSize)')
         && !str_contains($adminFormSubmissionFileSource, 'http_response_code(404)')
@@ -9183,6 +9181,19 @@ $foundationChecks = [
         && str_contains($adminContentReferenceSearchSource, 'if ($isHeadRequest)')
         && str_contains($adminPollResultsExportSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
         && str_contains($adminPollResultsExportSource, 'if ($isHeadRequest)'),
+    'admin JSON export requires review confirmation' => str_contains($adminExportSource, "requireCapability('import_export_manage'")
+        && str_contains($adminExportSource, "\$requestMethod = requireHttpMethods(['GET', 'HEAD', 'POST']);")
+        && str_contains($adminExportSource, 'function renderJsonExportForm(bool $confirmExportError = false): void')
+        && str_contains($adminExportSource, 'JSON export nejde stáhnout bez potvrzení kontroly citlivosti exportu')
+        && str_contains($adminExportSource, 'id="json-export-form-error" class="error" role="alert" aria-atomic="true"')
+        && str_contains($adminExportSource, 'id="json-export-review-help" class="field-help field-help--flush"')
+        && str_contains($adminExportSource, 'confirm_json_export')
+        && str_contains($adminExportSource, "adminFieldAttributes('confirm_json_export', \$exportErrorFields, [], ['json-export-review-help'], 'confirm-json-export-error')")
+        && str_contains($adminExportSource, "adminRenderFieldError('confirm_json_export'")
+        && str_contains($adminExportSource, "\$confirmJsonExport = isset(\$_POST['confirm_json_export'])")
+        && str_contains($adminExportSource, '!$confirmJsonExport')
+        && str_contains($adminImportSource, "requireCapability('import_export_manage'")
+        && str_contains($adminImportSource, 'Přejít na kontrolu exportu (JSON)'),
     'admin HTML responses send no-store headers' => str_contains($authSource, 'function isAdminRequestPath')
         && str_contains($authSource, "BASE_URL . '/admin/'")
         && str_contains($authSource, "BASE_URL . '/migrate.php'")
@@ -9481,7 +9492,6 @@ foreach ($fileMethodGuardUrls as $fileMethodGuardUrl => $fileMethodGuardLabel) {
 }
 
 $adminReadOnlyMethodGuardUrls = [
-    '/admin/export.php' => 'admin/export.php',
     '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
     '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
     '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
@@ -18086,6 +18096,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzená SQL záloha nevrátila field-level chybu nebo zapsala export')
     || !str_contains($httpIntegrationSource, 'confirm_database_backup')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing database backup error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('json_export_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzený JSON export nevrátil field-level chybu nebo zapsal export')
+    || !str_contains($httpIntegrationSource, 'confirm_json_export')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing JSON export error-prevention coverage';
 }
 foreach ([
     'blog article image upload error suggestion' => [

@@ -114,6 +114,60 @@ function httpIntegrationHeaderContains(array $response, string $name, string $ne
 }
 
 /**
+ * @param array{id:string,cookie:string,csrf:string} $adminSession
+ * @param list<string> $issues
+ */
+function httpIntegrationRefreshAdminSessionCsrf(string $baseUrl, array &$adminSession, array &$issues, string $label): void
+{
+    $freshTokenPage = fetchUrl($baseUrl . BASE_URL . '/admin/settings.php', $adminSession['cookie'], 0);
+    $freshCsrf = extractHiddenInputValue($freshTokenPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($freshTokenPage) !== 200 || $freshCsrf === '') {
+        $issues[] = $label . ' neobnovil aktuální csrf_token pro další administrační scénáře';
+        return;
+    }
+
+    $adminSession['csrf'] = $freshCsrf;
+}
+
+/**
+ * @param array{id:string,cookie:string,csrf:string} $adminSession
+ * @param list<string> $issues
+ * @return array{status:string,headers:array<int,string>,body:string}
+ */
+function httpIntegrationFetchConfirmedJsonExport(string $baseUrl, array &$adminSession, array &$issues, string $label): array
+{
+    $exportPage = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    $exportCsrf = extractHiddenInputValue($exportPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($exportPage) !== 200
+        || $exportCsrf === ''
+        || httpIntegrationHeaderContains($exportPage, 'Content-Disposition', 'attachment')
+        || !str_contains($exportPage['body'], 'JSON export obsahuje články, stránky, média metadata')) {
+        $issues[] = $label . ' nevykreslil review formulář JSON exportu';
+    }
+
+    $exportResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/export.php',
+        [
+            'csrf_token' => $exportCsrf,
+            'confirm_json_export' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($exportResponse) !== 200
+        || !httpIntegrationHeaderContains($exportResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($exportResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($exportResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($exportResponse, 'X-Content-Type-Options', 'nosniff')) {
+        $issues[] = $label . ' nevrátil potvrzený JSON export s bezpečnými download hlavičkami';
+    }
+
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $issues, $label);
+
+    return $exportResponse;
+}
+
+/**
  * @param array{status:string,headers:array<int,string>,body:string} $response
  */
 function httpIntegrationHeaderValue(array $response, string $name): string
@@ -1503,7 +1557,6 @@ try {
 
     $adminReadOnlyEndpointIssues = [];
     $adminReadOnlyEndpointUrls = [
-        '/admin/export.php' => 'admin/export.php',
         '/admin/form_submission_file.php?id=0&field=missing' => 'admin/form_submission_file.php',
         '/admin/form_submissions.php?id=0&export=csv' => 'admin/form_submissions.php CSV export',
         '/admin/content_reference_search.php?q=test&type=all' => 'admin/content_reference_search.php',
@@ -2020,10 +2073,81 @@ try {
     }
     httpIntegrationPrintResult('database_backup_error_prevention_http', $databaseBackupErrorPreventionIssues, $failures);
 
+    $jsonExportErrorPreventionIssues = [];
+    $jsonExportPageResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    $jsonExportCsrf = extractHiddenInputValue($jsonExportPageResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($jsonExportPageResponse) !== 200
+        || $jsonExportCsrf === ''
+        || httpIntegrationHeaderContains($jsonExportPageResponse, 'Content-Disposition', 'attachment')
+        || !str_contains($jsonExportPageResponse['body'], 'JSON export obsahuje články, stránky, média metadata')
+        || !httpIntegrationInputHasAttributes(
+            $jsonExportPageResponse['body'],
+            'confirm_json_export',
+            [
+                'name' => 'confirm_json_export',
+                'aria-describedby' => 'json-export-review-help',
+            ]
+        )) {
+        $jsonExportErrorPreventionIssues[] = 'admin JSON export nevykreslil review text a potvrzovací checkbox místo přímého downloadu';
+    }
+
+    $jsonExportLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'export_json'")->fetchColumn();
+    $jsonExportMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/export.php',
+        [
+            'csrf_token' => $jsonExportCsrf,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $jsonExportLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'export_json'")->fetchColumn();
+    if (httpIntegrationStatusCode($jsonExportMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($jsonExportMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || str_contains($jsonExportMissingConfirmResponse['body'], '"exported_at"')
+        || !str_contains($jsonExportMissingConfirmResponse['body'], 'id="json-export-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($jsonExportMissingConfirmResponse['body'], 'id="confirm-json-export-error"')
+        || !httpIntegrationInputHasAttributes(
+            $jsonExportMissingConfirmResponse['body'],
+            'confirm_json_export',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'json-export-review-help confirm-json-export-error',
+            ]
+        )
+        || $jsonExportLogCountAfterMissingConfirm !== $jsonExportLogCountBefore) {
+        $jsonExportErrorPreventionIssues[] = 'nepotvrzený JSON export nevrátil field-level chybu nebo zapsal export';
+    }
+
+    $jsonExportConfirmedCsrf = extractHiddenInputValue($jsonExportMissingConfirmResponse['body'], 'csrf_token');
+    if ($jsonExportConfirmedCsrf === '') {
+        $jsonExportErrorPreventionIssues[] = 'nepotvrzený JSON export nevrátil nový csrf_token pro opravené odeslání';
+        $jsonExportConfirmedCsrf = $jsonExportCsrf;
+    }
+    $adminExportDownloadResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/export.php',
+        [
+            'csrf_token' => $jsonExportConfirmedCsrf,
+            'confirm_json_export' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $jsonExportLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'export_json'")->fetchColumn();
+    if (httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !str_contains($adminExportDownloadResponse['body'], '"exported_at"')
+        || !str_contains($adminExportDownloadResponse['body'], '"subscribers"')
+        || $jsonExportLogCountAfterConfirmed !== $jsonExportLogCountBefore + 1) {
+        $jsonExportErrorPreventionIssues[] = 'potvrzený JSON export nevrátil bezpečný attachment nebo nezapsal audit log';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $jsonExportErrorPreventionIssues, 'potvrzený JSON export');
+    httpIntegrationPrintResult('json_export_error_prevention_http', $jsonExportErrorPreventionIssues, $failures);
+
     $adminDownloadHeaderIssues = [];
-    $adminExportDownloadResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
-    if (
-        httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
+    if (httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'filename*=')
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Cache-Control', 'no-store')
@@ -5701,7 +5825,7 @@ try {
         }
     }
 
-    $galleryExportResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    $galleryExportResponse = httpIntegrationFetchConfirmedJsonExport($baseUrl, $adminSession, $galleryMetadataIssues, 'gallery metadata JSON export');
     if (httpIntegrationStatusCode($galleryExportResponse) === 200
         && (!str_contains($galleryExportResponse['body'], '"alt_text"')
             || !str_contains($galleryExportResponse['body'], '"default_license_url"'))) {
@@ -6491,7 +6615,7 @@ try {
         $blogSeriesIssues[] = 'podvržená cizí série se přesto uložila k článku';
     }
 
-    $seriesExportResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    $seriesExportResponse = httpIntegrationFetchConfirmedJsonExport($baseUrl, $adminSession, $blogSeriesIssues, 'article series JSON export');
     if (httpIntegrationStatusCode($seriesExportResponse) !== 200
         || !str_contains($seriesExportResponse['body'], '"blog_series"')
         || !str_contains($seriesExportResponse['body'], '"blog_series_items"')) {
@@ -9842,7 +9966,7 @@ try {
         }
     }
 
-    $adminExportWithFoodResponse = fetchUrl($baseUrl . BASE_URL . '/admin/export.php', $adminSession['cookie'], 0);
+    $adminExportWithFoodResponse = httpIntegrationFetchConfirmedJsonExport($baseUrl, $adminSession, $foodStructuredIssues, 'food structured JSON export');
     if (!str_contains($adminExportWithFoodResponse['body'], '"food_sections"')
         || !str_contains($adminExportWithFoodResponse['body'], '"food_items"')
         || !str_contains($adminExportWithFoodResponse['body'], '"image_alt_text"')

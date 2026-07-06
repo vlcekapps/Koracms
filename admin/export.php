@@ -1,8 +1,69 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
-requireLogin(BASE_URL . '/admin/login.php');
-$isHeadRequest = requireReadOnlyHttpMethod();
+requireCapability('import_export_manage', 'Přístup odepřen. Pro export dat nemáte potřebné oprávnění.');
+
+$requestMethod = requireHttpMethods(['GET', 'HEAD', 'POST']);
+
+if ($requestMethod === 'HEAD') {
+    header('Content-Type: text/html; charset=UTF-8');
+    sendAdminNoStoreHeaders();
+    exit;
+}
+
+function renderJsonExportForm(bool $confirmExportError = false): void
+{
+    require_once __DIR__ . '/layout.php';
+
+    $exportErrorFields = $confirmExportError ? ['confirm_json_export'] : [];
+    $exportConfirmErrorMessage = 'JSON export nejde stáhnout bez potvrzení kontroly citlivosti exportu. U pole Potvrzení stažení je konkrétní nápověda.';
+
+    adminHeader('Export dat');
+    ?>
+    <p class="admin-description">
+      Připraví JSON export obsahu, nastavení a vybraných provozních metadat CMS pro přenos nebo zálohu.
+    </p>
+
+    <?php if ($confirmExportError): ?>
+      <p id="json-export-form-error" class="error" role="alert" aria-atomic="true"><?= h($exportConfirmErrorMessage) ?></p>
+    <?php endif; ?>
+
+    <form method="post" novalidate<?= $confirmExportError ? ' aria-describedby="json-export-form-error"' : '' ?>>
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <fieldset class="admin-fieldset-card">
+        <legend>Export dat</legend>
+        <p id="json-export-review-help" class="field-help field-help--flush">
+          JSON export obsahuje články, stránky, média metadata, chatové zprávy, komentáře, odběratele, tokeny odběru a další provozní údaje.
+          Heslo administrátora, osobní rezervace a historie rezervací se neexportují, přesto soubor ukládejte jen do oprávněného a bezpečného úložiště.
+        </p>
+        <label for="confirm_json_export" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_json_export" name="confirm_json_export" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_json_export', $exportErrorFields, [], ['json-export-review-help'], 'confirm-json-export-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) citlivost JSON exportu a mám oprávnění jej stáhnout.
+        </label>
+        <?php adminRenderFieldError('confirm_json_export', $exportErrorFields, [], 'Před stažením JSON exportu potvrďte, že rozumíte citlivosti exportovaných dat a máte oprávnění soubor stáhnout.', 'confirm-json-export-error'); ?>
+        <div class="admin-field-row">
+          <button type="submit" class="btn" data-confirm="Stáhnout JSON export CMS? Soubor může obsahovat osobní a provozní údaje.">Stáhnout JSON export</button>
+        </div>
+      </fieldset>
+    </form>
+
+    <p><a href="import.php"><span aria-hidden="true">←</span> Zpět na Import / Export dat</a></p>
+    <?php
+    adminFooter();
+}
+
+if ($requestMethod !== 'POST') {
+    renderJsonExportForm();
+    exit;
+}
+
+verifyCsrf();
+$confirmJsonExport = isset($_POST['confirm_json_export'])
+    && (string)$_POST['confirm_json_export'] === '1';
+if (!$confirmJsonExport) {
+    renderJsonExportForm(true);
+    exit;
+}
 
 $pdo = db_connect();
 
@@ -152,9 +213,6 @@ if (!is_string($json)) {
 $filename = 'cms-export-' . date('Y-m-d') . '.json';
 
 sendAdminAttachmentHeaders('application/json; charset=utf-8', $filename, strlen($json));
-if ($isHeadRequest) {
-    exit;
-}
 logAction('export_json');
 echo $json;
 exit;
