@@ -48,11 +48,18 @@ $albums = array_map(
     static fn (array $album): array => hydrateGalleryAlbumPresentation($album),
     $stmt->fetchAll()
 );
+$galleryBulkConfirmError = trim((string)($_GET['error'] ?? '')) === 'gallery_bulk_confirm_required';
+$galleryBulkErrorFields = $galleryBulkConfirmError ? ['confirm_gallery_albums_bulk_action'] : [];
+$galleryBulkConfirmErrorMessage = 'Hromadnou akci s alby galerie nejde provést bez potvrzení kontroly vybraných alb a zvolené akce.';
 
 adminHeader('Alba galerie');
 ?>
 
 <p><a href="<?= BASE_URL ?>/admin/gallery_album_form.php" class="btn">+ Nové album</a></p>
+
+<?php if ($galleryBulkConfirmError): ?>
+  <p id="gallery-bulk-form-error" class="error" role="alert" aria-atomic="true"><?= h($galleryBulkConfirmErrorMessage) ?></p>
+<?php endif; ?>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
   <div>
@@ -91,13 +98,23 @@ adminHeader('Alba galerie');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/bulk.php" id="bulk-form">
+  <form method="post" action="<?= BASE_URL ?>/admin/bulk.php" id="bulk-form"<?= $galleryBulkConfirmError ? ' aria-describedby="gallery-bulk-form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="module" value="gallery_albums">
     <input type="hidden" name="redirect" value="<?= h(BASE_URL) ?>/admin/gallery_albums.php">
     <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými alby</legend>
       <p id="bulk-status" class="field-help field-help--flush" aria-live="polite">Zatím není vybrané žádné album.</p>
+      <div class="admin-stack-sm">
+        <p id="gallery-bulk-review-help" class="field-help field-help--flush">
+          Před smazáním nebo ZIP exportem zkontrolujte vybraná alba a zvolenou akci. ZIP export může obsahovat fotografie a názvy alb nebo souborů; smazání odstraní alba včetně fotografií a revizní historie.
+        </p>
+        <label for="confirm_gallery_albums_bulk_action" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_gallery_albums_bulk_action" name="confirm_gallery_albums_bulk_action" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_gallery_albums_bulk_action', $galleryBulkErrorFields, [], ['gallery-bulk-review-help'], 'confirm-gallery-albums-bulk-action-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) vybraná alba galerie a zvolenou hromadnou akci.
+        </label>
+        <?php adminRenderFieldError('confirm_gallery_albums_bulk_action', $galleryBulkErrorFields, [], 'Před smazáním nebo exportem ZIP zaškrtněte potvrzení kontroly vybraných alb a zvolené akce.', 'confirm-gallery-albums-bulk-action-error'); ?>
+      </div>
       <div class="button-row">
         <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
                 disabled data-confirm="Smazat vybraná alba včetně fotografií?">Smazat vybrané</button>

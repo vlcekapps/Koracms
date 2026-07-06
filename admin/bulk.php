@@ -299,6 +299,13 @@ if (!currentUserHasCapability($moduleConfig['capability'])) {
     exit;
 }
 
+$galleryAlbumsBulkConfirmed = isset($_POST['confirm_gallery_albums_bulk_action'])
+    && (string)$_POST['confirm_gallery_albums_bulk_action'] === '1';
+if ($module === 'gallery_albums' && $action === 'delete' && !$galleryAlbumsBulkConfirmed) {
+    header('Location: ' . appendUrlQuery($redirect, ['error' => 'gallery_bulk_confirm_required']));
+    exit;
+}
+
 if ($action === 'delete') {
     $ownCheck = $moduleConfig['own_check'];
     $table = $moduleConfig['table'];

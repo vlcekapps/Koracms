@@ -4831,6 +4831,8 @@ foreach ($pages as $page) {
             'Přehled alb',
             'Spravovat fotografie',
             'Zobrazit na webu',
+            'id="gallery-bulk-review-help"',
+            'id="confirm_gallery_albums_bulk_action"',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
                 $issues[] = 'admin gallery albums is missing fragment: ' . $expectedFragment;
@@ -18122,6 +18124,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_bulk_action')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions bulk error-prevention coverage';
 }
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('gallery_bulk_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'ZIP export galerie bez potvrzení nevrátil PRG chybu, poslal attachment nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_gallery_albums_bulk_action')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing gallery bulk error-prevention coverage';
+}
 foreach ([
     'blog article image upload error suggestion' => [
         'source' => $blogFormSource,
@@ -18751,6 +18759,18 @@ foreach ([
 ] as $formSubmissionsBulkFragment) {
     if (!str_contains($formSubmissionsOverviewSource . $formSubmissionBulkValidationSource, $formSubmissionsBulkFragment)) {
         $adminFieldErrorIssues[] = 'form submissions bulk flow is missing error-prevention fragment: ' . $formSubmissionsBulkFragment;
+    }
+}
+foreach ([
+    "adminRenderFieldError('confirm_gallery_albums_bulk_action'",
+    "adminFieldAttributes('confirm_gallery_albums_bulk_action', \$galleryBulkErrorFields, [], ['gallery-bulk-review-help'], 'confirm-gallery-albums-bulk-action-error')",
+    "\$galleryAlbumsBulkConfirmed = isset(\$_POST['confirm_gallery_albums_bulk_action'])",
+    "\$galleryZipExportConfirmed = isset(\$_POST['confirm_gallery_albums_bulk_action'])",
+    "'error' => 'gallery_bulk_confirm_required'",
+    'Hromadnou akci s alby galerie nejde provést bez potvrzení kontroly vybraných alb a zvolené akce.',
+] as $galleryBulkFragment) {
+    if (!str_contains($galleryAlbumsOverviewSource . $adminBulkSource . $adminGalleryExportZipSource, $galleryBulkFragment)) {
+        $adminFieldErrorIssues[] = 'gallery bulk flow is missing error-prevention fragment: ' . $galleryBulkFragment;
     }
 }
 foreach ([

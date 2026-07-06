@@ -5852,13 +5852,25 @@ try {
 
     $galleryMetadataPhotoSlug = 'http-gallery-photo-metadata-' . bin2hex(random_bytes(4));
     $galleryMetadataPhotoTitle = 'HTTP metadata fotografie';
+    $galleryMetadataPhotoFilename = 'http-gallery-export-' . bin2hex(random_bytes(4)) . '.png';
+    $galleryMetadataPhotoFixturePath = httpIntegrationCreatePngFixtureFile('kora-gallery-export-', $createdTempFiles);
+    $galleryMetadataStoredPhotoPath = dirname(__DIR__) . '/uploads/gallery/' . $galleryMetadataPhotoFilename;
+    if (!is_dir(dirname($galleryMetadataStoredPhotoPath))) {
+        mkdir(dirname($galleryMetadataStoredPhotoPath), 0775, true);
+    }
+    if (!copy($galleryMetadataPhotoFixturePath, $galleryMetadataStoredPhotoPath)) {
+        $galleryMetadataIssues[] = 'nepodařilo se připravit soubor fotografie pro ZIP export galerie';
+    } else {
+        $createdTempFiles[] = $galleryMetadataStoredPhotoPath;
+    }
     $pdo->prepare(
         "INSERT INTO cms_gallery_photos
          (album_id, filename, title, slug, alt_text, caption, description, credit, license_label, license_url, taken_at, location_label, sort_order, status, is_published)
-         VALUES (?, 'metadata.jpg', ?, ?, 'Fotografie s vyplněným alt textem.', 'Viditelný popisek metadata fotografie.',
+         VALUES (?, ?, ?, ?, 'Fotografie s vyplněným alt textem.', 'Viditelný popisek metadata fotografie.',
                  'Delší veřejný popis fotografie.', ?, ?, ?, '2026-04-01', 'Praha', 1, 'published', 1)"
     )->execute([
         $galleryMetadataAlbumId,
+        $galleryMetadataPhotoFilename,
         $galleryMetadataPhotoTitle,
         $galleryMetadataPhotoSlug,
         $galleryMetadataCredit,
@@ -6033,6 +6045,125 @@ try {
             || !str_contains($galleryExportResponse['body'], '"default_license_url"'))) {
         $galleryMetadataIssues[] = 'JSON export neobsahuje metadata galerie';
     }
+
+    $galleryBulkErrorPreventionIssues = [];
+    $galleryBulkRedirect = BASE_URL . '/admin/gallery_albums.php';
+    $galleryBulkPage = fetchUrl($baseUrl . $galleryBulkRedirect, $adminSession['cookie'], 0);
+    $galleryBulkCsrf = extractHiddenInputValue($galleryBulkPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($galleryBulkPage) !== 200
+        || $galleryBulkCsrf === ''
+        || !str_contains($galleryBulkPage['body'], 'id="confirm_gallery_albums_bulk_action"')
+        || !str_contains($galleryBulkPage['body'], 'gallery-bulk-review-help')) {
+        $galleryBulkErrorPreventionIssues[] = 'přehled alb galerie nevykreslil review checkbox pro hromadné akce';
+    }
+    $galleryZipLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_export_zip'")->fetchColumn();
+    $galleryZipMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/gallery_export_zip.php',
+        [
+            'csrf_token' => $galleryBulkCsrf,
+            'ids' => [(string)$galleryMetadataAlbumId],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $galleryZipLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_export_zip'")->fetchColumn();
+    if (httpIntegrationStatusCode($galleryZipMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($galleryZipMissingConfirmResponse['headers'], $galleryBulkRedirect . '?error=gallery_bulk_confirm_required', $baseUrl)
+        || httpIntegrationHeaderContains($galleryZipMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || $galleryZipLogCountAfterMissingConfirm !== $galleryZipLogCountBefore) {
+        $galleryBulkErrorPreventionIssues[] = 'ZIP export galerie bez potvrzení nevrátil PRG chybu, poslal attachment nebo zapsal audit log';
+    }
+    $galleryBulkErrorPage = fetchUrl($baseUrl . $galleryBulkRedirect . '?error=gallery_bulk_confirm_required', $adminSession['cookie'], 0);
+    if (!str_contains($galleryBulkErrorPage['body'], 'id="gallery-bulk-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($galleryBulkErrorPage['body'], 'id="confirm-gallery-albums-bulk-action-error"')
+        || !httpIntegrationInputHasAttributes(
+            $galleryBulkErrorPage['body'],
+            'confirm_gallery_albums_bulk_action',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'gallery-bulk-review-help confirm-gallery-albums-bulk-action-error',
+            ]
+        )
+        || !str_contains($galleryBulkErrorPage['body'], 'aria-describedby="gallery-bulk-form-error"')) {
+        $galleryBulkErrorPreventionIssues[] = 'hromadná akce galerie bez potvrzení nezobrazila text-backed alert a field-level chybu';
+    }
+    $galleryZipConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/gallery_export_zip.php',
+        [
+            'csrf_token' => extractHiddenInputValue($galleryBulkErrorPage['body'], 'csrf_token'),
+            'ids' => [(string)$galleryMetadataAlbumId],
+            'confirm_gallery_albums_bulk_action' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $galleryZipLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_export_zip'")->fetchColumn();
+    if (httpIntegrationStatusCode($galleryZipConfirmedResponse) !== 200
+        || !httpIntegrationHeaderContains($galleryZipConfirmedResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($galleryZipConfirmedResponse, 'Content-Disposition', 'filename*=')
+        || !str_starts_with($galleryZipConfirmedResponse['body'], 'PK')
+        || $galleryZipLogCountAfterConfirmed !== $galleryZipLogCountBefore + 1) {
+        $galleryBulkErrorPreventionIssues[] = 'potvrzený ZIP export galerie nevrátil bezpečný attachment nebo audit log';
+    }
+
+    $galleryBulkDeleteAlbumSlug = 'http-gallery-bulk-delete-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_gallery_albums (name, slug, description, status, is_published)
+         VALUES (?, ?, 'Dočasné album pro error-prevention bulk delete.', 'published', 1)"
+    )->execute([
+        'HTTP Gallery bulk delete ' . bin2hex(random_bytes(3)),
+        $galleryBulkDeleteAlbumSlug,
+    ]);
+    $galleryBulkDeleteAlbumId = (int)$pdo->lastInsertId();
+    $createdGalleryAlbumIds[] = $galleryBulkDeleteAlbumId;
+
+    $galleryBulkFreshPage = fetchUrl($baseUrl . $galleryBulkRedirect, $adminSession['cookie'], 0);
+    $galleryBulkDeleteLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_album_bulk_delete'")->fetchColumn();
+    $galleryBulkDeleteMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($galleryBulkFreshPage['body'], 'csrf_token'),
+            'module' => 'gallery_albums',
+            'redirect' => $galleryBulkRedirect,
+            'action' => 'delete',
+            'ids' => [(string)$galleryBulkDeleteAlbumId],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $galleryBulkDeleteExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_gallery_albums WHERE id = ?');
+    $galleryBulkDeleteExistsStmt->execute([$galleryBulkDeleteAlbumId]);
+    $galleryBulkDeleteLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_album_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($galleryBulkDeleteMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($galleryBulkDeleteMissingConfirmResponse['headers'], $galleryBulkRedirect . '?error=gallery_bulk_confirm_required', $baseUrl)
+        || (int)$galleryBulkDeleteExistsStmt->fetchColumn() !== 1
+        || $galleryBulkDeleteLogCountAfterMissingConfirm !== $galleryBulkDeleteLogCountBefore) {
+        $galleryBulkErrorPreventionIssues[] = 'bulk delete alb galerie bez potvrzení nevrátil PRG chybu, smazal album nebo zapsal audit log';
+    }
+    $galleryBulkDeleteErrorPage = fetchUrl($baseUrl . $galleryBulkRedirect . '?error=gallery_bulk_confirm_required', $adminSession['cookie'], 0);
+    $galleryBulkDeleteConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($galleryBulkDeleteErrorPage['body'], 'csrf_token'),
+            'module' => 'gallery_albums',
+            'redirect' => $galleryBulkRedirect,
+            'action' => 'delete',
+            'ids' => [(string)$galleryBulkDeleteAlbumId],
+            'confirm_gallery_albums_bulk_action' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $galleryBulkDeleteExistsStmt->execute([$galleryBulkDeleteAlbumId]);
+    $galleryBulkDeleteLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'gallery_album_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($galleryBulkDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($galleryBulkDeleteConfirmedResponse['headers'], $galleryBulkRedirect, $baseUrl)
+        || (int)$galleryBulkDeleteExistsStmt->fetchColumn() !== 0
+        || $galleryBulkDeleteLogCountAfterConfirmed !== $galleryBulkDeleteLogCountBefore + 1) {
+        $galleryBulkErrorPreventionIssues[] = 'potvrzený bulk delete alb galerie neproběhl s očekávaným PRG stavem nebo audit logem';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $galleryBulkErrorPreventionIssues, 'potvrzená hromadná akce galerie');
+    httpIntegrationPrintResult('gallery_bulk_error_prevention_http', $galleryBulkErrorPreventionIssues, $failures);
 
     httpIntegrationPrintResult('gallery_metadata_http', $galleryMetadataIssues, $failures);
 

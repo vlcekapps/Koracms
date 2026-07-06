@@ -38,6 +38,13 @@ if ($albumIds === []) {
     exit;
 }
 
+$galleryZipExportConfirmed = isset($_POST['confirm_gallery_albums_bulk_action'])
+    && (string)$_POST['confirm_gallery_albums_bulk_action'] === '1';
+if (!$galleryZipExportConfirmed) {
+    header('Location: ' . appendUrlQuery(BASE_URL . '/admin/gallery_albums.php', ['error' => 'gallery_bulk_confirm_required']));
+    exit;
+}
+
 $pdo = db_connect();
 $galleryDir = dirname(__DIR__) . '/uploads/gallery/';
 
