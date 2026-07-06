@@ -2192,7 +2192,8 @@ try {
         $formSubmissionsCsvData,
         hash('sha256', 'csv-export-' . bin2hex(random_bytes(4))),
     ]);
-    $createdFormSubmissionIds[] = (int)$pdo->lastInsertId();
+    $formSubmissionsCsvSubmissionId = (int)$pdo->lastInsertId();
+    $createdFormSubmissionIds[] = $formSubmissionsCsvSubmissionId;
 
     $formSubmissionsCsvUrl = $baseUrl . BASE_URL . '/admin/form_submissions.php?id=' . $formSubmissionsCsvFormId . '&status=all&export=csv';
     $formSubmissionsCsvReviewResponse = fetchUrl($formSubmissionsCsvUrl, $adminSession['cookie'], 0);
@@ -2290,6 +2291,76 @@ try {
         $adminDownloadHeaderIssues[] = 'admin/form_submissions.php CSV export neposlal bezpečné sdílené download hlavičky';
     }
     httpIntegrationPrintResult('admin_download_headers_http', $adminDownloadHeaderIssues, $failures);
+
+    $formSubmissionsBulkErrorPreventionIssues = [];
+    $formSubmissionsBulkRedirect = BASE_URL . '/admin/form_submissions.php?id=' . $formSubmissionsCsvFormId . '&status=all';
+    $formSubmissionsBulkPage = fetchUrl($baseUrl . $formSubmissionsBulkRedirect, $adminSession['cookie'], 0);
+    $formSubmissionsBulkCsrf = extractHiddenInputValue($formSubmissionsBulkPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($formSubmissionsBulkPage) !== 200
+        || $formSubmissionsBulkCsrf === ''
+        || !str_contains($formSubmissionsBulkPage['body'], 'id="confirm_form_submissions_bulk_action"')
+        || !str_contains($formSubmissionsBulkPage['body'], 'form-submissions-bulk-review-help')) {
+        $formSubmissionsBulkErrorPreventionIssues[] = 'přehled odpovědí formuláře nevykreslil review checkbox pro hromadné akce';
+    }
+    $formSubmissionsBulkLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_bulk_delete'")->fetchColumn();
+    $formSubmissionsBulkMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_submission_bulk.php',
+        [
+            'csrf_token' => $formSubmissionsBulkCsrf,
+            'form_id' => (string)$formSubmissionsCsvFormId,
+            'redirect' => $formSubmissionsBulkRedirect,
+            'action' => 'delete',
+            'ids' => [(string)$formSubmissionsCsvSubmissionId],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionsBulkExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submissions WHERE id = ?');
+    $formSubmissionsBulkExistsStmt->execute([$formSubmissionsCsvSubmissionId]);
+    $formSubmissionsBulkLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($formSubmissionsBulkMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($formSubmissionsBulkMissingConfirmResponse['headers'], $formSubmissionsBulkRedirect . '&error=bulk_confirm_required', $baseUrl)
+        || (int)$formSubmissionsBulkExistsStmt->fetchColumn() !== 1
+        || $formSubmissionsBulkLogCountAfterMissingConfirm !== $formSubmissionsBulkLogCountBefore) {
+        $formSubmissionsBulkErrorPreventionIssues[] = 'bulk delete odpovědí bez potvrzení nevrátil PRG chybu, smazal odpověď nebo zapsal audit log';
+    }
+    $formSubmissionsBulkErrorPage = fetchUrl($baseUrl . $formSubmissionsBulkRedirect . '&error=bulk_confirm_required', $adminSession['cookie'], 0);
+    if (!str_contains($formSubmissionsBulkErrorPage['body'], 'id="form-submissions-bulk-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($formSubmissionsBulkErrorPage['body'], 'id="confirm-form-submissions-bulk-action-error"')
+        || !httpIntegrationInputHasAttributes(
+            $formSubmissionsBulkErrorPage['body'],
+            'confirm_form_submissions_bulk_action',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'form-submissions-bulk-review-help confirm-form-submissions-bulk-action-error',
+            ]
+        )
+        || !str_contains($formSubmissionsBulkErrorPage['body'], 'aria-describedby="form-submissions-bulk-form-error"')) {
+        $formSubmissionsBulkErrorPreventionIssues[] = 'bulk delete odpovědí bez potvrzení nezobrazil text-backed alert a field-level chybu';
+    }
+    $formSubmissionsBulkConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_submission_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($formSubmissionsBulkErrorPage['body'], 'csrf_token'),
+            'form_id' => (string)$formSubmissionsCsvFormId,
+            'redirect' => $formSubmissionsBulkRedirect,
+            'action' => 'delete',
+            'ids' => [(string)$formSubmissionsCsvSubmissionId],
+            'confirm_form_submissions_bulk_action' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionsBulkExistsStmt->execute([$formSubmissionsCsvSubmissionId]);
+    $formSubmissionsBulkLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($formSubmissionsBulkConfirmedResponse) !== 302
+        || !responseHasLocationHeader($formSubmissionsBulkConfirmedResponse['headers'], $formSubmissionsBulkRedirect . '&ok=1', $baseUrl)
+        || (int)$formSubmissionsBulkExistsStmt->fetchColumn() !== 0
+        || $formSubmissionsBulkLogCountAfterConfirmed !== $formSubmissionsBulkLogCountBefore + 1) {
+        $formSubmissionsBulkErrorPreventionIssues[] = 'potvrzený bulk delete odpovědí neproběhl s očekávaným PRG stavem nebo audit logem';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $formSubmissionsBulkErrorPreventionIssues, 'potvrzený bulk delete odpovědí');
+    httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http', $formSubmissionsBulkErrorPreventionIssues, $failures);
 
     $adminJsonPostOnlyEndpointIssues = [];
     $adminJsonPostOnlyEndpointUrls = [

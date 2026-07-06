@@ -14,9 +14,22 @@ $ids = array_values(array_filter(
     array_map(static fn ($value): int => (int)$value, (array)($_POST['ids'] ?? [])),
     static fn (int $value): bool => $value > 0
 ));
+$bulkActionConfirmed = isset($_POST['confirm_form_submissions_bulk_action'])
+    && (string)$_POST['confirm_form_submissions_bulk_action'] === '1';
 
 if ($ids === []) {
     header('Location: ' . $redirect);
+    exit;
+}
+
+$statusDefinitions = formSubmissionStatusDefinitions();
+if ($action !== 'delete' && !isset($statusDefinitions[$action])) {
+    header('Location: ' . $redirect);
+    exit;
+}
+
+if (!$bulkActionConfirmed) {
+    header('Location: ' . appendUrlQuery($redirect, ['error' => 'bulk_confirm_required']));
     exit;
 }
 
@@ -53,12 +66,6 @@ if ($action === 'delete') {
     $deleteStmt->execute($ids);
     logAction('form_submission_bulk_delete', 'ids=' . implode(',', $ids));
     header('Location: ' . appendUrlQuery($redirect, ['ok' => 1]));
-    exit;
-}
-
-$statusDefinitions = formSubmissionStatusDefinitions();
-if (!isset($statusDefinitions[$action])) {
-    header('Location: ' . $redirect);
     exit;
 }
 

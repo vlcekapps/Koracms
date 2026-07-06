@@ -278,6 +278,9 @@ $bulkOptions = [
     'delete' => 'Smazat trvale',
 ];
 $hasAdditionalFilters = $query !== '' || $priorityFilter !== 'all' || $assignedFilter !== 'all' || $githubFilter !== 'all';
+$bulkConfirmError = trim((string)($_GET['error'] ?? '')) === 'bulk_confirm_required';
+$bulkErrorFields = $bulkConfirmError ? ['confirm_form_submissions_bulk_action'] : [];
+$bulkConfirmErrorMessage = 'Hromadnou akci s odpověďmi formuláře nejde provést bez potvrzení kontroly vybraných odpovědí a zvolené akce.';
 
 $emptyStateText = match ($statusFilter) {
     'new' => 'Zatím tu nejsou žádné nové odpovědi tohoto formuláře.',
@@ -292,6 +295,9 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Workflow odpovědí formuláře byl aktualizován.</p>
+<?php endif; ?>
+<?php if ($bulkConfirmError): ?>
+  <p id="form-submissions-bulk-form-error" class="error" role="alert" aria-atomic="true"><?= h($bulkConfirmErrorMessage) ?></p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -371,13 +377,23 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     <p><?= h($emptyStateText) ?></p>
   <?php endif; ?>
 <?php else: ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_bulk.php" id="form-submission-bulk-form">
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_bulk.php" id="form-submission-bulk-form"<?= $bulkConfirmError ? ' aria-describedby="form-submissions-bulk-form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
     <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými odpověďmi</legend>
       <p data-selection-status="form-submissions" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná odpověď.</p>
+      <div class="admin-stack-sm">
+        <p id="form-submissions-bulk-review-help" class="field-help field-help--flush">
+          Před hromadnou akcí zkontrolujte vybrané odpovědi a zvolenou akci. Potvrzení chrání před nechtěnou změnou workflow nebo trvalým smazáním odpovědí včetně nahraných příloh a historie.
+        </p>
+        <label for="confirm_form_submissions_bulk_action" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_form_submissions_bulk_action" name="confirm_form_submissions_bulk_action" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_form_submissions_bulk_action', $bulkErrorFields, [], ['form-submissions-bulk-review-help'], 'confirm-form-submissions-bulk-action-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) vybrané odpovědi formuláře a zvolenou hromadnou akci.
+        </label>
+        <?php adminRenderFieldError('confirm_form_submissions_bulk_action', $bulkErrorFields, [], 'Před spuštěním hromadné akce zaškrtněte potvrzení kontroly vybraných odpovědí a zvolené akce.', 'confirm-form-submissions-bulk-action-error'); ?>
+      </div>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <?php if ($statusFilter === $bulkAction): ?>

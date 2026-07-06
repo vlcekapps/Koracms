@@ -168,6 +168,7 @@ $adminImportSource = (string) file_get_contents(__DIR__ . '/../admin/import.php'
 $adminBulkSource = (string) file_get_contents(__DIR__ . '/../admin/bulk.php');
 $blogBulkSource = (string) file_get_contents(__DIR__ . '/../admin/blog_bulk.php');
 $adminFormSubmissionFileSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_file.php');
+$adminFormSubmissionBulkSource = (string) file_get_contents(__DIR__ . '/../admin/form_submission_bulk.php');
 $adminFormSubmissionsSource = (string) file_get_contents(__DIR__ . '/../admin/form_submissions.php');
 $adminFormsSource = (string) file_get_contents(__DIR__ . '/../admin/forms.php');
 $adminIndexSource = (string) file_get_contents(__DIR__ . '/../admin/index.php');
@@ -3969,6 +3970,8 @@ foreach ($pages as $page) {
             'Přiřazeno',
             'GitHub issue',
             'Hromadné akce s vybranými odpověďmi',
+            'id="form-submissions-bulk-review-help"',
+            'id="confirm_form_submissions_bulk_action"',
             'Rozpracované',
             'Runtime audit workflow poznámka',
             'Administrace, Formuláře',
@@ -15168,6 +15171,7 @@ $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.ph
 $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
 $formSubmissionDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission.php');
 $formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submissions.php');
+$formSubmissionBulkValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_bulk.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
@@ -18112,6 +18116,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions CSV export error-prevention coverage';
 }
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'bulk delete odpovědí bez potvrzení nevrátil PRG chybu, smazal odpověď nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_form_submissions_bulk_action')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions bulk error-prevention coverage';
+}
 foreach ([
     'blog article image upload error suggestion' => [
         'source' => $blogFormSource,
@@ -18729,6 +18739,18 @@ foreach ([
 ] as $userSaveFragment) {
     if (!str_contains($userSaveValidationSource, $userSaveFragment)) {
         $adminFieldErrorIssues[] = 'user save is missing field-level error persistence fragment: ' . $userSaveFragment;
+    }
+}
+foreach ([
+    "adminRenderFieldError('confirm_form_submissions_bulk_action'",
+    "adminFieldAttributes('confirm_form_submissions_bulk_action', \$bulkErrorFields, [], ['form-submissions-bulk-review-help'], 'confirm-form-submissions-bulk-action-error')",
+    "\$bulkActionConfirmed = isset(\$_POST['confirm_form_submissions_bulk_action'])",
+    '!$bulkActionConfirmed',
+    "'error' => 'bulk_confirm_required'",
+    'Hromadnou akci s odpověďmi formuláře nejde provést bez potvrzení kontroly vybraných odpovědí a zvolené akce.',
+] as $formSubmissionsBulkFragment) {
+    if (!str_contains($formSubmissionsOverviewSource . $formSubmissionBulkValidationSource, $formSubmissionsBulkFragment)) {
+        $adminFieldErrorIssues[] = 'form submissions bulk flow is missing error-prevention fragment: ' . $formSubmissionsBulkFragment;
     }
 }
 foreach ([
