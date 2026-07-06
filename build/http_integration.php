@@ -3458,6 +3458,83 @@ try {
     }
     httpIntegrationPrintResult('admin_validation_a11y_http', $adminValidationA11yIssues, $failures);
 
+    $themeExportErrorPreventionIssues = [];
+    $themeExportSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Theme Export Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-theme-export-prevention-' . bin2hex(random_bytes(3)));
+    $themeExportPage = fetchUrl($themesUrl, $themeExportSession['cookie'], 0);
+    $themeExportCsrf = extractHiddenInputValue($themeExportPage['body'], 'csrf_token');
+    $themeExportKey = defaultThemeName();
+    if (httpIntegrationStatusCode($themeExportPage) !== 200
+        || $themeExportCsrf === ''
+        || httpIntegrationHeaderContains($themeExportPage, 'Content-Disposition', 'attachment')
+        || !str_contains($themeExportPage['body'], 'ZIP balíček může přenášet vizuální konfiguraci')
+        || !httpIntegrationInputHasAttributes($themeExportPage['body'], 'confirm_theme_export', [
+            'name' => 'confirm_theme_export',
+            'aria-describedby' => 'theme-export-review-help',
+        ])) {
+        $themeExportErrorPreventionIssues[] = 'ZIP export šablony nevykreslil review formulář s potvrzovacím checkboxem';
+    }
+
+    $themeExportLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'theme_export'")->fetchColumn();
+    $themeExportMissingConfirmResponse = postUrl(
+        $themesUrl,
+        [
+            'csrf_token' => $themeExportCsrf,
+            'form_action' => 'export_theme_package',
+            'export_theme' => $themeExportKey,
+        ],
+        $themeExportSession['cookie'],
+        0
+    );
+    $themeExportLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'theme_export'")->fetchColumn();
+    if (httpIntegrationStatusCode($themeExportMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($themeExportMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || str_starts_with($themeExportMissingConfirmResponse['body'], 'PK')
+        || !str_contains($themeExportMissingConfirmResponse['body'], 'ZIP balíček šablony nejde stáhnout bez potvrzení kontroly balíčku')
+        || !str_contains($themeExportMissingConfirmResponse['body'], 'id="themes-form-errors" aria-atomic="true"')
+        || !str_contains($themeExportMissingConfirmResponse['body'], 'id="confirm-theme-export-error"')
+        || !httpIntegrationInputHasAttributes($themeExportMissingConfirmResponse['body'], 'confirm_theme_export', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'theme-export-review-help confirm-theme-export-error',
+        ])
+        || $themeExportLogCountAfterMissingConfirm !== $themeExportLogCountBefore) {
+        $themeExportErrorPreventionIssues[] = 'ZIP export šablony bez potvrzení nevrátil field-level chybu, poslal attachment nebo zapsal audit log';
+    }
+
+    $themeExportConfirmedCsrf = extractHiddenInputValue($themeExportMissingConfirmResponse['body'], 'csrf_token');
+    if ($themeExportConfirmedCsrf === '') {
+        $themeExportErrorPreventionIssues[] = 'nepotvrzený ZIP export šablony nevrátil nový csrf_token pro opravené odeslání';
+    } else {
+        $themeExportConfirmedResponse = postUrl(
+            $themesUrl,
+            [
+                'csrf_token' => $themeExportConfirmedCsrf,
+                'form_action' => 'export_theme_package',
+                'export_theme' => $themeExportKey,
+                'confirm_theme_export' => '1',
+            ],
+            $themeExportSession['cookie'],
+            0
+        );
+        $themeExportLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'theme_export'")->fetchColumn();
+        if (httpIntegrationStatusCode($themeExportConfirmedResponse) !== 200
+            || !httpIntegrationHeaderContains($themeExportConfirmedResponse, 'Content-Type', 'application/zip')
+            || !httpIntegrationHeaderContains($themeExportConfirmedResponse, 'Content-Disposition', 'attachment')
+            || !httpIntegrationHeaderContains($themeExportConfirmedResponse, 'Content-Disposition', 'filename*=')
+            || !httpIntegrationHeaderContains($themeExportConfirmedResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($themeExportConfirmedResponse, 'X-Content-Type-Options', 'nosniff')
+            || !str_starts_with($themeExportConfirmedResponse['body'], 'PK')
+            || $themeExportLogCountAfterConfirmed !== $themeExportLogCountBefore + 1) {
+            $themeExportErrorPreventionIssues[] = 'potvrzený ZIP export šablony nevrátil bezpečný attachment nebo nezapsal audit log';
+        }
+    }
+    httpIntegrationPrintResult('theme_export_error_prevention_http', $themeExportErrorPreventionIssues, $failures);
+
     $migrateLoginRedirectIssues = [];
     $migratePath = BASE_URL . '/migrate.php';
     $migrateUrl = $baseUrl . $migratePath;

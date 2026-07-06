@@ -41,6 +41,7 @@ $errors = [];
 $themeFieldErrors = [];
 $themeFieldErrorMessages = [];
 $previewRedirectDefault = BASE_URL . '/index.php';
+$lastExportThemeKey = '';
 
 [
     'availableThemeKeys' => $availableThemeKeys,
@@ -161,10 +162,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($formAction === 'export_theme_package') {
         $exportThemeKey = trim((string)($_POST['export_theme'] ?? ''));
+        $lastExportThemeKey = $exportThemeKey;
+        $confirmThemeExport = isset($_POST['confirm_theme_export'])
+            && (string)$_POST['confirm_theme_export'] === '1';
         if (!in_array($exportThemeKey, $availableThemeKeys, true)) {
             $errors[] = 'Vybranou šablonu nejde exportovat. U pole Šablona k exportu je konkrétní nápověda.';
             $themeFieldErrors[] = 'export_theme';
             $themeFieldErrorMessages['export_theme'] = 'Vyberte některou z dostupných šablon v seznamu a export spusťte znovu.';
+        } elseif (!$confirmThemeExport) {
+            $errors[] = 'ZIP balíček šablony nejde stáhnout bez potvrzení kontroly balíčku. U pole Potvrzení exportu je konkrétní nápověda.';
+            $themeFieldErrors[] = 'confirm_theme_export';
+            $themeFieldErrorMessages['confirm_theme_export'] = 'Před stažením potvrďte, že jste zkontrolovali vybranou šablonu a rozumíte obsahu exportu.';
         } else {
             $exportResult = themeBuildPortablePackage($exportThemeKey);
             if (!$exportResult['ok']) {
@@ -212,9 +220,13 @@ $themeSettingDefinitions = themeSettingDefinitions($editableTheme);
 $themeSettingValues = $previewIsActive && !empty($previewData['settings'])
     ? $previewData['settings']
     : themeSettingsValues($editableTheme);
-$exportThemeDefault = in_array($selectedTheme, $availableThemeKeys, true)
-    ? $selectedTheme
-    : ($availableThemeKeys[0] ?? defaultThemeName());
+$exportThemeDefault = $availableThemeKeys[0] ?? defaultThemeName();
+if (in_array($selectedTheme, $availableThemeKeys, true)) {
+    $exportThemeDefault = $selectedTheme;
+}
+if (in_array($lastExportThemeKey, $availableThemeKeys, true)) {
+    $exportThemeDefault = $lastExportThemeKey;
+}
 $themeFieldErrors = array_values(array_unique($themeFieldErrors));
 $activeThemeHasError = adminFieldHasError('active_theme', $themeFieldErrors);
 $themeSettingsHasError = adminFieldHasError('theme_key', $themeFieldErrors);
@@ -225,7 +237,8 @@ foreach ($themeFieldErrors as $themeFieldErrorName) {
     }
 }
 $themePackageHasError = adminFieldHasError('theme_package', $themeFieldErrors);
-$themeExportHasError = adminFieldHasError('export_theme', $themeFieldErrors);
+$themeExportHasError = adminFieldHasError('export_theme', $themeFieldErrors)
+    || adminFieldHasError('confirm_theme_export', $themeFieldErrors);
 
 adminHeader('Vzhled a šablony');
 ?>
@@ -550,6 +563,22 @@ adminHeader('Vzhled a šablony');
           Runtime PHP override soubory se do balíčku z bezpečnostních důvodů nevkládají.
         </small>
         <?php adminRenderFieldError('export_theme', $themeFieldErrors, [], $themeFieldErrorMessages['export_theme'] ?? ''); ?>
+
+        <p id="theme-export-review-help" class="field-help field-help--flush">
+          ZIP balíček může přenášet vizuální konfiguraci, CSS a statické assety šablony do jiné instalace.
+          Před stažením zkontrolujte, že exportujete správnou šablonu a máte oprávnění balíček sdílet.
+        </p>
+        <label for="confirm_theme_export" class="admin-checkbox-label">
+          <input
+            type="checkbox"
+            id="confirm_theme_export"
+            name="confirm_theme_export"
+            value="1"
+            required
+            aria-required="true"<?= adminFieldAttributes('confirm_theme_export', $themeFieldErrors, [], ['theme-export-review-help'], 'confirm-theme-export-error') ?>>
+          Potvrzuji kontrolu šablony a oprávnění ke stažení ZIP balíčku.
+        </label>
+        <?php adminRenderFieldError('confirm_theme_export', $themeFieldErrors, [], $themeFieldErrorMessages['confirm_theme_export'] ?? '', 'confirm-theme-export-error'); ?>
       </fieldset>
 
       <div class="button-row admin-action-row">

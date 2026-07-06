@@ -10657,6 +10657,7 @@ try {
             'csrf_token' => $adminCsrfToken,
             'form_action' => 'export_theme_package',
             'export_theme' => $roundtripThemeKey,
+            'confirm_theme_export' => '1',
         ],
         'PHPSESSID=' . $auditSessionId,
         0
@@ -15949,6 +15950,21 @@ foreach ([
         $adminFieldErrorIssues[] = 'admin backup page is missing database backup error-prevention fragment: ' . $databaseBackupPreventionFragment;
     }
 }
+foreach ([
+    'ZIP balíček šablony nejde stáhnout bez potvrzení kontroly balíčku',
+    'id="theme-export-review-help" class="field-help field-help--flush"',
+    'confirm_theme_export',
+    "adminFieldAttributes('confirm_theme_export', \$themeFieldErrors, [], ['theme-export-review-help'], 'confirm-theme-export-error')",
+    "adminRenderFieldError('confirm_theme_export'",
+    "\$confirmThemeExport = isset(\$_POST['confirm_theme_export'])",
+    '!$confirmThemeExport',
+    "logAction('theme_export'",
+    'sendAdminAttachmentHeaders(',
+] as $themeExportPreventionFragment) {
+    if (!str_contains($adminThemesSource, $themeExportPreventionFragment)) {
+        $adminFieldErrorIssues[] = 'admin themes page is missing theme ZIP export error-prevention fragment: ' . $themeExportPreventionFragment;
+    }
+}
 if (str_contains($integrityAdminSource, '<style') || str_contains($integrityAdminSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin integrity page still contains local style blocks or inline style attributes';
 }
@@ -17038,7 +17054,7 @@ $adminFieldErrorForms = [
     'user form' => [$userFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('author_slug'", "adminFieldAttributes('author_avatar'"],
     'profile form' => [$profileFormValidationSource, "adminFieldAttributes('email'", "adminFieldAttributes('totp_verify'", "adminFieldAttributes('author_slug'"],
     'settings form' => [$settingsAdminSource, "adminFieldAttributes('site_name'", "adminFieldAttributes('board_public_label'", "adminFieldAttributes('github_issues_repository'", "adminFieldAttributes('site_logo'", 'id="settings-form-errors" aria-atomic="true"'],
-    'theme catalog form' => [$adminThemesSource, "adminFieldAttributes('active_theme'", "adminRenderFieldError('active_theme'", "adminFieldAttributes('theme_package'", "adminFieldAttributes('export_theme'", "theme_setting_' . \$settingKey", 'id="themes-form-errors" aria-atomic="true"'],
+    'theme catalog form' => [$adminThemesSource, "adminFieldAttributes('active_theme'", "adminRenderFieldError('active_theme'", "adminFieldAttributes('theme_package'", "adminFieldAttributes('export_theme'", "adminFieldAttributes('confirm_theme_export'", "theme_setting_' . \$settingKey", 'id="themes-form-errors" aria-atomic="true"'],
     'newsletter form' => [$newsletterFormValidationSource, "adminFieldAttributes('subject'", "adminFieldAttributes('body'", "adminRenderFieldError('body'"],
     'contact topics form' => [$contactTopicsSource, "adminFieldAttributes('name'", "adminFieldAttributes('recipient_email'", "adminRenderFieldError('slug'"],
     'blog series form' => [$blogSeriesAdminSource, "adminFieldAttributes('title', \$seriesFieldErrors", "adminRenderFieldError('title'", 'id="series-title-help"'],
@@ -18137,6 +18153,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export výsledků ankety nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_poll_results_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing poll results CSV export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('theme_export_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'ZIP export šablony bez potvrzení nevrátil field-level chybu, poslal attachment nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_theme_export')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing theme ZIP export error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http'")
