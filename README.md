@@ -499,6 +499,8 @@ Hromadné akce nad odpověďmi Form Builderu používají stejný review-and-con
 
 Hromadné akce nad alby galerie mají stejný guardrail. Smazání vybraných alb i ZIP export vyžadují potvrzení kontroly výběru a zvolené akce; server nepotvrzené smazání odmítne před odstraněním alb, fotografií a revizí a nepotvrzený ZIP export před odesláním attachmentu nebo zápisem audit logu.
 
+Sdílené hromadné mazání v běžných administračních přehledech používá obecný `confirm_bulk_delete` guardrail. Přehled zobrazí review dopadu mazání, správce potvrdí kontrolu výběru a server nepotvrzený požadavek odmítne před cleanupem, smazáním dat nebo audit logem.
+
 Změny stavu rezervace používají stejný error-prevention princip. Detail rezervace pro schválení, zamítnutí, zrušení, dokončení a no-show ukazuje review dopadu, vyžaduje potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle notifikaci.
 
 Ruční SQL záloha databáze má vlastní review krok pro citlivý export. Formulář popisuje, že záloha obsahuje kompletní data CMS, vyžaduje potvrzení oprávnění ke stažení a server bez potvrzení neodešle soubor ani nezapíše audit log; HTTP integrace hlídá odmítnutí i potvrzený download pro WCAG `3.3.4`.

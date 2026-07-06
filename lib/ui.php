@@ -403,14 +403,46 @@ function logAction(string $action, string $detail = ''): void
  */
 function bulkActions(string $module, string $redirect, string $legend, string $itemLabel = 'položka', bool $showPublish = true): string
 {
-    $out = '<form method="post" action="' . BASE_URL . '/admin/bulk.php" id="bulk-form">'
+    $bulkDeleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'bulk_delete_confirm_required';
+    $bulkDeleteErrorFields = $bulkDeleteConfirmError ? ['confirm_bulk_delete'] : [];
+    $bulkIdPrefix = strtolower((string)preg_replace('/[^a-z0-9_-]+/i', '-', $module));
+    $bulkIdPrefix = trim($bulkIdPrefix, '-');
+    if ($bulkIdPrefix === '') {
+        $bulkIdPrefix = 'bulk';
+    }
+    $bulkDeleteFormErrorId = $bulkIdPrefix . '-bulk-delete-form-error';
+    $bulkDeleteReviewHelpId = $bulkIdPrefix . '-bulk-delete-review-help';
+    $bulkDeleteCheckboxId = $bulkIdPrefix . '-confirm-bulk-delete';
+    $bulkDeleteFieldErrorId = $bulkIdPrefix . '-confirm-bulk-delete-error';
+    $bulkDeleteErrorMessage = 'Sdílené hromadné smazání nejde provést bez potvrzení kontroly vybraných položek a dopadu smazání.';
+
+    $out = '<form method="post" action="' . BASE_URL . '/admin/bulk.php" id="bulk-form"'
+         . ($bulkDeleteConfirmError ? ' aria-describedby="' . h($bulkDeleteFormErrorId) . '"' : '') . '>'
          . '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '">'
          . '<input type="hidden" name="module" value="' . h($module) . '">'
-         . '<input type="hidden" name="redirect" value="' . h($redirect) . '">'
-         . '<fieldset class="admin-fieldset-card">'
+         . '<input type="hidden" name="redirect" value="' . h($redirect) . '">';
+    if ($bulkDeleteConfirmError) {
+        $out .= '<p id="' . h($bulkDeleteFormErrorId) . '" class="error" role="alert" aria-atomic="true">'
+              . h($bulkDeleteErrorMessage)
+              . '</p>';
+    }
+    $out .= '<fieldset class="admin-fieldset-card">'
          . '<legend>' . h($legend) . '</legend>'
          . '<p id="bulk-status" data-selection-status="bulk" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná ' . h($itemLabel) . '.</p>'
-         . '<div class="button-row">'
+         . '<p id="' . h($bulkDeleteReviewHelpId) . '" class="field-help field-help--flush">'
+         . 'Před smazáním zkontrolujte vybrané položky. Podle modulu může smazání odstranit také související soubory, metadata, revize, hlasy, objednávky nebo vazby.'
+         . '</p>'
+         . '<label for="' . h($bulkDeleteCheckboxId) . '" class="admin-checkbox-label">'
+         . '<input type="checkbox" id="' . h($bulkDeleteCheckboxId) . '" name="confirm_bulk_delete" value="1"'
+         . adminFieldAttributes('confirm_bulk_delete', $bulkDeleteErrorFields, [], [$bulkDeleteReviewHelpId], $bulkDeleteFieldErrorId)
+         . '> Zkontroloval(a) jsem vybrané položky a chci je smazat.'
+         . '</label>';
+    if ($bulkDeleteConfirmError) {
+        $out .= '<small id="' . h($bulkDeleteFieldErrorId) . '" class="field-help field-error">'
+              . 'Před hromadným smazáním zaškrtněte potvrzení kontroly vybraných položek a dopadu smazání.'
+              . '</small>';
+    }
+    $out .= '<div class="button-row">'
          . '<button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled data-confirm="Smazat vybrané?">Smazat vybrané</button>';
     if ($showPublish) {
         $out .= '<button type="submit" name="action" value="publish" class="btn bulk-action-btn" disabled>Publikovat vybrané</button>'

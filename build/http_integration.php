@@ -9457,6 +9457,8 @@ try {
     httpIntegrationPrintResult('downloads_catalog_versions_http', $downloadIssues, $failures);
 
     $faqIssues = [];
+    $genericBulkDeleteIssues = [];
+    $genericBulkDeleteScenarioRan = false;
     saveSetting('module_faq', '1');
     clearSettingsCache();
 
@@ -9799,8 +9801,101 @@ try {
         if ((int)$faqFeedbackUpdated[0] !== 1 || (string)$faqFeedbackUpdated[1] !== 'helpful') {
             $faqIssues[] = 'opakovaný FAQ feedback nevytvořil aktualizaci jednoho hlasu';
         }
+
+        $genericBulkDeleteScenarioRan = true;
+        $faqBulkDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/faq.php', $adminSession['cookie'], 0);
+        $faqBulkDeleteCsrf = extractHiddenInputValue($faqBulkDeletePage['body'], 'csrf_token');
+        foreach ([
+            'id="faq-bulk-delete-review-help"',
+            'id="faq-confirm-bulk-delete"',
+            'name="confirm_bulk_delete"',
+        ] as $faqBulkDeleteReviewFragment) {
+            if (!str_contains($faqBulkDeletePage['body'], $faqBulkDeleteReviewFragment)) {
+                $genericBulkDeleteIssues[] = 'admin FAQ přehled nezobrazuje generic bulk delete review fragment: ' . $faqBulkDeleteReviewFragment;
+            }
+        }
+        if ($faqBulkDeleteCsrf === '') {
+            $genericBulkDeleteIssues[] = 'admin FAQ přehled neposkytl CSRF token pro generic bulk delete guardrail';
+        }
+
+        $faqBulkDeleteLogCountBefore = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_bulk_delete'")
+            ->fetchColumn();
+        $faqBulkDeleteUnconfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/bulk.php',
+            [
+                'csrf_token' => $faqBulkDeleteCsrf,
+                'module' => 'faq',
+                'redirect' => BASE_URL . '/admin/faq.php',
+                'action' => 'delete',
+                'ids' => [$faqId],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $faqExistsAfterUnconfirmedBulk = (int)$pdo
+            ->query('SELECT COUNT(*) FROM cms_faqs WHERE id = ' . (int)$faqId)
+            ->fetchColumn();
+        $faqBulkDeleteLogCountAfterUnconfirmed = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_bulk_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($faqBulkDeleteUnconfirmedResponse) !== 302
+            || !responseHasLocationHeader(
+                $faqBulkDeleteUnconfirmedResponse['headers'],
+                BASE_URL . '/admin/faq.php?error=bulk_delete_confirm_required',
+                $baseUrl
+            )
+            || $faqExistsAfterUnconfirmedBulk !== 1
+            || $faqBulkDeleteLogCountAfterUnconfirmed !== $faqBulkDeleteLogCountBefore) {
+            $genericBulkDeleteIssues[] = 'generic bulk delete FAQ bez potvrzení nevrátil PRG chybu, smazal otázku nebo zapsal audit log';
+        }
+
+        $faqBulkDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/faq.php?error=bulk_delete_confirm_required',
+            $adminSession['cookie'],
+            0
+        );
+        if (!str_contains($faqBulkDeleteErrorPage['body'], 'id="faq-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+            || !str_contains($faqBulkDeleteErrorPage['body'], 'id="faq-confirm-bulk-delete-error"')
+            || !httpIntegrationElementHasAttributes($faqBulkDeleteErrorPage['body'], 'form', 'bulk-form', ['aria-describedby' => 'faq-bulk-delete-form-error'])
+            || !httpIntegrationInputHasAttributes($faqBulkDeleteErrorPage['body'], 'faq-confirm-bulk-delete', [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'faq-bulk-delete-review-help faq-confirm-bulk-delete-error',
+            ])) {
+            $genericBulkDeleteIssues[] = 'generic bulk delete FAQ chyba nemá alert, field-level chybu nebo existující aria-describedby vazby';
+        }
+
+        $faqBulkDeleteConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/bulk.php',
+            [
+                'csrf_token' => $faqBulkDeleteCsrf,
+                'module' => 'faq',
+                'redirect' => BASE_URL . '/admin/faq.php',
+                'action' => 'delete',
+                'ids' => [$faqId],
+                'confirm_bulk_delete' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $faqExistsAfterConfirmedBulk = (int)$pdo
+            ->query('SELECT COUNT(*) FROM cms_faqs WHERE id = ' . (int)$faqId)
+            ->fetchColumn();
+        $faqBulkDeleteLogCountAfterConfirmed = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_bulk_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($faqBulkDeleteConfirmedResponse) !== 302
+            || !responseHasLocationHeader($faqBulkDeleteConfirmedResponse['headers'], BASE_URL . '/admin/faq.php', $baseUrl)
+            || $faqExistsAfterConfirmedBulk !== 0
+            || $faqBulkDeleteLogCountAfterConfirmed !== $faqBulkDeleteLogCountBefore + 1) {
+            $genericBulkDeleteIssues[] = 'generic bulk delete FAQ s potvrzením neprošel, nesmazal otázku nebo nezapsal audit log';
+        }
     }
 
+    if (!$genericBulkDeleteScenarioRan) {
+        $genericBulkDeleteIssues[] = 'generic bulk delete HTTP scénář neběžel, protože nebyla dostupná FAQ fixture';
+    }
+    httpIntegrationPrintResult('generic_bulk_delete_error_prevention_http', $genericBulkDeleteIssues, $failures);
     httpIntegrationPrintResult('faq_categories_feedback_http', $faqIssues, $failures);
 
     $foodStructuredIssues = [];

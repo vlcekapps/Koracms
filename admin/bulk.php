@@ -306,6 +306,13 @@ if ($module === 'gallery_albums' && $action === 'delete' && !$galleryAlbumsBulkC
     exit;
 }
 
+$genericBulkDeleteConfirmed = isset($_POST['confirm_bulk_delete'])
+    && (string)$_POST['confirm_bulk_delete'] === '1';
+if ($action === 'delete' && $module !== 'gallery_albums' && !$genericBulkDeleteConfirmed) {
+    header('Location: ' . appendUrlQuery($redirect, ['error' => 'bulk_delete_confirm_required']));
+    exit;
+}
+
 if ($action === 'delete') {
     $ownCheck = $moduleConfig['own_check'];
     $table = $moduleConfig['table'];

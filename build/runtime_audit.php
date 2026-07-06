@@ -15153,6 +15153,7 @@ echo "=== admin_field_error_guardrails ===\n";
 $adminFieldErrorIssues = [];
 $adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
 $adminLayoutCssSource = (string)file_get_contents(dirname(__DIR__) . '/admin/assets/layout.css');
+$uiHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/ui.php');
 $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $newsFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news_form.php');
@@ -18130,6 +18131,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_gallery_albums_bulk_action')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing gallery bulk error-prevention coverage';
 }
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('generic_bulk_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'generic bulk delete FAQ bez potvrzení nevrátil PRG chybu, smazal otázku nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_bulk_delete')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing generic bulk delete error-prevention coverage';
+}
 foreach ([
     'blog article image upload error suggestion' => [
         'source' => $blogFormSource,
@@ -18759,6 +18766,19 @@ foreach ([
 ] as $formSubmissionsBulkFragment) {
     if (!str_contains($formSubmissionsOverviewSource . $formSubmissionBulkValidationSource, $formSubmissionsBulkFragment)) {
         $adminFieldErrorIssues[] = 'form submissions bulk flow is missing error-prevention fragment: ' . $formSubmissionsBulkFragment;
+    }
+}
+foreach ([
+    'name="confirm_bulk_delete"',
+    "\$bulkDeleteReviewHelpId = \$bulkIdPrefix . '-bulk-delete-review-help';",
+    "adminFieldAttributes('confirm_bulk_delete', \$bulkDeleteErrorFields, [], [\$bulkDeleteReviewHelpId], \$bulkDeleteFieldErrorId)",
+    'Sdílené hromadné smazání nejde provést bez potvrzení kontroly vybraných položek a dopadu smazání.',
+    "\$genericBulkDeleteConfirmed = isset(\$_POST['confirm_bulk_delete'])",
+    "\$action === 'delete' && \$module !== 'gallery_albums' && !\$genericBulkDeleteConfirmed",
+    "'error' => 'bulk_delete_confirm_required'",
+] as $genericBulkDeleteFragment) {
+    if (!str_contains($uiHelpersSource . $adminBulkSource, $genericBulkDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'generic bulk delete flow is missing error-prevention fragment: ' . $genericBulkDeleteFragment;
     }
 }
 foreach ([
