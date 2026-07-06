@@ -513,6 +513,11 @@ input[type=checkbox], input[type=radio] { min-width:1.25rem; min-height:1.25rem;
 textarea { min-height: 200px; }
 .actions > a:not(.btn) { display:inline-flex; align-items:center; min-height:2rem; }
 .actions form { display: inline; }
+.admin-trash-actions { display:flex; gap:.75rem; flex-wrap:wrap; align-items:flex-start; }
+.actions .admin-trash-action-form { display:block; flex:1 1 14rem; min-width:min(100%,14rem); }
+.admin-trash-action-form fieldset { display:grid; gap:.4rem; }
+.admin-trash-action-form--restore { flex:0 0 auto; min-width:auto; }
+.admin-trash-action-form--purge { max-width:24rem; }
 .table-row--scheduled { background:var(--admin-scheduled-bg); }
 .badge { display:inline-block; min-width:1.4rem; padding:.1rem .45rem; border-radius:999px; background:var(--admin-badge-bg); color:#fff; font-size:.75rem; text-align:center; }
 .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .55rem; border-radius:999px; border:1px solid transparent; font-size:.82rem; font-weight:700; line-height:1.25; }

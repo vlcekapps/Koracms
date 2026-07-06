@@ -1539,6 +1539,101 @@ try {
     }
     httpIntegrationPrintResult('admin_read_only_endpoints_http', $adminReadOnlyEndpointIssues, $failures);
 
+    $trashErrorPreventionIssues = [];
+    $trashBlogSlug = 'http-trash-error-prevention-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP koš pro error prevention', $trashBlogSlug, $adminUserId]);
+    $trashBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $trashBlogId;
+
+    $trashArticleTitle = 'HTTP koš nevratné smazání ' . bin2hex(random_bytes(3));
+    $trashArticleSlug = 'http-trash-error-prevention-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, deleted_at, created_at)
+         VALUES (?, ?, ?, '', '<p>Test review kroku před trvalým smazáním.</p>', 0, ?, 'draft', NOW(), NOW())"
+    )->execute([$trashArticleTitle, $trashArticleSlug, $trashBlogId, $adminUserId]);
+    $trashArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $trashArticleId;
+    $trashSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Trash Error Prevention Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-trash-error-prevention-' . bin2hex(random_bytes(3)));
+
+    $trashPageResponse = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $trashSession['cookie'], 0);
+    $trashDomPrefix = 'trash-articles-' . $trashArticleId;
+    if (httpIntegrationStatusCode($trashPageResponse) !== 200) {
+        $trashErrorPreventionIssues[] = 'admin koš nevrátil 200 pro review trvalého smazání';
+    } else {
+        foreach ([
+            'Trvalé smazání je nevratné a před odesláním vyžaduje samostatné potvrzení u konkrétní položky.',
+            htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8'),
+            '<td class="actions admin-trash-actions">',
+            '<legend class="sr-only">Obnovit položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“</legend>',
+            '<legend class="sr-only">Trvale smazat položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“</legend>',
+            'data-confirm="Trvale smazat položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“? Tuto akci nelze vrátit zpět."',
+            'id="' . $trashDomPrefix . '-purge-review"',
+            'Zkontrolujte typ, název a datum smazání v tomto řádku. Trvalé smazání nejde vrátit zpět.',
+            'id="' . $trashDomPrefix . '-purge-confirm" name="confirm_permanent_delete" value="1" required aria-describedby="' . $trashDomPrefix . '-purge-review"',
+            'Rozumím, že položku nepůjde obnovit.',
+            'Trvale smazat<span class="sr-only"> položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“</span>',
+        ] as $trashExpectedFragment) {
+            if (!str_contains($trashPageResponse['body'], $trashExpectedFragment)) {
+                $trashErrorPreventionIssues[] = 'admin koš neobsahuje error-prevention fragment: ' . $trashExpectedFragment;
+            }
+        }
+    }
+
+    $trashMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/trash.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'module' => 'articles',
+            'id' => (string)$trashArticleId,
+            'action' => 'purge',
+        ],
+        $trashSession['cookie'],
+        0
+    );
+    $trashArticleStillDeletedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_articles WHERE id = ? AND deleted_at IS NOT NULL");
+    $trashArticleStillDeletedStmt->execute([$trashArticleId]);
+    $trashMissingConfirmPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php?err=confirm_purge', $trashSession['cookie'], 0);
+    if (
+        httpIntegrationStatusCode($trashMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($trashMissingConfirmResponse['headers'], BASE_URL . '/admin/trash.php?err=confirm_purge', $baseUrl)
+        || !str_contains($trashMissingConfirmPage['body'], 'role="alert" aria-atomic="true">Před trvalým smazáním potvrďte, že položku už nebude možné obnovit.')
+        || (int)$trashArticleStillDeletedStmt->fetchColumn() !== 1
+    ) {
+        $trashErrorPreventionIssues[] = 'admin koš neodmítl trvalé smazání bez serverového potvrzení';
+    }
+
+    $trashConfirmedPurgeResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/trash.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'module' => 'articles',
+            'id' => (string)$trashArticleId,
+            'action' => 'purge',
+            'confirm_permanent_delete' => '1',
+        ],
+        $trashSession['cookie'],
+        0
+    );
+    $trashArticleGoneStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_articles WHERE id = ?");
+    $trashArticleGoneStmt->execute([$trashArticleId]);
+    $trashPurgeSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php?ok=purged', $trashSession['cookie'], 0);
+    if (
+        httpIntegrationStatusCode($trashConfirmedPurgeResponse) !== 302
+        || !responseHasLocationHeader($trashConfirmedPurgeResponse['headers'], BASE_URL . '/admin/trash.php?ok=purged', $baseUrl)
+        || !str_contains($trashPurgeSuccessPage['body'], 'role="status">Položka byla trvale smazána.')
+        || (int)$trashArticleGoneStmt->fetchColumn() !== 0
+    ) {
+        $trashErrorPreventionIssues[] = 'admin koš neprovedl potvrzené trvalé smazání s PRG stavem';
+    }
+    httpIntegrationPrintResult('trash_error_prevention_http', $trashErrorPreventionIssues, $failures);
+
     $redirectsValidationIssues = [];
     $redirectsValidationSession = koraPrimeTestSession([
         'cms_logged_in' => true,

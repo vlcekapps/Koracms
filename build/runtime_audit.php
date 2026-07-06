@@ -16725,10 +16725,28 @@ if (str_contains($trashAdminSource, 'style=')) {
 }
 foreach ([
     'class="admin-description"',
-    '<td class="actions">',
+    '<td class="actions admin-trash-actions">',
+    'Trvalé smazání je nevratné a před odesláním vyžaduje samostatné potvrzení u konkrétní položky.',
+    '$confirmedPermanentDelete = isset($_POST[\'confirm_permanent_delete\'])',
+    '$redirectQuery = \'err=confirm_purge\';',
+    'name="confirm_permanent_delete" value="1" required aria-describedby=',
+    'Rozumím, že položku nepůjde obnovit.',
+    'Zkontrolujte typ, název a datum smazání v tomto řádku. Trvalé smazání nejde vrátit zpět.',
+    'data-confirm="<?= h(\'Trvale smazat položku \' . $trashItemContext . \'? Tuto akci nelze vrátit zpět.\') ?>"',
+    'Trvale smazat<span class="sr-only"> položku <?= h($trashItemContext) ?></span>',
+    'header(\'Location: \' . BASE_URL . \'/admin/trash.php?\' . $redirectQuery);',
 ] as $trashAdminUtilityFragment) {
     if (!str_contains($trashAdminSource, $trashAdminUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin trash page is missing utility class fragment: ' . $trashAdminUtilityFragment;
+    }
+}
+foreach ([
+    '.admin-trash-actions',
+    '.actions .admin-trash-action-form',
+    '.admin-trash-action-form fieldset',
+] as $trashAdminCssFragment) {
+    if (!str_contains($adminLayoutCssSource, $trashAdminCssFragment)) {
+        $adminFieldErrorIssues[] = 'admin trash CSS is missing error-prevention fragment: ' . $trashAdminCssFragment;
     }
 }
 if (!str_contains($adminLayoutSource, 'document.addEventListener("submit"')

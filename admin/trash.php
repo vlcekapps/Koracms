@@ -6,7 +6,16 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
 
 $pdo = db_connect();
-$success = '';
+$success = match ((string)($_GET['ok'] ?? '')) {
+    'restored' => 'Položka byla obnovena.',
+    'purged' => 'Položka byla trvale smazána.',
+    default => '',
+};
+$error = match ((string)($_GET['err'] ?? '')) {
+    'confirm_purge' => 'Před trvalým smazáním potvrďte, že položku už nebude možné obnovit.',
+    'invalid_action' => 'Akci se nepodařilo provést. Vyberte položku z koše znovu.',
+    default => '',
+};
 
 // Akce: obnovit nebo trvale smazat
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim($_POST['action'] ?? '');
     $module = trim($_POST['module'] ?? '');
     $itemId = inputInt('post', 'id');
+    $redirectQuery = 'err=invalid_action';
 
     $moduleConfig = [
         'articles'       => ['table' => 'cms_articles',       'label' => 'Článek'],
@@ -55,72 +65,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
-            $success = $cfg['label'] . ' obnoven(a).';
             logAction('trash_restore', "module={$module} id={$itemId}");
+            $redirectQuery = 'ok=restored';
         } elseif ($action === 'purge') {
-            if ($module === 'articles') {
-                $articleRedirectStmt = $pdo->prepare(
-                    "SELECT id, slug, blog_id
-                     FROM cms_articles
-                     WHERE id = ?
-                     LIMIT 1"
-                );
-                $articleRedirectStmt->execute([$itemId]);
-                $articleForRedirectCleanup = $articleRedirectStmt->fetch() ?: null;
-                if ($articleForRedirectCleanup) {
-                    deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup));
+            $confirmedPermanentDelete = isset($_POST['confirm_permanent_delete'])
+                && (string)$_POST['confirm_permanent_delete'] === '1';
+            if (!$confirmedPermanentDelete) {
+                $redirectQuery = 'err=confirm_purge';
+            } else {
+                if ($module === 'articles') {
+                    $articleRedirectStmt = $pdo->prepare(
+                        "SELECT id, slug, blog_id
+                         FROM cms_articles
+                         WHERE id = ?
+                         LIMIT 1"
+                    );
+                    $articleRedirectStmt->execute([$itemId]);
+                    $articleForRedirectCleanup = $articleRedirectStmt->fetch() ?: null;
+                    if ($articleForRedirectCleanup) {
+                        deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup));
+                    }
+                    $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
+                    $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'polls') {
+                    $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'downloads') {
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'food_cards') {
+                    $orderIds = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id = ?");
+                    $orderIds->execute([$itemId]);
+                    $foodOrderIds = array_map('intval', array_column($orderIds->fetchAll(), 'id'));
+                    if ($foodOrderIds !== []) {
+                        $foodOrderPlaceholders = implode(',', array_fill(0, count($foodOrderIds), '?'));
+                        $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$foodOrderPlaceholders})")->execute($foodOrderIds);
+                    }
+                    $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'podcasts') {
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'podcast_shows') {
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'gallery_albums') {
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'gallery_photos') {
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
+                } elseif ($module === 'board') {
+                    $boardRedirectStmt = $pdo->prepare(
+                        "SELECT id, slug
+                         FROM cms_board
+                         WHERE id = ?
+                         LIMIT 1"
+                    );
+                    $boardRedirectStmt->execute([$itemId]);
+                    $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
+                    if ($boardForRedirectCleanup) {
+                        deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
+                    }
+                    $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
                 }
-                $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
-                $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'polls') {
-                $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'downloads') {
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'food_cards') {
-                $orderIds = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id = ?");
-                $orderIds->execute([$itemId]);
-                $foodOrderIds = array_map('intval', array_column($orderIds->fetchAll(), 'id'));
-                if ($foodOrderIds !== []) {
-                    $foodOrderPlaceholders = implode(',', array_fill(0, count($foodOrderIds), '?'));
-                    $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$foodOrderPlaceholders})")->execute($foodOrderIds);
-                }
-                $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'podcasts') {
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'podcast_shows') {
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'gallery_albums') {
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'gallery_photos') {
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
-            } elseif ($module === 'board') {
-                $boardRedirectStmt = $pdo->prepare(
-                    "SELECT id, slug
-                     FROM cms_board
-                     WHERE id = ?
-                     LIMIT 1"
-                );
-                $boardRedirectStmt->execute([$itemId]);
-                $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
-                if ($boardForRedirectCleanup) {
-                    deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
-                }
-                $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
+                $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
+                logAction('trash_purge', "module={$module} id={$itemId}");
+                $redirectQuery = 'ok=purged';
             }
-            $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
-            $success = $cfg['label'] . ' trvale smazán(a).';
-            logAction('trash_purge', "module={$module} id={$itemId}");
         }
     }
+
+    header('Location: ' . BASE_URL . '/admin/trash.php?' . $redirectQuery);
+    exit;
 }
 
 // Načtení smazaných položek
@@ -167,8 +186,9 @@ usort($trashItems, fn ($a, $b) => $b['deleted_at'] <=> $a['deleted_at']);
 adminHeader('Koš');
 ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
-<p class="admin-description">Smazané položky lze obnovit nebo trvale odstranit. Položky v koši se nezobrazují na veřejném webu ani v admin přehledech.</p>
+<p class="admin-description">Smazané položky lze obnovit nebo trvale odstranit. Položky v koši se nezobrazují na veřejném webu ani v admin přehledech. Trvalé smazání je nevratné a před odesláním vyžaduje samostatné potvrzení u konkrétní položky.</p>
 
 <?php if (empty($trashItems)): ?>
   <p>Koš je prázdný.</p>
@@ -185,25 +205,43 @@ adminHeader('Koš');
     </thead>
     <tbody>
     <?php foreach ($trashItems as $item): ?>
+      <?php
+        $trashItemDomId = 'trash-' . preg_replace('/[^a-z0-9_-]+/i', '-', (string)$item['module'] . '-' . (string)$item['id']);
+        $trashItemTitle = trim((string)$item['title']) !== '' ? (string)$item['title'] : ('ID ' . (string)$item['id']);
+        $trashItemContext = (string)$item['label'] . ' „' . $trashItemTitle . '“';
+        $purgeReviewId = $trashItemDomId . '-purge-review';
+        $purgeConfirmId = $trashItemDomId . '-purge-confirm';
+        ?>
       <tr>
         <td><?= h($item['label']) ?></td>
         <td><?= h($item['title']) ?></td>
         <td><time datetime="<?= h(str_replace(' ', 'T', $item['deleted_at'])) ?>"><?= h($item['deleted_at']) ?></time></td>
-        <td class="actions">
-          <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="module" value="<?= h($item['module']) ?>">
-            <input type="hidden" name="id" value="<?= $item['id'] ?>">
-            <input type="hidden" name="action" value="restore">
-            <button type="submit" class="btn">Obnovit</button>
+        <td class="actions admin-trash-actions">
+          <form method="post" class="admin-trash-action-form admin-trash-action-form--restore">
+            <fieldset class="admin-filter-fieldset">
+              <legend class="sr-only">Obnovit položku <?= h($trashItemContext) ?></legend>
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="module" value="<?= h($item['module']) ?>">
+              <input type="hidden" name="id" value="<?= $item['id'] ?>">
+              <input type="hidden" name="action" value="restore">
+              <button type="submit" class="btn">Obnovit<span class="sr-only"> položku <?= h($trashItemContext) ?></span></button>
+            </fieldset>
           </form>
-          <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="module" value="<?= h($item['module']) ?>">
-            <input type="hidden" name="id" value="<?= $item['id'] ?>">
-            <input type="hidden" name="action" value="purge">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Trvale smazat? Tuto akci nelze vrátit zpět.">Trvale smazat</button>
+          <form method="post" class="admin-trash-action-form admin-trash-action-form--purge"
+                data-confirm="<?= h('Trvale smazat položku ' . $trashItemContext . '? Tuto akci nelze vrátit zpět.') ?>">
+            <fieldset class="admin-filter-fieldset">
+              <legend class="sr-only">Trvale smazat položku <?= h($trashItemContext) ?></legend>
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="module" value="<?= h($item['module']) ?>">
+              <input type="hidden" name="id" value="<?= $item['id'] ?>">
+              <input type="hidden" name="action" value="purge">
+              <p id="<?= h($purgeReviewId) ?>" class="admin-description admin-description--muted admin-copy--compact">Zkontrolujte typ, název a datum smazání v tomto řádku. Trvalé smazání nejde vrátit zpět.</p>
+              <label for="<?= h($purgeConfirmId) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($purgeConfirmId) ?>" name="confirm_permanent_delete" value="1" required aria-describedby="<?= h($purgeReviewId) ?>">
+                Rozumím, že položku nepůjde obnovit.
+              </label>
+              <button type="submit" class="btn btn-danger">Trvale smazat<span class="sr-only"> položku <?= h($trashItemContext) ?></span></button>
+            </fieldset>
           </form>
         </td>
       </tr>
