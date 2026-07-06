@@ -142,6 +142,8 @@ Poznámka k `3.3.4` z 2026-07-06: hromadné akce nad alby galerie mají společn
 
 Poznámka k `3.3.4` z 2026-07-06: sdílený helper `bulkActions()` pro běžné administrační moduly zobrazuje review text k hromadnému mazání a checkbox `confirm_bulk_delete`. `admin/bulk.php` odmítne nepotvrzenou akci `delete` pro moduly mimo speciální galerijní flow před cleanupem, smazáním záznamů i audit logem. Runtime `admin_field_error_guardrails` hlídá zdrojový kontrakt a HTTP `generic_bulk_delete_error_prevention_http` ověřuje render na FAQ přehledu, odmítnutí nepotvrzeného bulk delete bez smazání otázky/logu a potvrzený průchod.
 
+Poznámka k `3.3.4` z 2026-07-06: individuální mazání přesměrování už není stav měnící GET odkaz. `admin/redirects.php` používá POST formulář s review textem staré/nové cesty, checkbox `confirm_redirect_delete_<id>`, textový `role="alert"` a field-level chybu u nepotvrzeného smazání. Server nepotvrzený požadavek odmítne bez odstranění záznamu a bez audit logu; potvrzená akce zapíše `redirect_delete` a vrátí PRG stav `deleted=1`. Runtime `admin_field_error_guardrails` hlídá zdrojový kontrakt včetně zákazu `redirects.php?delete=` a HTTP `redirect_delete_error_prevention_http` ověřuje render, odmítnutí i potvrzený průchod.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

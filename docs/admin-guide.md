@@ -46,6 +46,8 @@ Galerie používá stejný pattern pro hromadné smazání alb a ZIP export vybr
 
 Sdílené hromadné mazání v běžných administračních přehledech používá obecný `confirm_bulk_delete` guardrail. Přehled zobrazí review dopadu smazání, správce potvrdí kontrolu výběru a server bez potvrzení neprovede cleanup, nesmaže data ani nezapíše audit log.
 
+Mazání jednotlivého přesměrování používá stejný review-and-confirm princip. Řádková akce zobrazí starou a novou cestu, vyžaduje potvrzení dopadu na veřejnou URL a server bez `confirm_redirect_delete_<id>` záznam nesmaže ani nezapíše audit log.
+
 Tyto odkazy jsou součástí WCAG 2.2 `3.2.6 Consistent Help` evidence. Pokud nový modul zavádí vlastní podporu, inbox, kontaktní workflow nebo redakční pravidla, zvažte doplnění této stránky, veřejné patičky nebo dokumentace tak, aby správce ani návštěvník nemuseli hledat nápovědu na každé obrazovce jiným způsobem.
 
 ---
@@ -1096,6 +1098,8 @@ Návrat po administrátorském přihlášení zachovává původně otevřenou s
 Správa `301/302` přesměrování dovoluje jako starou adresu jen interní cestu webu. Nová adresa může být interní cesta nebo úplná `http://` či `https://` URL, ale CMS odmítá nebezpečná schémata, protocol-relative URL, CRLF znaky a adresy s přihlašovacími údaji; stejná validace platí i pro automatické redirecty při změně slugů.
 
 Řádková editace existujících přesměrování v tabulce používá skutečné skryté popisky polí (`label` + `id`) místo samotných `aria-label`, takže čtečka obrazovky oznamuje starou cestu, novou cestu a typ přesměrování stejně spolehlivě jako v hlavním formuláři.
+
+Řádkové smazání přesměrování je POST akce s vlastním review textem. Správce musí zaškrtnout potvrzení u konkrétního redirectu; server bez něj požadavek odmítne s textovým alertem a field-level chybou, aniž smaže záznam nebo zapíše audit log.
 
 Koš v administraci funguje jako review krok před nevratným odstraněním. Běžné mazání přesune obsah do koše, trvalé smazání v koši zobrazuje typ, název a datum smazání v řádku, vyžaduje samostatné potvrzení checkboxem u konkrétní položky a server odmítne purge bez tohoto potvrzení. HTTP integrace zároveň ověřuje, že nepotvrzené trvalé smazání položku neodstraní a potvrzené smazání projde s PRG stavem.
 

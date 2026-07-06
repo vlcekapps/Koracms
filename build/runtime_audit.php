@@ -17389,11 +17389,21 @@ foreach ([
             '$error = \'Přesměrování nejde uložit bez nové cesty. U pole Nová cesta je konkrétní nápověda.\';',
             '$error = \'Nová cesta přesměrování není použitelná. U pole Nová cesta je konkrétní nápověda.\';',
             '$error = \'Stará a nová cesta přesměrování se nesmí shodovat. U obou polí je konkrétní nápověda.\';',
+            '$formAction = trim((string)($_POST[\'form_action\'] ?? \'save_redirect\'));',
+            '$formAction === \'delete_redirect\'',
+            'Přesměrování nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.',
+            '<p id="redirect-delete-error" class="error" role="alert" aria-atomic="true"><?= h($redirectDeleteError) ?></p>',
             '\'old_path\' => \'Zadejte interní cestu bez domény, která začíná jedním lomítkem, například /stara-stranka.\',',
             '\'new_path\' => \'Zadejte interní cestu začínající lomítkem, nebo úplnou http/https adresu bez přihlašovacích údajů.\',',
             '<p id="redirect-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('old_path', \$redirectFieldErrors, [], ['old-path-help'])",
             "adminFieldAttributes('new_path', \$redirectFieldErrors, [], ['new-path-help'])",
+            '$redirectDeleteConfirmField = \'confirm_redirect_delete_\' . $redirectId;',
+            'adminFieldAttributes($redirectDeleteConfirmField, $redirectDeleteErrorFields, [], [$redirectDeleteReviewId], $redirectDeleteFieldErrorId)',
+            'adminRenderFieldError($redirectDeleteConfirmField, $redirectDeleteErrorFields',
+            "'redirect_delete',",
+            "header('Location: ' . BASE_URL . '/admin/redirects.php?deleted=1');",
+            'class="admin-inline-fieldset"',
         ],
         'forbidden' => [
             '$error = \'Stará cesta je povinná.\';',
@@ -17402,6 +17412,7 @@ foreach ([
             '$error = \'Nová cesta musí být interní cesta nebo úplná adresa začínající http:// či https:// bez přihlašovacích údajů.\';',
             '$error = \'Stará a nová cesta nesmí být stejné.\';',
             '<p class="error" role="alert"><?= h($error) ?></p>',
+            'redirects.php?delete=',
         ],
     ],
     'gallery album editor' => [
@@ -18159,6 +18170,12 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'ZIP export šablony bez potvrzení nevrátil field-level chybu, poslal attachment nebo zapsal audit log')
     || !str_contains($httpIntegrationSource, 'confirm_theme_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing theme ZIP export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('redirect_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'smazání přesměrování bez potvrzení nevrátilo field-level chybu, smazalo záznam nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_redirect_delete_')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing redirect delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http'")

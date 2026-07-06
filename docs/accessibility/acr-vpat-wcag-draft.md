@@ -118,6 +118,8 @@ Additional `3.3.4` ACR evidence, 2026-07-06: gallery album bulk actions render a
 
 Additional `3.3.4` ACR evidence, 2026-07-06: shared `bulkActions()` delete actions render a generic review instruction and require `confirm_bulk_delete` for ordinary admin modules. `admin/bulk.php` rejects unconfirmed generic delete requests outside the special gallery-album flow before cleanup, data deletion or audit logging. Runtime source checks and HTTP `generic_bulk_delete_error_prevention_http` verify FAQ overview rendering, rejected unconfirmed bulk delete without deleting/logging and the confirmed path.
 
+Additional `3.3.4` ACR evidence, 2026-07-06: individual redirect deletion is no longer exposed as a state-changing GET link. `admin/redirects.php` renders a POST review form with the old/new path context, requires `confirm_redirect_delete_<id>`, rejects unconfirmed deletion with a text-backed alert and field-level checkbox error, and avoids both record deletion and `redirect_delete` audit logging until confirmation. Runtime source checks forbid `redirects.php?delete=` and HTTP `redirect_delete_error_prevention_http` verifies review rendering, rejected unconfirmed deletion and confirmed PRG feedback.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

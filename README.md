@@ -502,6 +502,8 @@ Hromadné akce nad alby galerie mají stejný guardrail. Smazání vybraných al
 
 Sdílené hromadné mazání v běžných administračních přehledech používá obecný `confirm_bulk_delete` guardrail. Přehled zobrazí review dopadu mazání, správce potvrdí kontrolu výběru a server nepotvrzený požadavek odmítne před cleanupem, smazáním dat nebo audit logem.
 
+Mazání jednotlivého přesměrování používá stejný princip v řádkové akci. Už nejde o stav měnící GET odkaz; správce vidí review staré a nové cesty, musí potvrdit dopad na veřejnou URL a server bez `confirm_redirect_delete_<id>` záznam nesmaže ani nezapíše audit log.
+
 Změny stavu rezervace používají stejný error-prevention princip. Detail rezervace pro schválení, zamítnutí, zrušení, dokončení a no-show ukazuje review dopadu, vyžaduje potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle notifikaci.
 
 Ruční SQL záloha databáze má vlastní review krok pro citlivý export. Formulář popisuje, že záloha obsahuje kompletní data CMS, vyžaduje potvrzení oprávnění ke stažení a server bez potvrzení neodešle soubor ani nezapíše audit log; HTTP integrace hlídá odmítnutí i potvrzený download pro WCAG `3.3.4`.

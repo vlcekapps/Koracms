@@ -358,6 +358,7 @@ main > p > a:not(.btn) { display:inline-flex; align-items:center; min-height:2re
 .admin-inline-label { display:inline; margin-top:0; }
 .admin-checkbox-label { display:inline; margin-top:0; font-weight:normal; }
 .admin-inline-form { display:inline; }
+.admin-inline-fieldset { display:inline-grid; gap:.35rem; margin:0; border:0; padding:0; min-width:0; }
 .admin-description { font-size:.9rem; }
 .admin-description--flush { margin-top:0; }
 .admin-description--muted { color:var(--admin-field-help); }

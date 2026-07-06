@@ -1833,6 +1833,94 @@ try {
     }
     httpIntegrationPrintResult('redirects_validation_http', $redirectsValidationIssues, $failures);
 
+    $redirectDeleteErrorPreventionIssues = [];
+    $redirectDeleteOldPath = '/http-redirect-delete-' . bin2hex(random_bytes(4));
+    $redirectDeleteNewPath = '/http-redirect-target-' . bin2hex(random_bytes(4));
+    $pdo->prepare('INSERT INTO cms_redirects (old_path, new_path, status_code) VALUES (?, ?, 301)')
+        ->execute([$redirectDeleteOldPath, $redirectDeleteNewPath]);
+    $redirectDeleteId = (int)$pdo->lastInsertId();
+    $createdRedirectPaths[] = $redirectDeleteOldPath;
+    $createdRedirectPaths[] = $redirectDeleteNewPath;
+    $redirectDeleteSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Redirect Delete Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-redirect-delete-' . bin2hex(random_bytes(3)));
+    $redirectDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/redirects.php', $redirectDeleteSession['cookie'], 0);
+    $redirectDeleteCsrf = extractHiddenInputValue($redirectDeletePage['body'], 'csrf_token');
+    $redirectDeleteConfirmField = 'confirm_redirect_delete_' . $redirectDeleteId;
+    $redirectDeleteConfirmId = 'confirm-redirect-delete-' . $redirectDeleteId;
+    $redirectDeleteReviewId = 'redirect-delete-review-' . $redirectDeleteId;
+    $redirectDeleteFieldErrorId = 'confirm-redirect-delete-' . $redirectDeleteId . '-error';
+    if (httpIntegrationStatusCode($redirectDeletePage) !== 200
+        || $redirectDeleteCsrf === ''
+        || str_contains($redirectDeletePage['body'], 'redirects.php?delete=')
+        || !str_contains($redirectDeletePage['body'], 'name="form_action" value="delete_redirect"')
+        || !str_contains($redirectDeletePage['body'], 'Smazání ukončí přesměrování této staré cesty na novou')
+        || !httpIntegrationInputHasAttributes($redirectDeletePage['body'], $redirectDeleteConfirmId, [
+            'name' => $redirectDeleteConfirmField,
+            'aria-describedby' => $redirectDeleteReviewId,
+        ])) {
+        $redirectDeleteErrorPreventionIssues[] = 'přehled přesměrování nevykreslil POST delete review formulář nebo pořád obsahuje GET delete odkaz';
+    }
+
+    $redirectDeleteLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'redirect_delete'")->fetchColumn();
+    $redirectDeleteMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/redirects.php',
+        [
+            'csrf_token' => $redirectDeleteCsrf,
+            'form_action' => 'delete_redirect',
+            'delete_id' => (string)$redirectDeleteId,
+        ],
+        $redirectDeleteSession['cookie'],
+        0
+    );
+    $redirectDeleteCountAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_redirects WHERE id = ?');
+    $redirectDeleteCountAfterMissingConfirmStmt->execute([$redirectDeleteId]);
+    $redirectDeleteLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'redirect_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($redirectDeleteMissingConfirmResponse) !== 200
+        || !str_contains($redirectDeleteMissingConfirmResponse['body'], 'id="redirect-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($redirectDeleteMissingConfirmResponse['body'], 'id="' . $redirectDeleteFieldErrorId . '"')
+        || !httpIntegrationInputHasAttributes($redirectDeleteMissingConfirmResponse['body'], $redirectDeleteConfirmId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $redirectDeleteReviewId . ' ' . $redirectDeleteFieldErrorId,
+        ])
+        || (int)$redirectDeleteCountAfterMissingConfirmStmt->fetchColumn() !== 1
+        || $redirectDeleteLogCountAfterMissingConfirm !== $redirectDeleteLogCountBefore) {
+        $redirectDeleteErrorPreventionIssues[] = 'smazání přesměrování bez potvrzení nevrátilo field-level chybu, smazalo záznam nebo zapsalo audit log';
+    }
+
+    $redirectDeleteConfirmedCsrf = extractHiddenInputValue($redirectDeleteMissingConfirmResponse['body'], 'csrf_token');
+    if ($redirectDeleteConfirmedCsrf === '') {
+        $redirectDeleteErrorPreventionIssues[] = 'nepotvrzené smazání přesměrování nevrátilo nový csrf_token pro opravené odeslání';
+    } else {
+        $redirectDeleteConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/redirects.php',
+            [
+                'csrf_token' => $redirectDeleteConfirmedCsrf,
+                'form_action' => 'delete_redirect',
+                'delete_id' => (string)$redirectDeleteId,
+                $redirectDeleteConfirmField => '1',
+            ],
+            $redirectDeleteSession['cookie'],
+            0
+        );
+        $redirectDeleteCountAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_redirects WHERE id = ?');
+        $redirectDeleteCountAfterConfirmedStmt->execute([$redirectDeleteId]);
+        $redirectDeleteLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'redirect_delete'")->fetchColumn();
+        $redirectDeleteSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/redirects.php?deleted=1', $redirectDeleteSession['cookie'], 0);
+        if (httpIntegrationStatusCode($redirectDeleteConfirmedResponse) !== 302
+            || !responseHasLocationHeader($redirectDeleteConfirmedResponse['headers'], BASE_URL . '/admin/redirects.php?deleted=1', $baseUrl)
+            || !str_contains($redirectDeleteSuccessPage['body'], '<p class="success" role="status">Přesměrování smazáno.</p>')
+            || (int)$redirectDeleteCountAfterConfirmedStmt->fetchColumn() !== 0
+            || $redirectDeleteLogCountAfterConfirmed !== $redirectDeleteLogCountBefore + 1) {
+            $redirectDeleteErrorPreventionIssues[] = 'potvrzené smazání přesměrování neproběhlo s PRG stavem, nesmazalo záznam nebo nezapsalo audit log';
+        }
+    }
+    httpIntegrationPrintResult('redirect_delete_error_prevention_http', $redirectDeleteErrorPreventionIssues, $failures);
+
     $adminConsistentHelpIssues = [];
     $adminDashboardForHelp = fetchUrl($baseUrl . BASE_URL . '/admin/index.php', $adminSession['cookie'], 0);
     $adminHelpPage = fetchUrl($baseUrl . BASE_URL . '/admin/help.php', $adminSession['cookie'], 0);
