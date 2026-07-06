@@ -160,6 +160,8 @@ Samostatné importy z WordPressu a eStránek pracují s XML/WXR soubory. Před p
 
 Chyby importních formulářů se mají ozvat nahoře jako alert a současně u konkrétního pole. JSON import radí neupravený export z Kora CMS v platném UTF-8, WordPress import radí WXR/XML export z administrace WordPressu, eStránky import radí XML zálohu z eStránek a downloader fotek odděleně označí XML soubor i základní URL webu.
 
+Importy, které zapisují obsah, nastavení, galerie nebo soubory, vyžadují před spuštěním potvrzovací checkbox. Server bez něj odmítne JSON import, finální WordPress WXR import, XML import z eStránek i dávkové stahování fotografií z eStránek ještě před datovou změnou.
+
 Platí tato pravidla:
 
 - export z Kora CMS zapisuje JSON s českou diakritikou v UTF-8

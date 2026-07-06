@@ -31,10 +31,13 @@ $estrankyImportFieldErrors = array_filter(array_map('strval', $estrankyImportFie
 $estrankyImportFieldErrorNames = array_keys($estrankyImportFieldErrors);
 $estrankyXmlRequiredErrorMessage = 'Vyberte XML zálohu z eStránek. Soubor má mít příponu .xml a pocházet z exportu webu eStránky.cz.';
 $estrankyXmlInvalidErrorMessage = 'XML zálohu z eStránek se nepodařilo načíst. Nahrajte platný neprázdný XML soubor z exportu eStránek.';
+$estrankyImportConfirmErrorMessage = 'Před importem potvrďte, že jste zkontroloval(a) zdroj XML zálohy, cílový blog a rozsah importu z eStránek.';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     set_time_limit(300);
+    $estrankyImportConfirmed = isset($_POST['confirm_estranky_import'])
+        && (string)$_POST['confirm_estranky_import'] === '1';
 
     /** @var array<string,mixed> $xmlFile */
     $xmlFile = is_array($_FILES['xml_file'] ?? null) ? $_FILES['xml_file'] : [];
@@ -52,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $xmlPath = (string)$upload['tmp_path'];
     $xmlOriginalName = (string)$upload['original_name'];
+
+    if (!$estrankyImportConfirmed) {
+        $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> ' . h($estrankyImportConfirmErrorMessage)];
+        $_SESSION['estranky_import_field_errors'] = ['confirm_estranky_import' => $estrankyImportConfirmErrorMessage];
+        header('Location: estranky_import.php');
+        exit;
+    }
 
     $log = [];
     $xml = @simplexml_load_file($xmlPath);
@@ -363,6 +373,19 @@ adminHeader('Import z eStránek');
         <?php endforeach; ?>
       </select>
     </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Kontrola před importem</legend>
+    <p id="estranky-import-review-help" class="field-help">
+      Import vytvoří nebo doplní blog, kategorie, články, fotoalba a záznamy fotografií ze zálohy eStránek. Samotné soubory fotografií se stahují zvlášť.
+    </p>
+    <label for="confirm_estranky_import" class="admin-checkbox-label">
+      <input type="checkbox" id="confirm_estranky_import" name="confirm_estranky_import" value="1" required
+             <?= adminFieldAttributes('confirm_estranky_import', $estrankyImportFieldErrorNames, [], ['estranky-import-review-help'], 'estranky-import-confirm-error') ?>>
+      Potvrzuji, že jsem zkontroloval(a) zdroj XML zálohy a chci import z eStránek spustit.
+    </label>
+    <?php adminRenderFieldError('confirm_estranky_import', $estrankyImportFieldErrorNames, [], $estrankyImportFieldErrors['confirm_estranky_import'] ?? '', 'estranky-import-confirm-error'); ?>
   </fieldset>
 
   <div class="button-row admin-action-row">

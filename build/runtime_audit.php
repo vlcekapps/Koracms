@@ -17974,6 +17974,61 @@ if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, "http
     $adminFieldErrorIssues[] = 'HTTP integration is missing admin import error suggestion coverage';
 }
 foreach ([
+    'JSON import error prevention' => [
+        'source' => $importAdminSource,
+        'required' => [
+            '$jsonImportConfirmErrorMessage',
+            "\$jsonImportConfirmed = isset(\$_POST['confirm_json_import'])",
+            '!$jsonImportConfirmed',
+            "adminFieldAttributes('confirm_json_import'",
+            "adminRenderFieldError('confirm_json_import'",
+            'json-import-review-help',
+        ],
+    ],
+    'WordPress import error prevention' => [
+        'source' => $wpImportSource,
+        'required' => [
+            '$wpImportConfirmErrorMessage',
+            "\$wpImportConfirmed = isset(\$_POST['confirm_wp_import'])",
+            '!$wpImportConfirmed',
+            "adminFieldAttributes('confirm_wp_import'",
+            "adminRenderFieldError('confirm_wp_import'",
+            'wp-import-review-help',
+        ],
+    ],
+    'eStránky import error prevention' => [
+        'source' => $estrankyImportSource,
+        'required' => [
+            '$estrankyImportConfirmErrorMessage',
+            "\$estrankyImportConfirmed = isset(\$_POST['confirm_estranky_import'])",
+            '!$estrankyImportConfirmed',
+            "adminFieldAttributes('confirm_estranky_import'",
+            "adminRenderFieldError('confirm_estranky_import'",
+            'estranky-import-review-help',
+        ],
+    ],
+    'eStránky photo download error prevention' => [
+        'source' => $estrankyPhotoDownloadSource,
+        'required' => [
+            '$estrankyPhotoConfirmErrorMessage',
+            "\$estrankyPhotoConfirmed = isset(\$_POST['confirm_estranky_photo_download'])",
+            '!$estrankyPhotoConfirmed',
+            "adminFieldAttributes('confirm_estranky_photo_download'",
+            "adminRenderFieldError('confirm_estranky_photo_download'",
+            'estranky-photo-review-help',
+        ],
+    ],
+] as $adminImportPreventionLabel => $adminImportPreventionSpec) {
+    foreach ($adminImportPreventionSpec['required'] as $adminImportPreventionFragment) {
+        if (!str_contains((string)$adminImportPreventionSpec['source'], $adminImportPreventionFragment)) {
+            $adminFieldErrorIssues[] = $adminImportPreventionLabel . ' is missing error-prevention fragment: ' . $adminImportPreventionFragment;
+        }
+    }
+}
+if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, 'validní JSON import bez potvrzení nevrátil field-level chybu nebo změnil data')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing JSON import error-prevention coverage';
+}
+foreach ([
     'blog article image upload error suggestion' => [
         'source' => $blogFormSource,
         'required' => [

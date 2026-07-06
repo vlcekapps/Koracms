@@ -3167,9 +3167,41 @@ try {
         "\xEF\xBB\xBF" . (string)json_encode($validImportPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         $createdTempFiles
     );
-    $validImportResponse = postMultipartUrl(
+    $unconfirmedImportPath = httpIntegrationCreateTempFile(
+        'imp',
+        "\xEF\xBB\xBF" . (string)json_encode($validImportPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        $createdTempFiles
+    );
+    $unconfirmedImportResponse = postMultipartUrl(
         $importUrl,
         ['csrf_token' => $importCsrf],
+        [
+            'import_file' => [
+                'path' => $unconfirmedImportPath,
+                'filename' => 'cms-import-unconfirmed.json',
+                'type' => 'application/json',
+            ],
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $importedNewsletterProbeStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_newsletters WHERE id = ?');
+    $importedNewsletterProbeStmt->execute([$importNewsletterId]);
+    clearSettingsCache();
+    if (httpIntegrationStatusCode($unconfirmedImportResponse) !== 200
+        || !str_contains($unconfirmedImportResponse['body'], 'Před importem potvrďte, že jste zkontroloval(a) zdroj JSON souboru')
+        || !str_contains($unconfirmedImportResponse['body'], 'id="json-import-confirm-error"')
+        || !httpIntegrationInputHasAttributes($unconfirmedImportResponse['body'], 'confirm_json_import', ['aria-invalid' => 'true'])
+        || httpIntegrationSettingValue($pdo, 'site_name') !== $originalImportSettings['site_name']
+        || (int)$importedNewsletterProbeStmt->fetchColumn() !== 0) {
+        $jsonImportIssues[] = 'validní JSON import bez potvrzení nevrátil field-level chybu nebo změnil data';
+    }
+    $validImportResponse = postMultipartUrl(
+        $importUrl,
+        [
+            'csrf_token' => $importCsrf,
+            'confirm_json_import' => '1',
+        ],
         [
             'import_file' => [
                 'path' => $validImportPath,
@@ -3224,7 +3256,10 @@ try {
     );
     $invalidUtf8Response = postMultipartUrl(
         $importUrl,
-        ['csrf_token' => $importCsrf],
+        [
+            'csrf_token' => $importCsrf,
+            'confirm_json_import' => '1',
+        ],
         [
             'import_file' => [
                 'path' => $invalidUtf8ImportPath,

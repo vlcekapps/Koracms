@@ -8,6 +8,7 @@ $success = false;
 $summary = [];
 $jsonImportFileRequiredErrorMessage = 'Vyberte JSON export z Kora CMS. Soubor má mít příponu .json a musí pocházet z administrace Export dat.';
 $jsonImportFileInvalidErrorMessage = 'Nahrajte neupravený JSON export z Kora CMS v platném UTF-8. Poškozený soubor, jiný formát nebo ručně změněné kódování import odmítne.';
+$jsonImportConfirmErrorMessage = 'Před importem potvrďte, že jste zkontroloval(a) zdroj JSON souboru a rozumíte dopadu importu na obsah a nastavení CMS.';
 
 /**
  * @param list<string> $errors
@@ -42,10 +43,15 @@ function importDecodeJsonUpload(string $path, array &$errors): ?array
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
+    $jsonImportConfirmed = isset($_POST['confirm_json_import'])
+        && (string)$_POST['confirm_json_import'] === '1';
 
     if (empty($_FILES['import_file']['name'])) {
         $errors[] = $jsonImportFileRequiredErrorMessage;
         $fieldErrors['import_file'] = $jsonImportFileRequiredErrorMessage;
+    } elseif (!$jsonImportConfirmed) {
+        $errors[] = $jsonImportConfirmErrorMessage;
+        $fieldErrors['confirm_json_import'] = $jsonImportConfirmErrorMessage;
     } else {
         $tmp = $_FILES['import_file']['tmp_name'];
         $data = importDecodeJsonUpload($tmp, $errors);
@@ -1820,12 +1826,12 @@ adminHeader('Import / Export dat');
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
-  <ul class="error" role="alert">
+  <ul class="error" role="alert" id="import-page-error" aria-atomic="true">
     <?php foreach ($errors as $e): ?><li><?= h($e) ?></li><?php endforeach; ?>
   </ul>
 <?php endif; ?>
 
-<form method="post" enctype="multipart/form-data" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate<?= !empty($errors) ? ' aria-describedby="import-page-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Zdroj importu</legend>
@@ -1834,6 +1840,18 @@ adminHeader('Import / Export dat');
            <?= adminFieldAttributes('import_file', array_keys($fieldErrors), [], ['import-file-help'], 'import-file-error') ?>>
     <small id="import-file-help" class="field-help">Nahrajte neupravený JSON soubor stažený přes Export dat v této administraci.</small>
     <?php adminRenderFieldError('import_file', array_keys($fieldErrors), [], $fieldErrors['import_file'] ?? '', 'import-file-error'); ?>
+  </fieldset>
+  <fieldset>
+    <legend>Kontrola před importem</legend>
+    <p id="json-import-review-help" class="field-help">
+      Import přidá obsah, metadata a nastavení z JSON exportu do databáze. Existující záznamy se stejným ID se přeskočí, nové záznamy a povolená nastavení se uloží.
+    </p>
+    <label for="confirm_json_import" class="admin-checkbox-label">
+      <input type="checkbox" id="confirm_json_import" name="confirm_json_import" value="1" required
+             <?= adminFieldAttributes('confirm_json_import', array_keys($fieldErrors), [], ['json-import-review-help'], 'json-import-confirm-error') ?>>
+      Potvrzuji, že jsem zkontroloval(a) zdroj JSON exportu a chci import spustit.
+    </label>
+    <?php adminRenderFieldError('confirm_json_import', array_keys($fieldErrors), [], $fieldErrors['confirm_json_import'] ?? '', 'json-import-confirm-error'); ?>
   </fieldset>
   <button type="submit" class="btn admin-action-row">Importovat</button>
 </form>

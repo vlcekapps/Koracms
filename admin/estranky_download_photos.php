@@ -156,6 +156,7 @@ $estrankyPhotoSiteUrlInput = (string)($estrankyPhotoFormState['site_url'] ?? '')
 $estrankyPhotoXmlRequiredErrorMessage = 'Vyberte XML zálohu z eStránek, ze které se má sestavit seznam fotografií ke stažení.';
 $estrankyPhotoXmlInvalidErrorMessage = 'XML zálohu se nepodařilo načíst. Nahrajte stejný platný neprázdný XML soubor, který jste použili pro import obsahu z eStránek.';
 $estrankyPhotoSiteUrlErrorMessage = 'Zadejte hlavní URL webu na eStránkách jako http/https adresu nebo doménu bez schématu. URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.';
+$estrankyPhotoConfirmErrorMessage = 'Před stahováním potvrďte, že jste zkontroloval(a) XML zálohu, základní URL webu a cílové album pro fotografie.';
 $batchSize = 20;
 
 // ── Krok 1: Upload XML a příprava ────────────────────────────────────────────
@@ -165,6 +166,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteUrlRaw = trim((string)($_POST['site_url'] ?? ''));
     $siteUrl = rtrim(normalizeHttpExternalUrl($siteUrlRaw), '/');
     $parentAlbumId = inputInt('post', 'parent_album_id');
+    $estrankyPhotoConfirmed = isset($_POST['confirm_estranky_photo_download'])
+        && (string)$_POST['confirm_estranky_photo_download'] === '1';
 
     /** @var array<string,mixed> $xmlFile */
     $xmlFile = is_array($_FILES['xml_file'] ?? null) ? $_FILES['xml_file'] : [];
@@ -180,6 +183,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (empty($upload['ok'])) {
         $postedFieldErrors['xml_file'] = (string)($upload['error'] ?? $estrankyPhotoXmlInvalidErrorMessage);
+    }
+    if (!$estrankyPhotoConfirmed) {
+        $postedFieldErrors['confirm_estranky_photo_download'] = $estrankyPhotoConfirmErrorMessage;
     }
     if ($postedFieldErrors !== []) {
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Opravte prosím označená pole a spusťte stahování znovu.'];
@@ -495,6 +501,19 @@ adminHeader('Stažení fotografií z eStránek');
       </select>
       <small id="album-help" class="field-help">Importovaná alba se vytvoří jako podalba vybraného alba. Volba „Nikam" zachová stávající chování.</small>
     </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Kontrola před stahováním</legend>
+    <p id="estranky-photo-review-help" class="field-help">
+      Stahování vytvoří soubory v galerii, náhledy a WebP varianty a může aktualizovat vazby importovaných fotografií. Zkontrolujte XML zálohu, URL webu a cílové album.
+    </p>
+    <label for="confirm_estranky_photo_download" class="admin-checkbox-label">
+      <input type="checkbox" id="confirm_estranky_photo_download" name="confirm_estranky_photo_download" value="1" required
+             <?= adminFieldAttributes('confirm_estranky_photo_download', $estrankyPhotoFieldErrorNames, [], ['estranky-photo-review-help'], 'estranky-photo-confirm-error') ?>>
+      Potvrzuji, že jsem zkontroloval(a) zdroj fotografií a chci spustit dávkové stahování.
+    </label>
+    <?php adminRenderFieldError('confirm_estranky_photo_download', $estrankyPhotoFieldErrorNames, [], $estrankyPhotoFieldErrors['confirm_estranky_photo_download'] ?? '', 'estranky-photo-confirm-error'); ?>
   </fieldset>
 
   <div class="button-row admin-action-row">

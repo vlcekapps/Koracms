@@ -531,6 +531,8 @@ XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílen
 
 Importní formuláře navazují tyto chyby i na konkrétní pole. JSON import, WordPress WXR, XML import z eStránek a downloader fotografií z eStránek používají field-level chyby přes `aria-describedby`; chybový panel má `role="alert"` a text radí správný exportní soubor, platné UTF-8 nebo http/https/doménovou URL webu.
 
+Datově dopadající importy používají navíc error-prevention potvrzení. JSON import, finální krok WordPress WXR importu, XML import z eStránek i dávkové stahování fotografií z eStránek vyžadují kontrolní checkbox; server nepotvrzený požadavek odmítne před zápisem obsahu, nastavení, galerií nebo souborů.
+
 Tokenové odkazy, které mění stav přes tajný `GET` odkaz, jsou metodově omezené. Potvrzení e-mailu, potvrzení nebo odhlášení newsletteru a veřejné i administrační odhlášení odmítají `POST`, `HEAD` a další nečekané metody pomocí `405` a `Allow: GET`, takže kontrolní nebo chybné HTTP požadavky nemají měnit účet, odběr ani session.
 
 Editor anket v administraci používá pro přidávání a odebírání možností odpovědi datové atributy a delegovaný listener v nonce skriptu formuláře, ne inline `onclick` handlery.

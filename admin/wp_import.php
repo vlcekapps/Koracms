@@ -18,6 +18,15 @@ $wpImportFieldErrors = array_filter(array_map('strval', $wpImportFieldErrors));
 $wpImportFieldErrorNames = array_keys($wpImportFieldErrors);
 $wpWxrRequiredErrorMessage = 'Vyberte WordPress XML export ve formátu WXR (.xml), stažený z administrace WordPressu přes Nástroje → Export → Veškerý obsah.';
 $wpWxrInvalidErrorMessage = 'WordPress XML export se nepodařilo načíst. Nahrajte platný WXR/XML soubor exportovaný z WordPressu; prázdný nebo poškozený soubor import nepřijme.';
+$wpImportConfirmErrorMessage = 'Před importem potvrďte, že jste zkontroloval(a) náhled obsahu, vybraný blog a rozsah importovaných kategorií.';
+$wpImportConfirmFields = [];
+$preview = null;
+$cachedPath = '';
+$wpImportSelectedCats = null;
+$wpImportUncategorizedChecked = false;
+$wpImportPagesChecked = true;
+$wpImportSiteInfoChecked = true;
+$wpImportTargetBlogId = 0;
 
 /**
  * Parsuje WXR soubor a vrátí strukturovaná data.
@@ -152,6 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         exit;
     }
 
+    $wpImportConfirmed = isset($_POST['confirm_wp_import'])
+        && (string)$_POST['confirm_wp_import'] === '1';
     $data = wpParseWxr($cachedPath);
     if ($data === null) {
         $_SESSION['import_log'] = ['<span aria-hidden="true">✗</span> Nepodařilo se parsovat XML.'];
@@ -159,197 +170,206 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_import']) && !empt
         header('Location: wp_import.php');
         exit;
     }
-
-    $selectedCats = (array)($_POST['import_cats'] ?? []);
-    $importUncategorized = isset($_POST['import_uncategorized']);
-    $importPages = isset($_POST['import_pages']);
-    $importSiteInfo = isset($_POST['import_site_info']);
-    $targetBlogId = inputInt('post', 'target_blog_id');
-
-    // Cílový blog – existující nebo nový
-    if ($targetBlogId !== null && $targetBlogId > 0) {
-        $targetBlog = getBlogById($targetBlogId);
+    if (!$wpImportConfirmed) {
+        $log = ['<span aria-hidden="true">✗</span> ' . h($wpImportConfirmErrorMessage)];
+        $wpImportConfirmFields = ['confirm_wp_import'];
+        $preview = $data;
+        $wpImportSelectedCats = array_map('strval', (array)($_POST['import_cats'] ?? []));
+        $wpImportUncategorizedChecked = isset($_POST['import_uncategorized']);
+        $wpImportPagesChecked = isset($_POST['import_pages']);
+        $wpImportSiteInfoChecked = isset($_POST['import_site_info']);
+        $wpImportTargetBlogId = max(0, (int)($_POST['target_blog_id'] ?? 0));
     } else {
-        $targetBlog = null;
-    }
-    if (!$targetBlog && $importSiteInfo && $data['title'] !== '') {
-        $blogSlug = slugify($data['title']) ?: 'import';
-        $blogSlug = substr($blogSlug, 0, 100);
-        $creatorUserId = (int)(currentUserId() ?? 0);
-        try {
-            $pdo->beginTransaction();
-            $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, created_by_user_id) VALUES (?, ?, ?, ?, ?)")
-                ->execute([
-                    $data['title'],
-                    $blogSlug,
-                    $data['description'] ?? '',
-                    (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn(),
-                    $creatorUserId > 0 ? $creatorUserId : null,
-                ]);
-            $createdBlogId = (int)$pdo->lastInsertId();
-            if ($creatorUserId > 0 && $createdBlogId > 0) {
-                $pdo->prepare(
-                    "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
-                     VALUES (?, ?, 'manager')
-                     ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
-                )->execute([$createdBlogId, $creatorUserId]);
+
+        $selectedCats = (array)($_POST['import_cats'] ?? []);
+        $importUncategorized = isset($_POST['import_uncategorized']);
+        $importPages = isset($_POST['import_pages']);
+        $importSiteInfo = isset($_POST['import_site_info']);
+        $targetBlogId = inputInt('post', 'target_blog_id');
+
+        // Cílový blog – existující nebo nový
+        if ($targetBlogId !== null && $targetBlogId > 0) {
+            $targetBlog = getBlogById($targetBlogId);
+        } else {
+            $targetBlog = null;
+        }
+        if (!$targetBlog && $importSiteInfo && $data['title'] !== '') {
+            $blogSlug = slugify($data['title']) ?: 'import';
+            $blogSlug = substr($blogSlug, 0, 100);
+            $creatorUserId = (int)(currentUserId() ?? 0);
+            try {
+                $pdo->beginTransaction();
+                $pdo->prepare("INSERT INTO cms_blogs (name, slug, description, sort_order, created_by_user_id) VALUES (?, ?, ?, ?, ?)")
+                    ->execute([
+                        $data['title'],
+                        $blogSlug,
+                        $data['description'] ?? '',
+                        (int)$pdo->query("SELECT COALESCE(MAX(sort_order),0)+1 FROM cms_blogs")->fetchColumn(),
+                        $creatorUserId > 0 ? $creatorUserId : null,
+                    ]);
+                $createdBlogId = (int)$pdo->lastInsertId();
+                if ($creatorUserId > 0 && $createdBlogId > 0) {
+                    $pdo->prepare(
+                        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+                         VALUES (?, ?, 'manager')
+                         ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
+                    )->execute([$createdBlogId, $creatorUserId]);
+                }
+                $pdo->commit();
+                $targetBlog = getBlogById($createdBlogId);
+            } catch (\PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $targetBlog = getDefaultBlog();
             }
-            $pdo->commit();
-            $targetBlog = getBlogById($createdBlogId);
-        } catch (\PDOException $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
+        }
+        if (!$targetBlog) {
             $targetBlog = getDefaultBlog();
         }
-    }
-    if (!$targetBlog) {
-        $targetBlog = getDefaultBlog();
-    }
-    $blogId = (int)$targetBlog['id'];
+        $blogId = (int)$targetBlog['id'];
 
-    $log = [];
-    $log[] = '<span aria-hidden="true">✓</span> WXR načten: ' . h($data['title']);
+        $log = [];
+        $log[] = '<span aria-hidden="true">✓</span> WXR načten: ' . h($data['title']);
 
-    // Název a popis blogu
-    if ($importSiteInfo && $data['title'] !== '') {
-        $pdo->prepare("UPDATE cms_blogs SET name = ?, description = ? WHERE id = ?")
-            ->execute([$data['title'], $data['description'] ?? '', $blogId]);
-        $log[] = '<span aria-hidden="true">✓</span> Blog: ' . h($data['title']) . " (id={$blogId})";
-    }
-
-    // Kategorie
-    $catMap = [];
-    $insertedCats = 0;
-    foreach ($data['categories'] as $slug => $name) {
-        if (!in_array($slug, $selectedCats, true)) {
-            continue;
-        }
-        $ex = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?");
-        $ex->execute([$name, $blogId]);
-        if ($eid = $ex->fetchColumn()) {
-            $catMap[$slug] = (int)$eid;
-        } else {
-            $categorySlug = uniqueBlogCategorySlug($pdo, (string)$name, $blogId);
-            $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $categorySlug, $blogId]);
-            $catMap[$slug] = (int)$pdo->lastInsertId();
-            $insertedCats++;
-        }
-    }
-    $log[] = "<span aria-hidden=\"true\">✓</span> Kategorie: {$insertedCats} nových";
-
-    // Tagy
-    $tagMap = [];
-    $insertedTags = 0;
-    foreach ($data['tags'] as $slug => $name) {
-        $cmsSlug = slugify($name) ?: $slug;
-        $ex = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ? AND blog_id = ?");
-        $ex->execute([$cmsSlug, $blogId]);
-        if ($eid = $ex->fetchColumn()) {
-            $tagMap[$slug] = (int)$eid;
-        } else {
-            $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $cmsSlug, $blogId]);
-            $tagMap[$slug] = (int)$pdo->lastInsertId();
-            $insertedTags++;
-        }
-    }
-    $log[] = "<span aria-hidden=\"true\">✓</span> Tagy: {$insertedTags} nových";
-
-    // Články
-    $insertedArticles = 0;
-    $skippedArticles = 0;
-    $insertedComments = 0;
-    foreach ($data['posts'] as $post) {
-        // Filtr: článek musí patřit do vybrané kategorie, nebo být nekategorizovaný (pokud zapnuto)
-        $postCats = $post['categories'];
-        $matchesCat = array_intersect($postCats, $selectedCats) !== [];
-        $isUncategorized = empty($postCats);
-
-        if (!$matchesCat && !($isUncategorized && $importUncategorized)) {
-            $skippedArticles++;
-            continue;
+        // Název a popis blogu
+        if ($importSiteInfo && $data['title'] !== '') {
+            $pdo->prepare("UPDATE cms_blogs SET name = ?, description = ? WHERE id = ?")
+                ->execute([$data['title'], $data['description'] ?? '', $blogId]);
+            $log[] = '<span aria-hidden="true">✓</span> Blog: ' . h($data['title']) . " (id={$blogId})";
         }
 
-        $title = $post['title'];
-        $dup = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)");
-        $dup->execute([$title, $post['date']]);
-        if ($dup->fetchColumn()) {
-            $skippedArticles++;
-            continue;
-        }
-
-        $content = $post['content'];
-        $excerpt = $post['excerpt'];
-        if (str_contains($content, '<!--more-->')) {
-            $parts = explode('<!--more-->', $content, 2);
-            if ($excerpt === '') {
-                $excerpt = trim(strip_tags($parts[0]));
-            }
-            $content = trim($parts[1]);
-        }
-        $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $content);
-        $content = trim($content);
-
-        $slug = uniqueArticleSlug($pdo, articleSlug($post['slug'] ?: $title), null, $blogId);
-        $status = $post['status'] === 'publish' ? 'published' : 'pending';
-
-        $pdo->prepare("INSERT INTO cms_articles (title, slug, perex, content, comments_enabled, blog_id, status, created_at) VALUES (?,?,?,?,?,?,?,?)")
-            ->execute([$title, $slug, mb_substr($excerpt, 0, 500), $content, $post['comment_status'] === 'open' ? 1 : 0, $blogId, $status, $post['date']]);
-        $articleId = (int)$pdo->lastInsertId();
-        $insertedArticles++;
-
-        foreach ($postCats as $catSlug) {
-            if (isset($catMap[$catSlug])) {
-                $pdo->prepare("UPDATE cms_articles SET category_id = ? WHERE id = ? AND (category_id IS NULL OR category_id = 0)")
-                    ->execute([$catMap[$catSlug], $articleId]);
-            }
-        }
-        foreach ($post['tags'] as $tagSlug) {
-            if (isset($tagMap[$tagSlug])) {
-                try {
-                    $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?,?)")->execute([$articleId, $tagMap[$tagSlug]]);
-                } catch (\PDOException $e) {
-                }
-            }
-        }
-        foreach ($post['comments'] as $cm) {
-            $pdo->prepare("INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved, created_at) VALUES (?,?,?,?,?,?)")
-                ->execute([$articleId, $cm['author'], $cm['email'], $cm['content'], $cm['approved'], $cm['date']]);
-            $insertedComments++;
-        }
-    }
-    $log[] = "<span aria-hidden=\"true\">✓</span> Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (filtr/duplikát)";
-    $log[] = "<span aria-hidden=\"true\">✓</span> Komentáře: {$insertedComments} importováno";
-
-    // Stránky
-    $insertedPages = 0;
-    if ($importPages) {
-        foreach ($data['pages'] as $page) {
-            $dup = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?");
-            $dup->execute([$page['title']]);
-            if ($dup->fetchColumn()) {
+        // Kategorie
+        $catMap = [];
+        $insertedCats = 0;
+        foreach ($data['categories'] as $slug => $name) {
+            if (!in_array($slug, $selectedCats, true)) {
                 continue;
             }
-            $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $page['content']);
-            $slug = uniquePageSlug($pdo, pageSlug($page['slug'] ?: $page['title']), null, null);
-            $pdo->prepare("INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at) VALUES (?,?,?,?,1,?,?)")
-                ->execute([$page['title'], $slug, trim($content), $page['status'] === 'publish' ? 1 : 0, $page['menu_order'], $page['date']]);
-            $insertedPages++;
+            $ex = $pdo->prepare("SELECT id FROM cms_categories WHERE name = ? AND blog_id = ?");
+            $ex->execute([$name, $blogId]);
+            if ($eid = $ex->fetchColumn()) {
+                $catMap[$slug] = (int)$eid;
+            } else {
+                $categorySlug = uniqueBlogCategorySlug($pdo, (string)$name, $blogId);
+                $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $categorySlug, $blogId]);
+                $catMap[$slug] = (int)$pdo->lastInsertId();
+                $insertedCats++;
+            }
         }
+        $log[] = "<span aria-hidden=\"true\">✓</span> Kategorie: {$insertedCats} nových";
+
+        // Tagy
+        $tagMap = [];
+        $insertedTags = 0;
+        foreach ($data['tags'] as $slug => $name) {
+            $cmsSlug = slugify($name) ?: $slug;
+            $ex = $pdo->prepare("SELECT id FROM cms_tags WHERE slug = ? AND blog_id = ?");
+            $ex->execute([$cmsSlug, $blogId]);
+            if ($eid = $ex->fetchColumn()) {
+                $tagMap[$slug] = (int)$eid;
+            } else {
+                $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)")->execute([$name, $cmsSlug, $blogId]);
+                $tagMap[$slug] = (int)$pdo->lastInsertId();
+                $insertedTags++;
+            }
+        }
+        $log[] = "<span aria-hidden=\"true\">✓</span> Tagy: {$insertedTags} nových";
+
+        // Články
+        $insertedArticles = 0;
+        $skippedArticles = 0;
+        $insertedComments = 0;
+        foreach ($data['posts'] as $post) {
+            // Filtr: článek musí patřit do vybrané kategorie, nebo být nekategorizovaný (pokud zapnuto)
+            $postCats = $post['categories'];
+            $matchesCat = array_intersect($postCats, $selectedCats) !== [];
+            $isUncategorized = empty($postCats);
+
+            if (!$matchesCat && !($isUncategorized && $importUncategorized)) {
+                $skippedArticles++;
+                continue;
+            }
+
+            $title = $post['title'];
+            $dup = $pdo->prepare("SELECT id FROM cms_articles WHERE title = ? AND DATE(created_at) = DATE(?)");
+            $dup->execute([$title, $post['date']]);
+            if ($dup->fetchColumn()) {
+                $skippedArticles++;
+                continue;
+            }
+
+            $content = $post['content'];
+            $excerpt = $post['excerpt'];
+            if (str_contains($content, '<!--more-->')) {
+                $parts = explode('<!--more-->', $content, 2);
+                if ($excerpt === '') {
+                    $excerpt = trim(strip_tags($parts[0]));
+                }
+                $content = trim($parts[1]);
+            }
+            $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $content);
+            $content = trim($content);
+
+            $slug = uniqueArticleSlug($pdo, articleSlug($post['slug'] ?: $title), null, $blogId);
+            $status = $post['status'] === 'publish' ? 'published' : 'pending';
+
+            $pdo->prepare("INSERT INTO cms_articles (title, slug, perex, content, comments_enabled, blog_id, status, created_at) VALUES (?,?,?,?,?,?,?,?)")
+                ->execute([$title, $slug, mb_substr($excerpt, 0, 500), $content, $post['comment_status'] === 'open' ? 1 : 0, $blogId, $status, $post['date']]);
+            $articleId = (int)$pdo->lastInsertId();
+            $insertedArticles++;
+
+            foreach ($postCats as $catSlug) {
+                if (isset($catMap[$catSlug])) {
+                    $pdo->prepare("UPDATE cms_articles SET category_id = ? WHERE id = ? AND (category_id IS NULL OR category_id = 0)")
+                        ->execute([$catMap[$catSlug], $articleId]);
+                }
+            }
+            foreach ($post['tags'] as $tagSlug) {
+                if (isset($tagMap[$tagSlug])) {
+                    try {
+                        $pdo->prepare("INSERT IGNORE INTO cms_article_tags (article_id, tag_id) VALUES (?,?)")->execute([$articleId, $tagMap[$tagSlug]]);
+                    } catch (\PDOException $e) {
+                    }
+                }
+            }
+            foreach ($post['comments'] as $cm) {
+                $pdo->prepare("INSERT INTO cms_comments (article_id, author_name, author_email, content, is_approved, created_at) VALUES (?,?,?,?,?,?)")
+                    ->execute([$articleId, $cm['author'], $cm['email'], $cm['content'], $cm['approved'], $cm['date']]);
+                $insertedComments++;
+            }
+        }
+        $log[] = "<span aria-hidden=\"true\">✓</span> Články: {$insertedArticles} importováno, {$skippedArticles} přeskočeno (filtr/duplikát)";
+        $log[] = "<span aria-hidden=\"true\">✓</span> Komentáře: {$insertedComments} importováno";
+
+        // Stránky
+        $insertedPages = 0;
+        if ($importPages) {
+            foreach ($data['pages'] as $page) {
+                $dup = $pdo->prepare("SELECT id FROM cms_pages WHERE title = ?");
+                $dup->execute([$page['title']]);
+                if ($dup->fetchColumn()) {
+                    continue;
+                }
+                $content = preg_replace('/<!-- \/?wp:[a-z\/\-]+[^>]*-->/', '', $page['content']);
+                $slug = uniquePageSlug($pdo, pageSlug($page['slug'] ?: $page['title']), null, null);
+                $pdo->prepare("INSERT INTO cms_pages (title, slug, content, is_published, show_in_nav, nav_order, created_at) VALUES (?,?,?,?,1,?,?)")
+                    ->execute([$page['title'], $slug, trim($content), $page['status'] === 'publish' ? 1 : 0, $page['menu_order'], $page['date']]);
+                $insertedPages++;
+            }
+        }
+        $log[] = "<span aria-hidden=\"true\">✓</span> Stránky: {$insertedPages} importováno";
+
+        logAction('wp_import', 'wxr, articles=' . $insertedArticles);
+        @unlink($cachedPath);
+
+        $_SESSION['import_log'] = $log;
+        header('Location: wp_import.php');
+        exit;
     }
-    $log[] = "<span aria-hidden=\"true\">✓</span> Stránky: {$insertedPages} importováno";
-
-    logAction('wp_import', 'wxr, articles=' . $insertedArticles);
-    @unlink($cachedPath);
-
-    $_SESSION['import_log'] = $log;
-    header('Location: wp_import.php');
-    exit;
 }
 
 // ── Krok 1: Náhled po uploadu ──
-$preview = null;
-$cachedPath = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['do_import'])) {
     verifyCsrf();
     /** @var array<string,mixed> $wxrFile */
@@ -452,7 +472,7 @@ adminHeader('Import z WordPressu');
         <?php foreach ($preview['categories'] as $slug => $name): ?>
           <div class="admin-check-row">
             <label>
-              <input type="checkbox" name="import_cats[]" value="<?= h($slug) ?>" checked>
+              <input type="checkbox" name="import_cats[]" value="<?= h($slug) ?>"<?= $wpImportSelectedCats === null || in_array((string)$slug, $wpImportSelectedCats, true) ? ' checked' : '' ?>>
               <?= h($name) ?>
               <small class="admin-inline-meta">(<?= $catCounts[$slug] ?? 0 ?> článků)</small>
             </label>
@@ -462,7 +482,7 @@ adminHeader('Import z WordPressu');
         <?php if ($uncatCount > 0): ?>
           <div class="admin-check-row admin-check-row--separated">
             <label>
-              <input type="checkbox" name="import_uncategorized" value="1">
+              <input type="checkbox" name="import_uncategorized" value="1"<?= $wpImportUncategorizedChecked ? ' checked' : '' ?>>
               Nekategorizované články
               <small class="admin-inline-meta">(<?= $uncatCount ?> článků – může obsahovat spam)</small>
             </label>
@@ -475,25 +495,38 @@ adminHeader('Import z WordPressu');
         <div class="admin-check-row">
           <label for="wp_target_blog">Importovat do blogu:</label>
           <select id="wp_target_blog" name="target_blog_id" class="admin-select-md">
-            <option value="0">Vytvořit nový blog z importu</option>
+            <option value="0"<?= $wpImportTargetBlogId === 0 ? ' selected' : '' ?>>Vytvořit nový blog z importu</option>
             <?php foreach (getAllBlogs() as $b): ?>
-              <option value="<?= (int)$b['id'] ?>"><?= h((string)$b['name']) ?></option>
+              <option value="<?= (int)$b['id'] ?>"<?= $wpImportTargetBlogId === (int)$b['id'] ? ' selected' : '' ?>><?= h((string)$b['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="admin-check-row">
           <label>
-            <input type="checkbox" name="import_site_info" value="1" checked>
+            <input type="checkbox" name="import_site_info" value="1"<?= $wpImportSiteInfoChecked ? ' checked' : '' ?>>
             Převzít název a popis do vybraného blogu
             <small class="admin-inline-meta">(<?= h($preview['title']) ?>)</small>
           </label>
         </div>
         <div class="admin-check-row">
           <label>
-            <input type="checkbox" name="import_pages" value="1" checked>
+            <input type="checkbox" name="import_pages" value="1"<?= $wpImportPagesChecked ? ' checked' : '' ?>>
             Importovat statické stránky (<?= count($preview['pages']) ?>)
           </label>
         </div>
+      </fieldset>
+
+      <fieldset class="admin-fieldset-spaced">
+        <legend>Kontrola před importem</legend>
+        <p id="wp-import-review-help" class="field-help">
+          Zkontrolujte náhled webu, počet článků a stránek, vybrané kategorie a cílový blog. Import vytvoří nové články, stránky, kategorie, štítky a komentáře.
+        </p>
+        <label for="confirm_wp_import" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_wp_import" name="confirm_wp_import" value="1" required
+                 <?= adminFieldAttributes('confirm_wp_import', $wpImportConfirmFields, [], ['wp-import-review-help'], 'wp-import-confirm-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) náhled a chci vybraný obsah importovat.
+        </label>
+        <?php adminRenderFieldError('confirm_wp_import', $wpImportConfirmFields, [], $wpImportConfirmFields !== [] ? $wpImportConfirmErrorMessage : '', 'wp-import-confirm-error'); ?>
       </fieldset>
 
       <div class="button-row admin-action-row">
