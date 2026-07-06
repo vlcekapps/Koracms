@@ -46,6 +46,8 @@ if ($account === null) {
     $account = array_merge($defaults, $account);
 }
 
+$storedRole = normalizeUserRole((string)($account['role'] ?? 'author'));
+
 if (!empty($formData)) {
     $account = array_merge($account, $formData);
 }
@@ -57,6 +59,7 @@ $authorFieldsetAvailable = $accountRole !== 'public';
 $roleOptions = staffRoleOptions($accountRole);
 $fieldErrorMessages = [
     'email' => 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz. Adresa musí být jedinečná, protože slouží k přihlášení.',
+    'role' => 'Zkontrolujte aktuální a novou roli účtu a potvrďte, že chcete změnit oprávnění.',
     'new_pass' => $accountId !== null
         ? 'Zadejte nové heslo dlouhé alespoň 8 znaků, nebo pole ponechte prázdné, pokud heslo nechcete měnit.'
         : 'Zadejte heslo dlouhé alespoň 8 znaků.',
@@ -109,7 +112,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
     <small id="nickname-help" class="field-help">Zobrazí se místo jména a příjmení.</small>
 
     <label for="role">Role</label>
-    <select id="role" name="role" aria-describedby="role-help">
+    <select id="role" name="role"<?= adminFieldAttributes('role', $formErrorFields, [], ['role-help']) ?>>
       <?php foreach ($roleOptions as $roleKey => $roleLabel): ?>
         <option value="<?= h($roleKey) ?>" <?= $accountRole === $roleKey ? 'selected' : '' ?>>
           <?= h($roleLabel) ?>
@@ -120,7 +123,34 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
       Autor pracuje s blogem a novinkami, editor navíc schvaluje obsah, moderátor řeší komentáře a zprávy,
       správce rezervací řeší rezervace a admin spravuje i nastavení a uživatele.
     </small>
+    <?php adminRenderFieldError('role', $formErrorFields, [], $fieldErrorMessages['role']); ?>
   </fieldset>
+
+  <?php if ($accountId !== null): ?>
+    <fieldset class="admin-fieldset-card admin-fieldset-spaced" aria-describedby="permission-review-help">
+      <legend>Kontrola změny oprávnění</legend>
+      <p id="permission-review-help" class="field-help field-help--flush">
+        Pokud měníte roli účtu, zkontrolujte dopad a potvrďte změnu. Bez potvrzení se role nezmění.
+      </p>
+      <dl class="admin-definition-list admin-definition-list--compact">
+        <div>
+          <dt>Aktuální role</dt>
+          <dd><?= h(userRoleLabel($storedRole)) ?></dd>
+        </div>
+        <div>
+          <dt>Nová role</dt>
+          <dd><span id="permission-new-role-preview"><?= h(userRoleLabel($accountRole)) ?></span></dd>
+        </div>
+      </dl>
+      <label for="confirm_permission_change" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm_permission_change" name="confirm_permission_change" value="1"
+               <?= !empty($formData['confirm_permission_change']) ? 'checked' : '' ?>
+               <?= adminFieldAttributes('confirm_permission_change', $formErrorFields, [], ['permission-review-help'], 'confirm-permission-change-error') ?>>
+        Potvrzuji, že jsem zkontroloval(a) změnu role a související oprávnění tohoto účtu.
+      </label>
+      <?php adminRenderFieldError('confirm_permission_change', $formErrorFields, [], 'Při změně role zaškrtněte potvrzení po kontrole aktuální a nové role účtu.', 'confirm-permission-change-error'); ?>
+    </fieldset>
+  <?php endif; ?>
 
   <fieldset class="admin-fieldset-card admin-fieldset-spaced">
     <legend><?= $accountId !== null ? 'Změna hesla' : 'Heslo <span aria-hidden="true">*</span>' ?></legend>
@@ -214,6 +244,7 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
 <script nonce="<?= cspNonce() ?>">
 (function () {
     const roleInput = document.getElementById('role');
+    const rolePreview = document.getElementById('permission-new-role-preview');
     const authorFieldsWrap = document.getElementById('author-role-fields');
     const authorRoleNote = document.getElementById('author-role-note');
     const authorInputs = authorFieldsWrap
@@ -261,6 +292,9 @@ adminHeader($accountId !== null ? 'Upravit uživatelský účet' : 'Nový uživa
         authorInputs.forEach((input) => {
             input.disabled = isPublicRole;
         });
+        if (rolePreview && roleInput) {
+            rolePreview.textContent = roleInput.options[roleInput.selectedIndex]?.textContent.trim() ?? '';
+        }
     };
 
     slugInput?.addEventListener('input', function () {

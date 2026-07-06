@@ -2785,6 +2785,104 @@ try {
         }
     }
 
+    $permissionReviewEmail = 'http-permission-review-' . bin2hex(random_bytes(4)) . '@example.test';
+    $permissionReviewSlug = 'http-permission-review-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_users (
+            email, password, first_name, last_name, nickname, role, is_superadmin, is_confirmed,
+            author_public_enabled, author_slug, author_bio, author_avatar, author_website, created_at
+         ) VALUES (?, ?, 'HTTP', 'Permission Review', 'HTTP Permission', 'author', 0, 1, 0, ?, '', '', '', NOW())"
+    )->execute([
+        $permissionReviewEmail,
+        password_hash('HttpPermissionReview123!', PASSWORD_DEFAULT),
+        $permissionReviewSlug,
+    ]);
+    $permissionReviewUserId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $permissionReviewUserId;
+    $permissionReviewFormUrl = $userFormUrl . '?id=' . $permissionReviewUserId;
+    $permissionReviewPage = fetchUrl($permissionReviewFormUrl, $adminAccountValidationSession['cookie'], 0);
+    $permissionReviewCsrf = extractHiddenInputValue($permissionReviewPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($permissionReviewPage) !== 200 || $permissionReviewCsrf === '') {
+        $adminValidationA11yIssues[] = 'Editace uživatelského účtu nevykreslila formulář pro permission review';
+    } else {
+        foreach ([
+            '<legend>Kontrola změny oprávnění</legend>',
+            'Aktuální role',
+            'Nová role',
+            'id="confirm_permission_change"',
+        ] as $permissionReviewFragment) {
+            if (!str_contains($permissionReviewPage['body'], $permissionReviewFragment)) {
+                $adminValidationA11yIssues[] = 'Editace uživatelského účtu neobsahuje permission review fragment: ' . $permissionReviewFragment;
+            }
+        }
+
+        $permissionReviewMissingConfirmResponse = postUrl(
+            $userSaveUrl,
+            [
+                'csrf_token' => $permissionReviewCsrf,
+                'id' => (string)$permissionReviewUserId,
+                'email' => $permissionReviewEmail,
+                'first_name' => 'HTTP',
+                'last_name' => 'Permission Review',
+                'nickname' => 'HTTP Permission',
+                'role' => 'editor',
+                'new_pass' => '',
+                'new_pass2' => '',
+                'author_slug' => $permissionReviewSlug,
+                'author_bio' => '',
+                'author_website' => '',
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($permissionReviewMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader($permissionReviewMissingConfirmResponse['headers'], BASE_URL . '/admin/user_form.php?id=' . $permissionReviewUserId, $baseUrl)) {
+            $adminValidationA11yIssues[] = 'Nepotvrzená změna role účtu nevrátila PRG redirect zpět na editaci';
+        }
+        $permissionReviewStoredRoleStmt = $pdo->prepare("SELECT role FROM cms_users WHERE id = ?");
+        $permissionReviewStoredRoleStmt->execute([$permissionReviewUserId]);
+        if ((string)$permissionReviewStoredRoleStmt->fetchColumn() !== 'author') {
+            $adminValidationA11yIssues[] = 'Nepotvrzená změna role účtu se nesměla uložit';
+        }
+        $permissionReviewErrorPage = fetchUrl($permissionReviewFormUrl, $adminAccountValidationSession['cookie'], 0);
+        if (!str_contains($permissionReviewErrorPage['body'], 'Změna role účtu vyžaduje potvrzení po kontrole aktuální a nové role.')
+            || !httpIntegrationElementHasAttributes($permissionReviewErrorPage['body'], 'select', 'role', ['aria-invalid' => 'true'])
+            || !httpIntegrationInputHasAttributes($permissionReviewErrorPage['body'], 'confirm_permission_change', ['aria-invalid' => 'true'])
+            || !str_contains($permissionReviewErrorPage['body'], 'id="confirm-permission-change-error"')) {
+            $adminValidationA11yIssues[] = 'Nepotvrzená změna role účtu nezobrazila field-level permission review chybu';
+        }
+
+        $permissionReviewConfirmedCsrf = extractHiddenInputValue($permissionReviewErrorPage['body'], 'csrf_token');
+        $permissionReviewConfirmedResponse = postUrl(
+            $userSaveUrl,
+            [
+                'csrf_token' => $permissionReviewConfirmedCsrf,
+                'id' => (string)$permissionReviewUserId,
+                'email' => $permissionReviewEmail,
+                'first_name' => 'HTTP',
+                'last_name' => 'Permission Review',
+                'nickname' => 'HTTP Permission',
+                'role' => 'editor',
+                'new_pass' => '',
+                'new_pass2' => '',
+                'author_slug' => $permissionReviewSlug,
+                'author_bio' => '',
+                'author_website' => '',
+                'confirm_permission_change' => '1',
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($permissionReviewConfirmedResponse) !== 302
+            || !responseHasLocationHeader($permissionReviewConfirmedResponse['headers'], BASE_URL . '/admin/users.php', $baseUrl)) {
+            $adminValidationA11yIssues[] = 'Potvrzená změna role účtu nevrátila redirect na přehled uživatelů';
+        }
+        $permissionReviewStoredRoleStmt->execute([$permissionReviewUserId]);
+        if ((string)$permissionReviewStoredRoleStmt->fetchColumn() !== 'editor') {
+            $adminValidationA11yIssues[] = 'Potvrzená změna role účtu se neuložila';
+        }
+    }
+
     $themesUrl = $baseUrl . BASE_URL . '/admin/themes.php';
     $themesValidationSession = koraPrimeTestSession([
         'cms_logged_in' => true,

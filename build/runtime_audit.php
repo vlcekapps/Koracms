@@ -17434,6 +17434,13 @@ foreach ([
         'source' => $userFormValidationSource . "\n" . $userSaveValidationSource,
         'required' => [
             'Uživatelský účet nejde uložit bez úplné e-mailové adresy ve tvaru jmeno@example.cz.',
+            'Změna role účtu vyžaduje potvrzení po kontrole aktuální a nové role. U pole Role je konkrétní nápověda.',
+            'Kontrola změny oprávnění',
+            'confirm_permission_change',
+            "adminFieldAttributes('role', \$formErrorFields, [], ['role-help'])",
+            "adminFieldAttributes('confirm_permission_change', \$formErrorFields, [], ['permission-review-help'], 'confirm-permission-change-error')",
+            "\$roleChangesPermissions = \$existingRole !== \$accountRole;",
+            "\$errorFields[] = 'confirm_permission_change';",
             'Nový účet nejde vytvořit bez hesla dlouhého alespoň 8 znaků.',
             'Nové heslo není dostatečně dlouhé. U pole Heslo je konkrétní nápověda.',
             'Kontrolní heslo se neshoduje. U obou polí hesla je konkrétní nápověda.',
@@ -18571,6 +18578,8 @@ if (
 foreach ([
     '$_SESSION[\'form_error_fields\']',
     '$errorFields[] = \'email\'',
+    '$errorFields[] = \'role\'',
+    '$errorFields[] = \'confirm_permission_change\'',
     '$errorFields[] = \'author_slug\'',
 ] as $userSaveFragment) {
     if (!str_contains($userSaveValidationSource, $userSaveFragment)) {

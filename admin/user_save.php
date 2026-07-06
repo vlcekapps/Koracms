@@ -51,6 +51,17 @@ if ($newPass !== $newPass2) {
     $errorFields[] = 'new_pass';
     $errorFields[] = 'new_pass2';
 }
+if ($existingAccount !== null) {
+    $existingRole = normalizeUserRole((string)($existingAccount['role'] ?? 'author'));
+    $roleChangesPermissions = $existingRole !== $accountRole;
+    $permissionChangeConfirmed = isset($_POST['confirm_permission_change'])
+        && (string)$_POST['confirm_permission_change'] === '1';
+    if ($roleChangesPermissions && !$permissionChangeConfirmed) {
+        $errors[] = 'Změna role účtu vyžaduje potvrzení po kontrole aktuální a nové role. U pole Role je konkrétní nápověda.';
+        $errorFields[] = 'role';
+        $errorFields[] = 'confirm_permission_change';
+    }
+}
 
 if (empty($errors)) {
     if ($accountId !== null) {
@@ -138,7 +149,7 @@ if (!empty($errors)) {
     $_SESSION['form_errors'] = $errors;
     $_SESSION['form_error_fields'] = array_values(array_unique($errorFields));
     $_SESSION['form_data'] = $_POST;
-    header('Location: user_form.php' . ($accountId ? '?id=' . $accountId : ''));
+    header('Location: ' . BASE_URL . '/admin/user_form.php' . ($accountId ? '?id=' . $accountId : ''));
     exit;
 }
 

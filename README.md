@@ -489,6 +489,8 @@ Editory novinek, událostí, míst, položek ke stažení a podcastových epizod
 
 Profil správce, správa uživatelských účtů, nastavení webu a správa šablon používají stejný guardrail i pro účetní a konfigurační chyby. E-mail, heslo, kontrolní heslo, veřejný autor, TOTP kód, název webu, veřejný název vývěsky, GitHub repozitář, logo/favicona, aktivní šablona, theme settings a theme ZIP import/export dostávají atomický souhrnný alert i field-level text s praktickou opravou; HTTP integrace `admin_validation_a11y_http` renderuje tyto stavy jako regresní důkaz.
 
+Změna role existujícího uživatelského účtu má samostatný review krok. Formulář ukazuje aktuální a novou roli, vyžaduje potvrzovací checkbox a server nepotvrzenou změnu odmítne bez uložení oprávnění; HTTP integrace ověřuje odmítnutí i potvrzený průchod pro WCAG `3.3.4`.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.
