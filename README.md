@@ -493,6 +493,8 @@ Změna role existujícího uživatelského účtu má samostatný review krok. F
 
 Newsletter composer používá stejný error-prevention princip před rozesláním e-mailu odběratelům. Formulář ukazuje počet potvrzených a čekajících odběratelů, vyžaduje potvrzovací checkbox a server validní rozesílku bez potvrzení odmítne, aniž ji zapíše do historie; HTTP integrace hlídá odmítnutí pro WCAG `3.3.4`.
 
+Hromadné akce nad odběrateli newsletteru navazují stejnou pojistkou. Potvrzení odběrů, znovuodeslání potvrzovacích e-mailů i mazání vybraných odběratelů vyžaduje kontrolní checkbox a server nepotvrzenou akci odmítne před změnou dat.
+
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 
 Detail odpovědi Form Builderu navazuje stejný pattern i na GitHub issue bridge. Při chybě vytvoření issue dostanou konkrétní nápovědu pole repozitář, název a tělo issue; při chybě ručního napojení dostane nápovědu URL existující issue. Runtime audit a HTTP integrace hlídají, že se nevrátí pouze obecná hláška.

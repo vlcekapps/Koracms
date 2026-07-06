@@ -8,9 +8,20 @@ $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/
 $action = trim($_POST['action'] ?? '');
 $allowedActions = ['confirm', 'resend', 'delete'];
 $ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), static fn (int $id): bool => $id > 0)));
+$bulkActionConfirmed = isset($_POST['confirm_newsletter_bulk_action'])
+    && (string)$_POST['confirm_newsletter_bulk_action'] === '1';
+
+$appendParams = static function (string $target, array $params): string {
+    return appendUrlQuery($target, $params);
+};
 
 if ($ids === [] || !in_array($action, $allowedActions, true)) {
     header('Location: ' . $redirect);
+    exit;
+}
+
+if (!$bulkActionConfirmed) {
+    header('Location: ' . $appendParams($redirect, ['error' => 'bulk_confirm_required']));
     exit;
 }
 
@@ -28,10 +39,6 @@ if ($subscribers === []) {
     header('Location: ' . $redirect);
     exit;
 }
-
-$appendParams = static function (string $target, array $params): string {
-    return appendUrlQuery($target, $params);
-};
 
 if ($action === 'confirm') {
     $pendingIds = [];

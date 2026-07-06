@@ -3817,6 +3817,8 @@ foreach ($pages as $page) {
             'Poslední rozesílky',
             'Nová rozesílka',
             'Hromadné akce s vybranými odběrateli',
+            'newsletter-bulk-review-help',
+            'id="confirm_newsletter_bulk_action"',
             'data-selection-status="newsletter-subscribers"',
             'Vybrat všechny odběratele newsletteru',
         ] as $expectedFragment) {
@@ -15198,6 +15200,7 @@ $eventsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/eve
 $foodOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food.php');
 $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.php');
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
+$newsletterBulkValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_bulk.php');
 $newsletterHistorySource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_history.php');
 $pagesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
@@ -18587,6 +18590,18 @@ foreach ([
 ] as $userSaveFragment) {
     if (!str_contains($userSaveValidationSource, $userSaveFragment)) {
         $adminFieldErrorIssues[] = 'user save is missing field-level error persistence fragment: ' . $userSaveFragment;
+    }
+}
+foreach ([
+    "adminRenderFieldError('confirm_newsletter_bulk_action'",
+    "adminFieldAttributes('confirm_newsletter_bulk_action', \$bulkErrorFields, [], ['newsletter-bulk-review-help'], 'confirm-newsletter-bulk-action-error')",
+    "\$bulkActionConfirmed = isset(\$_POST['confirm_newsletter_bulk_action'])",
+    '!$bulkActionConfirmed',
+    "'error' => 'bulk_confirm_required'",
+    'Hromadnou akci nejde provést bez potvrzení kontroly vybraných odběratelů.',
+] as $newsletterBulkFragment) {
+    if (!str_contains($newsletterOverviewSource . $newsletterBulkValidationSource, $newsletterBulkFragment)) {
+        $adminFieldErrorIssues[] = 'newsletter bulk flow is missing error-prevention fragment: ' . $newsletterBulkFragment;
     }
 }
 foreach ([

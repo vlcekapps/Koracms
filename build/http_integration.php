@@ -3934,6 +3934,80 @@ try {
 
     httpIntegrationPrintResult('footer_discovery_widgets_http', $footerDiscoveryWidgetIssues, $failures);
 
+    $newsletterBulkIssues = [];
+    $newsletterBulkOriginalModule = getSetting('module_newsletter', '0');
+    try {
+        saveSetting('module_newsletter', '1');
+        clearSettingsCache();
+        $newsletterBulkEmail = 'http-newsletter-bulk-' . bin2hex(random_bytes(4)) . '@example.test';
+        $createdSubscriberEmails[] = $newsletterBulkEmail;
+        $pdo->prepare(
+            "INSERT INTO cms_subscribers (email, token, confirmed, created_at)
+             VALUES (?, ?, 1, NOW())"
+        )->execute([$newsletterBulkEmail, bin2hex(random_bytes(16))]);
+        $newsletterBulkSubscriberId = (int)$pdo->lastInsertId();
+        $newsletterBulkSession = koraPrimeTestSession([
+            'cms_logged_in' => true,
+            'cms_superadmin' => true,
+            'cms_user_id' => $adminUserId,
+            'cms_user_name' => 'HTTP Newsletter Bulk Admin',
+            'cms_user_role' => 'admin',
+        ], 'kora-http-newsletter-bulk-' . bin2hex(random_bytes(3)));
+        $newsletterBulkPage = fetchUrl($baseUrl . BASE_URL . '/admin/newsletter.php', $newsletterBulkSession['cookie'], 0);
+        if (httpIntegrationStatusCode($newsletterBulkPage) !== 200
+            || !str_contains($newsletterBulkPage['body'], 'id="confirm_newsletter_bulk_action"')
+            || !str_contains($newsletterBulkPage['body'], 'newsletter-bulk-review-help')) {
+            $newsletterBulkIssues[] = 'newsletter bulk přehled nevykreslil review checkbox pro hromadné akce';
+        }
+        $newsletterBulkMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/newsletter_bulk.php',
+            [
+                'csrf_token' => $newsletterBulkSession['csrf'],
+                'redirect' => BASE_URL . '/admin/newsletter.php',
+                'action' => 'delete',
+                'ids' => [(string)$newsletterBulkSubscriberId],
+            ],
+            $newsletterBulkSession['cookie'],
+            0
+        );
+        $newsletterBulkExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_subscribers WHERE id = ? AND email = ?');
+        $newsletterBulkExistsStmt->execute([$newsletterBulkSubscriberId, $newsletterBulkEmail]);
+        if (httpIntegrationStatusCode($newsletterBulkMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader($newsletterBulkMissingConfirmResponse['headers'], BASE_URL . '/admin/newsletter.php?error=bulk_confirm_required', $baseUrl)
+            || (int)$newsletterBulkExistsStmt->fetchColumn() !== 1) {
+            $newsletterBulkIssues[] = 'newsletter bulk delete bez potvrzení nevrátil PRG chybu nebo smazal odběratele';
+        }
+        $newsletterBulkErrorPage = fetchUrl($baseUrl . BASE_URL . '/admin/newsletter.php?error=bulk_confirm_required', $newsletterBulkSession['cookie'], 0);
+        if (!str_contains($newsletterBulkErrorPage['body'], 'id="newsletter-page-error" aria-atomic="true">Hromadnou akci nejde provést bez potvrzení kontroly vybraných odběratelů.')
+            || !str_contains($newsletterBulkErrorPage['body'], 'id="confirm-newsletter-bulk-action-error"')
+            || !httpIntegrationInputHasAttributes($newsletterBulkErrorPage['body'], 'confirm_newsletter_bulk_action', ['aria-invalid' => 'true'])
+            || !str_contains($newsletterBulkErrorPage['body'], 'aria-describedby="newsletter-page-error"')) {
+            $newsletterBulkIssues[] = 'newsletter bulk delete bez potvrzení nezobrazil text-backed alert a field-level chybu';
+        }
+        $newsletterBulkConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/newsletter_bulk.php',
+            [
+                'csrf_token' => extractHiddenInputValue($newsletterBulkErrorPage['body'], 'csrf_token'),
+                'redirect' => BASE_URL . '/admin/newsletter.php',
+                'action' => 'delete',
+                'ids' => [(string)$newsletterBulkSubscriberId],
+                'confirm_newsletter_bulk_action' => '1',
+            ],
+            $newsletterBulkSession['cookie'],
+            0
+        );
+        $newsletterBulkExistsStmt->execute([$newsletterBulkSubscriberId, $newsletterBulkEmail]);
+        if (httpIntegrationStatusCode($newsletterBulkConfirmedResponse) !== 302
+            || !responseHasLocationHeader($newsletterBulkConfirmedResponse['headers'], BASE_URL . '/admin/newsletter.php?ok=bulk_deleted&count=1', $baseUrl)
+            || (int)$newsletterBulkExistsStmt->fetchColumn() !== 0) {
+            $newsletterBulkIssues[] = 'potvrzený newsletter bulk delete neproběhl s očekávaným PRG stavem';
+        }
+    } finally {
+        saveSetting('module_newsletter', $newsletterBulkOriginalModule);
+        clearSettingsCache();
+    }
+    httpIntegrationPrintResult('newsletter_bulk_error_prevention_http', $newsletterBulkIssues, $failures);
+
     $newsletterComposeIssues = [];
     $newsletterComposeEmail = 'http-newsletter-compose-' . bin2hex(random_bytes(4)) . '@example.test';
     $createdSubscriberEmails[] = $newsletterComposeEmail;

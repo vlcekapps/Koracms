@@ -68,6 +68,8 @@ $bulkOptions = [
 ];
 $bulkCount = max(0, (int)($_GET['count'] ?? 0));
 $bulkFailed = max(0, (int)($_GET['failed'] ?? 0));
+$bulkConfirmError = trim($_GET['error'] ?? '') === 'bulk_confirm_required';
+$bulkErrorFields = $bulkConfirmError ? ['confirm_newsletter_bulk_action'] : [];
 
 $successMessages = [
     'sent' => 'Newsletter byl odeslán a uložen do historie.',
@@ -101,6 +103,7 @@ $errorMessage = match ($error) {
     'bulk_resend_failed' => $bulkFailed === 1
         ? 'Potvrzovací e-mail se nepodařilo odeslat 1 odběrateli.'
         : 'Potvrzovací e-mail se nepodařilo odeslat ' . $bulkFailed . ' odběratelům.',
+    'bulk_confirm_required' => 'Hromadnou akci nejde provést bez potvrzení kontroly vybraných odběratelů.',
     default => $errorMessages[$error] ?? '',
 };
 
@@ -111,7 +114,7 @@ adminHeader('Newsletter');
   <p class="success" role="status"><?= h($successMessage) ?></p>
 <?php endif; ?>
 <?php if ($errorMessage !== ''): ?>
-  <p class="error" role="alert"><?= h($errorMessage) ?></p>
+  <p class="error" role="alert" id="newsletter-page-error" aria-atomic="true"><?= h($errorMessage) ?></p>
 <?php endif; ?>
 
 <div class="button-row button-row--between button-row--top admin-stack-md">
@@ -159,12 +162,24 @@ adminHeader('Newsletter');
   <?php if (empty($subscribers)): ?>
     <p><?= $statusFilter === 'all' && $q === '' ? 'Zatím tu nejsou žádní odběratelé.' : 'Pro zvolený filtr teď není k dispozici žádný odběratel.' ?></p>
   <?php else: ?>
-    <form method="post" action="<?= BASE_URL ?>/admin/newsletter_bulk.php" id="newsletter-bulk-form">
+    <form method="post" action="<?= BASE_URL ?>/admin/newsletter_bulk.php" id="newsletter-bulk-form"<?= $bulkConfirmError ? ' aria-describedby="newsletter-page-error"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
       <fieldset class="admin-fieldset-card">
         <legend>Hromadné akce s vybranými odběrateli</legend>
         <p data-selection-status="newsletter-subscribers" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný odběratel.</p>
+        <div class="admin-stack-sm">
+          <p id="newsletter-bulk-review-help" class="field-help field-help--flush">
+            Před hromadnou akcí zkontrolujte vybrané odběratele a zvolenou akci. Potvrzení chrání před nechtěným mazáním,
+            změnou stavu odběru nebo opakovaným odesláním potvrzovacích e-mailů.
+          </p>
+          <label for="confirm_newsletter_bulk_action" class="admin-checkbox-label">
+            <input type="checkbox" id="confirm_newsletter_bulk_action" name="confirm_newsletter_bulk_action" value="1" required
+                   <?= adminFieldAttributes('confirm_newsletter_bulk_action', $bulkErrorFields, [], ['newsletter-bulk-review-help'], 'confirm-newsletter-bulk-action-error') ?>>
+            Potvrzuji, že jsem zkontroloval(a) vybrané odběratele a zvolenou hromadnou akci.
+          </label>
+          <?php adminRenderFieldError('confirm_newsletter_bulk_action', $bulkErrorFields, [], 'Před spuštěním hromadné akce zaškrtněte potvrzení kontroly vybraných odběratelů.', 'confirm-newsletter-bulk-action-error'); ?>
+        </div>
         <div class="button-row">
           <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
             <?php if (($bulkAction === 'confirm' || $bulkAction === 'resend') && $statusFilter === 'confirmed'): ?>
