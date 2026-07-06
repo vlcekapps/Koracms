@@ -15212,6 +15212,7 @@ $galleryAlbumFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/g
 $galleryPhotoFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photo_form.php');
 $userFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_form.php');
 $userSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_save.php');
+$userDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/user_delete.php');
 $profileFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/profile.php');
 $auditLogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/audit_log.php');
 $backupAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/backup.php');
@@ -16633,9 +16634,13 @@ foreach ([
     'users overview' => [
         'source' => $usersOverviewSource,
         'fragments' => [
+            '<p id="user-delete-error" class="error" role="alert" aria-atomic="true">',
             'inline-badge inline-badge--info inline-badge--standalone',
             'class="table-list-compact"',
             '<td class="actions">',
+            '$deleteConfirmField = \'confirm_user_delete_\' . $accountId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
         ],
     ],
 ] as $adminInboxLabel => $adminInboxGuardrail) {
@@ -18178,6 +18183,12 @@ if ($httpIntegrationSource === ''
     $adminFieldErrorIssues[] = 'HTTP integration is missing redirect delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, 'confirm_user_delete_')
+    || !str_contains($httpIntegrationSource, 'mazání uživatele bez potvrzení smazalo účet, odstranilo zkratku nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání uživatele nevrátilo PRG stav, nesmazalo účet/zkratku nebo nezapsalo audit log')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing user delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http'")
     || !str_contains($httpIntegrationSource, 'bulk delete odpovědí bez potvrzení nevrátil PRG chybu, smazal odpověď nebo zapsal audit log')
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_bulk_action')) {
@@ -18812,6 +18823,19 @@ foreach ([
 ] as $userSaveFragment) {
     if (!str_contains($userSaveValidationSource, $userSaveFragment)) {
         $adminFieldErrorIssues[] = 'user save is missing field-level error persistence fragment: ' . $userSaveFragment;
+    }
+}
+foreach ([
+    'requireCapability(\'users_manage\', \'Přístup odepřen. Pro mazání uživatelských účtů nemáte potřebné oprávnění.\');',
+    '$confirmFieldName = \'confirm_user_delete_\' . $id;',
+    '$deleteConfirmed = isset($_POST[$confirmFieldName])',
+    '\'delete_error\' => \'confirm_required\'',
+    'DELETE FROM cms_admin_shortcuts WHERE user_id = ?',
+    'DELETE FROM cms_users WHERE id = ? AND is_superadmin = 0',
+    "'user_delete',",
+] as $userDeleteFragment) {
+    if (!str_contains($userDeleteSource, $userDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'user delete flow is missing error-prevention fragment: ' . $userDeleteFragment;
     }
 }
 foreach ([

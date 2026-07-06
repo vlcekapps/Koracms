@@ -3435,6 +3435,87 @@ try {
         if ((string)$permissionReviewStoredRoleStmt->fetchColumn() !== 'editor') {
             $adminValidationA11yIssues[] = 'Potvrzená změna role účtu se neuložila';
         }
+
+        $pdo->prepare(
+            "INSERT INTO cms_admin_shortcuts (user_id, item_type, item_key, label, url, sort_order)
+             VALUES (?, 'screen', 'http-user-delete', 'HTTP User Delete', '/admin/blog.php', 1)"
+        )->execute([$permissionReviewUserId]);
+        $userDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/users.php', $adminAccountValidationSession['cookie'], 0);
+        $userDeleteCsrf = extractHiddenInputValue($userDeletePage['body'], 'csrf_token');
+        $userDeleteConfirmField = 'confirm_user_delete_' . $permissionReviewUserId;
+        $userDeleteConfirmId = 'confirm-user-delete-' . $permissionReviewUserId;
+        $userDeleteReviewId = 'user-delete-review-' . $permissionReviewUserId;
+        $userDeleteFieldErrorId = 'confirm-user-delete-' . $permissionReviewUserId . '-error';
+        if (httpIntegrationStatusCode($userDeletePage) !== 200
+            || $userDeleteCsrf === ''
+            || !str_contains($userDeletePage['body'], 'Smazání odebere účet a osobní administrační zkratky.')
+            || !str_contains($userDeletePage['body'], 'action="user_delete.php"')
+            || !httpIntegrationInputHasAttributes($userDeletePage['body'], $userDeleteConfirmId, [
+                'name' => $userDeleteConfirmField,
+                'aria-describedby' => $userDeleteReviewId,
+            ])) {
+            $adminValidationA11yIssues[] = 'Přehled uživatelů nevykreslil user delete review formulář s potvrzovacím checkboxem';
+        }
+
+        $userDeleteLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'user_delete'")->fetchColumn();
+        $userDeleteMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/user_delete.php',
+            [
+                'csrf_token' => $userDeleteCsrf,
+                'id' => (string)$permissionReviewUserId,
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        $userDeleteStillExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_users WHERE id = ?');
+        $userDeleteStillExistsStmt->execute([$permissionReviewUserId]);
+        $userDeleteShortcutStillExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_admin_shortcuts WHERE user_id = ?');
+        $userDeleteShortcutStillExistsStmt->execute([$permissionReviewUserId]);
+        $userDeleteLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'user_delete'")->fetchColumn();
+        $userDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/users.php?delete_error=confirm_required&delete_error_id=' . $permissionReviewUserId,
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($userDeleteMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader($userDeleteMissingConfirmResponse['headers'], BASE_URL . '/admin/users.php?delete_error=confirm_required&delete_error_id=' . $permissionReviewUserId, $baseUrl)
+            || !str_contains($userDeleteErrorPage['body'], 'id="user-delete-error" class="error" role="alert" aria-atomic="true"')
+            || !str_contains($userDeleteErrorPage['body'], 'id="' . $userDeleteFieldErrorId . '"')
+            || !httpIntegrationInputHasAttributes($userDeleteErrorPage['body'], $userDeleteConfirmId, [
+                'aria-invalid' => 'true',
+                'aria-describedby' => $userDeleteReviewId . ' ' . $userDeleteFieldErrorId,
+            ])
+            || (int)$userDeleteStillExistsStmt->fetchColumn() !== 1
+            || (int)$userDeleteShortcutStillExistsStmt->fetchColumn() !== 1
+            || $userDeleteLogCountAfterMissingConfirm !== $userDeleteLogCountBefore) {
+            $adminValidationA11yIssues[] = 'mazání uživatele bez potvrzení smazalo účet, odstranilo zkratku nebo zapsalo audit log';
+        }
+
+        $userDeleteConfirmedCsrf = extractHiddenInputValue($userDeleteErrorPage['body'], 'csrf_token');
+        $userDeleteConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/user_delete.php',
+            [
+                'csrf_token' => $userDeleteConfirmedCsrf,
+                'id' => (string)$permissionReviewUserId,
+                $userDeleteConfirmField => '1',
+            ],
+            $adminAccountValidationSession['cookie'],
+            0
+        );
+        $userDeleteGoneStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_users WHERE id = ?');
+        $userDeleteGoneStmt->execute([$permissionReviewUserId]);
+        $userDeleteShortcutGoneStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_admin_shortcuts WHERE user_id = ?');
+        $userDeleteShortcutGoneStmt->execute([$permissionReviewUserId]);
+        $userDeleteLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'user_delete'")->fetchColumn();
+        $userDeleteSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/users.php?deleted=1', $adminAccountValidationSession['cookie'], 0);
+        if (httpIntegrationStatusCode($userDeleteConfirmedResponse) !== 302
+            || !responseHasLocationHeader($userDeleteConfirmedResponse['headers'], BASE_URL . '/admin/users.php?deleted=1', $baseUrl)
+            || !str_contains($userDeleteSuccessPage['body'], '<p class="success" role="status">Uživatelský účet byl smazán.</p>')
+            || (int)$userDeleteGoneStmt->fetchColumn() !== 0
+            || (int)$userDeleteShortcutGoneStmt->fetchColumn() !== 0
+            || $userDeleteLogCountAfterConfirmed !== $userDeleteLogCountBefore + 1) {
+            $adminValidationA11yIssues[] = 'potvrzené smazání uživatele nevrátilo PRG stav, nesmazalo účet/zkratku nebo nezapsalo audit log';
+        }
     }
 
     $themesUrl = $baseUrl . BASE_URL . '/admin/themes.php';
@@ -13301,6 +13382,7 @@ try {
         $pdo->prepare("DELETE FROM cms_blogs WHERE id = ?")->execute([$blogIdToDelete]);
     }
     foreach ($createdUsers as $userIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_admin_shortcuts WHERE user_id = ?")->execute([$userIdToDelete]);
         $pdo->prepare("DELETE FROM cms_users WHERE id = ?")->execute([$userIdToDelete]);
     }
     foreach ($createdTempFiles as $tempPath) {

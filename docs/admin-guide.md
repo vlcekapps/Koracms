@@ -1105,6 +1105,8 @@ Koš v administraci funguje jako review krok před nevratným odstraněním. Bě
 
 Stejný princip se používá i při změně role uživatelského účtu. Editační formulář ukazuje aktuální a novou roli, změna oprávnění vyžaduje potvrzovací checkbox a server nepotvrzenou změnu odmítne bez uložení nové role. Běžné úpravy profilu, které roli nemění, tímto potvrzením blokované nejsou.
 
+Mazání uživatelského účtu má podobný řádkový review krok ve správě uživatelů. Formulář popíše dopad na přístup do CMS a osobní administrační zkratky, vyžaduje potvrzovací checkbox u konkrétního účtu a server bez potvrzení nesmaže účet, zkratky ani nezapíše audit log. Potvrzené smazání současně uklidí osobní zkratky daného uživatele.
+
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.

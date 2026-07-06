@@ -492,6 +492,8 @@ Profil správce, správa uživatelských účtů, nastavení webu a správa šab
 
 Změna role existujícího uživatelského účtu má samostatný review krok. Formulář ukazuje aktuální a novou roli, vyžaduje potvrzovací checkbox a server nepotvrzenou změnu odmítne bez uložení oprávnění; HTTP integrace ověřuje odmítnutí i potvrzený průchod pro WCAG `3.3.4`.
 
+Mazání uživatelského účtu používá stejný review-and-confirm princip přímo v přehledu uživatelů. Řádkový formulář popíše dopad na přístup do CMS a osobní administrační zkratky, vyžaduje checkbox `confirm_user_delete_<id>` a server nepotvrzené smazání odmítne bez změny účtu, zkratek nebo audit logu. Potvrzené smazání uklidí osobní zkratky účtu a zapíše audit log `user_delete`.
+
 Newsletter composer používá stejný error-prevention princip před rozesláním e-mailu odběratelům. Formulář ukazuje počet potvrzených a čekajících odběratelů, vyžaduje potvrzovací checkbox a server validní rozesílku bez potvrzení odmítne, aniž ji zapíše do historie; HTTP integrace hlídá odmítnutí pro WCAG `3.3.4`.
 
 Hromadné akce nad odběrateli newsletteru navazují stejnou pojistkou. Potvrzení odběrů, znovuodeslání potvrzovacích e-mailů i mazání vybraných odběratelů vyžaduje kontrolní checkbox a server nepotvrzenou akci odmítne před změnou dat.

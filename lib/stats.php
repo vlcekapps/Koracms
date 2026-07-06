@@ -562,18 +562,43 @@ function statsUpsertContentDailyRows(PDO $pdo, array $dailyRows): void
 function statsAggregateContentDaily(PDO $pdo): void
 {
     try {
-        $range = $pdo->query(
-            "SELECT MIN(DATE(created_at)) AS min_date, MAX(DATE(created_at)) AS max_date
-             FROM cms_page_views
-             WHERE DATE(created_at) < CURDATE()"
-        )->fetch();
+        $pageTypes = array_values(array_unique(array_merge(['page'], array_keys(moduleStatsPageTypeMap()))));
+        $pageTypePlaceholders = implode(',', array_fill(0, count($pageTypes), '?'));
+        $rangeStmt = $pdo->prepare(
+            "SELECT MIN(raw_stats.stat_date) AS min_date,
+                    MAX(raw_stats.stat_date) AS max_date
+             FROM (
+                SELECT DATE(created_at) AS stat_date,
+                       COUNT(*) AS raw_views
+                FROM cms_page_views
+                WHERE created_at < CURDATE()
+                  AND page_type IN ({$pageTypePlaceholders})
+                GROUP BY DATE(created_at)
+             ) raw_stats
+             LEFT JOIN (
+                SELECT stat_date,
+                       SUM(total_views) AS aggregate_views
+                FROM cms_stats_content_daily
+                GROUP BY stat_date
+             ) content_stats ON content_stats.stat_date = raw_stats.stat_date
+             WHERE COALESCE(content_stats.aggregate_views, -1) <> raw_stats.raw_views"
+        );
+        $rangeStmt->execute($pageTypes);
+        $range = $rangeStmt->fetch();
         if (!is_array($range) || empty($range['min_date']) || empty($range['max_date'])) {
             return;
         }
 
+        $dateFrom = (string)$range['min_date'];
+        $dateTo = (string)$range['max_date'];
+        $pdo->prepare(
+            "DELETE FROM cms_stats_content_daily
+             WHERE stat_date >= ?
+               AND stat_date <= ?"
+        )->execute([$dateFrom, $dateTo]);
         statsUpsertContentDailyRows(
             $pdo,
-            statsBuildRawContentDailyRows($pdo, (string)$range['min_date'], (string)$range['max_date'])
+            statsBuildRawContentDailyRows($pdo, $dateFrom, $dateTo)
         );
     } catch (\PDOException $e) {
     }
