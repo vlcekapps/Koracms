@@ -1072,6 +1072,8 @@ Koš v administraci funguje jako review krok před nevratným odstraněním. Bě
 
 Stejný princip se používá i při změně role uživatelského účtu. Editační formulář ukazuje aktuální a novou roli, změna oprávnění vyžaduje potvrzovací checkbox a server nepotvrzenou změnu odmítne bez uložení nové role. Běžné úpravy profilu, které roli nemění, tímto potvrzením blokované nejsou.
 
+Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
+
 Recoverable chyby v administraci a souborových cleanupech se postupně převádějí na strukturovaný `koraLog()` formát. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů, import fotek z eStránek i dílčí selhání přehledů na administračním dashboardu tak v technickém logu nespoléhají na surové `error_log()` zprávy, ale přidávají `request_id`, metodu, cestu a omezený kontext bez dumpu celé žádosti nebo plných lokálních cest. Dashboard u počítadel používá jen sekci, počet parametrů a krátký hash dotazu, ne celý SQL text.
 
 Přepínač veřejné registrace v obecném nastavení blokuje registrační formulář a zároveň schovává odkazy na registraci ve veřejné přihlašovací obrazovce i ve společné patičce webu. Pokud jsou zapnuté rezervace, zůstane návštěvníkům dostupný odkaz na přihlášení, ale nové účty může při vypnuté registraci zakládat jen oprávněný správce.

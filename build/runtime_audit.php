@@ -3844,6 +3844,9 @@ foreach ($pages as $page) {
             'name="body"',
             'potvrzených odběratelů',
             'Nová rozesílka',
+            'Kontrola rozesílky',
+            'id="confirm_newsletter_send"',
+            'newsletter-review-help',
             'Odeslat rozesílku',
         ] as $expectedFragment) {
             if (!str_contains($result['body'], $expectedFragment)) {
@@ -18589,6 +18592,11 @@ foreach ([
 foreach ([
     '$_SESSION[\'newsletter_form_error_fields\']',
     "adminRenderFieldError('subject'",
+    "adminRenderFieldError('confirm_newsletter_send'",
+    "adminFieldAttributes('confirm_newsletter_send', \$formErrorFields, [], ['newsletter-review-help'], 'confirm-newsletter-send-error')",
+    "\$confirmNewsletterSend = isset(\$_POST['confirm_newsletter_send'])",
+    "!\$confirmNewsletterSend ? 'confirm_newsletter_send' : null",
+    'Newsletter nejde odeslat bez potvrzení kontroly příjemců a obsahu.',
 ] as $newsletterFragment) {
     if (!str_contains($newsletterFormValidationSource . $newsletterSendValidationSource, $newsletterFragment)) {
         $adminFieldErrorIssues[] = 'newsletter compose flow is missing field-level error fragment: ' . $newsletterFragment;

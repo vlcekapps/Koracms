@@ -6,19 +6,32 @@ verifyCsrf();
 
 $subject = trim($_POST['subject'] ?? '');
 $body = trim($_POST['body'] ?? '');
+$confirmNewsletterSend = isset($_POST['confirm_newsletter_send'])
+    && (string)$_POST['confirm_newsletter_send'] === '1';
 
 $_SESSION['newsletter_form_state'] = [
     'subject' => $subject,
     'body' => $body,
+    'confirm_newsletter_send' => $confirmNewsletterSend ? '1' : '',
 ];
 $_SESSION['newsletter_form_error_fields'] = [];
 
-if ($subject === '' || $body === '') {
-    $_SESSION['newsletter_form_error'] = 'Newsletter nejde odeslat bez předmětu nebo textu. U zvýrazněných polí je konkrétní nápověda.';
-    $_SESSION['newsletter_form_error_fields'] = array_values(array_filter([
-        $subject === '' ? 'subject' : null,
-        $body === '' ? 'body' : null,
-    ]));
+$contentMissing = $subject === '' || $body === '';
+$errorFields = array_values(array_filter([
+    $subject === '' ? 'subject' : null,
+    $body === '' ? 'body' : null,
+    !$confirmNewsletterSend ? 'confirm_newsletter_send' : null,
+]));
+
+if ($errorFields !== []) {
+    if ($contentMissing && !$confirmNewsletterSend) {
+        $_SESSION['newsletter_form_error'] = 'Newsletter nejde odeslat, dokud nejsou vyplněná povinná pole a potvrzená kontrola rozesílky. U zvýrazněných polí je konkrétní nápověda.';
+    } elseif ($contentMissing) {
+        $_SESSION['newsletter_form_error'] = 'Newsletter nejde odeslat bez předmětu nebo textu. U zvýrazněných polí je konkrétní nápověda.';
+    } else {
+        $_SESSION['newsletter_form_error'] = 'Newsletter nejde odeslat bez potvrzení kontroly příjemců a obsahu. U pole Potvrzení odeslání je konkrétní nápověda.';
+    }
+    $_SESSION['newsletter_form_error_fields'] = $errorFields;
     header('Location: ' . BASE_URL . '/admin/newsletter_form.php');
     exit;
 }

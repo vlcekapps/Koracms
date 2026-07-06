@@ -3969,7 +3969,7 @@ try {
         $newsletterComposeIssues[] = 'newsletter compose po validační chybě nevrátil 200';
     } else {
         foreach ([
-            'id="newsletter-form-error" aria-atomic="true">Newsletter nejde odeslat bez předmětu nebo textu.',
+            'id="newsletter-form-error" aria-atomic="true">Newsletter nejde odeslat, dokud nejsou vyplněná povinná pole a potvrzená kontrola rozesílky.',
             '<form method="post" action="newsletter_send.php" novalidate aria-describedby="newsletter-form-error">',
             'aria-invalid="true" aria-describedby="subject-error"',
             'id="subject-error"',
@@ -3977,6 +3977,11 @@ try {
             'aria-invalid="true" aria-describedby="body-error"',
             'id="body-error"',
             'Doplňte text rozesílky. Odkaz pro odhlášení CMS přidá automaticky.',
+            'Kontrola rozesílky',
+            'id="confirm_newsletter_send"',
+            'aria-invalid="true" aria-describedby="newsletter-review-help confirm-newsletter-send-error"',
+            'id="confirm-newsletter-send-error"',
+            'Před odesláním potvrďte, že jste zkontrolovali obsah a počet příjemců rozesílky.',
         ] as $newsletterComposeExpectedFragment) {
             if (!str_contains($newsletterInvalidRender['body'], $newsletterComposeExpectedFragment)) {
                 $newsletterComposeIssues[] = 'newsletter compose po validační chybě neobsahuje: ' . $newsletterComposeExpectedFragment;
@@ -3991,6 +3996,43 @@ try {
                 $newsletterComposeIssues[] = 'newsletter compose pořád používá starý obecný text';
             }
         }
+    }
+    $newsletterGuardSubject = 'HTTP newsletter confirm guard ' . bin2hex(random_bytes(4));
+    $newsletterGuardBody = "Dobrý den,\n\nTento test ověřuje potvrzení před rozesílkou.";
+    $newsletterHistoryBeforeStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_newsletters WHERE subject = ?');
+    $newsletterHistoryBeforeStmt->execute([$newsletterGuardSubject]);
+    $newsletterHistoryBefore = (int)$newsletterHistoryBeforeStmt->fetchColumn();
+    $newsletterMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/newsletter_send.php',
+        [
+            'csrf_token' => $newsletterComposeSession['csrf'],
+            'subject' => $newsletterGuardSubject,
+            'body' => $newsletterGuardBody,
+        ],
+        $newsletterComposeSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($newsletterMissingConfirmResponse) !== 302) {
+        $newsletterComposeIssues[] = 'newsletter bez potvrzení kontroly nevrátil PRG redirect';
+    }
+    if (!responseHasLocationHeader($newsletterMissingConfirmResponse['headers'], BASE_URL . '/admin/newsletter_form.php', $baseUrl)) {
+        $newsletterComposeIssues[] = 'newsletter bez potvrzení kontroly nemíří zpět na formulář';
+    }
+    $newsletterHistoryBeforeStmt->execute([$newsletterGuardSubject]);
+    if ((int)$newsletterHistoryBeforeStmt->fetchColumn() !== $newsletterHistoryBefore) {
+        $newsletterComposeIssues[] = 'newsletter bez potvrzení kontroly se nesměl uložit do historie';
+        $newsletterUnexpectedHistoryStmt = $pdo->prepare('SELECT id FROM cms_newsletters WHERE subject = ?');
+        $newsletterUnexpectedHistoryStmt->execute([$newsletterGuardSubject]);
+        foreach ($newsletterUnexpectedHistoryStmt->fetchAll(PDO::FETCH_COLUMN) as $newsletterUnexpectedHistoryId) {
+            $createdNewsletterIds[] = (int)$newsletterUnexpectedHistoryId;
+        }
+    }
+    $newsletterMissingConfirmRender = fetchUrl($baseUrl . BASE_URL . '/admin/newsletter_form.php', $newsletterComposeSession['cookie'], 0);
+    if (!str_contains($newsletterMissingConfirmRender['body'], 'Newsletter nejde odeslat bez potvrzení kontroly příjemců a obsahu.')
+        || !httpIntegrationInputHasAttributes($newsletterMissingConfirmRender['body'], 'confirm_newsletter_send', ['aria-invalid' => 'true'])
+        || !str_contains($newsletterMissingConfirmRender['body'], 'id="confirm-newsletter-send-error"')
+        || !str_contains($newsletterMissingConfirmRender['body'], 'value="' . h($newsletterGuardSubject) . '"')) {
+        $newsletterComposeIssues[] = 'newsletter bez potvrzení kontroly nezobrazil field-level review chybu a zachované hodnoty';
     }
     httpIntegrationPrintResult('newsletter_compose_validation_http', $newsletterComposeIssues, $failures);
 

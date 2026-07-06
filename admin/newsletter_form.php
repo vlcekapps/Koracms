@@ -11,6 +11,7 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $formState = $_SESSION['newsletter_form_state'] ?? [
     'subject' => '',
     'body' => '',
+    'confirm_newsletter_send' => '',
 ];
 $formError = $_SESSION['newsletter_form_error'] ?? '';
 $formErrorFields = $_SESSION['newsletter_form_error_fields'] ?? [];
@@ -19,6 +20,7 @@ unset($_SESSION['newsletter_form_state'], $_SESSION['newsletter_form_error'], $_
 $fieldErrorMessages = [
     'subject' => 'Doplňte krátký předmět, který odběratel uvidí v doručené poště.',
     'body' => 'Doplňte text rozesílky. Odkaz pro odhlášení CMS přidá automaticky.',
+    'confirm_newsletter_send' => 'Před odesláním potvrďte, že jste zkontrolovali obsah a počet příjemců rozesílky.',
 ];
 
 adminHeader('Nová rozesílka');
@@ -62,15 +64,40 @@ adminHeader('Nová rozesílka');
       <p class="field-help">
         Do každého e-mailu se automaticky přidá odkaz pro odhlášení z odběru.
       </p>
-
-      <div class="button-row admin-action-row">
-        <button type="submit" class="btn"
-                data-confirm="Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?">
-          Odeslat rozesílku
-        </button>
-        <a href="newsletter.php" class="btn">Zrušit</a>
-      </div>
     </fieldset>
+
+    <fieldset class="admin-fieldset-card admin-fieldset-spaced" aria-describedby="newsletter-review-help">
+      <legend>Kontrola rozesílky</legend>
+      <p id="newsletter-review-help" class="field-help field-help--flush">
+        Rozesílka se po potvrzení odešle všem potvrzeným odběratelům. Před odesláním zkontrolujte obsah,
+        počet příjemců a správnou cílovou skupinu.
+      </p>
+      <dl class="admin-definition-list admin-definition-list--compact">
+        <div>
+          <dt>Potvrzených odběratelů</dt>
+          <dd><?= $confirmedCount ?></dd>
+        </div>
+        <div>
+          <dt>Čekajících potvrzení</dt>
+          <dd><?= $pendingCount ?></dd>
+        </div>
+      </dl>
+      <label for="confirm_newsletter_send" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm_newsletter_send" name="confirm_newsletter_send" value="1" required
+               <?= !empty($formState['confirm_newsletter_send']) ? 'checked' : '' ?>
+               <?= adminFieldAttributes('confirm_newsletter_send', $formErrorFields, [], ['newsletter-review-help'], 'confirm-newsletter-send-error') ?>>
+        Potvrzuji, že jsem zkontroloval(a) obsah rozesílky a počet potvrzených příjemců.
+      </label>
+      <?php adminRenderFieldError('confirm_newsletter_send', $formErrorFields, [], $fieldErrorMessages['confirm_newsletter_send'], 'confirm-newsletter-send-error'); ?>
+    </fieldset>
+
+    <div class="button-row admin-action-row">
+      <button type="submit" class="btn"
+              data-confirm="Opravdu odeslat newsletter <?= $confirmedCount ?> potvrzeným odběratelům?">
+        Odeslat rozesílku
+      </button>
+      <a href="newsletter.php" class="btn">Zrušit</a>
+    </div>
   </form>
 
   <?php if ($useWysiwyg): ?>
