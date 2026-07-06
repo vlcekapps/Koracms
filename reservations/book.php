@@ -30,6 +30,7 @@ if (!$resource) {
 $resId = (int)$resource['id'];
 
 $isGuest = false;
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
     header('Location: ' . BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($slug));
     exit;
@@ -52,6 +53,7 @@ if (!empty($resource['allow_guests'])) {
     $currentUrl = BASE_URL . '/reservations/book.php?slug=' . urlencode($slug) . '&date=' . urlencode($dateStr);
     requirePublicLogin($currentUrl);
 }
+$contactDefaults = currentUserContactDefaults($pdo);
 
 $today = new DateTime('today');
 $now = new DateTime();
@@ -169,7 +171,7 @@ if ($slotMode === 'slots') {
 $errors = [];
 $fieldErrors = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     verifyCsrf();
 
     if (honeypotTriggered()) {
@@ -313,12 +315,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $guestPhone = $guestPhonePost;
                 } else {
                     $userId = currentUserId();
-                    $userStmt = $pdo->prepare("SELECT email, first_name, last_name, phone FROM cms_users WHERE id = ?");
-                    $userStmt->execute([$userId]);
-                    $userInfo = $userStmt->fetch();
-                    $guestName = trim(($userInfo['first_name'] ?? '') . ' ' . ($userInfo['last_name'] ?? ''));
-                    $guestEmail = $userInfo['email'] ?? '';
-                    $guestPhone = $userInfo['phone'] ?? '';
+                    $guestName = $contactDefaults['name'];
+                    $guestEmail = $contactDefaults['email'];
+                    $guestPhone = $contactDefaults['phone'];
                 }
 
                 $insertStmt = $pdo->prepare(
@@ -509,9 +508,9 @@ renderPublicPage([
             'slot' => $_POST['slot'] ?? '',
             'start_time' => $_POST['start_time'] ?? '',
             'end_time' => $_POST['end_time'] ?? '',
-            'guest_name' => $_POST['guest_name'] ?? '',
-            'guest_email' => $_POST['guest_email'] ?? '',
-            'guest_phone' => $_POST['guest_phone'] ?? '',
+            'guest_name' => $isPostRequest ? trim((string)($_POST['guest_name'] ?? '')) : $contactDefaults['name'],
+            'guest_email' => $isPostRequest ? trim((string)($_POST['guest_email'] ?? '')) : $contactDefaults['email'],
+            'guest_phone' => $isPostRequest ? trim((string)($_POST['guest_phone'] ?? '')) : $contactDefaults['phone'],
             'party_size' => (int)($_POST['party_size'] ?? 1),
             'notes' => $_POST['notes'] ?? '',
         ],

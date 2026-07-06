@@ -7215,6 +7215,63 @@ try {
         $reservationIssues[] = 'guest rezervační formulář uložil rezervaci i po chybné captche';
     }
 
+    if ($prefillPublicUserId > 0) {
+        $profileReservationSession = koraPrimeTestSession([
+            'cms_user_id' => $prefillPublicUserId,
+            'cms_user_name' => $prefillPublicName,
+        ], 'kora-http-reservation-profile-reuse-' . bin2hex(random_bytes(3)));
+        $profileReservationPage = fetchUrl($guestBookingUrl, $profileReservationSession['cookie'], 0);
+        $profileReservationCsrf = extractHiddenInputValue($profileReservationPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($profileReservationPage) !== 200 || $profileReservationCsrf === '') {
+            $reservationIssues[] = 'veřejný rezervační formulář pro přihlášeného uživatele nevrátil 200 nebo CSRF token';
+        }
+        if (str_contains($profileReservationPage['body'], 'name="guest_name"')
+            || str_contains($profileReservationPage['body'], 'name="guest_email"')
+            || str_contains($profileReservationPage['body'], 'name="guest_phone"')
+            || str_contains($profileReservationPage['body'], 'name="captcha"')) {
+            $reservationIssues[] = 'přihlášená veřejná rezervace pořád vyžaduje opakované kontaktní údaje nebo captchu';
+        }
+
+        $profileReservationNote = 'HTTP reservation profile reuse ' . bin2hex(random_bytes(4));
+        $profileReservationMailFlag = getenv('KORA_DISABLE_OUTBOUND_MAIL');
+        putenv('KORA_DISABLE_OUTBOUND_MAIL=1');
+        $profileReservationResponse = postUrl(
+            $guestBookingUrl,
+            [
+                'csrf_token' => $profileReservationCsrf,
+                'slot' => '09:00-10:00',
+                'party_size' => '1',
+                'notes' => $profileReservationNote,
+            ],
+            $profileReservationSession['cookie'],
+            0
+        );
+        if ($profileReservationMailFlag === false) {
+            putenv('KORA_DISABLE_OUTBOUND_MAIL');
+        } else {
+            putenv('KORA_DISABLE_OUTBOUND_MAIL=' . $profileReservationMailFlag);
+        }
+        if (httpIntegrationStatusCode($profileReservationResponse) !== 302
+            || !responseHasLocationHeader($profileReservationResponse['headers'], BASE_URL . '/reservations/my.php?msg=ok', $baseUrl)) {
+            $reservationIssues[] = 'přihlášená veřejná rezervace po uložení nepřesměrovala do Moje rezervace';
+        }
+
+        $profileReservationStmt = $pdo->prepare(
+            "SELECT guest_name, guest_email, guest_phone
+             FROM cms_res_bookings
+             WHERE resource_id = ? AND user_id = ? AND notes = ?
+             ORDER BY id DESC
+             LIMIT 1"
+        );
+        $profileReservationStmt->execute([$resourceId, $prefillPublicUserId, $profileReservationNote]);
+        $profileReservationRow = $profileReservationStmt->fetch() ?: [];
+        if ((string)($profileReservationRow['guest_name'] ?? '') !== $prefillPublicName
+            || (string)($profileReservationRow['guest_email'] ?? '') !== $prefillPublicEmail
+            || (string)($profileReservationRow['guest_phone'] ?? '') !== $prefillPublicPhone) {
+            $reservationIssues[] = 'přihlášená veřejná rezervace neuložila kontaktní snapshot z profilu přes currentUserContactDefaults()';
+        }
+    }
+
     httpIntegrationPrintResult('reservations_http', $reservationIssues, $failures);
 
     $boardIssues = [];

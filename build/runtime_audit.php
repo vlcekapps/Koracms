@@ -14254,6 +14254,7 @@ echo "=== redundant_entry_guardrails ===\n";
 $redundantEntryIssues = [];
 $contactPublicSource = (string)file_get_contents(dirname(__DIR__) . '/contact/index.php');
 $foodOrderSource = (string)file_get_contents(dirname(__DIR__) . '/food/order.php');
+$reservationBookSource = (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php');
 foreach ([
     'function currentUserContactDefaults(?PDO $pdo = null): array',
     'SELECT email, first_name, last_name, nickname, phone',
@@ -14286,9 +14287,25 @@ foreach ([
     }
 }
 foreach ([
+    '$contactDefaults = currentUserContactDefaults($pdo);',
+    '$guestName = $contactDefaults[\'name\'];',
+    '$guestEmail = $contactDefaults[\'email\'];',
+    '$guestPhone = $contactDefaults[\'phone\'];',
+    '\'guest_name\' => $isPostRequest ? trim((string)($_POST[\'guest_name\'] ?? \'\')) : $contactDefaults[\'name\'],',
+    '\'guest_email\' => $isPostRequest ? trim((string)($_POST[\'guest_email\'] ?? \'\')) : $contactDefaults[\'email\'],',
+    '\'guest_phone\' => $isPostRequest ? trim((string)($_POST[\'guest_phone\'] ?? \'\')) : $contactDefaults[\'phone\'],',
+] as $redundantEntryReservationFragment) {
+    if (!str_contains($reservationBookSource, $redundantEntryReservationFragment)) {
+        $redundantEntryIssues[] = 'reservation booking controller is missing redundant-entry fragment: ' . $redundantEntryReservationFragment;
+    }
+}
+foreach ([
     'kora-http-contact-prefill',
     'kora-http-food-order-prefill',
+    'kora-http-reservation-profile-reuse',
     'předvyplněné kontaktní údaje z profilu',
+    'přihlášená veřejná rezervace pořád vyžaduje opakované kontaktní údaje nebo captchu',
+    'přihlášená veřejná rezervace neuložila kontaktní snapshot z profilu přes currentUserContactDefaults()',
 ] as $redundantEntryHttpFragment) {
     if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, $redundantEntryHttpFragment)) {
         $redundantEntryIssues[] = 'HTTP integration is missing redundant-entry render assertion: ' . $redundantEntryHttpFragment;
@@ -14307,6 +14324,7 @@ foreach ([
 foreach ([
     'kontakt',
     'Food objednávka',
+    'přihlášené veřejné rezervace',
 ] as $redundantEntryCzechDocFragment) {
     if (!str_contains($wcagConformanceSource, $redundantEntryCzechDocFragment)
         || !str_contains($manualTestProtocolSource, $redundantEntryCzechDocFragment)) {
@@ -14316,13 +14334,14 @@ foreach ([
 foreach ([
     'public contact',
     'Food order',
+    'public reservations',
 ] as $redundantEntryAcrFragment) {
     if (!str_contains($acrVpatDraftSource, $redundantEntryAcrFragment)) {
         $redundantEntryIssues[] = 'ACR draft is missing redundant-entry fragment: ' . $redundantEntryAcrFragment;
     }
 }
-if (!str_contains($a11yBacklogSource, 'Základní guardrail pro kontakt a Food objednávku je hotový')) {
-    $redundantEntryIssues[] = 'a11y backlog must describe remaining redundant-entry work after contact/Food guardrails';
+if (!str_contains($a11yBacklogSource, 'Základní guardrail pro kontakt, Food objednávku a přihlášené veřejné rezervace je hotový')) {
+    $redundantEntryIssues[] = 'a11y backlog must describe remaining redundant-entry work after contact/Food/reservation guardrails';
 }
 if (!str_contains($developerModulesDocSource, 'currentUserContactDefaults()')) {
     $redundantEntryIssues[] = 'developer module guide must mention currentUserContactDefaults() for repeated contact details';
