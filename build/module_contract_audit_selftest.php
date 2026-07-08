@@ -227,7 +227,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
         . "Content picker používá content_reference_types, veřejné vyhledávání search_result_types a sitemap používá sitemap_sections.\n"
-        . "Obsahové statistiky používají stats_page_types.\n"
+        . "Obsahové statistiky používají stats_page_types a trackPageView().\n"
         . "Widgety a šablony hlídají requires_module i requires_modules.\n"
         . "Redirecty validujte přes internalRedirectTarget() a uploady přes lib/uploads.php.\n"
         . "WCAG vazby používejte přes aria-labelledby a veřejné šablony kontroluje build/theme_view_audit.php.\n"
@@ -240,7 +240,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
     return "Nové moduly popisuje docs/developer-modules.md.\n"
         . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
         . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
-        . "Obsahové trendy používají stats_page_types.\n"
+        . "Obsahové trendy používají stats_page_types a trackPageView().\n"
         . "Cesty modulů mapují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
         . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace pro nové moduly používá sekci Další moduly.\n"
@@ -259,7 +259,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
         . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace nových modulů používá sekci Další moduly.\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
-        . "Obsahové trendy definuje stats_page_types.\n"
+        . "Obsahové trendy definuje stats_page_types a trackPageView().\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n"
         . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n";
 }
@@ -610,6 +610,14 @@ assertModuleContractAuditFails(
     'Duplicate stats page type',
     $duplicateStatsPageTypeFiles,
     'stats_page_types key article is duplicated by modules blog and news.'
+);
+
+$missingTrackedStatsPageTypeFiles = $validFiles;
+$missingTrackedStatsPageTypeFiles['blog/index.php'] = "<?php\nif (!isModuleEnabled('blog')) { exit; }\ntrackPageView('blog_landing', 1);\n";
+assertModuleContractAuditFails(
+    'Missing tracked stats page type',
+    $missingTrackedStatsPageTypeFiles,
+    'blog/index.php calls trackPageView(blog_landing) but no module manifest stats_page_types entry defines it.'
 );
 
 $invalidManifestPublicPathFiles = $validFiles;

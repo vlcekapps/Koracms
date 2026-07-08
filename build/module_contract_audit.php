@@ -212,6 +212,55 @@ function moduleContractAuditValidateApplicationModuleSettingReferences(string $p
     }
 }
 
+/**
+ * @param list<string> $issues
+ * @return list<string>
+ */
+function moduleContractAuditKnownStatsPageTypes(string $definitionsSource, array &$issues): array
+{
+    $pageTypes = ['page', 'other'];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringListField($block, $moduleKey, 'stats_page_types', $issues) as $pageType) {
+            $pageTypes[] = $pageType;
+        }
+    }
+
+    $pageTypes = array_values(array_unique($pageTypes));
+    sort($pageTypes);
+
+    return $pageTypes;
+}
+
+/**
+ * @param list<string> $knownStatsPageTypes
+ * @param list<string> $issues
+ */
+function moduleContractAuditValidateStatsTrackingReferences(
+    string $projectRoot,
+    array $knownStatsPageTypes,
+    array &$issues
+): void {
+    foreach (moduleContractAuditApplicationPhpFiles($projectRoot) as $path) {
+        $source = file_get_contents($path);
+        $relativePath = moduleContractAuditRelativePath($projectRoot, $path);
+        if (!is_string($source)) {
+            $issues[] = $relativePath . ' cannot be read for trackPageView audit.';
+            continue;
+        }
+
+        if (preg_match_all('/\btrackPageView\(\s*[\'"]([a-z][a-z0-9_]*)[\'"]/', $source, $matches) === false) {
+            $issues[] = $relativePath . ' trackPageView references cannot be parsed.';
+            continue;
+        }
+
+        foreach (array_unique($matches[1]) as $pageType) {
+            if (!in_array($pageType, $knownStatsPageTypes, true)) {
+                $issues[] = $relativePath . ' calls trackPageView(' . $pageType . ') but no module manifest stats_page_types entry defines it.';
+            }
+        }
+    }
+}
+
 function moduleContractAuditFindMatchingBracket(string $source, int $openPosition): ?int
 {
     $depth = 0;
@@ -1541,6 +1590,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'trackPageView()',
             'requires_module',
             'requires_modules',
             'internalRedirectTarget()',
@@ -1576,6 +1626,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'trackPageView()',
             'public_module_navigation_http',
             'admin_disabled_modules_http',
             'content_reference_disabled_modules_http',
@@ -1605,6 +1656,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'trackPageView()',
             'composer ci:module-ready',
             'wcag-22-aa-conformance.md',
             'a11y-remediation-backlog.md',
@@ -1743,6 +1795,11 @@ moduleContractAuditValidatePublicEntryPointStaticCoverage($definitionsSource, $c
 moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
 moduleContractAuditValidateSearchResultTypeCoverage($definitionsSource, $publicSearchSource, $issues);
 moduleContractAuditValidateSitemapSectionCoverage($definitionsSource, $sitemapSource, $issues);
+moduleContractAuditValidateStatsTrackingReferences(
+    $projectRoot,
+    moduleContractAuditKnownStatsPageTypes($definitionsSource, $issues),
+    $issues
+);
 
 moduleContractAuditRequire(
     str_contains($definitionsSource, "return coreModuleKeysByFlag('profile_managed');"),
