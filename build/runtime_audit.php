@@ -11951,8 +11951,13 @@ if (!str_contains($blogExportSource, 'article_related') || !str_contains($blogIm
 if (!str_contains($blogFormSource, 'name="series_ids[]"')
     || !str_contains($blogFormSource, 'blog-series-help')
     || !str_contains($blogFormSource, 'blog-link-series')
+    || !str_contains($blogFormSource, 'id="blog-series-options"')
+    || !str_contains($blogFormSource, 'type="checkbox"')
     || !str_contains($blogFormSource, 'series_target')) {
     $blogAdminIssues[] = 'article form is missing article series controls or validation feedback';
+}
+if (str_contains($blogFormSource, '<select id="series_ids"')) {
+    $blogAdminIssues[] = 'article form must not use a native multi-select for article series because unselecting all series is unclear';
 }
 if (!str_contains($blogSaveSource, 'validateBlogSeriesIds') || !str_contains($blogSaveSource, 'saveArticleSeriesMemberships')) {
     $blogAdminIssues[] = 'article save is missing blog-scoped series validation or persistence';

@@ -6925,7 +6925,10 @@ try {
         'series_target' => [
             'expected' => [
                 'role="alert" class="error" id="form-error" aria-atomic="true">Vybraná série článků nepatří do cílového blogu.',
-                'aria-invalid="true" aria-describedby="blog-series-help blog-series-empty blog-series-error"',
+                'id="blog-series-options"',
+                'name="series_ids[]"',
+                'aria-invalid="true"',
+                'aria-describedby="blog-series-help blog-series-empty blog-series-error"',
                 'id="blog-series-error"',
                 'Vyberte jen série aktuálního blogu, nebo zařazení do série odeberte.',
             ],
@@ -7121,7 +7124,9 @@ try {
         $adminSession['cookie'],
         0
     );
-    if (!str_contains($seriesArticleForm['body'], 'Série článků') || !str_contains($seriesArticleForm['body'], 'name="series_ids[]"')) {
+    if (!str_contains($seriesArticleForm['body'], 'Série článků')
+        || !str_contains($seriesArticleForm['body'], 'id="blog-series-options"')
+        || !str_contains($seriesArticleForm['body'], 'name="series_ids[]"')) {
         $blogSeriesIssues[] = 'editor článku nezobrazil výběr série článků';
     }
     if (!str_contains($seriesArticleForm['body'], $seriesTitle)) {

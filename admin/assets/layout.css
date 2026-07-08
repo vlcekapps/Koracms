@@ -287,6 +287,7 @@ button:disabled, input[type=button]:disabled, input[type=submit]:disabled, input
 .blog-form-fieldset { margin-top:1rem; border:1px solid #ccc; padding:.5rem 1rem; }
 .blog-form-fieldset--seo { margin-top:1.5rem; }
 .blog-form-tag-label { display:inline-block; margin-right:1rem; font-weight:normal; }
+.blog-form-check-list { margin-top:.35rem; }
 .blog-form-checkbox-row { font-weight:normal; margin-top:.3rem; }
 .blog-form-actions { margin-top:1.5rem; }
 .blog-form-preview-note { color:#666; }

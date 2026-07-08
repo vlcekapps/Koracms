@@ -558,25 +558,27 @@ adminHeader($pageTitle);
     <?php endif; ?>
   </fieldset>
 
-  <fieldset id="article-series-fieldset" class="blog-form-fieldset" aria-describedby="blog-series-help blog-series-empty<?= $err === 'series_target' ? ' blog-series-error' : '' ?>">
+  <fieldset id="article-series-fieldset" class="blog-form-fieldset" aria-describedby="blog-series-help blog-series-empty<?= $err === 'series_target' ? ' blog-series-error' : '' ?>"<?= $err === 'series_target' ? ' aria-invalid="true"' : '' ?>>
     <legend>Série článků</legend>
-    <label for="series_ids">Zařazení do série</label>
-    <select id="series_ids" name="series_ids[]" multiple size="<?= min(8, max(3, count($blogSeriesOptions))) ?>"
-            <?= $blogSeriesOptions === [] ? 'disabled ' : '' ?>
-            <?= adminFieldAttributes('series_ids', $err, $fieldErrorMap, ['blog-series-help', 'blog-series-empty'], 'blog-series-error') ?>>
+    <div id="blog-series-options" class="blog-form-check-list"<?= $blogSeriesOptions === [] ? ' hidden' : '' ?>>
       <?php foreach ($blogSeriesOptions as $seriesOption): ?>
         <?php
+          $seriesId = (int)$seriesOption['id'];
+          $seriesInputId = 'series_id_' . $seriesId;
           $seriesLabel = (string)$seriesOption['title'];
           if ((int)$seriesOption['is_active'] !== 1) {
               $seriesLabel .= ' - skrytá';
           }
           ?>
-        <option value="<?= (int)$seriesOption['id'] ?>"<?= in_array((int)$seriesOption['id'], $articleSeriesIds, true) ? ' selected' : '' ?>>
-          <?= h($seriesLabel) ?>
-        </option>
+        <div class="blog-form-checkbox-row">
+          <input type="checkbox" id="<?= h($seriesInputId) ?>" name="series_ids[]" value="<?= $seriesId ?>"
+                 <?= in_array($seriesId, $articleSeriesIds, true) ? ' checked' : '' ?>
+                 <?= adminFieldAttributes('series_ids', $err, $fieldErrorMap, ['blog-series-help', 'blog-series-empty'], 'blog-series-error') ?>>
+          <label for="<?= h($seriesInputId) ?>" class="admin-checkbox-label"><?= h($seriesLabel) ?></label>
+        </div>
       <?php endforeach; ?>
-    </select>
-    <small id="blog-series-help" class="field-help">Vyberte série stejného blogu, do kterých článek patří. Pořadí článků v sérii upravíte na stránce <a id="blog-series-manage-link" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $currentBlogId ?>">Série článků</a>.</small>
+    </div>
+    <small id="blog-series-help" class="field-help">Zaškrtněte jednu nebo více sérií stejného blogu, do kterých článek patří. Když nemá patřit do žádné série, nechte všechna políčka nezaškrtnutá. Pořadí článků v sérii upravíte na stránce <a id="blog-series-manage-link" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $currentBlogId ?>">Série článků</a>.</small>
     <small id="blog-series-empty" class="field-help"<?= $blogSeriesOptions === [] ? '' : ' hidden' ?>>V tomto blogu zatím nejsou vytvořené žádné série článků.</small>
     <?php adminRenderFieldError('series_ids', $err, $fieldErrorMap, $fieldErrorMessages['series_target'], 'blog-series-error'); ?>
   </fieldset>
@@ -758,7 +760,7 @@ adminHeader($pageTitle);
     const missingTagsActionInputs = Array.from(document.querySelectorAll('input[name="missing_tags_action"]'));
     const categorySelectionModeInput = document.getElementById('category-selection-mode');
     const tagSelectionModeInput = document.getElementById('tag-selection-mode');
-    const seriesSelect = document.getElementById('series_ids');
+    const seriesContainer = document.getElementById('blog-series-options');
     const seriesEmpty = document.getElementById('blog-series-empty');
     const relatedSelect = document.getElementById('related_article_ids');
     const relatedEmpty = document.getElementById('blog-related-empty');
@@ -979,8 +981,8 @@ adminHeader($pageTitle);
             tags: Array.from(tagsContainer.querySelectorAll('input[name="tags[]"]:checked')).map((input) => Number(input.value)),
             categoryMode: categorySelectionModeInput ? categorySelectionModeInput.value : 'manual',
             tagsMode: tagSelectionModeInput ? tagSelectionModeInput.value : 'manual',
-            series: seriesSelect
-                ? Array.from(seriesSelect.selectedOptions).map((option) => Number(option.value))
+            series: seriesContainer
+                ? Array.from(seriesContainer.querySelectorAll('input[name="series_ids[]"]:checked')).map((input) => Number(input.value))
                 : [],
             relatedArticles: relatedSelect
                 ? Array.from(relatedSelect.selectedOptions).map((option) => Number(option.value))
@@ -1058,15 +1060,17 @@ adminHeader($pageTitle);
             commentsCheckbox.checked = (blogOptions[blogId].comments_default || 0) === 1;
         }
 
-        if (seriesSelect) {
+        if (seriesContainer) {
             const seriesRows = blogOptions[blogId].series || [];
-            seriesSelect.disabled = seriesRows.length === 0;
-            seriesSelect.size = String(Math.min(8, Math.max(3, seriesRows.length)));
-            seriesSelect.innerHTML = seriesRows.map((series) => {
-                const selected = selectedSeries.has(Number(series.id)) ? ' selected' : '';
-                return '<option value="' + String(series.id) + '"' + selected + '>'
-                    + escapeHtml(seriesLabel(series))
-                    + '</option>';
+            seriesContainer.hidden = seriesRows.length === 0;
+            seriesContainer.innerHTML = seriesRows.map((series) => {
+                const seriesId = Number(series.id);
+                const checked = selectedSeries.has(seriesId) ? ' checked' : '';
+                const inputId = 'series_id_' + String(seriesId);
+                return '<div class="blog-form-checkbox-row">'
+                    + '<input type="checkbox" id="' + inputId + '" name="series_ids[]" value="' + String(seriesId) + '"' + checked + '>'
+                    + '<label for="' + inputId + '" class="admin-checkbox-label">' + escapeHtml(seriesLabel(series)) + '</label>'
+                    + '</div>';
             }).join('');
             if (seriesEmpty) {
                 seriesEmpty.hidden = seriesRows.length > 0;
@@ -1153,7 +1157,7 @@ adminHeader($pageTitle);
         input.addEventListener('change', rememberCurrentSelections);
     });
     relatedSelect?.addEventListener('change', rememberCurrentSelections);
-    seriesSelect?.addEventListener('change', rememberCurrentSelections);
+    seriesContainer?.addEventListener('change', rememberCurrentSelections);
 })();
 </script>
 
