@@ -3,6 +3,9 @@ require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 requireModuleEnabled('statistics');
 
+$isContentCsvExport = (string)($_GET['export'] ?? '') === 'content_csv';
+$requestMethod = requireHttpMethods($isContentCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);
+
 $pdo = db_connect();
 statsCleanup();
 
@@ -229,15 +232,96 @@ try {
     statisticsLogSectionError('content_trends', $e);
 }
 
-if ((string)($_GET['export'] ?? '') === 'content_csv') {
-    $isHeadRequest = requireReadOnlyHttpMethod();
+$contentStatisticsParams = [
+    'from' => $dateFrom,
+    'to' => $dateTo,
+    'module' => $contentModuleFilter,
+];
+$contentExportUrl = 'statistics.php?' . http_build_query(array_merge($contentStatisticsParams, [
+    'export' => 'content_csv',
+]));
+$contentReturnUrl = 'statistics.php?' . http_build_query($contentStatisticsParams);
+
+$renderStatisticsContentCsvExportForm = static function (bool $confirmExportError = false) use (
+    $contentExportUrl,
+    $contentReturnUrl,
+    $contentModuleFilter,
+    $contentModuleOptions,
+    $contentRowsWithTrend,
+    $dateFrom,
+    $dateTo,
+    $previousFrom,
+    $previousTo
+): void {
+    $exportErrorFields = $confirmExportError ? ['confirm_statistics_content_csv_export'] : [];
+    $exportConfirmErrorMessage = 'CSV export statistik obsahu nejde stáhnout bez potvrzení kontroly interních metrik návštěvnosti. U pole Potvrzení stažení je konkrétní nápověda.';
+    $moduleSummary = $contentModuleFilter !== 'all'
+        ? 'Export je omezený na modul ' . ($contentModuleOptions[$contentModuleFilter] ?? $contentModuleFilter) . '.'
+        : 'Export zahrne všechny podporované obsahové moduly.';
+
+    adminHeader('Export statistik obsahu');
+    ?>
+    <p class="admin-description">
+      Připraví CSV export agregovaných statistik obsahu za období <strong><?= h($dateFrom) ?></strong> – <strong><?= h($dateTo) ?></strong>.
+    </p>
+
+    <?php if ($confirmExportError): ?>
+      <p id="statistics-content-csv-export-form-error" class="error" role="alert" aria-atomic="true"><?= h($exportConfirmErrorMessage) ?></p>
+    <?php endif; ?>
+
+    <form method="post" action="<?= h($contentExportUrl) ?>" novalidate<?= $confirmExportError ? ' aria-describedby="statistics-content-csv-export-form-error"' : '' ?>>
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <fieldset class="admin-fieldset-card">
+        <legend>Export statistik obsahu</legend>
+        <p id="statistics-content-csv-export-review-help" class="field-help field-help--flush">
+          CSV export obsahuje interní výkon obsahu, veřejné URL, počty zobrazení, unikátních návštěvníků a srovnání s předchozím obdobím <?= h($previousFrom) ?> – <?= h($previousTo) ?>.
+          Neobsahuje IP hashe, user-agenty ani raw referrery, přesto může prozrazovat redakční a provozní priority webu.
+          Export zahrne <?= count($contentRowsWithTrend) ?> řádků. <?= h($moduleSummary) ?> Soubor ukládejte jen do oprávněného a bezpečného úložiště.
+        </p>
+        <label for="confirm_statistics_content_csv_export" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_statistics_content_csv_export" name="confirm_statistics_content_csv_export" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_statistics_content_csv_export', $exportErrorFields, [], ['statistics-content-csv-export-review-help'], 'confirm-statistics-content-csv-export-error') ?>>
+          Potvrzuji, že jsem zkontroloval(a) rozsah statistik obsahu a mám oprávnění CSV stáhnout.
+        </label>
+        <?php adminRenderFieldError('confirm_statistics_content_csv_export', $exportErrorFields, [], 'Před stažením CSV exportu potvrďte, že rozumíte interní povaze metrik návštěvnosti a máte oprávnění soubor stáhnout.', 'confirm-statistics-content-csv-export-error'); ?>
+        <div class="admin-field-row">
+          <button type="submit" class="btn" data-confirm="Stáhnout CSV export statistik obsahu? Soubor obsahuje interní metriky návštěvnosti a výkonu obsahu.">Stáhnout CSV export</button>
+        </div>
+      </fieldset>
+    </form>
+
+    <p><a href="<?= h($contentReturnUrl) ?>"><span aria-hidden="true">←</span> Zpět na statistiky</a></p>
+    <?php
+    adminFooter();
+};
+
+if ($isContentCsvExport) {
+    if ($requestMethod === 'HEAD') {
+        header('Content-Type: text/html; charset=UTF-8');
+        sendAdminNoStoreHeaders();
+        exit;
+    }
+
+    if ($requestMethod !== 'POST') {
+        $renderStatisticsContentCsvExportForm();
+        exit;
+    }
+
+    verifyCsrf();
+    $confirmStatisticsContentCsvExport = isset($_POST['confirm_statistics_content_csv_export'])
+        && (string)$_POST['confirm_statistics_content_csv_export'] === '1';
+    if (!$confirmStatisticsContentCsvExport) {
+        $renderStatisticsContentCsvExportForm(true);
+        exit;
+    }
+
     sendAdminAttachmentHeaders(
         'text/csv; charset=UTF-8',
         'statistiky-obsahu-' . $dateFrom . '-' . $dateTo . '.csv'
     );
-    if ($isHeadRequest) {
-        exit;
-    }
+    logAction(
+        'statistics_content_export_csv',
+        'from=' . $dateFrom . ';to=' . $dateTo . ';module=' . $contentModuleFilter . ';count=' . count($contentRowsWithTrend)
+    );
 
     $outputHandle = fopen('php://output', 'wb');
     if ($outputHandle !== false) {
@@ -378,12 +462,6 @@ $statusLabels = [
 ];
 
 $contentTotalTrendViews = array_sum(array_map(static fn (array $row): int => (int)$row['views'], $contentModuleSummary));
-$contentExportUrl = 'statistics.php?' . http_build_query([
-    'from' => $dateFrom,
-    'to' => $dateTo,
-    'module' => $contentModuleFilter,
-    'export' => 'content_csv',
-]);
 
 adminHeader('Statistiky');
 ?>
@@ -522,7 +600,7 @@ adminHeader('Statistiky');
     Předchozí období: <strong><?= h($previousFrom) ?></strong> – <strong><?= h($previousTo) ?></strong>.
   </p>
   <p>
-    <a class="btn" href="<?= h($contentExportUrl) ?>">Exportovat agregovaný obsah do CSV</a>
+    <a class="btn" href="<?= h($contentExportUrl) ?>">Zkontrolovat CSV export obsahu</a>
   </p>
 
   <?php if ($contentTopRows === []): ?>

@@ -418,7 +418,7 @@ Homepage, sidebar i footer se skládají přes widgetový systém. V administrac
 
 Widgety pokrývají typické potřeby: úvodní text, nejnovější články, novinky, události, anketa, newsletter, ke stažení, FAQ, místa, podcasty, galerie, vybraný formulář, vyhledávání, kontaktní údaje, sociální sítě, statistiky návštěvnosti a vlastní HTML.
 
-Administrace i veřejný widget používají u základních statistik stejné pořadí a popisky `Online / Dnes / Měsíc / Celkem`. Detailní administrace statistik navíc za zvolené období ukazuje nejčtenější statické stránky, včetně blogových stránek, externí odkazující stránky a blok `Výkon obsahu`. Ten používá dlouhodobé denní agregace bez IP hashů, user-agentů a raw referrerů, umí souhrn podle modulů, nejčtenější obsah, největší nárůsty proti předchozímu stejně dlouhému období, filtr podle modulu a bezpečný CSV export agregovaných výsledků. Kvůli soukromí se u referrerů ukládá jen schéma, host a cesta bez query stringu a fragmentu; interní přechody v rámci vlastního webu se do referrer přehledu nepočítají.
+Administrace i veřejný widget používají u základních statistik stejné pořadí a popisky `Online / Dnes / Měsíc / Celkem`. Detailní administrace statistik navíc za zvolené období ukazuje nejčtenější statické stránky, včetně blogových stránek, externí odkazující stránky a blok `Výkon obsahu`. Ten používá dlouhodobé denní agregace bez IP hashů, user-agentů a raw referrerů, umí souhrn podle modulů, nejčtenější obsah, největší nárůsty proti předchozímu stejně dlouhému období, filtr podle modulu a CSV export agregovaných výsledků přes samostatný review-and-confirm krok. Kvůli soukromí se u referrerů ukládá jen schéma, host a cesta bez query stringu a fragmentu; interní přechody v rámci vlastního webu se do referrer přehledu nepočítají.
 
 Widget `Náhled galerie` vykresluje poslední veřejné fotografie jako responzivní náhledový grid. Na homepage, v sidebaru i ve footeru používá stejné šablonové CSS třídy, takže výstup zůstává konzistentní a bez inline layout stylů.
 
@@ -513,6 +513,8 @@ Změny stavu rezervace používají stejný error-prevention princip. Detail rez
 Ruční SQL záloha databáze má vlastní review krok pro citlivý export. Formulář popisuje, že záloha obsahuje kompletní data CMS, vyžaduje potvrzení oprávnění ke stažení a server bez potvrzení neodešle soubor ani nezapíše audit log; HTTP integrace hlídá odmítnutí i potvrzený download pro WCAG `3.3.4`.
 
 Hlavní JSON export CMS používá stejný error-prevention princip. Správce nejdřív projde review citlivosti exportu, včetně zpráv, komentářů, odběratelů a tokenů odběru; bez potvrzení oprávnění server zůstane na HTML chybě u checkboxu a neodešle soubor ani nezapíše audit log.
+
+CSV export statistik obsahu ve správě statistik používá stejný error-prevention princip. Správce nejdřív zkontroluje období, filtr modulu, počet řádků a upozornění na interní výkon obsahu; bez potvrzení oprávnění server neodešle attachment ani nezapíše audit log.
 
 Detaily kontaktních zpráv, chat zpráv a odpovědí Form Builderu používají stejný pattern i pro e-mailovou odpověď správce. Pokud chybí předmět nebo text odpovědi, souhrnný alert doplní field-level chyby u obou polí přes `aria-describedby` a konkrétní rada říká, co má správce doplnit.
 

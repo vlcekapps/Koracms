@@ -15975,7 +15975,14 @@ if (!str_contains($adminStatisticsSource, 'Výkon obsahu')
     || !str_contains($adminStatisticsSource, 'statsPreviousDateRange($dateFrom, $dateTo)')
     || !str_contains($adminStatisticsSource, 'statsLoadContentTrendRows($pdo, $dateFrom, $dateTo, $contentModuleFilter)')
     || !str_contains($adminStatisticsSource, "'export' => 'content_csv'")
+    || !str_contains($adminStatisticsSource, "\$requestMethod = requireHttpMethods(\$isContentCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);")
+    || !str_contains($adminStatisticsSource, '$renderStatisticsContentCsvExportForm = static function')
+    || !str_contains($adminStatisticsSource, 'confirm_statistics_content_csv_export')
+    || !str_contains($adminStatisticsSource, "adminFieldAttributes('confirm_statistics_content_csv_export', \$exportErrorFields, [], ['statistics-content-csv-export-review-help'], 'confirm-statistics-content-csv-export-error')")
+    || !str_contains($adminStatisticsSource, "adminRenderFieldError('confirm_statistics_content_csv_export'")
+    || !str_contains($adminStatisticsSource, "\$confirmStatisticsContentCsvExport = isset(\$_POST['confirm_statistics_content_csv_export'])")
     || !str_contains($adminStatisticsSource, 'sendAdminAttachmentHeaders(')
+    || !str_contains($adminStatisticsSource, "logAction(\n        'statistics_content_export_csv'")
     || !str_contains($adminStatisticsSource, "fputcsv(\$outputHandle, ['Modul', 'Obsah', 'Typ', 'URL', 'Zobrazení', 'Unikátní návštěvníci', 'Předchozí období', 'Změna']")) {
     $adminFieldErrorIssues[] = 'admin statistics detail is missing long-term content performance tables or safe CSV export';
 }
@@ -18274,6 +18281,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export výsledků ankety nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_poll_results_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing poll results CSV export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('visitor_content_trends_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export obsahových trendů nevrátil field-level chybu, poslal attachment nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_statistics_content_csv_export')
+    || !str_contains($httpIntegrationSource, "statistics_content_export_csv")) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing content statistics CSV export error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('theme_export_error_prevention_http'")

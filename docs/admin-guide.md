@@ -42,6 +42,8 @@ CSV export odpovědí Form Builderu používá stejný princip. Přehled odpově
 
 CSV export výsledků anket používá stejný princip pro agregovaná data. Kontrolní obrazovka ukáže téma ankety, typ hlasování, viditelnost výsledků, počet hlasujících a vybraných odpovědí; stažení vyžaduje potvrzení oprávnění a server bez potvrzení vrátí textový alert a chybu u checkboxu bez attachmentu i audit logu.
 
+CSV export statistik obsahu používá stejný princip pro interní výkon obsahu. Kontrolní obrazovka ukáže období, filtr modulu, počet řádků a upozorní, že agregovaná data neobsahují raw identifikátory návštěvníků, ale mohou prozrazovat redakční a provozní priority; stažení vyžaduje potvrzení oprávnění a server bez potvrzení neodešle attachment ani nezapíše audit log.
+
 ZIP export šablony také vyžaduje kontrolu před stažením. Obrazovka připomíná, že balíček přenáší manifest, uloženou vizuální konfiguraci a statické assety šablony; správce musí potvrdit kontrolu vybrané šablony a oprávnění ke stažení, jinak server neodešle attachment ani nezapíše audit log.
 
 Galerie používá stejný pattern pro hromadné smazání alb a ZIP export vybraných alb. Přehled alb zobrazí review dopadu, správce potvrdí kontrolu výběru a zvolené akce a server bez potvrzení neodstraní alba/fotografie/revize ani neodešle ZIP attachment.
@@ -1123,6 +1125,8 @@ Hromadné akce nad alby galerie používají stejný review-and-confirm pattern.
 
 ZIP export šablony používá podobný review-and-confirm pattern pro přenos vzhledu mezi instalacemi. Před stažením musí správce potvrdit, že zkontroloval vybranou šablonu a má oprávnění balíček sdílet; bez potvrzení se ZIP neodešle ani nezapíše audit log.
 
+CSV export statistik obsahu používá review-and-confirm pattern pro interní metriky výkonu obsahu. Před stažením musí správce zkontrolovat období, filtr modulu a počet řádků, potvrdit oprávnění a server bez potvrzení neodešle CSV ani nezapíše audit log.
+
 Sdílený helper hromadných akcí pro běžné administrační moduly používá pro smazání obecný review-and-confirm pattern. Před `delete` akcí musí správce zaškrtnout `confirm_bulk_delete`; bez něj `admin/bulk.php` požadavek odmítne ještě před module-specific cleanupem, smazáním záznamů a zápisem audit logu. Publikování a skrývání zůstává bez tohoto potvrzení, protože nejde o trvalé smazání.
 
 Recoverable chyby v administraci a souborových cleanupech se postupně převádějí na strukturovaný `koraLog()` formát. Globální neošetřené chyby ukládají jen název souboru a hash cesty, ne plnou lokální cestu; chybová stránka návštěvníkovi ukáže bezpečný kód požadavku pro podporu a odpověď je necacheovatelná. Ukládání článků, přesun článků mezi blogy, ukládání anket, cleanup šablon, mazání prezentačních souborů, import fotek z eStránek i dílčí selhání přehledů na administračním dashboardu tak v technickém logu nespoléhají na surové `error_log()` zprávy, ale přidávají `request_id`, metodu, cestu a omezený kontext bez dumpu celé žádosti nebo plných lokálních cest. Dashboard u počítadel používá jen sekci, počet parametrů a krátký hash dotazu, ne celý SQL text.
@@ -1240,7 +1244,7 @@ Vývojové kontroly:
 - Souhrnné karty v administraci používají stejné popisky jako veřejný widget statistik: `Online`, `Dnes`, `Měsíc` a `Celkem`, vždy s popiskem před hodnotou.
 - Podrobné statistiky obsahují blok `Nejčtenější statické stránky`. Ukazuje globální statické stránky i statické stránky blogů za zvolené období z raw návštěvnických dat, tedy jen v rámci nastavené retence statistik.
 - Podrobné statistiky obsahují blok `Výkon obsahu`. Ten kombinuje dlouhodobé denní agregace a dnešní živá raw data, ukazuje souhrn podle modulů, nejčtenější obsah, největší nárůsty proti předchozímu stejně dlouhému období a filtr podle modulu. Agregace neukládají IP hashe, user-agenty ani raw referrery, takže mohou zůstat dostupné i po vyčištění krátkodobých raw návštěv.
-- CSV export v bloku `Výkon obsahu` je pouze pro přihlášenou administraci, posílá bezpečné no-store/noindex/nosniff hlavičky a obsahuje jen agregovaná pole: modul, název obsahu, typ, veřejnou URL, zobrazení, unikátní návštěvníky, předchozí období a změnu.
+- CSV export v bloku `Výkon obsahu` je pouze pro přihlášenou administraci a před stažením vyžaduje review interních metrik, období, filtru modulu, počtu řádků a potvrzení oprávnění. Potvrzený export posílá bezpečné no-store/noindex/nosniff hlavičky a obsahuje jen agregovaná pole: modul, název obsahu, typ, veřejnou URL, zobrazení, unikátní návštěvníky, předchozí období a změnu.
 - Podrobné statistiky obsahují blok `Odkud návštěvníci přišli`. Zobrazuje externí odkazující stránky za zvolené období z raw návštěvnických dat, tedy jen v rámci nastavené retence. Referrer se ukládá bez query stringu a fragmentu, aby se do statistik zbytečně nedostaly tokeny nebo jiné citlivé parametry URL; interní přechody v rámci vlastního hostu se nezobrazují.
 - Dashboard administrace používá sdílené panely, souhrnné karty, metadata tabulek a sémantický `<progress>` pro mini graf návštěvnosti místo lokálních `style` atributů; runtime audit hlídá, aby se do přehledu nevrátily inline barvy, výšky nebo starý vizuální graf.
 - JSON-LD strukturovaná data pro veřejné moduly se vykreslují přes sdílený helper s CSP nonce. Runtime audit hlídá, aby se structured-data výstupy nevracely k surovým non-nonced `<script type="application/ld+json">` blokům.

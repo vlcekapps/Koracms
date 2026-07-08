@@ -4339,17 +4339,68 @@ try {
     }
 
     $contentTrendsCsvUrl = $contentTrendsUrl . '&export=content_csv';
-    $contentTrendsCsvResponse = fetchUrl($contentTrendsCsvUrl, $adminSession['cookie'], 0);
+    $contentTrendsCsvReviewResponse = fetchUrl($contentTrendsCsvUrl, $adminSession['cookie'], 0);
+    $contentTrendsCsvCsrf = extractHiddenInputValue($contentTrendsCsvReviewResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($contentTrendsCsvReviewResponse) !== 200) {
+        $contentTrendsIssues[] = 'kontrola CSV exportu obsahových trendů nevrátila 200';
+    }
+    if (httpIntegrationHeaderContains($contentTrendsCsvReviewResponse, 'Content-Disposition', 'attachment')) {
+        $contentTrendsIssues[] = 'GET kontrola CSV exportu obsahových trendů poslala attachment bez potvrzení';
+    }
+    if ($contentTrendsCsvCsrf === ''
+        || !str_contains($contentTrendsCsvReviewResponse['body'], 'Export statistik obsahu')
+        || !str_contains($contentTrendsCsvReviewResponse['body'], 'interní výkon obsahu')
+        || !httpIntegrationInputHasAttributes($contentTrendsCsvReviewResponse['body'], 'confirm_statistics_content_csv_export', [
+            'name' => 'confirm_statistics_content_csv_export',
+            'aria-describedby' => 'statistics-content-csv-export-review-help',
+        ])) {
+        $contentTrendsIssues[] = 'kontrola CSV exportu obsahových trendů neobsahuje review a potvrzovací checkbox';
+    }
+
+    $contentTrendsCsvLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'statistics_content_export_csv'")->fetchColumn();
+    $contentTrendsCsvMissingConfirmResponse = postUrl(
+        $contentTrendsCsvUrl,
+        ['csrf_token' => $contentTrendsCsvCsrf],
+        $adminSession['cookie'],
+        0
+    );
+    $contentTrendsCsvLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'statistics_content_export_csv'")->fetchColumn();
+    if (httpIntegrationStatusCode($contentTrendsCsvMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($contentTrendsCsvMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || !str_contains($contentTrendsCsvMissingConfirmResponse['body'], 'role="alert" aria-atomic="true"')
+        || !str_contains($contentTrendsCsvMissingConfirmResponse['body'], 'id="confirm-statistics-content-csv-export-error"')
+        || !httpIntegrationInputHasAttributes($contentTrendsCsvMissingConfirmResponse['body'], 'confirm_statistics_content_csv_export', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'statistics-content-csv-export-review-help confirm-statistics-content-csv-export-error',
+        ])
+        || $contentTrendsCsvLogCountAfterMissingConfirm !== $contentTrendsCsvLogCountBefore) {
+        $contentTrendsIssues[] = 'nepotvrzený CSV export obsahových trendů nevrátil field-level chybu, poslal attachment nebo zapsal audit log';
+    }
+
+    $contentTrendsCsvConfirmedCsrf = extractHiddenInputValue($contentTrendsCsvMissingConfirmResponse['body'], 'csrf_token');
+    $contentTrendsCsvResponse = postUrl(
+        $contentTrendsCsvUrl,
+        [
+            'csrf_token' => $contentTrendsCsvConfirmedCsrf,
+            'confirm_statistics_content_csv_export' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $contentTrendsCsvLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'statistics_content_export_csv'")->fetchColumn();
     if (httpIntegrationStatusCode($contentTrendsCsvResponse) !== 200) {
-        $contentTrendsIssues[] = 'CSV export obsahových trendů nevrátil 200';
+        $contentTrendsIssues[] = 'potvrzený CSV export obsahových trendů nevrátil 200';
     }
     if (!httpIntegrationHeaderContains($contentTrendsCsvResponse, 'Content-Disposition', 'attachment')
         || !httpIntegrationHeaderContains($contentTrendsCsvResponse, 'X-Content-Type-Options', 'nosniff')) {
-        $contentTrendsIssues[] = 'CSV export obsahových trendů neposílá bezpečné download hlavičky';
+        $contentTrendsIssues[] = 'potvrzený CSV export obsahových trendů neposílá bezpečné download hlavičky';
     }
     if (!str_contains($contentTrendsCsvResponse['body'], $contentTrendsTitle)
         || !str_contains($contentTrendsCsvResponse['body'], 'Modul;Obsah;Typ;URL;Zobrazení')) {
-        $contentTrendsIssues[] = 'CSV export neobsahuje očekávaná agregovaná pole';
+        $contentTrendsIssues[] = 'potvrzený CSV export neobsahuje očekávaná agregovaná pole';
+    }
+    if ($contentTrendsCsvLogCountAfterConfirmed !== $contentTrendsCsvLogCountBefore + 1) {
+        $contentTrendsIssues[] = 'potvrzený CSV export obsahových trendů nezapsal audit log';
     }
     foreach (['ip_hash', 'user_agent', 'referrer', 'token=secret', '#detail'] as $forbiddenCsvFragment) {
         if (str_contains($contentTrendsCsvResponse['body'], $forbiddenCsvFragment)) {
