@@ -57,9 +57,20 @@ $stmt = $pdo->prepare(
 $stmt->execute($q !== '' ? ['%' . $q . '%', '%' . $q . '%'] : []);
 $locations = $stmt->fetchAll();
 
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
+if ($deleteConfirmError) {
+    $error = 'Místo rezervací nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$successMessage = $success ? 'Místo uloženo.' : '';
+if (trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $successMessage = 'Místo bylo smazáno.';
+}
+$createFormHasError = $error !== '' && $editId === null && !$deleteConfirmError;
+
 adminHeader('Lokality rezervací');
 ?>
-<?php if ($success): ?><p class="success" role="status">Místo uloženo.</p><?php endif; ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="res-location-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
@@ -73,7 +84,7 @@ adminHeader('Lokality rezervací');
   <?php endif; ?>
 </form>
 
-<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="res-location-form-error"' : '' ?>>
+<form method="post" novalidate<?= $createFormHasError ? ' aria-describedby="res-location-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nové místo</legend>
@@ -105,23 +116,32 @@ adminHeader('Lokality rezervací');
     <thead><tr><th scope="col">Název</th><th scope="col">Adresa</th><th scope="col">Zdroje</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($locations as $location): ?>
+      <?php
+        $locationId = (int)$location['id'];
+        $deleteConfirmField = 'confirm_res_location_delete_' . $locationId;
+        $deleteConfirmId = 'confirm-res-location-delete-' . $locationId;
+        $deleteReviewId = 'res-location-delete-review-' . $locationId;
+        $deleteFieldErrorId = 'confirm-res-location-delete-' . $locationId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $locationId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <?php if ($editId === (int)$location['id']): ?>
-          <?php $editLocationHasError = $error !== '' && $editId === (int)$location['id']; ?>
+        <?php if ($editId === $locationId): ?>
+          <?php $editLocationHasError = $error !== '' && $editId === $locationId && !$deleteConfirmError; ?>
           <td colspan="3">
             <form method="post" novalidate<?= $editLocationHasError ? ' aria-describedby="res-location-form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$location['id'] ?>">
+              <input type="hidden" name="update_id" value="<?= $locationId ?>">
               <fieldset class="admin-filter-fieldset button-row button-row--baseline">
                 <legend class="sr-only">Upravit místo <?= h((string)$location['name']) ?></legend>
-                <label for="name-<?= (int)$location['id'] ?>" class="sr-only">Název místa</label>
-                <input type="text" id="name-<?= (int)$location['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                <label for="name-<?= $locationId ?>" class="sr-only">Název místa</label>
+                <input type="text" id="name-<?= $locationId ?>" name="name" required aria-required="true" maxlength="255"
                        value="<?= h($editLocationHasError ? $formState['name'] : (string)$location['name']) ?>" class="admin-input-auto"
-                       <?= adminFieldAttributes('name', $editLocationHasError ? $fieldErrors : [], [], ['res-location-name-help-' . (int)$location['id']], 'name-error-' . (int)$location['id']) ?>>
-                <small id="res-location-name-help-<?= (int)$location['id'] ?>" class="field-help">Doplňte krátký název místa rezervací.</small>
-                <?php adminRenderFieldError('name', $editLocationHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$location['id']); ?>
-                <label for="addr-<?= (int)$location['id'] ?>" class="sr-only">Adresa místa</label>
-                <input type="text" id="addr-<?= (int)$location['id'] ?>" name="address" maxlength="500"
+                       <?= adminFieldAttributes('name', $editLocationHasError ? $fieldErrors : [], [], ['res-location-name-help-' . $locationId], 'name-error-' . $locationId) ?>>
+                <small id="res-location-name-help-<?= $locationId ?>" class="field-help">Doplňte krátký název místa rezervací.</small>
+                <?php adminRenderFieldError('name', $editLocationHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . $locationId); ?>
+                <label for="addr-<?= $locationId ?>" class="sr-only">Adresa místa</label>
+                <input type="text" id="addr-<?= $locationId ?>" name="address" maxlength="500"
                        value="<?= h($editLocationHasError ? $formState['address'] : (string)$location['address']) ?>" class="admin-search-input">
                 <button type="submit" class="btn">Uložit</button>
                 <a href="res_locations.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
@@ -134,14 +154,33 @@ adminHeader('Lokality rezervací');
           <td><?= (int)$location['resource_count'] ?></td>
         <?php endif; ?>
         <td class="actions">
-          <?php if ($editId !== (int)$location['id']): ?>
-            <a href="res_locations.php?edit=<?= (int)$location['id'] ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
+          <?php if ($editId !== $locationId): ?>
+            <a href="res_locations.php?edit=<?= $locationId ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="res_location_delete.php" method="post">
+          <form action="res_location_delete.php" method="post"
+                class="admin-inline-form"
+                novalidate<?= $deleteHasError ? ' aria-describedby="res-location-form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$location['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat místo? Vazby na zdroje budou odebrány.">Smazat</button>
+            <input type="hidden" name="id" value="<?= $locationId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání místa rezervací <?= h((string)$location['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání odebere místo z <?= (int)$location['resource_count'] ?> rezervačních zdrojů. Zdroje i existující rezervace zůstanou zachované bez tohoto místa.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání tohoto místa rezervací.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním místa potvrďte, že jste zkontrolovali dopad na rezervační zdroje.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat místo? Vazby na zdroje budou odebrány.">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

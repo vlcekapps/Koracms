@@ -132,6 +132,8 @@ Additional `3.3.4` ACR evidence, 2026-07-08: individual newsletter subscriber de
 
 Additional `3.3.4` ACR evidence, 2026-07-09: Contact and Chat topic deletion now use row-level review-and-confirm forms. The UI describes the impact on the public contact form or chat and on existing messages, requires `confirm_contact_topic_delete_<id>` or `confirm_chat_topic_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before unlinking message relationships, deleting the topic or writing the audit log. Runtime `admin_field_error_guardrails` and HTTP `contact_topics_and_reply_http` / `chat_topics_threads_support_http` cover rendered review text, rejected unconfirmed deletion without message/log changes and confirmed cleanup.
 
+Additional `3.3.4` ACR evidence, 2026-07-09: Reservation category and location deletion now use row-level review-and-confirm forms. The UI describes the number of affected reservation resources and the impact on existing resources/bookings, requires `confirm_res_category_delete_<id>` or `confirm_res_location_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before unlinking resources, deleting taxonomy rows or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `reservations_http` cover rendered review text, rejected unconfirmed deletion without relationship/log changes and confirmed cleanup.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

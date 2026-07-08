@@ -15323,11 +15323,13 @@ $placeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_fo
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastShowFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_show_form.php');
 $reservationCategoriesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_categories.php');
+$reservationCategoryDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_cat_delete.php');
 $reservationFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_form.php');
 $reservationBookingAddFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_add.php');
 $reservationBookingDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_booking_detail.php');
 $reservationBookingsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_bookings.php');
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
+$reservationLocationDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_location_delete.php');
 $reservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
 $revisionsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/revisions.php');
 $reviewQueueSource = (string)file_get_contents(dirname(__DIR__) . '/admin/review_queue.php');
@@ -18016,6 +18018,12 @@ foreach ([
         'required' => [
             '$error = \'Kategorii zdrojů rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
             '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Konzultace.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '$deleteConfirmField = \'confirm_res_category_delete_\' . $categoryId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Kategorii zdrojů rezervací nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na rezervační zdroje.',
             '<p id="res-category-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['res-category-name-help'])",
             "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
@@ -18030,6 +18038,12 @@ foreach ([
         'required' => [
             '$error = \'Místo rezervací nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
             '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název místa, například Zasedací místnost A.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '$deleteConfirmField = \'confirm_res_location_delete_\' . $locationId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Místo rezervací nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním místa potvrďte, že jste zkontrolovali dopad na rezervační zdroje.',
             '<p id="res-location-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['res-location-name-help'])",
             "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
@@ -18051,6 +18065,18 @@ foreach ([
             $adminFieldErrorIssues[] = $adminTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
         }
     }
+}
+if (!str_contains($reservationCategoryDeleteSource, "\$confirmFieldName = 'confirm_res_category_delete_' . \$id;")
+    || !str_contains($reservationCategoryDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($reservationCategoryDeleteSource, "UPDATE cms_res_resources SET category_id = NULL WHERE category_id = ?")
+    || !str_contains($reservationCategoryDeleteSource, "logAction('res_cat_delete'")) {
+    $adminFieldErrorIssues[] = 'reservation category delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($reservationLocationDeleteSource, "\$confirmFieldName = 'confirm_res_location_delete_' . \$id;")
+    || !str_contains($reservationLocationDeleteSource, 'delete_error=confirm_required&delete_error_id=')
+    || !str_contains($reservationLocationDeleteSource, "DELETE FROM cms_res_resource_locations WHERE location_id = ?")
+    || !str_contains($reservationLocationDeleteSource, "logAction('res_location_delete'")) {
+    $adminFieldErrorIssues[] = 'reservation location delete handler is missing server-side review-and-confirm guardrails';
 }
 foreach ([
     'blog categories editor' => [
@@ -18362,6 +18388,16 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_chat_topic_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání tématu chatu neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing messaging topic delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('reservations_http'")
+    || !str_contains($httpIntegrationSource, 'smazání rezervační kategorie bez potvrzení změnilo vazbu zdroje, smazalo kategorii nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_res_category_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervační kategorie neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')
+    || !str_contains($httpIntegrationSource, 'smazání rezervačního místa bez potvrzení změnilo vazbu zdroje, smazalo místo nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_res_location_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing reservation taxonomy delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')

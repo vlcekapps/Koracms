@@ -55,6 +55,8 @@ $createdFaqIds = [];
 $createdFaqCategoryIds = [];
 $createdPollIds = [];
 $createdResourceIds = [];
+$createdReservationCategoryIds = [];
+$createdReservationLocationIds = [];
 $createdWidgetIds = [];
 $createdNewsletterIds = [];
 $createdSubscriberEmails = [];
@@ -8430,6 +8432,192 @@ try {
          WHERE id = ?"
     )->execute([$resourceId]);
 
+    $reservationDeleteCategoryName = 'HTTP smazání kategorie rezervací ' . bin2hex(random_bytes(3));
+    $pdo->prepare(
+        'INSERT INTO cms_res_categories (name, sort_order) VALUES (?, 90)'
+    )->execute([$reservationDeleteCategoryName]);
+    $reservationDeleteCategoryId = (int)$pdo->lastInsertId();
+    $createdReservationCategoryIds[] = $reservationDeleteCategoryId;
+    $pdo->prepare('UPDATE cms_res_resources SET category_id = ? WHERE id = ?')->execute([
+        $reservationDeleteCategoryId,
+        $resourceId,
+    ]);
+
+    $reservationDeleteLocationName = 'HTTP smazání místa rezervací ' . bin2hex(random_bytes(3));
+    $pdo->prepare(
+        'INSERT INTO cms_res_locations (name, address) VALUES (?, ?)'
+    )->execute([$reservationDeleteLocationName, 'HTTP testovací adresa pro mazání místa']);
+    $reservationDeleteLocationId = (int)$pdo->lastInsertId();
+    $createdReservationLocationIds[] = $reservationDeleteLocationId;
+    $pdo->prepare('INSERT INTO cms_res_resource_locations (resource_id, location_id) VALUES (?, ?)')->execute([
+        $resourceId,
+        $reservationDeleteLocationId,
+    ]);
+
+    $reservationCategoryDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/res_categories.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($reservationCategoryDeletePage) !== 200
+        || !str_contains($reservationCategoryDeletePage['body'], 'confirm_res_category_delete_' . $reservationDeleteCategoryId)
+        || !str_contains($reservationCategoryDeletePage['body'], 'res-category-delete-review-' . $reservationDeleteCategoryId)
+        || !str_contains($reservationCategoryDeletePage['body'], 'Smazání odebere kategorii z 1 rezervačních zdrojů.')) {
+        $reservationIssues[] = 'správa rezervačních kategorií nevykreslila review checkbox pro smazání kategorie';
+    }
+
+    $reservationCategoryDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_cat_delete'")
+        ->fetchColumn();
+    $reservationCategoryMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_cat_delete.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$reservationDeleteCategoryId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationCategoryExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_categories WHERE id = ?');
+    $reservationCategoryExistsStmt->execute([$reservationDeleteCategoryId]);
+    $reservationCategoryResourceStmt = $pdo->prepare('SELECT category_id FROM cms_res_resources WHERE id = ?');
+    $reservationCategoryResourceStmt->execute([$resourceId]);
+    $reservationCategoryAfterMissing = $reservationCategoryResourceStmt->fetchColumn();
+    $reservationCategoryDeleteLogCountAfterMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($reservationCategoryMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $reservationCategoryMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/res_categories.php?delete_error=confirm_required&delete_error_id=' . $reservationDeleteCategoryId,
+            $baseUrl
+        )
+        || (int)$reservationCategoryExistsStmt->fetchColumn() !== 1
+        || (int)$reservationCategoryAfterMissing !== $reservationDeleteCategoryId
+        || $reservationCategoryDeleteLogCountAfterMissing !== $reservationCategoryDeleteLogCountBefore) {
+        $reservationIssues[] = 'smazání rezervační kategorie bez potvrzení změnilo vazbu zdroje, smazalo kategorii nebo zapsalo audit log';
+    }
+
+    $reservationCategoryDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/res_categories.php?delete_error=confirm_required&delete_error_id=' . $reservationDeleteCategoryId,
+        $adminSession['cookie'],
+        0
+    );
+    $reservationCategoryConfirmInputId = 'confirm-res-category-delete-' . $reservationDeleteCategoryId;
+    if (httpIntegrationStatusCode($reservationCategoryDeleteErrorPage) !== 200
+        || !str_contains($reservationCategoryDeleteErrorPage['body'], 'id="res-category-form-error" class="error" role="alert" aria-atomic="true">Kategorii zdrojů rezervací nejde smazat bez potvrzení kontroly dopadu.')
+        || !httpIntegrationInputHasAttributes($reservationCategoryDeleteErrorPage['body'], $reservationCategoryConfirmInputId, [
+            'name' => 'confirm_res_category_delete_' . $reservationDeleteCategoryId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'res-category-delete-review-' . $reservationDeleteCategoryId . ' confirm-res-category-delete-' . $reservationDeleteCategoryId . '-error',
+        ])
+        || !str_contains($reservationCategoryDeleteErrorPage['body'], 'id="confirm-res-category-delete-' . $reservationDeleteCategoryId . '-error"')
+        || !str_contains($reservationCategoryDeleteErrorPage['body'], 'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na rezervační zdroje.')) {
+        $reservationIssues[] = 'smazání rezervační kategorie bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $reservationCategoryConfirmedDeleteResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_cat_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($reservationCategoryDeleteErrorPage['body'], 'csrf_token'),
+            'id' => (string)$reservationDeleteCategoryId,
+            'confirm_res_category_delete_' . $reservationDeleteCategoryId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationCategoryExistsStmt->execute([$reservationDeleteCategoryId]);
+    $reservationCategoryResourceStmt->execute([$resourceId]);
+    $reservationCategoryAfterConfirm = $reservationCategoryResourceStmt->fetchColumn();
+    $reservationCategoryDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($reservationCategoryConfirmedDeleteResponse) !== 302
+        || !responseHasLocationHeader($reservationCategoryConfirmedDeleteResponse['headers'], BASE_URL . '/admin/res_categories.php?deleted=1', $baseUrl)
+        || (int)$reservationCategoryExistsStmt->fetchColumn() !== 0
+        || $reservationCategoryAfterConfirm !== null
+        || $reservationCategoryDeleteLogCountAfterConfirm !== $reservationCategoryDeleteLogCountBefore + 1) {
+        $reservationIssues[] = 'potvrzené smazání rezervační kategorie neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
+    }
+
+    $reservationLocationDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/res_locations.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($reservationLocationDeletePage) !== 200
+        || !str_contains($reservationLocationDeletePage['body'], 'confirm_res_location_delete_' . $reservationDeleteLocationId)
+        || !str_contains($reservationLocationDeletePage['body'], 'res-location-delete-review-' . $reservationDeleteLocationId)
+        || !str_contains($reservationLocationDeletePage['body'], 'Smazání odebere místo z 1 rezervačních zdrojů.')) {
+        $reservationIssues[] = 'správa rezervačních míst nevykreslila review checkbox pro smazání místa';
+    }
+
+    $reservationLocationDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_location_delete'")
+        ->fetchColumn();
+    $reservationLocationMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_location_delete.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$reservationDeleteLocationId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationLocationExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_locations WHERE id = ?');
+    $reservationLocationExistsStmt->execute([$reservationDeleteLocationId]);
+    $reservationLocationLinkStmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM cms_res_resource_locations WHERE resource_id = ? AND location_id = ?'
+    );
+    $reservationLocationLinkStmt->execute([$resourceId, $reservationDeleteLocationId]);
+    $reservationLocationDeleteLogCountAfterMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_location_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($reservationLocationMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $reservationLocationMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/res_locations.php?delete_error=confirm_required&delete_error_id=' . $reservationDeleteLocationId,
+            $baseUrl
+        )
+        || (int)$reservationLocationExistsStmt->fetchColumn() !== 1
+        || (int)$reservationLocationLinkStmt->fetchColumn() !== 1
+        || $reservationLocationDeleteLogCountAfterMissing !== $reservationLocationDeleteLogCountBefore) {
+        $reservationIssues[] = 'smazání rezervačního místa bez potvrzení změnilo vazbu zdroje, smazalo místo nebo zapsalo audit log';
+    }
+
+    $reservationLocationDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/res_locations.php?delete_error=confirm_required&delete_error_id=' . $reservationDeleteLocationId,
+        $adminSession['cookie'],
+        0
+    );
+    $reservationLocationConfirmInputId = 'confirm-res-location-delete-' . $reservationDeleteLocationId;
+    if (httpIntegrationStatusCode($reservationLocationDeleteErrorPage) !== 200
+        || !str_contains($reservationLocationDeleteErrorPage['body'], 'id="res-location-form-error" class="error" role="alert" aria-atomic="true">Místo rezervací nejde smazat bez potvrzení kontroly dopadu.')
+        || !httpIntegrationInputHasAttributes($reservationLocationDeleteErrorPage['body'], $reservationLocationConfirmInputId, [
+            'name' => 'confirm_res_location_delete_' . $reservationDeleteLocationId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'res-location-delete-review-' . $reservationDeleteLocationId . ' confirm-res-location-delete-' . $reservationDeleteLocationId . '-error',
+        ])
+        || !str_contains($reservationLocationDeleteErrorPage['body'], 'id="confirm-res-location-delete-' . $reservationDeleteLocationId . '-error"')
+        || !str_contains($reservationLocationDeleteErrorPage['body'], 'Před smazáním místa potvrďte, že jste zkontrolovali dopad na rezervační zdroje.')) {
+        $reservationIssues[] = 'smazání rezervačního místa bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $reservationLocationConfirmedDeleteResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_location_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($reservationLocationDeleteErrorPage['body'], 'csrf_token'),
+            'id' => (string)$reservationDeleteLocationId,
+            'confirm_res_location_delete_' . $reservationDeleteLocationId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationLocationExistsStmt->execute([$reservationDeleteLocationId]);
+    $reservationLocationLinkStmt->execute([$resourceId, $reservationDeleteLocationId]);
+    $reservationLocationDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_location_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($reservationLocationConfirmedDeleteResponse) !== 302
+        || !responseHasLocationHeader($reservationLocationConfirmedDeleteResponse['headers'], BASE_URL . '/admin/res_locations.php?deleted=1', $baseUrl)
+        || (int)$reservationLocationExistsStmt->fetchColumn() !== 0
+        || (int)$reservationLocationLinkStmt->fetchColumn() !== 0
+        || $reservationLocationDeleteLogCountAfterConfirm !== $reservationLocationDeleteLogCountBefore + 1) {
+        $reservationIssues[] = 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
+    }
+
     $reservationResponse = fetchUrl(
         $baseUrl . BASE_URL . '/reservations/book.php?slug=' . rawurlencode($resourceSlug) . '&date=2026-02-31',
         '',
@@ -13912,7 +14100,17 @@ try {
         $pdo->prepare("DELETE FROM cms_redirects WHERE old_path = ? OR new_path = ?")->execute([$redirectPathToDelete, $redirectPathToDelete]);
     }
 
+    foreach ($createdReservationLocationIds as $reservationLocationIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_res_resource_locations WHERE location_id = ?")->execute([$reservationLocationIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_res_locations WHERE id = ?")->execute([$reservationLocationIdToDelete]);
+    }
+    foreach ($createdReservationCategoryIds as $reservationCategoryIdToDelete) {
+        $pdo->prepare("UPDATE cms_res_resources SET category_id = NULL WHERE category_id = ?")->execute([$reservationCategoryIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_res_categories WHERE id = ?")->execute([$reservationCategoryIdToDelete]);
+    }
+
     foreach ($createdResourceIds as $resourceId) {
+        $pdo->prepare("DELETE FROM cms_res_resource_locations WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_blocked WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_slots WHERE resource_id = ?")->execute([$resourceId]);
         $pdo->prepare("DELETE FROM cms_res_hours WHERE resource_id = ?")->execute([$resourceId]);

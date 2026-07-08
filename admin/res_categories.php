@@ -57,9 +57,20 @@ $stmt = $pdo->prepare(
 $stmt->execute($q !== '' ? ['%' . $q . '%'] : []);
 $categories = $stmt->fetchAll();
 
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
+if ($deleteConfirmError) {
+    $error = 'Kategorii zdrojů rezervací nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$successMessage = $success ? 'Kategorie uložena.' : '';
+if (trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $successMessage = 'Kategorie byla smazána.';
+}
+$createFormHasError = $error !== '' && $editId === null && !$deleteConfirmError;
+
 adminHeader('Kategorie zdrojů rezervací');
 ?>
-<?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="res-category-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
@@ -73,7 +84,7 @@ adminHeader('Kategorie zdrojů rezervací');
   <?php endif; ?>
 </form>
 
-<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="res-category-form-error"' : '' ?>>
+<form method="post" novalidate<?= $createFormHasError ? ' aria-describedby="res-category-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
@@ -104,23 +115,32 @@ adminHeader('Kategorie zdrojů rezervací');
     <thead><tr><th scope="col">Název</th><th scope="col">Pořadí</th><th scope="col">Zdroje</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
+      <?php
+        $categoryId = (int)$category['id'];
+        $deleteConfirmField = 'confirm_res_category_delete_' . $categoryId;
+        $deleteConfirmId = 'confirm-res-category-delete-' . $categoryId;
+        $deleteReviewId = 'res-category-delete-review-' . $categoryId;
+        $deleteFieldErrorId = 'confirm-res-category-delete-' . $categoryId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $categoryId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <?php if ($editId === (int)$category['id']): ?>
-          <?php $editCategoryHasError = $error !== '' && $editId === (int)$category['id']; ?>
+        <?php if ($editId === $categoryId): ?>
+          <?php $editCategoryHasError = $error !== '' && $editId === $categoryId && !$deleteConfirmError; ?>
           <td colspan="3">
             <form method="post" novalidate<?= $editCategoryHasError ? ' aria-describedby="res-category-form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
+              <input type="hidden" name="update_id" value="<?= $categoryId ?>">
               <fieldset class="admin-filter-fieldset button-row button-row--baseline">
                 <legend class="sr-only">Upravit kategorii <?= h((string)$category['name']) ?></legend>
-                <label for="name-<?= (int)$category['id'] ?>" class="sr-only">Název kategorie</label>
-                <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                <label for="name-<?= $categoryId ?>" class="sr-only">Název kategorie</label>
+                <input type="text" id="name-<?= $categoryId ?>" name="name" required aria-required="true" maxlength="255"
                        value="<?= h($editCategoryHasError ? $formState['name'] : (string)$category['name']) ?>" class="admin-input-auto"
-                       <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['res-category-name-help-' . (int)$category['id']], 'name-error-' . (int)$category['id']) ?>>
-                <small id="res-category-name-help-<?= (int)$category['id'] ?>" class="field-help">Doplňte krátký název kategorie zdrojů rezervací.</small>
-                <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$category['id']); ?>
-                <label for="sort-<?= (int)$category['id'] ?>" class="sr-only">Pořadí</label>
-                <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0" class="admin-input-xs"
+                       <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['res-category-name-help-' . $categoryId], 'name-error-' . $categoryId) ?>>
+                <small id="res-category-name-help-<?= $categoryId ?>" class="field-help">Doplňte krátký název kategorie zdrojů rezervací.</small>
+                <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . $categoryId); ?>
+                <label for="sort-<?= $categoryId ?>" class="sr-only">Pořadí</label>
+                <input type="number" id="sort-<?= $categoryId ?>" name="sort_order" min="0" class="admin-input-xs"
                        value="<?= h($editCategoryHasError ? $formState['sort_order'] : (string)$category['sort_order']) ?>">
                 <button type="submit" class="btn">Uložit</button>
                 <a href="res_categories.php<?= $q !== '' ? '?q=' . rawurlencode($q) : '' ?>">Zrušit</a>
@@ -133,14 +153,33 @@ adminHeader('Kategorie zdrojů rezervací');
           <td><?= (int)$category['resource_count'] ?></td>
         <?php endif; ?>
         <td class="actions">
-          <?php if ($editId !== (int)$category['id']): ?>
-            <a href="res_categories.php?edit=<?= (int)$category['id'] ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
+          <?php if ($editId !== $categoryId): ?>
+            <a href="res_categories.php?edit=<?= $categoryId ?><?= $q !== '' ? '&amp;q=' . rawurlencode($q) : '' ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="res_cat_delete.php" method="post">
+          <form action="res_cat_delete.php" method="post"
+                class="admin-inline-form"
+                novalidate<?= $deleteHasError ? ' aria-describedby="res-category-form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat kategorii? Zdroje bez kategorie zůstanou zachovány.">Smazat</button>
+            <input type="hidden" name="id" value="<?= $categoryId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání kategorie rezervací <?= h((string)$category['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání odebere kategorii z <?= (int)$category['resource_count'] ?> rezervačních zdrojů. Zdroje i existující rezervace zůstanou zachované bez této kategorie.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání této kategorie rezervací.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na rezervační zdroje.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat kategorii? Zdroje bez kategorie zůstanou zachovány.">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>
