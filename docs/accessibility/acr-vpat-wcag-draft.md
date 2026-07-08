@@ -128,6 +128,8 @@ Additional `3.3.4` ACR evidence, 2026-07-06: individual unused-media deletion in
 
 Additional `3.3.4` ACR evidence, 2026-07-08: Download category and series deletion now use row-level review-and-confirm forms. Category deletion describes the number of affected downloads and requires `confirm_download_category_delete_<id>`; series deletion describes affected downloads and current-version flags and requires `confirm_download_series_delete_<id>`. Unconfirmed POST requests return text-backed alerts and field-level checkbox errors without clearing relationships, deleting taxonomy rows or writing audit logs. Runtime `downloads_source_guardrails` and HTTP `downloads_catalog_versions_http` cover the rendered error state, rejected unconfirmed paths and confirmed cleanup.
 
+Additional `3.3.4` ACR evidence, 2026-07-08: individual newsletter subscriber deletion now uses row/detail review-and-confirm forms. The UI describes removal from active newsletter subscriptions while preserving already-sent newsletter history, requires `confirm_newsletter_subscriber_delete_<id>` and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before deleting the subscriber or writing the audit log. Runtime `admin_field_error_guardrails` and HTTP `newsletter_subscriber_delete_error_prevention_http` cover overview/detail rendering, rejected unconfirmed deletion without database/log changes and confirmed deletion.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

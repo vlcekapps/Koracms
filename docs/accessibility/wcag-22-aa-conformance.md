@@ -155,6 +155,8 @@ Poznámka k `3.3.4` z 2026-07-06: individuální mazání nepoužitého média v
 
 Poznámka k `3.3.4` z 2026-07-08: mazání kategorií a sérií v modulu Ke stažení má vlastní review-and-confirm guardrail. Řádkové formuláře popisují počet navázaných položek a u série i počet aktuálních verzí, vyžadují `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` a při chybějícím potvrzení vrací textový `role="alert"` s field-level chybou u checkboxu. Server odmítne nepotvrzený POST před zrušením vazeb, odstraněním taxonomie nebo audit logem; HTTP `downloads_catalog_versions_http` ověřuje odmítnutí i potvrzené zrušení vazeb.
 
+Poznámka k `3.3.4` z 2026-07-08: individuální mazání odběratele newsletteru má navazující review-and-confirm guardrail v přehledu i detailu odběratele. Formulář popisuje odstranění e-mailu z aktivních odběrů a zachování historie odeslaných rozesílek, vyžaduje checkbox `confirm_newsletter_subscriber_delete_<id>` a při chybějícím potvrzení vrací textový atomický alert s field-level chybou u checkboxu. Server odmítne nepotvrzený POST před smazáním odběratele nebo zápisem audit logu; HTTP `newsletter_subscriber_delete_error_prevention_http` ověřuje render v přehledu i detailu, odmítnutí bez změny DB/logu a potvrzené smazání.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

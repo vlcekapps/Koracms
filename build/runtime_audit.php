@@ -11665,7 +11665,7 @@ $adminBulkRowLabelExpectations = [
     'admin/gallery_albums.php' => ['<label for="gallery-album-select-<?= (int)$album[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-album-select-<?= (int)$album[\'id\'] ?>" name="ids[]"'],
     'admin/gallery_photos.php' => ['<label for="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" name="ids[]"'],
     'admin/news.php' => ['<label for="news-select-<?= (int)$item[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="news-select-<?= (int)$item[\'id\'] ?>" name="ids[]"'],
-    'admin/newsletter.php' => ['<label for="newsletter-subscriber-select-<?= (int)$subscriber[\'id\'] ?>" class="sr-only">Vybrat odběratele', '<input type="checkbox" id="newsletter-subscriber-select-<?= (int)$subscriber[\'id\'] ?>" name="ids[]"'],
+    'admin/newsletter.php' => ['<label for="newsletter-subscriber-select-<?= $subscriberId ?>" class="sr-only">Vybrat odběratele', '<input type="checkbox" id="newsletter-subscriber-select-<?= $subscriberId ?>" name="ids[]"'],
     'admin/pages.php' => ['<label for="page-select-<?= $pageId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="page-select-<?= $pageId ?>" name="ids[]"'],
     'admin/places.php' => ['<label for="place-select-<?= (int)$place[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="place-select-<?= (int)$place[\'id\'] ?>" name="ids[]"'],
     'admin/polls.php' => ['<label for="poll-select-<?= (int)$poll[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="poll-select-<?= (int)$poll[\'id\'] ?>" name="ids[]"'],
@@ -15361,6 +15361,9 @@ $newsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/news.
 $newsletterOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter.php');
 $newsletterBulkValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_bulk.php');
 $newsletterHistorySource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_history.php');
+$newsletterSubscriberDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_subscriber.php');
+$newsletterSubscriberActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_subscriber_action.php');
+$newsletterSubscriberDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/newsletter_subscriber_delete.php');
 $pagesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
 $placesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
 $podcastEpisodesOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
@@ -18329,6 +18332,13 @@ if ($httpIntegrationSource === ''
     $adminFieldErrorIssues[] = 'HTTP integration is missing downloads taxonomy delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('newsletter_subscriber_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'individuální smazání newsletter odběratele bez potvrzení nevrátilo PRG chybu, smazalo odběratele nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_newsletter_subscriber_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené individuální smazání newsletter odběratele neproběhlo s očekávaným PRG stavem nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing newsletter subscriber delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')
     || !str_contains($httpIntegrationSource, 'mazání uživatele bez potvrzení smazalo účet, odstranilo zkratku nebo zapsalo audit log')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání uživatele nevrátilo PRG stav, nesmazalo účet/zkratku nebo nezapsalo audit log')) {
@@ -19031,6 +19041,30 @@ foreach ([
 ] as $newsletterBulkFragment) {
     if (!str_contains($newsletterOverviewSource . $newsletterBulkValidationSource, $newsletterBulkFragment)) {
         $adminFieldErrorIssues[] = 'newsletter bulk flow is missing error-prevention fragment: ' . $newsletterBulkFragment;
+    }
+}
+foreach ([
+    'confirm_newsletter_subscriber_delete_',
+    'newsletter-subscriber-delete-review-',
+    'adminFieldAttributes($subscriberDeleteConfirmField',
+    'adminRenderFieldError($subscriberDeleteConfirmField',
+    'adminFieldAttributes($deleteConfirmField',
+    'adminRenderFieldError($deleteConfirmField',
+    'Odběratele newsletteru nejde smazat bez potvrzení kontroly dopadu.',
+] as $newsletterSubscriberDeleteFragment) {
+    if (!str_contains($newsletterOverviewSource . $newsletterSubscriberDetailSource, $newsletterSubscriberDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'newsletter subscriber delete UI is missing error-prevention fragment: ' . $newsletterSubscriberDeleteFragment;
+    }
+}
+foreach ([
+    "requireModuleEnabled('newsletter')",
+    "\$confirmFieldName = 'confirm_newsletter_subscriber_delete_' . \$subscriberId;",
+    "'subscriber_delete_confirm_required'",
+    "DELETE FROM cms_subscribers WHERE id = ?",
+    "logAction('newsletter_subscriber_delete', 'id=' . \$subscriberId . ' email=' . (string)\$subscriber['email']);",
+] as $newsletterSubscriberDeleteServerFragment) {
+    if (!str_contains($newsletterSubscriberActionSource . $newsletterSubscriberDeleteSource, $newsletterSubscriberDeleteServerFragment)) {
+        $adminFieldErrorIssues[] = 'newsletter subscriber delete handler is missing error-prevention fragment: ' . $newsletterSubscriberDeleteServerFragment;
     }
 }
 foreach ([

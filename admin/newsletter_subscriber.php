@@ -35,6 +35,12 @@ $errorMessages = [
 ];
 $ok = trim($_GET['ok'] ?? '');
 $error = trim($_GET['error'] ?? '');
+$deleteConfirmError = $error === 'subscriber_delete_confirm_required';
+$deleteConfirmField = 'confirm_newsletter_subscriber_delete_' . (int)$subscriber['id'];
+$deleteConfirmId = 'confirm-newsletter-subscriber-delete-' . (int)$subscriber['id'];
+$deleteReviewId = 'newsletter-subscriber-delete-review-' . (int)$subscriber['id'];
+$deleteFieldErrorId = 'confirm-newsletter-subscriber-delete-' . (int)$subscriber['id'] . '-error';
+$deleteErrorFields = $deleteConfirmError ? [$deleteConfirmField] : [];
 
 adminHeader('Detail odběratele');
 ?>
@@ -42,8 +48,10 @@ adminHeader('Detail odběratele');
 <?php if (isset($successMessages[$ok])): ?>
   <p class="success" role="status"><?= h($successMessages[$ok]) ?></p>
 <?php endif; ?>
-<?php if (isset($errorMessages[$error])): ?>
-  <p class="error" role="alert"><?= h($errorMessages[$error]) ?></p>
+<?php if (isset($errorMessages[$error]) || $deleteConfirmError): ?>
+  <p id="newsletter-subscriber-error" class="error" role="alert" aria-atomic="true">
+    <?= h($deleteConfirmError ? 'Odběratele newsletteru nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.' : $errorMessages[$error]) ?>
+  </p>
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>">&larr; Zpět na odběratele newsletteru</a></p>
@@ -102,12 +110,31 @@ adminHeader('Detail odběratele');
   <?php endif; ?>
 
   <form method="post" action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php"
+        class="admin-inline-form"
+        novalidate<?= $deleteConfirmError ? ' aria-describedby="newsletter-subscriber-error"' : '' ?>
         data-confirm="Smazat tohoto odběratele?">
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
     <input type="hidden" name="action" value="delete">
     <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
-    <button type="submit" class="btn btn-danger">Smazat odběratele</button>
+    <fieldset class="admin-inline-fieldset">
+      <legend class="sr-only">Smazání odběratele <?= h((string)$subscriber['email']) ?></legend>
+      <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+        Smazání odstraní e-mail z aktivních odběrů newsletteru. Historie už odeslaných rozesílek zůstane zachovaná.
+      </p>
+      <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+        <input
+          type="checkbox"
+          id="<?= h($deleteConfirmId) ?>"
+          name="<?= h($deleteConfirmField) ?>"
+          value="1"
+          required
+          aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+        Potvrzuji smazání tohoto odběratele.
+      </label>
+      <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním odběratele potvrďte, že jste zkontrolovali jeho e-mail a dopad na další rozesílky.', $deleteFieldErrorId); ?>
+      <button type="submit" class="btn btn-danger">Smazat odběratele</button>
+    </fieldset>
   </form>
 </div>
 

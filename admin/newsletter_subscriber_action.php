@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../db.php';
 requireCapability('newsletter_manage', 'Přístup odepřen. Pro správu odběratelů newsletteru nemáte potřebné oprávnění.');
+requireModuleEnabled('newsletter');
 verifyCsrf();
 
 $subscriberId = inputInt('post', 'id');
@@ -58,6 +59,16 @@ if ($action === 'resend') {
     }
 
     header('Location: ' . $redirect);
+    exit;
+}
+
+$confirmFieldName = 'confirm_newsletter_subscriber_delete_' . $subscriberId;
+$deleteConfirmed = isset($_POST[$confirmFieldName])
+    && (string)$_POST[$confirmFieldName] === '1';
+if (!$deleteConfirmed) {
+    $target = $appendRedirectParam($redirect, 'error', 'subscriber_delete_confirm_required');
+    $target = $appendRedirectParam($target, 'delete_error_id', (string)$subscriberId);
+    header('Location: ' . $target);
     exit;
 }
 

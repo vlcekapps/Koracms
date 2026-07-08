@@ -70,6 +70,8 @@ $bulkCount = max(0, (int)($_GET['count'] ?? 0));
 $bulkFailed = max(0, (int)($_GET['failed'] ?? 0));
 $bulkConfirmError = trim($_GET['error'] ?? '') === 'bulk_confirm_required';
 $bulkErrorFields = $bulkConfirmError ? ['confirm_newsletter_bulk_action'] : [];
+$subscriberDeleteConfirmError = trim($_GET['error'] ?? '') === 'subscriber_delete_confirm_required';
+$subscriberDeleteErrorId = inputInt('get', 'delete_error_id');
 
 $successMessages = [
     'sent' => 'Newsletter byl odeslán a uložen do historie.',
@@ -104,6 +106,7 @@ $errorMessage = match ($error) {
         ? 'Potvrzovací e-mail se nepodařilo odeslat 1 odběrateli.'
         : 'Potvrzovací e-mail se nepodařilo odeslat ' . $bulkFailed . ' odběratelům.',
     'bulk_confirm_required' => 'Hromadnou akci nejde provést bez potvrzení kontroly vybraných odběratelů.',
+    'subscriber_delete_confirm_required' => 'Odběratele newsletteru nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.',
     default => $errorMessages[$error] ?? '',
 };
 
@@ -210,11 +213,20 @@ adminHeader('Newsletter');
       </thead>
       <tbody>
         <?php foreach ($subscribers as $subscriber): ?>
-          <?php $isConfirmed = (int)$subscriber['confirmed'] === 1; ?>
+          <?php
+            $subscriberId = (int)$subscriber['id'];
+            $isConfirmed = (int)$subscriber['confirmed'] === 1;
+            $subscriberDeleteConfirmField = 'confirm_newsletter_subscriber_delete_' . $subscriberId;
+            $subscriberDeleteConfirmId = 'confirm-newsletter-subscriber-delete-' . $subscriberId;
+            $subscriberDeleteReviewId = 'newsletter-subscriber-delete-review-' . $subscriberId;
+            $subscriberDeleteFieldErrorId = 'confirm-newsletter-subscriber-delete-' . $subscriberId . '-error';
+            $subscriberDeleteHasError = $subscriberDeleteConfirmError && $subscriberDeleteErrorId === $subscriberId;
+            $subscriberDeleteErrorFields = $subscriberDeleteHasError ? [$subscriberDeleteConfirmField] : [];
+            ?>
           <tr>
             <td>
-              <label for="newsletter-subscriber-select-<?= (int)$subscriber['id'] ?>" class="sr-only">Vybrat odběratele <?= h((string)$subscriber['email']) ?></label>
-              <input type="checkbox" id="newsletter-subscriber-select-<?= (int)$subscriber['id'] ?>" name="ids[]" value="<?= (int)$subscriber['id'] ?>" form="newsletter-bulk-form">
+              <label for="newsletter-subscriber-select-<?= $subscriberId ?>" class="sr-only">Vybrat odběratele <?= h((string)$subscriber['email']) ?></label>
+              <input type="checkbox" id="newsletter-subscriber-select-<?= $subscriberId ?>" name="ids[]" value="<?= $subscriberId ?>" form="newsletter-bulk-form">
             </td>
             <td><a href="mailto:<?= h((string)$subscriber['email']) ?>"><?= h((string)$subscriber['email']) ?></a></td>
             <td>
@@ -228,14 +240,33 @@ adminHeader('Newsletter');
               </time>
             </td>
             <td class="actions">
-              <a class="btn" href="newsletter_subscriber.php?id=<?= (int)$subscriber['id'] ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
+              <a class="btn" href="newsletter_subscriber.php?id=<?= $subscriberId ?>&redirect=<?= rawurlencode($currentRedirect) ?>">Zobrazit detail</a>
               <form action="<?= BASE_URL ?>/admin/newsletter_subscriber_action.php" method="post"
+                    class="admin-inline-form"
+                    novalidate<?= $subscriberDeleteHasError ? ' aria-describedby="newsletter-page-error"' : '' ?>
                     data-confirm="Smazat tohoto odběratele?">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                <input type="hidden" name="id" value="<?= (int)$subscriber['id'] ?>">
+                <input type="hidden" name="id" value="<?= $subscriberId ?>">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-                <button type="submit" class="btn btn-danger">Smazat</button>
+                <fieldset class="admin-inline-fieldset">
+                  <legend class="sr-only">Smazání odběratele <?= h((string)$subscriber['email']) ?></legend>
+                  <p id="<?= h($subscriberDeleteReviewId) ?>" class="field-help field-help--flush">
+                    Smazání odstraní e-mail z aktivních odběrů newsletteru. Historie už odeslaných rozesílek zůstane zachovaná.
+                  </p>
+                  <label for="<?= h($subscriberDeleteConfirmId) ?>" class="admin-checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="<?= h($subscriberDeleteConfirmId) ?>"
+                      name="<?= h($subscriberDeleteConfirmField) ?>"
+                      value="1"
+                      required
+                      aria-required="true"<?= adminFieldAttributes($subscriberDeleteConfirmField, $subscriberDeleteErrorFields, [], [$subscriberDeleteReviewId], $subscriberDeleteFieldErrorId) ?>>
+                    Potvrzuji smazání tohoto odběratele.
+                  </label>
+                  <?php adminRenderFieldError($subscriberDeleteConfirmField, $subscriberDeleteErrorFields, [], 'Před smazáním odběratele potvrďte, že jste zkontrolovali jeho e-mail a dopad na další rozesílky.', $subscriberDeleteFieldErrorId); ?>
+                  <button type="submit" class="btn btn-danger">Smazat</button>
+                </fieldset>
               </form>
             </td>
           </tr>

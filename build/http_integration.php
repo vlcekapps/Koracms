@@ -4806,6 +4806,123 @@ try {
     }
     httpIntegrationPrintResult('newsletter_bulk_error_prevention_http', $newsletterBulkIssues, $failures);
 
+    $newsletterSubscriberDeleteIssues = [];
+    $newsletterSubscriberDeleteOriginalModule = getSetting('module_newsletter', '0');
+    try {
+        saveSetting('module_newsletter', '1');
+        clearSettingsCache();
+        $newsletterSubscriberDeleteEmail = 'http-newsletter-delete-' . bin2hex(random_bytes(4)) . '@example.test';
+        $createdSubscriberEmails[] = $newsletterSubscriberDeleteEmail;
+        $pdo->prepare(
+            "INSERT INTO cms_subscribers (email, token, confirmed, created_at)
+             VALUES (?, ?, 1, NOW())"
+        )->execute([$newsletterSubscriberDeleteEmail, bin2hex(random_bytes(16))]);
+        $newsletterSubscriberDeleteId = (int)$pdo->lastInsertId();
+        $newsletterSubscriberDeleteSession = koraPrimeTestSession([
+            'cms_logged_in' => true,
+            'cms_superadmin' => true,
+            'cms_user_id' => $adminUserId,
+            'cms_user_name' => 'HTTP Newsletter Delete Admin',
+            'cms_user_role' => 'admin',
+        ], 'kora-http-newsletter-delete-' . bin2hex(random_bytes(3)));
+        $newsletterSubscriberDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/newsletter.php', $newsletterSubscriberDeleteSession['cookie'], 0);
+        if (httpIntegrationStatusCode($newsletterSubscriberDeletePage) !== 200
+            || !str_contains($newsletterSubscriberDeletePage['body'], 'confirm_newsletter_subscriber_delete_' . $newsletterSubscriberDeleteId)
+            || !str_contains($newsletterSubscriberDeletePage['body'], 'newsletter-subscriber-delete-review-' . $newsletterSubscriberDeleteId)
+            || !str_contains($newsletterSubscriberDeletePage['body'], 'Smazání odstraní e-mail z aktivních odběrů newsletteru.')) {
+            $newsletterSubscriberDeleteIssues[] = 'přehled newsletter odběratelů nevykreslil review checkbox pro individuální smazání';
+        }
+
+        $newsletterSubscriberDeleteLogCountBefore = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'newsletter_subscriber_delete'")
+            ->fetchColumn();
+        $newsletterSubscriberMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/newsletter_subscriber_action.php',
+            [
+                'csrf_token' => $newsletterSubscriberDeleteSession['csrf'],
+                'redirect' => BASE_URL . '/admin/newsletter.php',
+                'action' => 'delete',
+                'id' => (string)$newsletterSubscriberDeleteId,
+            ],
+            $newsletterSubscriberDeleteSession['cookie'],
+            0
+        );
+        $newsletterSubscriberDeleteExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_subscribers WHERE id = ? AND email = ?');
+        $newsletterSubscriberDeleteExistsStmt->execute([$newsletterSubscriberDeleteId, $newsletterSubscriberDeleteEmail]);
+        $newsletterSubscriberDeleteLogCountAfterMissingConfirm = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'newsletter_subscriber_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($newsletterSubscriberMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader(
+                $newsletterSubscriberMissingConfirmResponse['headers'],
+                BASE_URL . '/admin/newsletter.php?error=subscriber_delete_confirm_required&delete_error_id=' . $newsletterSubscriberDeleteId,
+                $baseUrl
+            )
+            || (int)$newsletterSubscriberDeleteExistsStmt->fetchColumn() !== 1
+            || $newsletterSubscriberDeleteLogCountAfterMissingConfirm !== $newsletterSubscriberDeleteLogCountBefore) {
+            $newsletterSubscriberDeleteIssues[] = 'individuální smazání newsletter odběratele bez potvrzení nevrátilo PRG chybu, smazalo odběratele nebo zapsalo audit log';
+        }
+
+        $newsletterSubscriberDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/newsletter.php?error=subscriber_delete_confirm_required&delete_error_id=' . $newsletterSubscriberDeleteId,
+            $newsletterSubscriberDeleteSession['cookie'],
+            0
+        );
+        $newsletterSubscriberConfirmInputId = 'confirm-newsletter-subscriber-delete-' . $newsletterSubscriberDeleteId;
+        if (httpIntegrationStatusCode($newsletterSubscriberDeleteErrorPage) !== 200
+            || !str_contains($newsletterSubscriberDeleteErrorPage['body'], 'id="newsletter-page-error" aria-atomic="true">Odběratele newsletteru nejde smazat bez potvrzení kontroly dopadu.')
+            || !httpIntegrationInputHasAttributes($newsletterSubscriberDeleteErrorPage['body'], $newsletterSubscriberConfirmInputId, [
+                'name' => 'confirm_newsletter_subscriber_delete_' . $newsletterSubscriberDeleteId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'newsletter-subscriber-delete-review-' . $newsletterSubscriberDeleteId . ' confirm-newsletter-subscriber-delete-' . $newsletterSubscriberDeleteId . '-error',
+            ])
+            || !str_contains($newsletterSubscriberDeleteErrorPage['body'], 'id="confirm-newsletter-subscriber-delete-' . $newsletterSubscriberDeleteId . '-error"')
+            || !str_contains($newsletterSubscriberDeleteErrorPage['body'], 'Před smazáním odběratele potvrďte, že jste zkontrolovali jeho e-mail a dopad na další rozesílky.')) {
+            $newsletterSubscriberDeleteIssues[] = 'individuální smazání newsletter odběratele bez potvrzení nezobrazilo text-backed alert a field-level chybu v přehledu';
+        }
+
+        $newsletterSubscriberDetailErrorUrl = $baseUrl . BASE_URL . '/admin/newsletter_subscriber.php?id=' . $newsletterSubscriberDeleteId
+            . '&redirect=' . rawurlencode(BASE_URL . '/admin/newsletter.php')
+            . '&error=subscriber_delete_confirm_required&delete_error_id=' . $newsletterSubscriberDeleteId;
+        $newsletterSubscriberDetailErrorPage = fetchUrl($newsletterSubscriberDetailErrorUrl, $newsletterSubscriberDeleteSession['cookie'], 0);
+        if (httpIntegrationStatusCode($newsletterSubscriberDetailErrorPage) !== 200
+            || !str_contains($newsletterSubscriberDetailErrorPage['body'], 'id="newsletter-subscriber-error" class="error" role="alert" aria-atomic="true"')
+            || !httpIntegrationInputHasAttributes($newsletterSubscriberDetailErrorPage['body'], $newsletterSubscriberConfirmInputId, [
+                'name' => 'confirm_newsletter_subscriber_delete_' . $newsletterSubscriberDeleteId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'newsletter-subscriber-delete-review-' . $newsletterSubscriberDeleteId . ' confirm-newsletter-subscriber-delete-' . $newsletterSubscriberDeleteId . '-error',
+            ])) {
+            $newsletterSubscriberDeleteIssues[] = 'detail newsletter odběratele nezobrazil field-level chybu individuálního smazání';
+        }
+
+        $newsletterSubscriberConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/newsletter_subscriber_action.php',
+            [
+                'csrf_token' => extractHiddenInputValue($newsletterSubscriberDetailErrorPage['body'], 'csrf_token'),
+                'redirect' => BASE_URL . '/admin/newsletter.php',
+                'action' => 'delete',
+                'id' => (string)$newsletterSubscriberDeleteId,
+                'confirm_newsletter_subscriber_delete_' . $newsletterSubscriberDeleteId => '1',
+            ],
+            $newsletterSubscriberDeleteSession['cookie'],
+            0
+        );
+        $newsletterSubscriberDeleteExistsStmt->execute([$newsletterSubscriberDeleteId, $newsletterSubscriberDeleteEmail]);
+        $newsletterSubscriberDeleteLogCountAfterConfirm = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'newsletter_subscriber_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($newsletterSubscriberConfirmedResponse) !== 302
+            || !responseHasLocationHeader($newsletterSubscriberConfirmedResponse['headers'], BASE_URL . '/admin/newsletter.php?ok=deleted', $baseUrl)
+            || (int)$newsletterSubscriberDeleteExistsStmt->fetchColumn() !== 0
+            || $newsletterSubscriberDeleteLogCountAfterConfirm !== $newsletterSubscriberDeleteLogCountBefore + 1) {
+            $newsletterSubscriberDeleteIssues[] = 'potvrzené individuální smazání newsletter odběratele neproběhlo s očekávaným PRG stavem nebo audit logem';
+        }
+    } finally {
+        saveSetting('module_newsletter', $newsletterSubscriberDeleteOriginalModule);
+        clearSettingsCache();
+    }
+    httpIntegrationPrintResult('newsletter_subscriber_delete_error_prevention_http', $newsletterSubscriberDeleteIssues, $failures);
+
     $newsletterComposeIssues = [];
     $newsletterComposeEmail = 'http-newsletter-compose-' . bin2hex(random_bytes(4)) . '@example.test';
     $createdSubscriberEmails[] = $newsletterComposeEmail;
