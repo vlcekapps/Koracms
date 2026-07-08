@@ -9857,6 +9857,165 @@ try {
         $downloadIssues[] = 'sitemap neobsahuje veřejnou kategorii nebo sérii ke stažení s publikovanou položkou';
     }
 
+    $downloadCategoryDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'dl_cat_delete'")
+        ->fetchColumn();
+    $downloadCategoryMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/dl_cat_delete.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$downloadCategoryId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $downloadCategoryStillExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_dl_categories WHERE id = ?');
+    $downloadCategoryStillExistsStmt->execute([$downloadCategoryId]);
+    $downloadCategoryStillAssignedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_downloads WHERE dl_category_id = ? AND deleted_at IS NULL');
+    $downloadCategoryStillAssignedStmt->execute([$downloadCategoryId]);
+    $downloadCategoryDeleteLogCountAfterMissingConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'dl_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($downloadCategoryMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $downloadCategoryMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/dl_cats.php?delete_error=confirm_required&delete_error_id=' . $downloadCategoryId,
+            $baseUrl
+        )
+        || (int)$downloadCategoryStillExistsStmt->fetchColumn() !== 1
+        || (int)$downloadCategoryStillAssignedStmt->fetchColumn() !== 3
+        || $downloadCategoryDeleteLogCountAfterMissingConfirm !== $downloadCategoryDeleteLogCountBefore) {
+        $downloadIssues[] = 'smazání download kategorie bez potvrzení nevrátilo field-level chybu, zrušilo vazby nebo zapsalo audit log';
+    }
+
+    $downloadCategoryDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/dl_cats.php?delete_error=confirm_required&delete_error_id=' . $downloadCategoryId,
+        $adminSession['cookie'],
+        0
+    );
+    $downloadCategoryConfirmInputId = 'confirm-download-category-delete-' . $downloadCategoryId;
+    if (httpIntegrationStatusCode($downloadCategoryDeleteErrorPage) !== 200
+        || !str_contains($downloadCategoryDeleteErrorPage['body'], 'id="download-category-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationInputHasAttributes($downloadCategoryDeleteErrorPage['body'], $downloadCategoryConfirmInputId, [
+            'name' => 'confirm_download_category_delete_' . $downloadCategoryId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'download-category-delete-review-' . $downloadCategoryId . ' confirm-download-category-delete-' . $downloadCategoryId . '-error',
+        ])
+        || !str_contains($downloadCategoryDeleteErrorPage['body'], 'id="confirm-download-category-delete-' . $downloadCategoryId . '-error"')
+        || !str_contains($downloadCategoryDeleteErrorPage['body'], 'Před smazáním kategorie potvrďte, že jste zkontrolovali počet navázaných položek.')) {
+        $downloadIssues[] = 'smazání download kategorie bez potvrzení nezobrazilo text-backed alert a existující aria-describedby vazby';
+    }
+
+    $downloadCategoryConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/dl_cat_delete.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$downloadCategoryId,
+            'confirm_download_category_delete_' . $downloadCategoryId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $downloadCategoryRemovedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_dl_categories WHERE id = ?');
+    $downloadCategoryRemovedStmt->execute([$downloadCategoryId]);
+    $downloadCategoryUnassignedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_downloads WHERE dl_category_id = ? AND deleted_at IS NULL');
+    $downloadCategoryUnassignedStmt->execute([$downloadCategoryId]);
+    $downloadCategoryDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'dl_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($downloadCategoryConfirmedResponse) !== 302
+        || !responseHasLocationHeader($downloadCategoryConfirmedResponse['headers'], BASE_URL . '/admin/dl_cats.php?deleted=1', $baseUrl)
+        || (int)$downloadCategoryRemovedStmt->fetchColumn() !== 0
+        || (int)$downloadCategoryUnassignedStmt->fetchColumn() !== 0
+        || $downloadCategoryDeleteLogCountAfterConfirm !== $downloadCategoryDeleteLogCountBefore + 1) {
+        $downloadIssues[] = 'potvrzené smazání download kategorie neodstranilo kategorii, nezrušilo vazby nebo nezapsalo audit log';
+    }
+
+    $downloadSeriesDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'download_series_delete'")
+        ->fetchColumn();
+    $downloadSeriesMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/download_series.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'delete',
+            'series_id' => (string)$downloadSeriesId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $downloadSeriesStillExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_download_series WHERE id = ?');
+    $downloadSeriesStillExistsStmt->execute([$downloadSeriesId]);
+    $downloadSeriesStillAssignedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_downloads WHERE download_series_id = ? AND deleted_at IS NULL');
+    $downloadSeriesStillAssignedStmt->execute([$downloadSeriesId]);
+    $downloadSeriesCurrentCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_downloads WHERE download_series_id = ? AND is_current_version = 1 AND deleted_at IS NULL');
+    $downloadSeriesCurrentCountStmt->execute([$downloadSeriesId]);
+    $downloadSeriesDeleteLogCountAfterMissingConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'download_series_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($downloadSeriesMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $downloadSeriesMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/download_series.php?delete_error=confirm_required&delete_error_id=' . $downloadSeriesId,
+            $baseUrl
+        )
+        || (int)$downloadSeriesStillExistsStmt->fetchColumn() !== 1
+        || (int)$downloadSeriesStillAssignedStmt->fetchColumn() !== 2
+        || (int)$downloadSeriesCurrentCountStmt->fetchColumn() !== 1
+        || $downloadSeriesDeleteLogCountAfterMissingConfirm !== $downloadSeriesDeleteLogCountBefore) {
+        $downloadIssues[] = 'smazání download série bez potvrzení nevrátilo field-level chybu, zrušilo vazby nebo zapsalo audit log';
+    }
+
+    $downloadSeriesDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/download_series.php?delete_error=confirm_required&delete_error_id=' . $downloadSeriesId,
+        $adminSession['cookie'],
+        0
+    );
+    $downloadSeriesConfirmInputId = 'confirm-download-series-delete-' . $downloadSeriesId;
+    if (httpIntegrationStatusCode($downloadSeriesDeleteErrorPage) !== 200
+        || !str_contains($downloadSeriesDeleteErrorPage['body'], 'id="download-series-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationInputHasAttributes($downloadSeriesDeleteErrorPage['body'], $downloadSeriesConfirmInputId, [
+            'name' => 'confirm_download_series_delete_' . $downloadSeriesId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'download-series-delete-review-' . $downloadSeriesId . ' confirm-download-series-delete-' . $downloadSeriesId . '-error',
+        ])
+        || !str_contains($downloadSeriesDeleteErrorPage['body'], 'id="confirm-download-series-delete-' . $downloadSeriesId . '-error"')
+        || !str_contains($downloadSeriesDeleteErrorPage['body'], 'Před smazáním série potvrďte, že jste zkontrolovali navázané položky a aktuální verzi.')) {
+        $downloadIssues[] = 'smazání download série bez potvrzení nezobrazilo text-backed alert a existující aria-describedby vazby';
+    }
+
+    $downloadSeriesConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/download_series.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'delete',
+            'series_id' => (string)$downloadSeriesId,
+            'confirm_download_series_delete_' . $downloadSeriesId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $downloadSeriesRemovedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_download_series WHERE id = ?');
+    $downloadSeriesRemovedStmt->execute([$downloadSeriesId]);
+    $downloadSeriesUnassignedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_downloads WHERE download_series_id = ? AND deleted_at IS NULL');
+    $downloadSeriesUnassignedStmt->execute([$downloadSeriesId]);
+    $downloadSeriesCurrentRemovedStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM cms_downloads
+         WHERE id IN (?, ?) AND is_current_version = 1 AND deleted_at IS NULL"
+    );
+    $downloadSeriesCurrentRemovedStmt->execute([$downloadCurrentId, $downloadOldId]);
+    $downloadSeriesDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'download_series_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($downloadSeriesConfirmedResponse) !== 302
+        || !responseHasLocationHeader($downloadSeriesConfirmedResponse['headers'], BASE_URL . '/admin/download_series.php?msg=deleted', $baseUrl)
+        || (int)$downloadSeriesRemovedStmt->fetchColumn() !== 0
+        || (int)$downloadSeriesUnassignedStmt->fetchColumn() !== 0
+        || (int)$downloadSeriesCurrentRemovedStmt->fetchColumn() !== 0
+        || $downloadSeriesDeleteLogCountAfterConfirm !== $downloadSeriesDeleteLogCountBefore + 1) {
+        $downloadIssues[] = 'potvrzené smazání download série neodstranilo sérii, nezrušilo vazby/current stav nebo nezapsalo audit log';
+    }
+
     httpIntegrationPrintResult('downloads_catalog_versions_http', $downloadIssues, $failures);
 
     $faqIssues = [];

@@ -5,6 +5,13 @@ requireModuleEnabled('downloads');
 
 $pdo = db_connect();
 $message = trim((string)($_GET['msg'] ?? ''));
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorSeriesId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Sérii ke stažení nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.',
+    'invalid' => 'Sérii ke stažení nejde smazat, protože už není dostupná.',
+    default => '',
+};
 $error = '';
 $fieldErrors = [];
 $fieldErrorMessages = [];
@@ -24,11 +31,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'delete') {
         $deleteId = inputInt('post', 'series_id');
-        if ($deleteId !== null) {
-            $pdo->prepare("UPDATE cms_downloads SET download_series_id = NULL, is_current_version = 0 WHERE download_series_id = ?")->execute([$deleteId]);
-            $pdo->prepare("DELETE FROM cms_download_series WHERE id = ?")->execute([$deleteId]);
-            logAction('download_series_delete', "id={$deleteId}");
+        if ($deleteId === null) {
+            header('Location: ' . BASE_URL . '/admin/download_series.php?delete_error=invalid');
+            exit;
         }
+
+        $confirmFieldName = 'confirm_download_series_delete_' . $deleteId;
+        $confirmedSeriesDelete = isset($_POST[$confirmFieldName])
+            && (string)$_POST[$confirmFieldName] === '1';
+        if (!$confirmedSeriesDelete) {
+            header('Location: ' . BASE_URL . '/admin/download_series.php?delete_error=confirm_required&delete_error_id=' . $deleteId);
+            exit;
+        }
+
+        $seriesStmt = $pdo->prepare('SELECT id FROM cms_download_series WHERE id = ? LIMIT 1');
+        $seriesStmt->execute([$deleteId]);
+        if (!$seriesStmt->fetch()) {
+            header('Location: ' . BASE_URL . '/admin/download_series.php?delete_error=invalid&delete_error_id=' . $deleteId);
+            exit;
+        }
+
+        $seriesImpactStmt = $pdo->prepare(
+            'SELECT COUNT(*) AS download_count,
+                    SUM(CASE WHEN is_current_version = 1 THEN 1 ELSE 0 END) AS current_count
+             FROM cms_downloads
+             WHERE download_series_id = ? AND deleted_at IS NULL'
+        );
+        $seriesImpactStmt->execute([$deleteId]);
+        $seriesImpact = $seriesImpactStmt->fetch() ?: [];
+        $seriesDownloadCount = (int)($seriesImpact['download_count'] ?? 0);
+        $seriesCurrentCount = (int)($seriesImpact['current_count'] ?? 0);
+
+        $pdo->prepare("UPDATE cms_downloads SET download_series_id = NULL, is_current_version = 0 WHERE download_series_id = ?")->execute([$deleteId]);
+        $pdo->prepare("DELETE FROM cms_download_series WHERE id = ?")->execute([$deleteId]);
+        logAction('download_series_delete', "id={$deleteId};download_count={$seriesDownloadCount};current_count={$seriesCurrentCount}");
         header('Location: ' . BASE_URL . '/admin/download_series.php?msg=deleted');
         exit;
     }
@@ -146,6 +182,7 @@ adminHeader('Ke stažení – série a verze');
 <?php if ($message === 'saved'): ?><p class="success" role="status">Série byla uložena.</p><?php endif; ?>
 <?php if ($message === 'deleted'): ?><p class="success" role="status">Série byla smazána.</p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="download-series-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="download-series-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="downloads.php"><span aria-hidden="true">←</span> Zpět na soubory a položky</a>
@@ -208,6 +245,15 @@ adminHeader('Ke stažení – série a verze');
     </thead>
     <tbody>
       <?php foreach ($seriesRows as $seriesRow): ?>
+        <?php
+          $seriesId = (int)$seriesRow['id'];
+          $seriesDeleteConfirmField = 'confirm_download_series_delete_' . $seriesId;
+          $seriesDeleteConfirmId = 'confirm-download-series-delete-' . $seriesId;
+          $seriesDeleteReviewId = 'download-series-delete-review-' . $seriesId;
+          $seriesDeleteFieldErrorId = 'confirm-download-series-delete-' . $seriesId . '-error';
+          $seriesDeleteHasError = $deleteError === 'confirm_required' && $deleteErrorSeriesId === $seriesId;
+          $seriesDeleteErrorFields = $seriesDeleteHasError ? [$seriesDeleteConfirmField] : [];
+          ?>
         <tr>
           <td>
             <strong><?= h((string)$seriesRow['title']) ?></strong>
@@ -227,12 +273,29 @@ adminHeader('Ke stažení – série a verze');
             <?php if ((int)$seriesRow['is_active'] === 1 && (int)$seriesRow['download_count'] > 0): ?>
               <a class="btn" href="<?= h(downloadSeriesPath($seriesRow)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
-            <a class="btn" href="download_series.php?edit=<?= (int)$seriesRow['id'] ?>">Upravit</a>
-            <form method="post" class="admin-inline-form">
+            <a class="btn" href="download_series.php?edit=<?= $seriesId ?>">Upravit</a>
+            <form method="post" class="admin-inline-form" novalidate<?= $seriesDeleteHasError ? ' aria-describedby="download-series-delete-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="action" value="delete">
-              <input type="hidden" name="series_id" value="<?= (int)$seriesRow['id'] ?>">
-              <button type="submit" class="btn btn-danger" data-confirm="Smazat sérii? Položky ke stažení zůstanou zachované, smaže se jen jejich zařazení do této série.">Smazat</button>
+              <input type="hidden" name="series_id" value="<?= $seriesId ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Smazání série <?= h((string)$seriesRow['title']) ?></legend>
+                <p id="<?= h($seriesDeleteReviewId) ?>" class="field-help field-help--flush">
+                  Smazání odebere sérii z <?= (int)$seriesRow['download_count'] ?> položek ke stažení a zruší označení aktuální verze u <?= (int)$seriesRow['current_count'] ?> položek. Položky zůstanou zachované.
+                </p>
+                <label for="<?= h($seriesDeleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="<?= h($seriesDeleteConfirmId) ?>"
+                    name="<?= h($seriesDeleteConfirmField) ?>"
+                    value="1"
+                    required
+                    aria-required="true"<?= adminFieldAttributes($seriesDeleteConfirmField, $seriesDeleteErrorFields, [], [$seriesDeleteReviewId], $seriesDeleteFieldErrorId) ?>>
+                  Potvrzuji smazání této série.
+                </label>
+                <?php adminRenderFieldError($seriesDeleteConfirmField, $seriesDeleteErrorFields, [], 'Před smazáním série potvrďte, že jste zkontrolovali navázané položky a aktuální verzi.', $seriesDeleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger" data-confirm="Smazat sérii? Položky ke stažení zůstanou zachované, smaže se jen jejich zařazení do této série.">Smazat</button>
+              </fieldset>
             </form>
           </td>
         </tr>

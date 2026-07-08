@@ -13090,6 +13090,7 @@ $downloadSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/downl
 $downloadFormSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
 $downloadAdminListSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/downloads.php');
 $downloadCatsSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
+$downloadCategoryDeleteSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cat_delete.php');
 $downloadSeriesAdminSourceForGuard = (string)file_get_contents(dirname(__DIR__) . '/admin/download_series.php');
 $downloadsIndexViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php');
 $downloadsArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-article.php');
@@ -13112,11 +13113,29 @@ if (!str_contains($downloadCatsSourceForGuard, 'uniqueDownloadCategorySlug(')
     || !str_contains($downloadCatsSourceForGuard, 'upsertPathRedirect(')) {
     $downloadsSourceIssues[] = 'download category admin is missing landing metadata or redirect support';
 }
+if (!str_contains($downloadCatsSourceForGuard, 'confirm_download_category_delete_')
+    || !str_contains($downloadCatsSourceForGuard, 'download-category-delete-review-')
+    || !str_contains($downloadCatsSourceForGuard, 'adminFieldAttributes($categoryDeleteConfirmField')
+    || !str_contains($downloadCatsSourceForGuard, 'adminRenderFieldError($categoryDeleteConfirmField')
+    || !str_contains($downloadCategoryDeleteSourceForGuard, "requireModuleEnabled('downloads')")
+    || !str_contains($downloadCategoryDeleteSourceForGuard, "\$confirmFieldName = 'confirm_download_category_delete_' . \$id;")
+    || !str_contains($downloadCategoryDeleteSourceForGuard, "'delete_error' => 'confirm_required'")
+    || !str_contains($downloadCategoryDeleteSourceForGuard, 'logAction(\'dl_cat_delete\', "id={$id};download_count={$downloadCount}")')) {
+    $downloadsSourceIssues[] = 'download category delete is missing accessible error-prevention confirmation guardrails';
+}
 if (!str_contains($downloadSeriesAdminSourceForGuard, 'uniqueDownloadSeriesSlug(')
     || !str_contains($downloadSeriesAdminSourceForGuard, 'downloadSeriesPath(')
     || !str_contains($downloadSeriesAdminSourceForGuard, 'upsertPathRedirect(')
     || !str_contains($downloadSeriesAdminSourceForGuard, 'UPDATE cms_downloads SET download_series_id = NULL, is_current_version = 0')) {
     $downloadsSourceIssues[] = 'download series admin is missing slug validation, redirects, or cleanup';
+}
+if (!str_contains($downloadSeriesAdminSourceForGuard, 'confirm_download_series_delete_')
+    || !str_contains($downloadSeriesAdminSourceForGuard, "\$confirmFieldName = 'confirm_download_series_delete_' . \$deleteId;")
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'download-series-delete-review-')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'adminFieldAttributes($seriesDeleteConfirmField')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'adminRenderFieldError($seriesDeleteConfirmField')
+    || !str_contains($downloadSeriesAdminSourceForGuard, 'logAction(\'download_series_delete\', "id={$deleteId};download_count={$seriesDownloadCount};current_count={$seriesCurrentCount}")')) {
+    $downloadsSourceIssues[] = 'download series delete is missing accessible error-prevention confirmation guardrails';
 }
 if (!str_contains($downloadFormSourceForGuard, 'name="download_series_id"')
     || !str_contains($downloadFormSourceForGuard, 'name="is_current_version"')
@@ -18300,6 +18319,14 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'smazání přesměrování bez potvrzení nevrátilo field-level chybu, smazalo záznam nebo zapsalo audit log')
     || !str_contains($httpIntegrationSource, 'confirm_redirect_delete_')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing redirect delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('downloads_catalog_versions_http'")
+    || !str_contains($httpIntegrationSource, 'smazání download kategorie bez potvrzení nevrátilo field-level chybu, zrušilo vazby nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_download_category_delete_')
+    || !str_contains($httpIntegrationSource, 'smazání download série bez potvrzení nevrátilo field-level chybu, zrušilo vazby nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_download_series_delete_')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing downloads taxonomy delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')
