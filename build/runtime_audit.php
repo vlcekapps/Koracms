@@ -11034,84 +11034,89 @@ if (!$smtpConfigured) {
                 break;
             }
         }
-        if (!str_starts_with(trim($smtpGreeting), '220')) {
+        if (!str_starts_with(trim($smtpGreeting), '220') && str_contains($smtpGreeting, 'System load too high')) {
+            $smtpConnectivitySkipped = true;
+            echo 'SKIP (SMTP server je dočasně přetížený: ' . trim($smtpGreeting) . ")\n";
+        } elseif (!str_starts_with(trim($smtpGreeting), '220')) {
             $smtpIssues[] = 'unexpected SMTP greeting: ' . trim($smtpGreeting);
         }
 
-        fwrite($smtpSocket, "EHLO localhost\r\n");
-        $smtpEhlo = '';
-        while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-            $smtpEhlo .= $smtpLine;
-            if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
-                break;
-            }
-        }
-        if (!str_starts_with(trim($smtpEhlo), '250')) {
-            $smtpIssues[] = 'EHLO failed: ' . trim($smtpEhlo);
-        }
-
-        if ($smtpSecure === 'tls') {
-            fwrite($smtpSocket, "STARTTLS\r\n");
-            $smtpTls = '';
+        if (!$smtpConnectivitySkipped) {
+            fwrite($smtpSocket, "EHLO localhost\r\n");
+            $smtpEhlo = '';
             while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                $smtpTls .= $smtpLine;
+                $smtpEhlo .= $smtpLine;
                 if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
                     break;
                 }
             }
-            if (!str_starts_with(trim($smtpTls), '220')) {
-                $smtpIssues[] = 'STARTTLS not supported: ' . trim($smtpTls);
-            } else {
-                $smtpCrypto = @stream_socket_enable_crypto(
-                    $smtpSocket,
-                    true,
-                    STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
-                );
-                if (!$smtpCrypto) {
-                    $smtpIssues[] = 'STARTTLS handshake failed';
-                }
+            if (!str_starts_with(trim($smtpEhlo), '250')) {
+                $smtpIssues[] = 'EHLO failed: ' . trim($smtpEhlo);
             }
-        }
 
-        $smtpUser = defined('SMTP_USER') ? SMTP_USER : '';
-        $smtpPass = defined('SMTP_PASS') ? SMTP_PASS : '';
-        if ($smtpUser !== '' && $smtpPass !== '' && empty($smtpIssues)) {
             if ($smtpSecure === 'tls') {
-                fwrite($smtpSocket, "EHLO localhost\r\n");
+                fwrite($smtpSocket, "STARTTLS\r\n");
+                $smtpTls = '';
                 while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                    $smtpTls .= $smtpLine;
                     if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
                         break;
+                    }
+                }
+                if (!str_starts_with(trim($smtpTls), '220')) {
+                    $smtpIssues[] = 'STARTTLS not supported: ' . trim($smtpTls);
+                } else {
+                    $smtpCrypto = @stream_socket_enable_crypto(
+                        $smtpSocket,
+                        true,
+                        STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
+                    );
+                    if (!$smtpCrypto) {
+                        $smtpIssues[] = 'STARTTLS handshake failed';
                     }
                 }
             }
-            fwrite($smtpSocket, "AUTH LOGIN\r\n");
-            $smtpAuth = '';
-            while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                $smtpAuth .= $smtpLine;
-                if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
-                    break;
+
+            $smtpUser = defined('SMTP_USER') ? SMTP_USER : '';
+            $smtpPass = defined('SMTP_PASS') ? SMTP_PASS : '';
+            if ($smtpUser !== '' && $smtpPass !== '' && empty($smtpIssues)) {
+                if ($smtpSecure === 'tls') {
+                    fwrite($smtpSocket, "EHLO localhost\r\n");
+                    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                            break;
+                        }
+                    }
                 }
-            }
-            if (!str_starts_with(trim($smtpAuth), '334')) {
-                $smtpConnectivitySkipped = true;
-                echo 'SKIP (SMTP server je dosažitelný, ale nepodporuje AUTH LOGIN: ' . trim($smtpAuth) . ")\n";
-            } else {
-                fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
+                fwrite($smtpSocket, "AUTH LOGIN\r\n");
+                $smtpAuth = '';
                 while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                    $smtpAuth .= $smtpLine;
                     if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
                         break;
                     }
                 }
-                fwrite($smtpSocket, base64_encode($smtpPass) . "\r\n");
-                $smtpLogin = '';
-                while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
-                    $smtpLogin .= $smtpLine;
-                    if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
-                        break;
+                if (!str_starts_with(trim($smtpAuth), '334')) {
+                    $smtpConnectivitySkipped = true;
+                    echo 'SKIP (SMTP server je dosažitelný, ale nepodporuje AUTH LOGIN: ' . trim($smtpAuth) . ")\n";
+                } else {
+                    fwrite($smtpSocket, base64_encode($smtpUser) . "\r\n");
+                    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                            break;
+                        }
                     }
-                }
-                if (!str_starts_with(trim($smtpLogin), '235')) {
-                    $smtpIssues[] = 'AUTH LOGIN credentials rejected: ' . trim($smtpLogin);
+                    fwrite($smtpSocket, base64_encode($smtpPass) . "\r\n");
+                    $smtpLogin = '';
+                    while (($smtpLine = @fgets($smtpSocket, 512)) !== false) {
+                        $smtpLogin .= $smtpLine;
+                        if (isset($smtpLine[3]) && $smtpLine[3] === ' ') {
+                            break;
+                        }
+                    }
+                    if (!str_starts_with(trim($smtpLogin), '235')) {
+                        $smtpIssues[] = 'AUTH LOGIN credentials rejected: ' . trim($smtpLogin);
+                    }
                 }
             }
         }
@@ -12402,6 +12407,21 @@ if (!str_contains($blogPresentationSource, 'function buildBlogArticleTableOfCont
     || !str_contains($blogPublicCssSource, '.article-toc')
     || !str_contains($blogPublicCssSource, 'scroll-margin-top')) {
     $blogAdminIssues[] = 'blog article detail is missing automatic table of contents guardrails';
+}
+foreach ([
+    'comment field errors data' => [$blogArticleControllerSource, '$commentFieldErrors = [];', '$addCommentError', 'publicCaptchaErrorMessage()'],
+    'comment field attributes helper' => [$blogArticleViewSource, '$commentFieldAttributes', 'aria-invalid="true"', 'aria-describedby'],
+    'comment author field error' => [$blogArticleViewSource, 'comment-author-name-error', '$commentFieldAttributes(\'author_name\')'],
+    'comment email field error' => [$blogArticleViewSource, 'comment-author-email-help', '$commentFieldAttributes(\'author_email\', [\'comment-author-email-help\'])'],
+    'comment body field error' => [$blogArticleViewSource, 'comment-body-error', '$commentFieldAttributes(\'comment\')'],
+    'comment captcha field error' => [$blogArticleViewSource, 'comment-captcha-error', '$commentFieldAttributes(\'captcha\')'],
+] as $blogCommentGuardrailLabel => $blogCommentGuardrailFragments) {
+    $blogCommentGuardrailSource = (string)array_shift($blogCommentGuardrailFragments);
+    foreach ($blogCommentGuardrailFragments as $blogCommentGuardrailFragment) {
+        if (!str_contains($blogCommentGuardrailSource, $blogCommentGuardrailFragment)) {
+            $blogAdminIssues[] = 'blog comment form is missing field-level accessibility guardrail: ' . $blogCommentGuardrailLabel . ' / ' . $blogCommentGuardrailFragment;
+        }
+    }
 }
 if (!str_contains($blogSeriesControllerSource, 'publicBlogSeriesDetail($pdo, $blogId, $seriesSlug)')
     || !str_contains($blogSeriesControllerSource, 'renderPublicNotFoundPage')
@@ -14217,6 +14237,7 @@ $publicErrorSuggestionSources = [
     'newsletter subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/subscribe.php'),
     'board subscribe controller' => (string)file_get_contents(dirname(__DIR__) . '/board/subscribe.php'),
     'reservation booking controller' => (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php'),
+    'blog comment controller' => (string)file_get_contents(dirname(__DIR__) . '/blog/article.php'),
     'newsletter subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/newsletter/subscribe.php'),
     'board subscribe view' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-subscribe.php'),
 ];
@@ -14277,6 +14298,9 @@ $a11yBacklogSource = is_file(dirname(__DIR__) . '/docs/accessibility/a11y-remedi
 $manualTestProtocolSource = is_file(dirname(__DIR__) . '/docs/accessibility/manual-test-protocol.md')
     ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/manual-test-protocol.md')
     : '';
+$blogAcrModuleSource = is_file(dirname(__DIR__) . '/docs/accessibility/modules/blog.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/modules/blog.md')
+    : '';
 foreach ([
     '# Redakční checklist přístupného obsahu',
     'alt text',
@@ -14305,6 +14329,29 @@ foreach ([
 ] as $authorContentDoc => [$authorContentDocSource, $authorContentDocFragment]) {
     if (!str_contains($authorContentDocSource, $authorContentDocFragment)) {
         $authorContentIssues[] = $authorContentDoc . ' is missing author content checklist reference: ' . $authorContentDocFragment;
+    }
+}
+foreach ([
+    'README.md' => [$readmeSource, 'docs/accessibility/modules/blog.md'],
+    'docs/admin-guide.md' => [$adminGuideSource, 'docs/accessibility/modules/blog.md'],
+    'docs/accessibility/wcag-22-aa-conformance.md' => [$wcagConformanceSource, 'docs/accessibility/modules/blog.md'],
+    'docs/accessibility/a11y-remediation-backlog.md' => [$a11yBacklogSource, 'docs/accessibility/modules/blog.md'],
+    'docs/accessibility/manual-test-protocol.md' => [$manualTestProtocolSource, 'docs/accessibility/modules/blog.md'],
+] as $blogAcrDoc => [$blogAcrDocSource, $blogAcrDocFragment]) {
+    if (!str_contains($blogAcrDocSource, $blogAcrDocFragment)) {
+        $authorContentIssues[] = $blogAcrDoc . ' is missing blog module accessibility conformance reference: ' . $blogAcrDocFragment;
+    }
+}
+foreach ([
+    'Blog Module Accessibility Conformance Pass',
+    'WCAG 2.2 A/AA Shrnutí',
+    'Nález Opravený V Tomto Passu',
+    'Veřejný komentářový formulář',
+    'Ruční Scénáře Pro Blog',
+    'core/theme defektů',
+] as $blogAcrModuleFragment) {
+    if (!str_contains($blogAcrModuleSource, $blogAcrModuleFragment)) {
+        $authorContentIssues[] = 'blog module accessibility appendix is missing fragment: ' . $blogAcrModuleFragment;
     }
 }
 if (!str_contains($a11yBacklogSource, 'reálné použití v redakčním workflow') && !str_contains($a11yBacklogSource, 'representative')) {

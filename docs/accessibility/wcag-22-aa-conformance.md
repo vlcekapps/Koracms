@@ -24,6 +24,7 @@ Oficiální zdroje:
 
 - Veřejná homepage a default theme layout.
 - Blog index, detail článku, dlouhý článek s osnovou, kategorie, štítky a série.
+- Modulová blogová příloha: `docs/accessibility/modules/blog.md`.
 - Vyhledávání, widgety, content snippety, media picker a PDF preview.
 - Form Builder, komentáře, kontakt, chat, ankety, newsletter subscribe.
 - Galerie, média, downloads, board, events, places, reservations, food a podcast.
@@ -113,6 +114,8 @@ Poznámka k `3.3.3` z 2026-07-05: série článků, externí odkazy blogu, zákl
 Poznámka k `3.3.3` z 2026-07-05: hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace mají zpřesněné souhrnné i field-level chyby. Alerty jsou atomické, dotčená pole dostávají `aria-invalid` a `aria-describedby` na existující nápovědu nebo field-level text; HTTP scénáře `forms_nav_http`, `redirects_validation_http`, `gallery_metadata_http` a `reservations_http` hlídají render, zachování hodnot a zákaz návratu starých obecných hlášek.
 
 Poznámka k `3.3.3` z 2026-07-05: editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety mají zpřesněné souhrnné i field-level chyby. Alerty jsou atomické, dotčená pole dostávají `aria-invalid` a `aria-describedby` na existující nápovědu nebo field-level text; HTTP scénáře `blog_related_articles_http`, `blog_management_validation_http`, `board_save_http`, `food_structured_items_http` a `poll_voting_modes_http` hlídají render a zákaz návratu starých obecných hlášek.
+
+Poznámka k Blog modulu z 2026-07-08: `docs/accessibility/modules/blog.md` rozepisuje veřejné i administrační workflow Blogu jako modulovou přílohu hlavního ACR. Veřejný komentářový formulář u článku už při chybné captche, prázdném jménu, neplatném e-mailu nebo prázdném komentáři používá souhrnný alert, field-level chybu, `aria-invalid`, `aria-describedby` a sdílenou akční captcha hlášku; runtime audit a HTTP `blog_related_articles_http` hlídají návrat patternu.
 
 Poznámka k `3.3.3` z 2026-07-05: editory novinek, událostí, míst, položek ke stažení a podcastových epizod mají zpřesněné souhrnné i field-level chyby. Alerty jsou atomické, dotčená pole dostávají `aria-invalid` a `aria-describedby` na existující nápovědu nebo field-level text; HTTP scénáře `news_editor_validation_http`, `events_types_places_recurrence_http`, `downloads_catalog_versions_http` a `podcast_admin_validation_http` hlídají render a zákaz návratu starých obecných hlášek.
 

@@ -111,6 +111,11 @@ try {
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $commentErrors = [];
+$commentFieldErrors = [];
+$addCommentError = static function (string $field, string $message) use (&$commentErrors, &$commentFieldErrors): void {
+    $commentErrors[] = $message;
+    $commentFieldErrors[$field] = $message;
+};
 $commentResult = trim($_GET['komentar'] ?? '');
 if (!in_array($commentResult, ['approved', 'pending'], true)) {
     $commentResult = '';
@@ -138,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         verifyCsrf();
 
         if (!captchaVerify($_POST['captcha'] ?? '')) {
-            $commentErrors[] = 'Nesprávná odpověď na ověřovací příklad.';
+            $addCommentError('captcha', publicCaptchaErrorMessage());
         }
 
         $authorName = trim($_POST['author_name'] ?? '');
@@ -146,16 +151,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $content = trim($_POST['comment'] ?? '');
 
         if ($authorName === '') {
-            $commentErrors[] = 'Jméno je povinné.';
+            $addCommentError('author_name', 'Doplňte jméno, pod kterým se má komentář zobrazit.');
         }
         if (mb_strlen($authorName) > 100) {
-            $commentErrors[] = 'Jméno je příliš dlouhé.';
+            $addCommentError('author_name', 'Zkraťte jméno na nejvýše 100 znaků.');
         }
         if ($authorEmail !== '' && !filter_var($authorEmail, FILTER_VALIDATE_EMAIL)) {
-            $commentErrors[] = 'Neplatná e-mailová adresa.';
+            $addCommentError('author_email', 'Zadejte úplnou e-mailovou adresu ve tvaru jmeno@example.cz, nebo pole nechte prázdné.');
         }
         if ($content === '') {
-            $commentErrors[] = 'Text komentáře je povinný.';
+            $addCommentError('comment', 'Napište text komentáře.');
         }
 
         if (empty($commentErrors)) {
@@ -263,6 +268,7 @@ renderPublicPage([
         'articleSeries' => $articleSeries,
         'comments' => $comments,
         'commentErrors' => $commentErrors,
+        'commentFieldErrors' => $commentFieldErrors,
         'commentResult' => $commentResult,
         'commentsState' => $commentsState,
         'captchaExpr' => $captchaExpr,

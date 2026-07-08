@@ -6821,6 +6821,8 @@ try {
 
     $blogRelatedIssues = [];
     saveSetting('module_blog', '1');
+    saveSetting('comments_enabled', '1');
+    saveSetting('comment_close_days', '0');
     clearSettingsCache();
 
     $relatedBlogSlug = 'http-related-blog-' . bin2hex(random_bytes(4));
@@ -6844,7 +6846,7 @@ try {
             'title' => 'HTTP Hlavní článek se souvisejícími',
             'slug' => $mainRelatedSlug,
             'blog_id' => $relatedBlogId,
-            'created_at' => '2026-01-10 10:00:00',
+            'created_at' => date('Y-m-d H:i:s'),
         ],
         [
             'title' => $manualRelatedTitle,
@@ -7000,6 +7002,38 @@ try {
         }
         if ($manualPosition !== false && $autoPosition !== false && $manualPosition > $autoPosition) {
             $blogRelatedIssues[] = 'ručně vybraný související článek není před automatickým fallbackem';
+        }
+    }
+    $blogCommentSession = koraPrimeTestSession([]);
+    $blogCommentUrl = $baseUrl . BASE_URL . '/' . rawurlencode($relatedBlogSlug) . '/' . rawurlencode($mainRelatedSlug);
+    $blogCommentFormResponse = fetchUrl($blogCommentUrl, $blogCommentSession['cookie'], 0);
+    $blogCommentCsrf = extractHiddenInputValue($blogCommentFormResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($blogCommentFormResponse) !== 200 || $blogCommentCsrf === '') {
+        $blogRelatedIssues[] = 'veřejný detail článku nevykreslil komentářový formulář s csrf_token';
+    } else {
+        $invalidBlogCommentResponse = postUrl($blogCommentUrl, [
+            'csrf_token' => $blogCommentCsrf,
+            'author_name' => '',
+            'author_email' => 'neplatny-email',
+            'comment' => '',
+            'captcha' => '999',
+        ], $blogCommentSession['cookie'], 0);
+        foreach ([
+            'role="alert" aria-atomic="true" aria-labelledby="comment-errors-heading"',
+            $publicCaptchaErrorSuggestion,
+            'id="comment-author-name-error"',
+            'id="comment-author-email-error"',
+            'id="comment-body-error"',
+            'id="comment-captcha-error"',
+            'aria-invalid="true"',
+            'aria-describedby="comment-author-email-help comment-author-email-error"',
+        ] as $blogCommentExpectedFragment) {
+            if (!str_contains($invalidBlogCommentResponse['body'], $blogCommentExpectedFragment)) {
+                $blogRelatedIssues[] = 'chybný veřejný komentář neobsahuje přístupný fragment: ' . (string)$blogCommentExpectedFragment;
+            }
+        }
+        if (str_contains($invalidBlogCommentResponse['body'], 'Nesprávná odpověď na ověřovací příklad.')) {
+            $blogRelatedIssues[] = 'chybný veřejný komentář stále používá starou neakční captcha hlášku';
         }
     }
 

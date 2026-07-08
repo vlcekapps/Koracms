@@ -20,6 +20,40 @@ $showAuthorPanel = !empty($article['author_public_path'])
     );
 $articleContentHtml = isset($articleContentHtml) ? (string)$articleContentHtml : renderContent((string)($article['content'] ?? ''));
 $articleToc = isset($articleToc) && is_array($articleToc) ? $articleToc : [];
+$commentFieldErrors = isset($commentFieldErrors) && is_array($commentFieldErrors) ? $commentFieldErrors : [];
+$commentErrorId = static function (string $field): string {
+    $errorIds = [
+        'author_name' => 'comment-author-name-error',
+        'author_email' => 'comment-author-email-error',
+        'comment' => 'comment-body-error',
+        'captcha' => 'comment-captcha-error',
+    ];
+
+    return $errorIds[$field] ?? ('comment-' . str_replace('_', '-', $field) . '-error');
+};
+$commentFieldAttributes = static function (string $field, array $describedBy = []) use ($commentFieldErrors, $commentErrorId): string {
+    $ids = array_values(array_filter($describedBy, static fn ($id): bool => is_string($id) && $id !== ''));
+    $hasError = isset($commentFieldErrors[$field]) && (string)$commentFieldErrors[$field] !== '';
+    if ($hasError) {
+        $ids[] = $commentErrorId($field);
+    }
+
+    $attributes = '';
+    if ($hasError) {
+        $attributes .= ' aria-invalid="true"';
+    }
+    if ($ids !== []) {
+        $attributes .= ' aria-describedby="' . h(implode(' ', array_unique($ids))) . '"';
+    }
+
+    return $attributes;
+};
+$renderCommentFieldError = static function (string $field) use ($commentFieldErrors, $commentErrorId): void {
+    if (!isset($commentFieldErrors[$field]) || (string)$commentFieldErrors[$field] === '') {
+        return;
+    }
+    echo '<small id="' . h($commentErrorId($field)) . '" class="help-text field-error">' . h((string)$commentFieldErrors[$field]) . '</small>';
+};
 ?>
 <div class="article-layout">
   <article class="surface" aria-labelledby="clanek-nadpis">
@@ -268,27 +302,31 @@ $articleToc = isset($articleToc) && is_array($articleToc) ? $articleToc : [];
         <div class="field">
           <label for="author_name">Jméno <span aria-hidden="true">*</span></label>
           <input type="text" id="author_name" name="author_name" class="form-control" required
-                 aria-required="true" maxlength="100" value="<?= h($formData['author_name']) ?>">
+                 aria-required="true" maxlength="100" value="<?= h($formData['author_name']) ?>"<?= $commentFieldAttributes('author_name') ?>>
+          <?php $renderCommentFieldError('author_name'); ?>
         </div>
 
         <div class="field">
           <label for="author_email">E-mail</label>
           <input type="email" id="author_email" name="author_email" class="form-control" maxlength="255"
-                 aria-describedby="comment-author-email-help" autocomplete="email"
+                 autocomplete="email"<?= $commentFieldAttributes('author_email', ['comment-author-email-help']) ?>
                  value="<?= h($formData['author_email']) ?>">
           <small id="comment-author-email-help" class="help-text">Nepovinné pole, nebude zveřejněno.</small>
+          <?php $renderCommentFieldError('author_email'); ?>
         </div>
 
         <div class="field">
           <label for="comment">Komentář <span aria-hidden="true">*</span></label>
           <textarea id="comment" name="comment" class="form-control" required
-                    aria-required="true"><?= h($formData['comment']) ?></textarea>
+                    aria-required="true"<?= $commentFieldAttributes('comment') ?>><?= h($formData['comment']) ?></textarea>
+          <?php $renderCommentFieldError('comment'); ?>
         </div>
 
         <div class="field">
           <label for="captcha">Ověření: kolik je <?= h($captchaExpr) ?>? <span aria-hidden="true">*</span></label>
           <input type="text" id="captcha" name="captcha" class="form-control form-control--compact" required
-                 aria-required="true" inputmode="numeric" autocomplete="off">
+                 aria-required="true" inputmode="numeric" autocomplete="off"<?= $commentFieldAttributes('captcha') ?>>
+          <?php $renderCommentFieldError('captcha'); ?>
         </div>
 
         <div class="button-row button-row--start">
