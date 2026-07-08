@@ -5271,6 +5271,117 @@ try {
         if (str_contains($duplicateContactTopicResponse['body'], 'Tento slug už používá jiné téma kontaktu.')) {
             $contactCenterIssues[] = 'duplicitní slug tématu kontaktu pořád používá starý obecný text';
         }
+
+        $contactDeleteTopicSlug = 'http-kontakt-delete-' . bin2hex(random_bytes(4));
+        $contactDeleteTopicName = 'HTTP smazání tématu kontaktu ' . bin2hex(random_bytes(3));
+        $pdo->prepare(
+            "INSERT INTO cms_contact_topics
+             (name, slug, description, recipient_email, is_active, sort_order)
+             VALUES (?, ?, 'Téma pro HTTP ověření smazání.', '', 1, 90)"
+        )->execute([$contactDeleteTopicName, $contactDeleteTopicSlug]);
+        $contactDeleteTopicId = (int)$pdo->lastInsertId();
+        $createdContactTopicIds[] = $contactDeleteTopicId;
+        $contactDeleteSubject = 'HTTP contact topic delete guard ' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_contact
+             (sender_name, sender_email, topic_id, topic_label, reference_code, subject, message, created_at, updated_at)
+             VALUES ('HTTP Delete Guard', ?, ?, ?, '', ?, 'Zpráva pro ověření nepotvrzeného mazání tématu.', NOW(), NOW())"
+        )->execute([
+            'http-contact-topic-delete-' . bin2hex(random_bytes(4)) . '@example.test',
+            $contactDeleteTopicId,
+            $contactDeleteTopicName,
+            $contactDeleteSubject,
+        ]);
+        $contactDeleteMessageId = (int)$pdo->lastInsertId();
+        $createdContactMessageIds[] = $contactDeleteMessageId;
+
+        $contactDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/contact_topics.php', $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($contactDeletePage) !== 200
+            || !str_contains($contactDeletePage['body'], 'confirm_contact_topic_delete_' . $contactDeleteTopicId)
+            || !str_contains($contactDeletePage['body'], 'contact-topic-delete-review-' . $contactDeleteTopicId)
+            || !str_contains($contactDeletePage['body'], 'Smazání odebere téma z veřejného kontaktního formuláře')) {
+            $contactCenterIssues[] = 'správa témat kontaktu nevykreslila review checkbox pro smazání tématu';
+        }
+
+        $contactTopicDeleteLogCountBefore = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_topic_delete'")
+            ->fetchColumn();
+        $contactMissingDeleteConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/contact_topics.php',
+            [
+                'csrf_token' => $contactTopicsCsrf,
+                'action' => 'delete',
+                'id' => (string)$contactDeleteTopicId,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $contactDeleteTopicExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_contact_topics WHERE id = ?');
+        $contactDeleteTopicExistsStmt->execute([$contactDeleteTopicId]);
+        $contactDeleteMessageTopicStmt = $pdo->prepare('SELECT topic_id, topic_label FROM cms_contact WHERE id = ?');
+        $contactDeleteMessageTopicStmt->execute([$contactDeleteMessageId]);
+        $contactDeleteMessageAfterMissing = $contactDeleteMessageTopicStmt->fetch();
+        $contactTopicDeleteLogCountAfterMissing = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_topic_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($contactMissingDeleteConfirmResponse) !== 302
+            || !responseHasLocationHeader(
+                $contactMissingDeleteConfirmResponse['headers'],
+                BASE_URL . '/admin/contact_topics.php?error=delete_confirm_required&delete_error_id=' . $contactDeleteTopicId,
+                $baseUrl
+            )
+            || (int)$contactDeleteTopicExistsStmt->fetchColumn() !== 1
+            || !is_array($contactDeleteMessageAfterMissing)
+            || (int)($contactDeleteMessageAfterMissing['topic_id'] ?? 0) !== $contactDeleteTopicId
+            || (string)($contactDeleteMessageAfterMissing['topic_label'] ?? '') !== $contactDeleteTopicName
+            || $contactTopicDeleteLogCountAfterMissing !== $contactTopicDeleteLogCountBefore) {
+            $contactCenterIssues[] = 'smazání tématu kontaktu bez potvrzení nevrátilo PRG chybu, změnilo vazbu zprávy nebo zapsalo audit log';
+        }
+
+        $contactDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/contact_topics.php?error=delete_confirm_required&delete_error_id=' . $contactDeleteTopicId,
+            $adminSession['cookie'],
+            0
+        );
+        $contactDeleteConfirmInputId = 'confirm-contact-topic-delete-' . $contactDeleteTopicId;
+        if (httpIntegrationStatusCode($contactDeleteErrorPage) !== 200
+            || !str_contains($contactDeleteErrorPage['body'], 'id="contact-topic-form-error" class="error" role="alert" aria-atomic="true">Téma kontaktu nejde smazat bez potvrzení kontroly dopadu.')
+            || !httpIntegrationInputHasAttributes($contactDeleteErrorPage['body'], $contactDeleteConfirmInputId, [
+                'name' => 'confirm_contact_topic_delete_' . $contactDeleteTopicId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'contact-topic-delete-review-' . $contactDeleteTopicId . ' confirm-contact-topic-delete-' . $contactDeleteTopicId . '-error',
+            ])
+            || !str_contains($contactDeleteErrorPage['body'], 'id="confirm-contact-topic-delete-' . $contactDeleteTopicId . '-error"')
+            || !str_contains($contactDeleteErrorPage['body'], 'Před smazáním tématu potvrďte, že jste zkontrolovali dopad na veřejný formulář a existující zprávy.')) {
+            $contactCenterIssues[] = 'smazání tématu kontaktu bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+        }
+
+        $contactConfirmedDeleteResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/contact_topics.php',
+            [
+                'csrf_token' => extractHiddenInputValue($contactDeleteErrorPage['body'], 'csrf_token'),
+                'action' => 'delete',
+                'id' => (string)$contactDeleteTopicId,
+                'confirm_contact_topic_delete_' . $contactDeleteTopicId => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $contactDeleteTopicExistsStmt->execute([$contactDeleteTopicId]);
+        $contactDeleteMessageTopicStmt->execute([$contactDeleteMessageId]);
+        $contactDeleteMessageAfterConfirm = $contactDeleteMessageTopicStmt->fetch();
+        $contactTopicDeleteLogCountAfterConfirm = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_topic_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($contactConfirmedDeleteResponse) !== 302
+            || !responseHasLocationHeader($contactConfirmedDeleteResponse['headers'], BASE_URL . '/admin/contact_topics.php?ok=delete', $baseUrl)
+            || (int)$contactDeleteTopicExistsStmt->fetchColumn() !== 0
+            || !is_array($contactDeleteMessageAfterConfirm)
+            || $contactDeleteMessageAfterConfirm['topic_id'] !== null
+            || (string)($contactDeleteMessageAfterConfirm['topic_label'] ?? '') !== $contactDeleteTopicName
+            || $contactTopicDeleteLogCountAfterConfirm !== $contactTopicDeleteLogCountBefore + 1) {
+            $contactCenterIssues[] = 'potvrzené smazání tématu kontaktu neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
+        }
     }
 
     $prefillPublicEmail = 'http-prefill-public-' . bin2hex(random_bytes(4)) . '@example.test';
@@ -5601,6 +5712,118 @@ try {
         }
         if (str_contains($duplicateChatTopicResponse['body'], 'Tento slug už používá jiné téma chatu.')) {
             $chatCenterIssues[] = 'duplicitní slug tématu chatu pořád používá starý obecný text';
+        }
+
+        $chatDeleteTopicSlug = 'http-chat-delete-' . bin2hex(random_bytes(4));
+        $chatDeleteTopicName = 'HTTP smazání tématu chatu ' . bin2hex(random_bytes(3));
+        $pdo->prepare(
+            "INSERT INTO cms_chat_topics
+             (name, slug, description, is_active, sort_order)
+             VALUES (?, ?, 'Téma pro HTTP ověření smazání.', 1, 90)"
+        )->execute([$chatDeleteTopicName, $chatDeleteTopicSlug]);
+        $chatDeleteTopicId = (int)$pdo->lastInsertId();
+        $createdChatTopicIds[] = $chatDeleteTopicId;
+        $chatDeleteMessage = 'HTTP chat topic delete guard ' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_chat (
+                topic_id, topic_label, conversation_type, reference_code, name, email, web, message,
+                status, public_visibility, created_at, updated_at
+             ) VALUES (?, ?, 'public', '', 'HTTP Delete Guard', ?, '', ?, 'read', 'approved', NOW(), NOW())"
+        )->execute([
+            $chatDeleteTopicId,
+            $chatDeleteTopicName,
+            'http-chat-topic-delete-' . bin2hex(random_bytes(4)) . '@example.test',
+            $chatDeleteMessage,
+        ]);
+        $chatDeleteMessageId = (int)$pdo->lastInsertId();
+        $createdChatMessageIds[] = $chatDeleteMessageId;
+
+        $chatDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/chat_topics.php', $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($chatDeletePage) !== 200
+            || !str_contains($chatDeletePage['body'], 'confirm_chat_topic_delete_' . $chatDeleteTopicId)
+            || !str_contains($chatDeletePage['body'], 'chat-topic-delete-review-' . $chatDeleteTopicId)
+            || !str_contains($chatDeletePage['body'], 'Smazání odebere téma z veřejného chatu')) {
+            $chatCenterIssues[] = 'správa témat chatu nevykreslila review checkbox pro smazání tématu';
+        }
+
+        $chatTopicDeleteLogCountBefore = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_topic_delete'")
+            ->fetchColumn();
+        $chatMissingDeleteConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/chat_topics.php',
+            [
+                'csrf_token' => $chatTopicsCsrf,
+                'action' => 'delete',
+                'id' => (string)$chatDeleteTopicId,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $chatDeleteTopicExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_chat_topics WHERE id = ?');
+        $chatDeleteTopicExistsStmt->execute([$chatDeleteTopicId]);
+        $chatDeleteMessageTopicStmt = $pdo->prepare('SELECT topic_id, topic_label FROM cms_chat WHERE id = ?');
+        $chatDeleteMessageTopicStmt->execute([$chatDeleteMessageId]);
+        $chatDeleteMessageAfterMissing = $chatDeleteMessageTopicStmt->fetch();
+        $chatTopicDeleteLogCountAfterMissing = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_topic_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($chatMissingDeleteConfirmResponse) !== 302
+            || !responseHasLocationHeader(
+                $chatMissingDeleteConfirmResponse['headers'],
+                BASE_URL . '/admin/chat_topics.php?error=delete_confirm_required&delete_error_id=' . $chatDeleteTopicId,
+                $baseUrl
+            )
+            || (int)$chatDeleteTopicExistsStmt->fetchColumn() !== 1
+            || !is_array($chatDeleteMessageAfterMissing)
+            || (int)($chatDeleteMessageAfterMissing['topic_id'] ?? 0) !== $chatDeleteTopicId
+            || (string)($chatDeleteMessageAfterMissing['topic_label'] ?? '') !== $chatDeleteTopicName
+            || $chatTopicDeleteLogCountAfterMissing !== $chatTopicDeleteLogCountBefore) {
+            $chatCenterIssues[] = 'smazání tématu chatu bez potvrzení nevrátilo PRG chybu, změnilo vazbu zprávy nebo zapsalo audit log';
+        }
+
+        $chatDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/chat_topics.php?error=delete_confirm_required&delete_error_id=' . $chatDeleteTopicId,
+            $adminSession['cookie'],
+            0
+        );
+        $chatDeleteConfirmInputId = 'confirm-chat-topic-delete-' . $chatDeleteTopicId;
+        if (httpIntegrationStatusCode($chatDeleteErrorPage) !== 200
+            || !str_contains($chatDeleteErrorPage['body'], 'id="chat-topic-form-error" class="error" role="alert" aria-atomic="true">Téma chatu nejde smazat bez potvrzení kontroly dopadu.')
+            || !httpIntegrationInputHasAttributes($chatDeleteErrorPage['body'], $chatDeleteConfirmInputId, [
+                'name' => 'confirm_chat_topic_delete_' . $chatDeleteTopicId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'chat-topic-delete-review-' . $chatDeleteTopicId . ' confirm-chat-topic-delete-' . $chatDeleteTopicId . '-error',
+            ])
+            || !str_contains($chatDeleteErrorPage['body'], 'id="confirm-chat-topic-delete-' . $chatDeleteTopicId . '-error"')
+            || !str_contains($chatDeleteErrorPage['body'], 'Před smazáním tématu potvrďte, že jste zkontrolovali dopad na veřejný chat a existující zprávy.')) {
+            $chatCenterIssues[] = 'smazání tématu chatu bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+        }
+
+        $chatConfirmedDeleteResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/chat_topics.php',
+            [
+                'csrf_token' => extractHiddenInputValue($chatDeleteErrorPage['body'], 'csrf_token'),
+                'action' => 'delete',
+                'id' => (string)$chatDeleteTopicId,
+                'confirm_chat_topic_delete_' . $chatDeleteTopicId => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $chatDeleteTopicExistsStmt->execute([$chatDeleteTopicId]);
+        $chatDeleteMessageTopicStmt->execute([$chatDeleteMessageId]);
+        $chatDeleteMessageAfterConfirm = $chatDeleteMessageTopicStmt->fetch();
+        $chatTopicDeleteLogCountAfterConfirm = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_topic_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($chatConfirmedDeleteResponse) !== 302
+            || !responseHasLocationHeader($chatConfirmedDeleteResponse['headers'], BASE_URL . '/admin/chat_topics.php?ok=delete', $baseUrl)
+            || (int)$chatDeleteTopicExistsStmt->fetchColumn() !== 0
+            || !is_array($chatDeleteMessageAfterConfirm)
+            || $chatDeleteMessageAfterConfirm['topic_id'] !== null
+            || (string)($chatDeleteMessageAfterConfirm['topic_label'] ?? '') !== $chatDeleteTopicName
+            || $chatTopicDeleteLogCountAfterConfirm !== $chatTopicDeleteLogCountBefore + 1) {
+            $chatCenterIssues[] = 'potvrzené smazání tématu chatu neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
         }
     }
 

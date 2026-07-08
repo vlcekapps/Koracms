@@ -26,6 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $deleteId = inputInt('post', 'id');
         if ($deleteId !== null) {
+            $confirmFieldName = 'confirm_contact_topic_delete_' . $deleteId;
+            $deleteConfirmed = isset($_POST[$confirmFieldName])
+                && (string)$_POST[$confirmFieldName] === '1';
+            if (!$deleteConfirmed) {
+                header('Location: ' . BASE_URL . '/admin/contact_topics.php?error=delete_confirm_required&delete_error_id=' . $deleteId);
+                exit;
+            }
+
             $pdo->prepare("UPDATE cms_contact SET topic_id = NULL WHERE topic_id = ?")->execute([$deleteId]);
             $pdo->prepare("DELETE FROM cms_contact_topics WHERE id = ?")->execute([$deleteId]);
             logAction('contact_topic_delete', 'id=' . $deleteId);
@@ -127,6 +135,12 @@ $success = match ((string)($_GET['ok'] ?? '')) {
     'delete' => 'Téma kontaktu bylo smazáno.',
     default => $success,
 };
+$deleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'delete_confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
+if ($deleteConfirmError) {
+    $error = 'Téma kontaktu nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$saveFormHasError = $error !== '' && !$deleteConfirmError;
 
 adminHeader('Témata kontaktu');
 ?>
@@ -138,7 +152,7 @@ adminHeader('Témata kontaktu');
   <a href="contact.php">Zpět na kontaktní zprávy</a>
 </p>
 
-<form method="post" novalidate<?= $error !== '' ? ' aria-describedby="contact-topic-form-error"' : '' ?>>
+<form method="post" novalidate<?= $saveFormHasError ? ' aria-describedby="contact-topic-form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($editId !== null): ?>
     <input type="hidden" name="update_id" value="<?= (int)$editId ?>">
@@ -212,6 +226,15 @@ adminHeader('Témata kontaktu');
     </thead>
     <tbody>
       <?php foreach ($topics as $topic): ?>
+        <?php
+          $topicId = (int)$topic['id'];
+          $deleteConfirmField = 'confirm_contact_topic_delete_' . $topicId;
+          $deleteConfirmId = 'confirm-contact-topic-delete-' . $topicId;
+          $deleteReviewId = 'contact-topic-delete-review-' . $topicId;
+          $deleteFieldErrorId = 'confirm-contact-topic-delete-' . $topicId . '-error';
+          $deleteHasError = $deleteConfirmError && $deleteErrorId === $topicId;
+          $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+          ?>
         <tr>
           <td>
             <strong><?= h((string)$topic['name']) ?></strong>
@@ -224,12 +247,32 @@ adminHeader('Témata kontaktu');
           <td><?= (int)$topic['is_active'] === 1 ? 'Aktivní' : 'Vypnuté' ?></td>
           <td><?= (int)$topic['sort_order'] ?></td>
           <td class="actions">
-            <a href="contact_topics.php?edit=<?= (int)$topic['id'] ?>" class="btn">Upravit</a>
-            <form method="post" action="<?= BASE_URL ?>/admin/contact_topics.php" data-confirm="Smazat toto téma kontaktu? Existující zprávy si ponechají uložený název tématu.">
+            <a href="contact_topics.php?edit=<?= $topicId ?>" class="btn">Upravit</a>
+            <form method="post" action="<?= BASE_URL ?>/admin/contact_topics.php"
+                  class="admin-inline-form"
+                  novalidate<?= $deleteHasError ? ' aria-describedby="contact-topic-form-error"' : '' ?>
+                  data-confirm="Smazat toto téma kontaktu? Existující zprávy si ponechají uložený název tématu.">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="action" value="delete">
-              <input type="hidden" name="id" value="<?= (int)$topic['id'] ?>">
-              <button type="submit" class="btn btn-danger">Smazat</button>
+              <input type="hidden" name="id" value="<?= $topicId ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Smazání tématu kontaktu <?= h((string)$topic['name']) ?></legend>
+                <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                  Smazání odebere téma z veřejného kontaktního formuláře a z existujících kontaktních zpráv odstraní vazbu na toto téma. Zprávy zůstanou zachované.
+                </p>
+                <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="<?= h($deleteConfirmId) ?>"
+                    name="<?= h($deleteConfirmField) ?>"
+                    value="1"
+                    required
+                    aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                  Potvrzuji smazání tohoto tématu kontaktu.
+                </label>
+                <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním tématu potvrďte, že jste zkontrolovali dopad na veřejný formulář a existující zprávy.', $deleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger">Smazat</button>
+              </fieldset>
             </form>
           </td>
         </tr>

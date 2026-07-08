@@ -1119,6 +1119,8 @@ Mazání nepoužitého média má stejný review krok v kartě souboru. Správce
 
 Mazání kategorií a sérií Ke stažení používá stejný princip v řádkových akcích. Správce vidí dopad na navázané položky, musí potvrdit kontrolu checkboxem a server bez `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` nezruší vazby, nesmaže taxonomii ani nezapíše audit log.
 
+Mazání témat kontaktu a chatu používá stejný review krok. Správce vidí dopad na veřejný kontaktní formulář nebo chat a na existující zprávy, musí potvrdit kontrolu checkboxem a server bez `confirm_contact_topic_delete_<id>` nebo `confirm_chat_topic_delete_<id>` nezmění vazby zpráv, nesmaže téma ani nezapíše audit log.
+
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.

@@ -17967,6 +17967,13 @@ foreach ([
             '$fieldErrors[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba fakturace.\';',
             '$fieldErrors[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
             '$error = \'Téma kontaktu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'error\'] ?? \'\')) === \'delete_confirm_required\';',
+            '$confirmFieldName = \'confirm_contact_topic_delete_\' . $deleteId;',
+            '$deleteConfirmField = \'confirm_contact_topic_delete_\' . $topicId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Téma kontaktu nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním tématu potvrďte, že jste zkontrolovali dopad na veřejný formulář a existující zprávy.',
             '<p id="contact-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('slug', array_keys(\$fieldErrors), [], ['contact-topic-slug-help'])",
             'id="contact-topic-recipient-email-help"',
@@ -17986,6 +17993,13 @@ foreach ([
             '$fieldErrors[\'slug\'] = \'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba technicka-podpora.\';',
             '$fieldErrors[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
             '$error = \'Téma chatu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'error\'] ?? \'\')) === \'delete_confirm_required\';',
+            '$confirmFieldName = \'confirm_chat_topic_delete_\' . $deleteId;',
+            '$deleteConfirmField = \'confirm_chat_topic_delete_\' . $topicId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Téma chatu nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním tématu potvrďte, že jste zkontrolovali dopad na veřejný chat a existující zprávy.',
             '<p id="chat-topic-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('slug', array_keys(\$fieldErrors), [], ['chat-topic-slug-help'])",
         ],
@@ -18337,6 +18351,17 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_newsletter_subscriber_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené individuální smazání newsletter odběratele neproběhlo s očekávaným PRG stavem nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing newsletter subscriber delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('contact_topics_and_reply_http'")
+    || !str_contains($httpIntegrationSource, 'smazání tématu kontaktu bez potvrzení nevrátilo PRG chybu, změnilo vazbu zprávy nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_contact_topic_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání tématu kontaktu neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('chat_topics_threads_support_http'")
+    || !str_contains($httpIntegrationSource, 'smazání tématu chatu bez potvrzení nevrátilo PRG chybu, změnilo vazbu zprávy nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_chat_topic_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání tématu chatu neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing messaging topic delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')

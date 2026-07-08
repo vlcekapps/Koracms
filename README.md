@@ -480,6 +480,8 @@ Kategorie a série ke stažení mají stejný field-level pattern pro hlavní va
 
 Mazání kategorií a sérií Ke stažení navazuje na stejný error-prevention princip. Řádkový formulář popíše počet navázaných položek, u série i dopad na aktuální verzi, vyžaduje checkbox `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` a server nepotvrzené smazání odmítne bez změny vazeb nebo audit logu.
 
+Mazání témat kontaktu a chatu používá stejný review-and-confirm princip. Řádkový formulář popíše dopad na veřejný kontaktní formulář nebo chat a existující zprávy, vyžaduje checkbox `confirm_contact_topic_delete_<id>` nebo `confirm_chat_topic_delete_<id>` a server nepotvrzené smazání odmítne bez změny tématu, vazby zpráv nebo audit logu.
+
 Stejný pattern používají i další administrační taxonomie: kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. Povinný název, nepoužitelný nebo duplicitní slug a příliš dlouhý meta title se naváže na konkrétní pole přes existující `aria-describedby`; u rezervačních číselníků se po chybě zachová rozepsaný název i adresa.
 
 Stejný pattern se rozšířil i na další běžná administrační workflow mimo číselníky: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Souhrnné alerty jsou textové a atomické, field-level texty radí doplnit název, opravit URL, slug, kapacitu, RSS limit, cover obrázek nebo doplnit předmět a text rozesílky.

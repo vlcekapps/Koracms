@@ -130,6 +130,8 @@ Additional `3.3.4` ACR evidence, 2026-07-08: Download category and series deleti
 
 Additional `3.3.4` ACR evidence, 2026-07-08: individual newsletter subscriber deletion now uses row/detail review-and-confirm forms. The UI describes removal from active newsletter subscriptions while preserving already-sent newsletter history, requires `confirm_newsletter_subscriber_delete_<id>` and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before deleting the subscriber or writing the audit log. Runtime `admin_field_error_guardrails` and HTTP `newsletter_subscriber_delete_error_prevention_http` cover overview/detail rendering, rejected unconfirmed deletion without database/log changes and confirmed deletion.
 
+Additional `3.3.4` ACR evidence, 2026-07-09: Contact and Chat topic deletion now use row-level review-and-confirm forms. The UI describes the impact on the public contact form or chat and on existing messages, requires `confirm_contact_topic_delete_<id>` or `confirm_chat_topic_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before unlinking message relationships, deleting the topic or writing the audit log. Runtime `admin_field_error_guardrails` and HTTP `contact_topics_and_reply_http` / `chat_topics_threads_support_http` cover rendered review text, rejected unconfirmed deletion without message/log changes and confirmed cleanup.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.
