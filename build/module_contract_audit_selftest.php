@@ -128,7 +128,7 @@ function moduleContractAuditSelfTestAdminScriptTargets(): string
 
 function moduleContractAuditSelfTestStaticScriptTargets(): string
 {
-    return moduleContractAuditSelfTestAdminScriptTargets() . ' blog/index.php';
+    return moduleContractAuditSelfTestAdminScriptTargets() . ' blog/index.php chat/index.php chat/message.php';
 }
 
 function moduleContractAuditSelfTestDefinitionsFixture(): string
@@ -140,6 +140,7 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $publicNavOrder = $publicNav ? 10 : 0;
         $publicNavValue = $publicNav ? 'true' : 'false';
         $adminPath = '/admin/' . $moduleKey . '.php';
+        $publicPaths = $publicNav ? "['{$publicNavPath}']" : '[]';
         $contentReferenceTypes = $moduleKey === 'blog'
             ? "['blog' => 'Blog']"
             : ($moduleKey === 'news' ? "['news' => 'News']" : '[]');
@@ -152,7 +153,9 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $statsPageTypes = $moduleKey === 'blog'
             ? "['article']"
             : ($moduleKey === 'news' ? "['news']" : '[]');
-        $publicPaths = $publicNav ? "['{$publicNavPath}']" : '[]';
+        if ($moduleKey === 'chat') {
+            $publicPaths = "['/chat/index.php', '/chat/message.php']";
+        }
         $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'sitemap_sections' => {$sitemapSections}, 'stats_page_types' => {$statsPageTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
@@ -279,6 +282,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'lib/admin_command.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { modulePrimaryAdminPath((string)\$moduleKey); moduleAdminCapability((string)\$moduleKey); 'module.' . (string)\$moduleKey; }\n",
         'admin/layout.php' => "<?php\nforeach (coreModuleDefinitions() as \$moduleKey => \$definition) { modulePrimaryAdminPath((string)\$moduleKey); moduleAdminCapability((string)\$moduleKey); moduleAdminLabel((string)\$moduleKey); 'nav-modules'; }\n",
         'blog/index.php' => "<?php\nif (!isModuleEnabled('blog')) { exit; }\n",
+        'chat/index.php' => "<?php\nif (!isModuleEnabled('chat')) { exit; }\n",
         'admin/content_reference_picker.php' => "<?php\nmoduleContentReferenceTypeLabels();\n",
         'admin/content_reference_search.php' => "<?php\ncontentReferenceTypeModuleMap(); if ((\$requestedType === 'all' || \$requestedType === 'news') && isModuleEnabled('news')) {}\n",
         'search.php' => "<?php\nmoduleSearchResultTypeLabels(); if (isModuleEnabled('blog')) { 'blog' AS type; } if (isModuleEnabled('news')) { 'news' AS type; } function resultUrl(array \$result): string { return match(\$result['type']) { 'blog' => '/', 'news' => '/', 'page' => '/', default => '/', }; } function typeLabel(string \$type): string { moduleSearchResultTypeLabels(); return ''; }\n",
@@ -294,6 +298,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'docs/developer-modules.md' => moduleContractAuditSelfTestDeveloperModulesDocFixture(),
         'README.md' => moduleContractAuditSelfTestReadmeFixture(),
         'docs/admin-guide.md' => moduleContractAuditSelfTestAdminGuideFixture(),
+        'chat/message.php' => "<?php\nif (!isModuleEnabled('chat')) { exit; }\n",
     ];
 
     foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
@@ -691,6 +696,14 @@ assertModuleContractAuditFails(
     'Missing public module entrypoint gate',
     $missingPublicEntryPointGateFiles,
     "public module entrypoint blog/detail.php must guard access with isModuleEnabled('blog')."
+);
+
+$unlistedPublicEntryPointFiles = $validFiles;
+$unlistedPublicEntryPointFiles['blog/forgotten.php'] = "<?php\nif (!isModuleEnabled('blog')) { exit; }\n";
+assertModuleContractAuditFails(
+    'Unlisted public module entrypoint',
+    $unlistedPublicEntryPointFiles,
+    'public module directory blog contains PHP entrypoint blog/forgotten.php that is not listed in manifest public_paths.'
 );
 
 $missingPublicNavHttpFiles = $validFiles;

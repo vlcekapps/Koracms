@@ -979,6 +979,50 @@ function moduleContractAuditValidatePublicEntryPointStaticCoverage(string $defin
 
 /**
  * @param list<string> $issues
+ */
+function moduleContractAuditValidatePublicDirectoryEntryPoints(
+    string $projectRoot,
+    string $definitionsSource,
+    array &$issues
+): void {
+    $declaredPublicPaths = [];
+    $publicDirectories = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues) as $publicPath) {
+            if (!str_starts_with($publicPath, '/') || str_contains($publicPath, '..') || str_contains($publicPath, "\0") || !str_ends_with($publicPath, '.php')) {
+                continue;
+            }
+
+            $relativePath = ltrim($publicPath, '/');
+            $declaredPublicPaths[$relativePath] = $moduleKey;
+            $directory = dirname($relativePath);
+            if ($directory !== '.' && $directory !== '') {
+                $publicDirectories[$directory] = true;
+            }
+        }
+    }
+
+    foreach (array_keys($publicDirectories) as $directory) {
+        $glob = glob($projectRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $directory) . DIRECTORY_SEPARATOR . '*.php');
+        if (!is_array($glob)) {
+            continue;
+        }
+
+        foreach ($glob as $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+
+            $relativePath = moduleContractAuditRelativePath($projectRoot, $path);
+            if (!isset($declaredPublicPaths[$relativePath])) {
+                $issues[] = 'public module directory ' . $directory . ' contains PHP entrypoint ' . $relativePath . ' that is not listed in manifest public_paths.';
+            }
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
  * @return array<string,string>
  */
 function moduleContractAuditContentReferenceTypeModuleMap(string $definitionsSource, array &$issues): array
@@ -1792,6 +1836,7 @@ moduleContractAuditValidateAdminRouteModuleRequirements($projectRoot, $definitio
 moduleContractAuditValidateAdminRouteStaticCoverage($authSource, $composerSource, $issues);
 moduleContractAuditValidatePublicNavStaticCoverage($definitionsSource, $composerSource, $issues);
 moduleContractAuditValidatePublicEntryPointStaticCoverage($definitionsSource, $composerSource, $issues);
+moduleContractAuditValidatePublicDirectoryEntryPoints($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateContentReferenceTypeCoverage($definitionsSource, $contentReferencePickerSource, $contentReferenceSearchSource, $issues);
 moduleContractAuditValidateSearchResultTypeCoverage($definitionsSource, $publicSearchSource, $issues);
 moduleContractAuditValidateSitemapSectionCoverage($definitionsSource, $sitemapSource, $issues);

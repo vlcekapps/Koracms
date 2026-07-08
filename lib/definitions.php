@@ -105,6 +105,7 @@ function coreModuleDefinitions(): array
             'public_nav_path' => '/chat/index.php',
             'public_paths' => [
                 '/chat/index.php',
+                '/chat/message.php',
             ],
             'public_nav_order' => 90,
             'profile_managed' => true,
