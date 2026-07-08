@@ -4,6 +4,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 
 ## Než začnete
 
+- U nového modulu nebo větší modulové funkce vyplňte návrhovou šablonu `docs/module-proposal-template.md`. Má předem zachytit workflow, datový model, migrace, export/import, bezpečnost, přístupnost, testy a dokumentaci, aby implementace nevznikala jen jako sada obrazovek bez kontraktu.
 - Sepište účel modulu, cílového správce, veřejné URL a zda modul bude mít veřejný detail, výpis, widgety, sitemapu, vyhledávání, RSS/ICS/export nebo přílohy.
 - Vyberte nejbližší existující vzor: `Blog` pro komplexní obsah, `Novinky` pro jednoduchý obsahový modul, `Vývěska` pro přílohy a platnost, `Ankety` pro veřejnou interakci, `Rezervace` pro workflow s termíny.
 - Rozhodněte, které role smí modul spravovat, zda bude modul sdílený pro celý web nebo navázaný na konkrétní blog, a jak se bude chovat při vypnutém modulu.

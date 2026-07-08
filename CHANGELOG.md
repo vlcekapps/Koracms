@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Návrhová šablona nového modulu** – dokument `docs/module-proposal-template.md` pomáhá před implementací zachytit workflow, datový model, `install.php`/`migrate.php`, export/import, bezpečnost, ACR dopady, testy a dokumentaci; module contract audit hlídá, aby šablona i odkazy zůstaly součástí module-ready procesu.
 - **Blogový accessibility conformance pass** – Blog má modulovou přílohu `docs/accessibility/modules/blog.md` s rozsahem veřejných i administračních workflow, WCAG 2.2 AA shrnutím, automatickými důkazy, ručními scénáři a backlogem navázaným na hlavní ACR dokumentaci.
 - **Srozumitelnější zařazení článku do sérií** – editor článku už nepoužívá záludný vícenásobný select pro série; série cílového blogu se vybírají zaškrtávacími políčky, editor oznamuje aktuální počet vybraných sérií a tlačítko `Odebrat ze všech sérií` umožní jasně vrátit článek mimo série.
 - **Accessibility conformance report draft** – projekt má novou dokumentační sadu `docs/accessibility/` pro dlouhodobé vyhodnocování WCAG 2.2 AA a VPAT/ACR: matici kritérií, ACR draft, remediation backlog a ruční testovací protokol.

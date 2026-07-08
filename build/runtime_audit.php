@@ -111,6 +111,7 @@ $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string)
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
 $developerModulesDocSource = is_file(__DIR__ . '/../docs/developer-modules.md') ? (string) file_get_contents(__DIR__ . '/../docs/developer-modules.md') : '';
+$moduleProposalTemplateSource = is_file(__DIR__ . '/../docs/module-proposal-template.md') ? (string) file_get_contents(__DIR__ . '/../docs/module-proposal-template.md') : '';
 $runtimeAuditSelfSource = (string) file_get_contents(__FILE__);
 $httpIntegrationBuildSource = is_file(__DIR__ . '/http_integration.php') ? (string) file_get_contents(__DIR__ . '/http_integration.php') : '';
 $unitTestsSource = is_file(__DIR__ . '/unit_tests.php') ? (string) file_get_contents(__DIR__ . '/unit_tests.php') : '';
@@ -8003,6 +8004,7 @@ $foundationChecks = [
         && str_contains($composerSource, '"format:check"')
         && str_contains($composerSource, '"format:fix"'),
     'developer module guide exists' => str_contains($developerModulesDocSource, '# Vývoj nového modulu v Kora CMS')
+        && str_contains($developerModulesDocSource, 'docs/module-proposal-template.md')
         && str_contains($developerModulesDocSource, 'Povinné integrační body')
         && str_contains($developerModulesDocSource, 'Bezpečnostní pravidla')
         && str_contains($developerModulesDocSource, 'WCAG 2.2 checklist')
@@ -8023,6 +8025,11 @@ $foundationChecks = [
         && str_contains($developerModulesDocSource, 'lib/uploads.php')
         && str_contains($developerModulesDocSource, 'aria-labelledby')
         && str_contains($developerModulesDocSource, 'build/module_contract_audit.php')
+        && str_contains($moduleProposalTemplateSource, '# Šablona návrhu nového modulu')
+        && str_contains($moduleProposalTemplateSource, 'Datový model a migrace')
+        && str_contains($moduleProposalTemplateSource, 'Accessibility conformance dopad')
+        && str_contains($moduleProposalTemplateSource, 'composer ci:module-ready')
+        && str_contains($readmeSource, 'docs/module-proposal-template.md')
         && str_contains($readmeSource, 'docs/developer-modules.md')
         && str_contains($readmeSource, 'composer ci:module-ready')
         && str_contains($readmeSource, 'coreModuleDefinitions()')
@@ -8038,6 +8045,7 @@ $foundationChecks = [
         && str_contains($adminGuideSource, 'search_result_types')
         && str_contains($adminGuideSource, 'sitemap_sections')
         && str_contains($adminGuideSource, 'stats_page_types')
+        && str_contains($adminGuideSource, 'module-proposal-template.md')
         && str_contains($adminGuideSource, 'developer-modules.md'),
     'module contract audit is wired into module-ready CI' => str_contains($composerSource, '"test:module-contract"')
         && str_contains($composerSource, '"test:module-contract-selftest"')

@@ -1595,6 +1595,7 @@ function moduleContractAuditRequireDocumentationFragments(string $source, string
  */
 function moduleContractAuditValidateDeveloperDocumentation(
     string $developerModulesDocSource,
+    string $moduleProposalTemplateSource,
     string $readmeSource,
     string $adminGuideSource,
     array &$issues
@@ -1646,6 +1647,39 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'README.md',
             'docs/admin-guide.md',
             'CHANGELOG.md',
+            'docs/module-proposal-template.md',
+        ],
+        $issues
+    );
+
+    moduleContractAuditRequireDocumentationFragments(
+        $moduleProposalTemplateSource,
+        'docs/module-proposal-template.md',
+        [
+            '# Šablona návrhu nového modulu',
+            'Module key',
+            'Veřejné a administrační workflow',
+            'Datový model a migrace',
+            'install.php',
+            'migrate.php',
+            'Schema parity guardrail',
+            'Export/import',
+            'Bezpečnost a soukromí',
+            'internalRedirectTarget()',
+            'Accessibility conformance dopad',
+            'WCAG 2.2 A/AA',
+            'aria-describedby',
+            'aria-labelledby',
+            'Odpovědnost CMS',
+            'Odpovědnost autora obsahu',
+            'wcag-22-aa-conformance.md',
+            'a11y-remediation-backlog.md',
+            'manual-test-protocol.md',
+            'Testy a guardrails',
+            'composer ci:module-ready',
+            'CHANGELOG.md',
+            'README.md',
+            'docs/admin-guide.md',
         ],
         $issues
     );
@@ -1654,6 +1688,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
         $readmeSource,
         'README.md',
         [
+            'docs/module-proposal-template.md',
             'docs/developer-modules.md',
             'coreModuleDefinitions()',
             'modulePublicPathModuleMap()',
@@ -1687,6 +1722,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
         $adminGuideSource,
         'docs/admin-guide.md',
         [
+            'module-proposal-template.md',
             'developer-modules.md',
             'coreModuleDefinitions()',
             'modulePublicPathModuleMap()',
@@ -1721,6 +1757,7 @@ $migrateSource = moduleContractAuditReadFile($projectRoot, 'migrate.php', $issue
 $composerSource = moduleContractAuditReadFile($projectRoot, 'composer.json', $issues);
 $runtimeAuditSource = moduleContractAuditReadFile($projectRoot, 'build/runtime_audit.php', $issues);
 $developerModulesDocSource = moduleContractAuditReadFile($projectRoot, 'docs/developer-modules.md', $issues);
+$moduleProposalTemplateSource = moduleContractAuditReadFile($projectRoot, 'docs/module-proposal-template.md', $issues);
 $adminGuideSource = moduleContractAuditReadFile($projectRoot, 'docs/admin-guide.md', $issues);
 $readmeSource = moduleContractAuditReadFile($projectRoot, 'README.md', $issues);
 $authSource = moduleContractAuditReadFile($projectRoot, 'auth.php', $issues);
@@ -1945,7 +1982,13 @@ moduleContractAuditRequire(
     $issues
 );
 
-moduleContractAuditValidateDeveloperDocumentation($developerModulesDocSource, $readmeSource, $adminGuideSource, $issues);
+moduleContractAuditValidateDeveloperDocumentation(
+    $developerModulesDocSource,
+    $moduleProposalTemplateSource,
+    $readmeSource,
+    $adminGuideSource,
+    $issues
+);
 
 if ($issues !== []) {
     fwrite(STDERR, "Module contract audit failed:\n");

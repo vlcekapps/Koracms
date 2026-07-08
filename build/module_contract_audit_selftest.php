@@ -219,6 +219,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Povinné integrační body\n"
         . "Bezpečnostní pravidla\n"
         . "WCAG 2.2 checklist\n"
+        . "Před implementací vyplňte docs/module-proposal-template.md.\n"
         . "Nový modul porovnejte s wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n"
         . "Testy a guardrails\n"
         . "Definition of done\n"
@@ -238,9 +239,32 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Dokumentujte README.md, docs/admin-guide.md a CHANGELOG.md.\n";
 }
 
+function moduleContractAuditSelfTestModuleProposalTemplateFixture(): string
+{
+    return "# Šablona návrhu nového modulu\n"
+        . "Module key\n"
+        . "Veřejné a administrační workflow\n"
+        . "Datový model a migrace\n"
+        . "Dopad na install.php a migrate.php.\n"
+        . "Schema parity guardrail.\n"
+        . "Export/import.\n"
+        . "Bezpečnost a soukromí\n"
+        . "Redirecty validujte přes internalRedirectTarget().\n"
+        . "Accessibility conformance dopad\n"
+        . "WCAG 2.2 A/AA.\n"
+        . "Použijte aria-describedby a aria-labelledby.\n"
+        . "Odpovědnost CMS.\n"
+        . "Odpovědnost autora obsahu.\n"
+        . "Dokumenty wcag-22-aa-conformance.md, a11y-remediation-backlog.md a manual-test-protocol.md.\n"
+        . "Testy a guardrails\n"
+        . "Spusťte composer ci:module-ready.\n"
+        . "Dokumentujte CHANGELOG.md, README.md a docs/admin-guide.md.\n";
+}
+
 function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
+        . "Před návrhem použijte docs/module-proposal-template.md.\n"
         . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
         . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
         . "Obsahové trendy používají stats_page_types a trackPageView().\n"
@@ -256,6 +280,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
 function moduleContractAuditSelfTestAdminGuideFixture(): string
 {
     return "Admin guide odkazuje na developer-modules.md.\n"
+        . "Návrh modulu používá module-proposal-template.md.\n"
         . "Modulová metadata jsou v coreModuleDefinitions().\n"
         . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
         . "Sdílené lookupy cest poskytují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
@@ -296,6 +321,7 @@ function moduleContractAuditSelfTestValidFiles(): array
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
         'build/http_integration.php' => "<?php\nforeach (moduleNavigationDefaults() as \$moduleKey => \$moduleNavigation) { saveSetting(moduleSettingKey(\$moduleKey), '0'); responseHasLocationHeader(\$disabledModuleResponse['headers'], BASE_URL . '/index.php', \$baseUrl); saveSetting(moduleSettingKey(\$moduleKey), '1'); } httpIntegrationPrintResult('public_module_navigation_http', ['veřejný modul ', 'Tento modul není povolen'], \$failures); foreach (moduleAdminEntryPoints() as \$moduleKey => \$adminPaths) { saveSetting(moduleSettingKey(\$moduleKey), '0'); } httpIntegrationPrintResult('admin_disabled_modules_http', ['admin stránka vypnutého modulu ', 'není povolen'], \$failures);\n",
         'docs/developer-modules.md' => moduleContractAuditSelfTestDeveloperModulesDocFixture(),
+        'docs/module-proposal-template.md' => moduleContractAuditSelfTestModuleProposalTemplateFixture(),
         'README.md' => moduleContractAuditSelfTestReadmeFixture(),
         'docs/admin-guide.md' => moduleContractAuditSelfTestAdminGuideFixture(),
         'chat/message.php' => "<?php\nif (!isModuleEnabled('chat')) { exit; }\n",
@@ -876,6 +902,18 @@ assertModuleContractAuditFails(
     'Missing developer module documentation fragment',
     $missingDeveloperDocFragmentFiles,
     'docs/developer-modules.md must document module development fragment: internalRedirectTarget().'
+);
+
+$missingModuleProposalTemplateFragmentFiles = $validFiles;
+$missingModuleProposalTemplateFragmentFiles['docs/module-proposal-template.md'] = str_replace(
+    'Accessibility conformance dopad',
+    'Přístupnost',
+    $missingModuleProposalTemplateFragmentFiles['docs/module-proposal-template.md']
+);
+assertModuleContractAuditFails(
+    'Missing module proposal template fragment',
+    $missingModuleProposalTemplateFragmentFiles,
+    'docs/module-proposal-template.md must document module development fragment: Accessibility conformance dopad.'
 );
 
 $missingReadmeDocFragmentFiles = $validFiles;
