@@ -172,7 +172,7 @@ function mediaAllowedMimeMap(): array
 
 function mediaMaxFileSizeBytes(): int
 {
-    return 10 * 1024 * 1024;
+    return koraDefaultUploadMaxSizeBytes();
 }
 
 function mediaMimeFamily(string $mimeType): string
@@ -553,7 +553,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         'no_file_error' => 'Nebyl vybrán žádný soubor.',
         'upload_error' => mediaUploadErrorMessage((int)($file['error'] ?? UPLOAD_ERR_NO_FILE)),
         'invalid_upload_error' => 'Soubor se nepodařilo zpracovat.',
-        'too_large_error' => 'Soubor překračuje maximální velikost 10 MB.',
+        'too_large_error' => 'Soubor překračuje maximální velikost ' . koraUploadMaxSizeLabel() . '.',
         'max_bytes' => mediaMaxFileSizeBytes(),
         'reject_svg' => true,
         'svg_error' => 'SVG soubory už knihovna médií nepřijímá. Nahrajte prosím PNG, JPG, WebP nebo jiný podporovaný formát.',

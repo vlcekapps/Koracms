@@ -7,9 +7,10 @@ $perPage = 24;
 $mediaDeleteDisabledReason = 'Použité médium nelze smazat.';
 $mediaDeleteConfirmErrorMessage = 'Před smazáním zaškrtněte potvrzení kontroly konkrétního souboru. Soubor i jeho miniatury se z knihovny odstraní.';
 $mediaDeleteFilesystemErrorMessage = 'Soubor se nepodařilo bezpečně odstranit z úložiště. Záznam zůstal v knihovně, zkontrolujte oprávnění úložiště a zkuste akci znovu.';
-$mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do 10 MB: JPEG, PNG, GIF, WebP, audio, video, WebVTT titulky nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
-$mediaUploadFileErrorMessage = 'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát, není SVG a nepřekračuje 10 MB.';
-$mediaReplacementFileErrorMessage = 'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině jako původní médium; u veřejného souboru zachovejte stejnou příponu. SVG knihovna nepřijímá.';
+$mediaUploadLimitLabel = koraUploadMaxSizeLabel();
+$mediaUploadNoFileErrorMessage = 'Vyberte alespoň jeden podporovaný soubor do ' . $mediaUploadLimitLabel . ': JPEG, PNG, GIF, WebP, audio, video, WebVTT titulky nebo dokument. SVG knihovna z bezpečnostních důvodů nepřijímá.';
+$mediaUploadFileErrorMessage = 'Některé soubory se nepodařilo nahrát. Zkontrolujte, že každý vybraný soubor má podporovaný formát, není SVG a nepřekračuje ' . $mediaUploadLimitLabel . '.';
+$mediaReplacementFileErrorMessage = 'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do ' . $mediaUploadLimitLabel . ' ve stejné MIME rodině jako původní médium; u veřejného souboru zachovejte stejnou příponu. SVG knihovna nepřijímá.';
 
 /**
  * @return array<string, string>
@@ -760,7 +761,7 @@ adminHeader('Knihovna médií');
     <input type="file" id="media_files" name="media_files[]" multiple required aria-required="true"
            accept="image/jpeg,image/png,image/gif,image/webp,audio/*,video/*,.vtt,text/vtt,.pdf,.zip,.doc,.docx,.xls,.xlsx,.csv,.txt"
            <?= adminFieldAttributes('media_files', $mediaFieldErrorNames, [], ['media-upload-help'], 'media-upload-error') ?>>
-    <small id="media-upload-help" class="field-help">Obrázky, audio, video, WebVTT titulky a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max 10 MB na soubor.</small>
+    <small id="media-upload-help" class="field-help">Obrázky, audio, video, WebVTT titulky a dokumenty. SVG už knihovna z bezpečnostních důvodů nepřijímá. Max <?= h($mediaUploadLimitLabel) ?> na soubor.</small>
     <?php adminRenderFieldError('media_files', $mediaFieldErrorNames, [], $mediaFieldErrors['media_files'] ?? '', 'media-upload-error'); ?>
 
     <label for="upload_collection_id">Kolekce médií</label>

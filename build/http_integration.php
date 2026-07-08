@@ -11983,6 +11983,7 @@ try {
     $mediaIssues = [];
     $mediaAdminUrl = $baseUrl . BASE_URL . '/admin/media.php';
     $mediaReturnPath = BASE_URL . '/admin/media.php';
+    $defaultMediaUploadLimitLabel = koraUploadMaxSizeLabel();
 
     $mediaCollectionName = 'HTTP kolekce médií ' . bin2hex(random_bytes(4));
     $mediaCollectionSlug = 'http-media-kolekce-' . bin2hex(random_bytes(4));
@@ -12034,7 +12035,7 @@ try {
     }
     $emptyMediaUploadPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
     foreach ([
-        'Vyberte alespoň jeden podporovaný soubor do 10 MB',
+        'Vyberte alespoň jeden podporovaný soubor do ' . $defaultMediaUploadLimitLabel,
         'aria-invalid="true"',
         'aria-describedby="media-upload-help media-upload-error"',
         'id="media-upload-error"',
@@ -12213,7 +12214,7 @@ try {
         $mediaIssues[] = 'oversized upload média nevrátil 302 redirect';
     }
     $oversizedMediaPage = fetchUrl($mediaAdminUrl, $adminSession['cookie'], 0);
-    if (!str_contains($oversizedMediaPage['body'], 'Soubor překračuje maximální velikost 10 MB.')) {
+    if (!str_contains($oversizedMediaPage['body'], 'Soubor překračuje maximální velikost ' . $defaultMediaUploadLimitLabel . '.')) {
         $mediaIssues[] = 'oversized upload média nezobrazil validační chybu';
     }
     if (httpIntegrationFetchMediaByOriginalName($pdo, $oversizedMediaOriginalName) !== null) {
@@ -12391,7 +12392,7 @@ try {
             $mediaIssues[] = 'replace média jiné MIME rodiny nezobrazil validační chybu';
         }
         foreach ([
-            'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do 10 MB ve stejné MIME rodině',
+            'Náhradní soubor se nepodařilo nahrát. Vyberte podporovaný soubor do ' . $defaultMediaUploadLimitLabel . ' ve stejné MIME rodině',
             'aria-invalid="true"',
             'aria-describedby="replacement-file-help replacement-file-error"',
             'id="replacement-file-error"',

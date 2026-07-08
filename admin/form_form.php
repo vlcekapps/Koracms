@@ -11,6 +11,7 @@ $form = null;
 $fields = [];
 $fieldTypes = formFieldTypeDefinitions();
 $fieldLayoutWidths = formFieldLayoutWidthDefinitions();
+$defaultUploadMaxSizeMb = koraDefaultUploadMaxSizeMb();
 $conditionOperators = formConditionOperatorDefinitions();
 $successBehaviors = formSuccessBehaviorDefinitions();
 $webhookEventDefinitions = formWebhookEventDefinitions();
@@ -506,10 +507,10 @@ adminHeader($pageTitle);
             </div>
             <div>
               <label for="field-max-size-<?= $i ?>">Max. velikost souboru (MB)</label>
-              <input type="number" id="field-max-size-<?= $i ?>" name="fields[<?= $i ?>][max_file_size_mb]" min="1" max="100"
-                     value="<?= (int)($field['max_file_size_mb'] ?? 10) ?>" class="form-builder-input-sm"
+              <input type="number" id="field-max-size-<?= $i ?>" name="fields[<?= $i ?>][max_file_size_mb]" min="1" max="500"
+                     value="<?= (int)($field['max_file_size_mb'] ?? $defaultUploadMaxSizeMb) ?>" class="form-builder-input-sm"
                      aria-describedby="field-max-size-help-<?= $i ?>">
-              <small id="field-max-size-help-<?= $i ?>" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
+              <small id="field-max-size-help-<?= $i ?>" class="field-help">Jen pro pole Soubor. Výchozí hodnota je <?= h(koraUploadMaxSizeLabel($defaultUploadMaxSizeMb)) ?>.</small>
             </div>
             <div>
               <label for="field-layout-width-<?= $i ?>">Šířka pole</label>
@@ -609,9 +610,9 @@ adminHeader($pageTitle);
         </div>
         <div>
           <label for="new-field-max-size">Max. velikost souboru (MB)</label>
-          <input type="number" id="new-field-max-size" name="new_field_max_file_size_mb" min="1" max="100" value="10" class="form-builder-input-sm"
+          <input type="number" id="new-field-max-size" name="new_field_max_file_size_mb" min="1" max="500" value="<?= $defaultUploadMaxSizeMb ?>" class="form-builder-input-sm"
                  aria-describedby="new-field-max-size-help">
-          <small id="new-field-max-size-help" class="field-help">Jen pro pole Soubor. Výchozí hodnota je 10 MB.</small>
+          <small id="new-field-max-size-help" class="field-help">Jen pro pole Soubor. Výchozí hodnota je <?= h(koraUploadMaxSizeLabel($defaultUploadMaxSizeMb)) ?>.</small>
         </div>
         <div>
           <label for="new-field-layout-width">Šířka pole</label>

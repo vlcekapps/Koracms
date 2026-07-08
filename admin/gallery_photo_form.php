@@ -195,7 +195,7 @@ adminHeader($pageTitle);
       <input type="file" id="photos" name="photos[]"
              accept="image/jpeg,image/png,image/gif,image/webp"
              multiple required aria-required="true" aria-describedby="gallery-photos-help">
-      <small id="gallery-photos-help" class="field-help">Můžete vybrat více fotografií najednou. Povolené jsou JPEG, PNG, GIF a WebP do 10 MB na soubor.</small>
+      <small id="gallery-photos-help" class="field-help">Můžete vybrat více fotografií najednou. Povolené jsou JPEG, PNG, GIF a WebP do <?= h(koraUploadMaxSizeLabel()) ?> na soubor.</small>
 
       <p class="admin-description admin-description--muted admin-action-row">Slug se při hromadném nahrání vytvoří automaticky z názvu souboru.</p>
       <?php if ((string)($album['default_credit'] ?? '') !== '' || (string)($album['default_license_label'] ?? '') !== ''): ?>

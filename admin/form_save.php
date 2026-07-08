@@ -150,6 +150,7 @@ $presetDefinition = $id === null ? formPresetDefinition($presetKey) : null;
 $errorSuffix = $id !== null ? '&id=' . $id : ($presetKey !== '' ? '&preset=' . urlencode($presetKey) : '');
 $existingForm = null;
 $submittedFields = (array)($_POST['fields'] ?? []);
+$defaultUploadMaxSizeMb = koraDefaultUploadMaxSizeMb();
 
 if ($id !== null) {
     $existingStmt = $pdo->prepare("SELECT * FROM cms_forms WHERE id = ?");
@@ -268,7 +269,7 @@ if ($id !== null) {
         $fieldDefaultValue = trim((string)($fieldData['default_value'] ?? ''));
         $fieldHelpText = trim((string)($fieldData['help_text'] ?? ''));
         $fieldAcceptTypes = trim((string)($fieldData['accept_types'] ?? ''));
-        $fieldMaxFileSize = max(1, min(100, (int)($fieldData['max_file_size_mb'] ?? 10)));
+        $fieldMaxFileSize = max(1, min(500, (int)($fieldData['max_file_size_mb'] ?? $defaultUploadMaxSizeMb)));
         $fieldAllowMultiple = isset($fieldData['allow_multiple']) && $fieldType === 'file' ? 1 : 0;
         $fieldLayoutWidth = normalizeFormFieldLayoutWidth((string)($fieldData['layout_width'] ?? 'full'));
         $fieldStartNewRow = isset($fieldData['start_new_row']) ? 1 : 0;
@@ -315,7 +316,7 @@ if ($id !== null) {
         $newDefaultValue = trim($_POST['new_field_default_value'] ?? '');
         $newHelpText = trim($_POST['new_field_help_text'] ?? '');
         $newAcceptTypes = trim($_POST['new_field_accept_types'] ?? '');
-        $newMaxFileSize = max(1, min(100, (int)($_POST['new_field_max_file_size_mb'] ?? 10)));
+        $newMaxFileSize = max(1, min(500, (int)($_POST['new_field_max_file_size_mb'] ?? $defaultUploadMaxSizeMb)));
         $newAllowMultiple = isset($_POST['new_field_allow_multiple']) && $newType === 'file' ? 1 : 0;
         $newLayoutWidth = normalizeFormFieldLayoutWidth((string)($_POST['new_field_layout_width'] ?? 'full'));
         $newStartNewRow = isset($_POST['new_field_start_new_row']) ? 1 : 0;
@@ -388,7 +389,7 @@ if ($id !== null) {
                 trim((string)($presetField['default_value'] ?? '')),
                 trim((string)($presetField['help_text'] ?? '')),
                 trim((string)($presetField['accept_types'] ?? '')),
-                max(1, min(100, (int)($presetField['max_file_size_mb'] ?? 10))),
+                max(1, min(500, (int)($presetField['max_file_size_mb'] ?? $defaultUploadMaxSizeMb))),
                 !empty($presetField['allow_multiple']) ? 1 : 0,
                 normalizeFormFieldLayoutWidth((string)($presetField['layout_width'] ?? 'full')),
                 !empty($presetField['start_new_row']) ? 1 : 0,

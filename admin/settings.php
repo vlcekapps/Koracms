@@ -413,6 +413,13 @@ adminHeader('Nastavení webu');
            value="<?= h($formState['chat_retention_days']) ?>">
     <small id="chat-retention-days-help" class="field-help">Hodnota 0 znamená, že se vyřízené chat zprávy automaticky nemažou. Mazání provádí cron.php.</small>
     <?php endif; ?>
+
+    <label for="upload_max_size_mb">Maximální velikost uploadu (MB)</label>
+    <input type="number" id="upload_max_size_mb" name="upload_max_size_mb" min="1" max="500"
+           aria-describedby="upload-max-size-help"
+           value="<?= h($formState['upload_max_size_mb']) ?>"<?= adminFieldAttributes('upload_max_size_mb', $fieldErrors, [], ['upload-max-size-help']) ?>>
+    <small id="upload-max-size-help" class="field-help">Výchozí hodnota je 10 MB. Nastavení ovlivní knihovnu médií, hromadné nahrávání fotografií a výchozí limit nových souborových polí ve Form Builderu. Hosting musí zároveň dovolovat alespoň stejný limit v PHP nastaveních <code>upload_max_filesize</code> a <code>post_max_size</code>.</small>
+    <?php adminRenderFieldError('upload_max_size_mb', $fieldErrors, [], $fieldMessageFor('upload_max_size_mb')); ?>
   </fieldset>
 
   <button type="submit" class="btn settings-submit">Uložit nastavení</button>

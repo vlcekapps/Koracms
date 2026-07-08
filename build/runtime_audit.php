@@ -13755,7 +13755,7 @@ foreach ([
             "adminFieldAttributes('media_files', \$mediaFieldErrorNames, [], ['media-upload-help'], 'media-upload-error')",
             "adminRenderFieldError('media_files', \$mediaFieldErrorNames, [], \$mediaFieldErrors['media_files'] ?? '', 'media-upload-error')",
             'id="media-upload-help"',
-            '10 MB',
+            'koraUploadMaxSizeLabel()',
             'SVG knihovna z bezpečnostních důvodů nepřijímá',
         ],
         'forbidden' => [
@@ -13869,7 +13869,8 @@ if ($mediaHttpIntegrationSource === '') {
         "'action' => 'bulk'",
         "'bulk_action' => 'make_private'",
         "'bulk_action' => 'delete_unused'",
-        'Vyberte alespoň jeden podporovaný soubor do 10 MB',
+        '$defaultMediaUploadLimitLabel = koraUploadMaxSizeLabel()',
+        "'Vyberte alespoň jeden podporovaný soubor do ' . \$defaultMediaUploadLimitLabel",
         'media-upload-error',
         'replacement-file-error',
         'Použité médium nelze přepnout do soukromého režimu',
@@ -14008,6 +14009,7 @@ foreach ([
     'function settingsFlashPull(): array',
     'function settingsFlashSet(array $flash): void',
     'function settingsDefaultFormState(): array',
+    "'upload_max_size_mb' => (string)koraDefaultUploadMaxSizeMb()",
 ] as $settingsSharedFragment) {
     if (!str_contains($settingsSharedSource, $settingsSharedFragment)) {
         $settingsPrgIssues[] = 'settings shared helper is missing fragment: ' . $settingsSharedFragment;
@@ -14023,6 +14025,8 @@ foreach ([
     '$generatedWebpFiles = [];',
     'koraInspectUploadedFile(',
     'koraStoreInspectedUpload(',
+    "'upload_max_size_mb'",
+    '$submittedUploadMaxSize',
 ] as $settingsSaveFragment) {
     if (!str_contains($settingsSaveSource, $settingsSaveFragment)) {
         $settingsPrgIssues[] = 'settings save handler is missing PRG/atomic fragment: ' . $settingsSaveFragment;
@@ -14030,6 +14034,16 @@ foreach ([
 }
 if (str_contains($settingsSaveSource, 'is_uploaded_file(') || str_contains($settingsSaveSource, 'move_uploaded_file(') || str_contains($settingsSaveSource, 'new finfo(FILEINFO_MIME_TYPE)')) {
     $settingsPrgIssues[] = 'settings save handler still performs direct upload storage or MIME detection';
+}
+foreach ([
+    'id="upload_max_size_mb"',
+    'Maximální velikost uploadu (MB)',
+    'upload-max-size-help',
+    'adminRenderFieldError(\'upload_max_size_mb\'',
+] as $settingsUploadLimitFragment) {
+    if (!str_contains($settingsAdminSource, $settingsUploadLimitFragment)) {
+        $settingsPrgIssues[] = 'settings page is missing configurable upload limit fragment: ' . $settingsUploadLimitFragment;
+    }
 }
 foreach ([
     'settings-social',

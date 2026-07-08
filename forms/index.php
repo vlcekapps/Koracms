@@ -46,7 +46,7 @@ function publicFormFieldAcceptsUpload(array $field, string $originalName, string
  */
 function storePublicFormUpload(array $field, array $file): array
 {
-    $maxFileSizeBytes = max(1, (int)($field['max_file_size_mb'] ?? 10)) * 1024 * 1024;
+    $maxFileSizeBytes = max(1, (int)($field['max_file_size_mb'] ?? koraDefaultUploadMaxSizeMb())) * 1024 * 1024;
     $upload = koraInspectUploadedFile($file, [
         'upload_error' => 'Soubor se nepodařilo nahrát. Zkuste to prosím znovu.',
         'invalid_upload_error' => 'Nahraný soubor se nepodařilo ověřit.',

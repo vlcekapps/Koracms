@@ -5536,7 +5536,7 @@ function uploadGalleryPhotoImage(array $file): array
         'invalid_upload_error' => 'Fotografii se nepodařilo zpracovat.',
         'allowed_mime_map' => presentationImageMimeMap(),
         'unsupported_type_error' => 'Fotografie musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        'max_bytes' => 10 * 1024 * 1024,
+        'max_bytes' => koraDefaultUploadMaxSizeBytes(),
         'too_large_error' => 'Fotografie je příliš velká.',
     ]);
     if (empty($upload['ok'])) {
@@ -9658,7 +9658,24 @@ function formPresetDefinitions(): array
 function formPresetDefinition(string $key): ?array
 {
     $definitions = formPresetDefinitions();
-    return $definitions[$key] ?? null;
+    $definition = $definitions[$key] ?? null;
+    if ($definition === null) {
+        return null;
+    }
+
+    $defaultUploadLimit = koraDefaultUploadMaxSizeMb();
+    foreach ($definition['fields'] as &$field) {
+        if (normalizeFormFieldType((string)($field['field_type'] ?? 'text')) !== 'file') {
+            continue;
+        }
+
+        if ((int)($field['max_file_size_mb'] ?? 0) === 10) {
+            $field['max_file_size_mb'] = $defaultUploadLimit;
+        }
+    }
+    unset($field);
+
+    return $definition;
 }
 
 /**

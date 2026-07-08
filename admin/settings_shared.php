@@ -60,6 +60,7 @@ function settingsDefaultFormState(): array
         'notify_pending_content' => getSetting('notify_pending_content', '1'),
         'notify_chat_message' => getSetting('notify_chat_message', '0'),
         'chat_retention_days' => getSetting('chat_retention_days', '0'),
+        'upload_max_size_mb' => (string)koraDefaultUploadMaxSizeMb(),
         'content_editor' => getSetting('content_editor', 'html'),
         'ga4_measurement_id' => getSetting('ga4_measurement_id', ''),
         'custom_head_code' => getSetting('custom_head_code', ''),
@@ -90,6 +91,7 @@ function settingsFieldErrorMessages(): array
         'board_public_label' => 'Zkraťte veřejný název sekce vývěsky na nejvýše 60 znaků, například Úřední deska.',
         'github_issues_repository' => 'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms, nebo pole nechte prázdné.',
         'comment_notify_email' => 'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.',
+        'upload_max_size_mb' => 'Zadejte celé číslo od 1 do 500 podle limitu hostingu.',
         'site_favicon' => 'Nahrajte faviconu ve formátu ICO nebo PNG o velikosti nejvýše 256 KB, nebo pole nechte prázdné a stávající faviconu neměňte.',
         'site_logo' => 'Nahrajte logo ve formátu JPEG, PNG, GIF nebo WebP o velikosti nejvýše 2 MB, nebo pole nechte prázdné a stávající logo neměňte.',
     ];

@@ -34,6 +34,8 @@ $formState['notify_form_submission'] = isset($_POST['notify_form_submission']) ?
 $formState['notify_pending_content'] = isset($_POST['notify_pending_content']) ? '1' : '0';
 $formState['notify_chat_message'] = isset($_POST['notify_chat_message']) ? '1' : '0';
 $formState['chat_retention_days'] = (string)max(0, min(3650, (int)($_POST['chat_retention_days'] ?? $formState['chat_retention_days'])));
+$submittedUploadMaxSize = trim((string)($_POST['upload_max_size_mb'] ?? $formState['upload_max_size_mb']));
+$formState['upload_max_size_mb'] = (string)max(1, min(500, (int)$submittedUploadMaxSize));
 $formState['content_editor'] = in_array((string)($_POST['content_editor'] ?? ''), ['html', 'wysiwyg'], true)
     ? (string)$_POST['content_editor']
     : 'html';
@@ -105,6 +107,16 @@ if (
     $errors[] = 'E-mail pro upozornění na komentáře musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
     $fieldErrors[] = 'comment_notify_email';
     $fieldErrorMessages['comment_notify_email'] = 'Zadejte úplnou e-mailovou adresu pro upozornění ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
+}
+
+$submittedUploadMaxSizeInt = filter_var($submittedUploadMaxSize, FILTER_VALIDATE_INT);
+if ($submittedUploadMaxSize === ''
+    || $submittedUploadMaxSizeInt === false
+    || $submittedUploadMaxSizeInt < 1
+    || $submittedUploadMaxSizeInt > 500) {
+    $errors[] = 'Maximální velikost uploadu musí být celé číslo v MB. U pole Maximální velikost uploadu je konkrétní nápověda.';
+    $fieldErrors[] = 'upload_max_size_mb';
+    $fieldErrorMessages['upload_max_size_mb'] = 'Zadejte celé číslo od 1 do 500 podle limitu hostingu.';
 }
 
 $faviconUpload = null;
@@ -224,6 +236,7 @@ $settingsToPersist = [
     'notify_pending_content',
     'notify_chat_message',
     'chat_retention_days',
+    'upload_max_size_mb',
     'ga4_measurement_id',
     'custom_head_code',
     'custom_footer_code',

@@ -1296,6 +1296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notify_pending_content' => '1',
             'notify_chat_message' => '0',
             'chat_retention_days' => '0',
+            'upload_max_size_mb' => '10',
             'comment_blocked_emails' => '',
             'comment_spam_words' => '',
             'home_author_user_id' => '',

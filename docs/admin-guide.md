@@ -1173,7 +1173,7 @@ Obrazové uploady v článcích, vývěsce, událostech, místech a položkách 
 
 Přílohy vývěsky a audio soubory podcastových epizod mají podobně konkrétní field-level nápovědu. Příloha vývěsky radí povolené formáty PDF, Office/OpenDocument, ZIP a TXT; audio epizody radí MP3, OGG, WAV, M4A nebo AAC a připomíná, že při použití externího audio odkazu má upload pole zůstat prázdné.
 
-Knihovna médií používá stejný princip pro hromadný upload i náhradu existujícího souboru. Chyba zůstává nahoře jako alert, ale po redirectu se současně napojí na file input přes `aria-describedby`; text správci připomene podporovaný formát do 10 MB, zákaz SVG, u náhrady stejnou MIME rodinu a u veřejného souboru zachování přípony.
+Knihovna médií používá stejný princip pro hromadný upload i náhradu existujícího souboru. Chyba zůstává nahoře jako alert, ale po redirectu se současně napojí na file input přes `aria-describedby`; text správci připomene podporovaný formát do nastaveného limitu uploadu, zákaz SVG, u náhrady stejnou MIME rodinu a u veřejného souboru zachování přípony. Limit běžných uploadů se nastavuje v obecných nastaveních webu v MB; hosting zároveň musí povolit odpovídající hodnoty `upload_max_filesize` a `post_max_size`.
 
 U plánování publikace, ukončení publikace, rezervační dostupnosti a časových rozsahů CMS nepředpokládá ruční znalost formátu. Pokud prohlížeč pošle neplatnou hodnotu, chyba má správci poradit, aby znovu vybral datum a čas v ovládacím prvku, volitelné plánování nechal prázdné, odstranil prázdný řádek nebo opravil pořadí začátku a konce.
 

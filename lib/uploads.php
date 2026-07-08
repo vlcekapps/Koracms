@@ -28,6 +28,23 @@ function koraUploadErrorMessage(int $errorCode): string
     };
 }
 
+function koraDefaultUploadMaxSizeMb(): int
+{
+    $rawValue = function_exists('getSetting') ? getSetting('upload_max_size_mb', '10') : '10';
+    return max(1, min(500, (int)$rawValue));
+}
+
+function koraDefaultUploadMaxSizeBytes(): int
+{
+    return koraDefaultUploadMaxSizeMb() * 1024 * 1024;
+}
+
+function koraUploadMaxSizeLabel(?int $megabytes = null): string
+{
+    $megabytes ??= koraDefaultUploadMaxSizeMb();
+    return number_format(max(1, $megabytes), 0, ',', "\u{00a0}") . "\u{00a0}MB";
+}
+
 function koraUploadSanitizeExtension(string $originalName): string
 {
     $extension = strtolower((string)pathinfo($originalName, PATHINFO_EXTENSION));
