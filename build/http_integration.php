@@ -6930,7 +6930,7 @@ try {
                 'id="blog-series-options"',
                 'name="series_ids[]"',
                 'aria-invalid="true"',
-                'aria-describedby="blog-series-help blog-series-empty blog-series-error"',
+                'aria-describedby="blog-series-help blog-series-status blog-series-empty blog-series-error"',
                 'id="blog-series-error"',
                 'Vyberte jen série aktuálního blogu, nebo zařazení do série odeberte.',
             ],
@@ -7160,7 +7160,12 @@ try {
     );
     if (!str_contains($seriesArticleForm['body'], 'Série článků')
         || !str_contains($seriesArticleForm['body'], 'id="blog-series-options"')
-        || !str_contains($seriesArticleForm['body'], 'name="series_ids[]"')) {
+        || !str_contains($seriesArticleForm['body'], 'name="series_ids[]"')
+        || !str_contains($seriesArticleForm['body'], 'id="blog-series-status"')
+        || !str_contains($seriesArticleForm['body'], 'Článek není zařazený do žádné série.')
+        || !str_contains($seriesArticleForm['body'], 'id="blog-series-clear"')
+        || !str_contains($seriesArticleForm['body'], 'Odebrat ze všech sérií')
+        || !str_contains($seriesArticleForm['body'], 'aria-describedby="blog-series-help blog-series-status blog-series-empty"')) {
         $blogSeriesIssues[] = 'editor článku nezobrazil výběr série článků';
     }
     if (!str_contains($seriesArticleForm['body'], $seriesTitle)) {

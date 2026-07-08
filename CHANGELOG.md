@@ -8,7 +8,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Přidáno
 - **Blogový accessibility conformance pass** – Blog má modulovou přílohu `docs/accessibility/modules/blog.md` s rozsahem veřejných i administračních workflow, WCAG 2.2 AA shrnutím, automatickými důkazy, ručními scénáři a backlogem navázaným na hlavní ACR dokumentaci.
-- **Srozumitelnější zařazení článku do sérií** – editor článku už nepoužívá záludný vícenásobný select pro série; série cílového blogu se vybírají zaškrtávacími políčky a odznačení všech políček jasně znamená, že článek do žádné série nepatří.
+- **Srozumitelnější zařazení článku do sérií** – editor článku už nepoužívá záludný vícenásobný select pro série; série cílového blogu se vybírají zaškrtávacími políčky, editor oznamuje aktuální počet vybraných sérií a tlačítko `Odebrat ze všech sérií` umožní jasně vrátit článek mimo série.
 - **Accessibility conformance report draft** – projekt má novou dokumentační sadu `docs/accessibility/` pro dlouhodobé vyhodnocování WCAG 2.2 AA a VPAT/ACR: matici kritérií, ACR draft, remediation backlog a ruční testovací protokol.
 - **Jednotná administrační nápověda pro Consistent Help** – spodní navigace administrace má stabilní stránku `Nápověda a podpora`, která inventarizuje command centrum, profil, redakční checklist, kontaktní/chat/Form Builder workflow, provozní nastavení a conformance dokumentaci; runtime audit a HTTP integrace hlídají route guard, pořadí navigace a render pro WCAG `3.2.6`.
 - **Veřejná footer navigace Pomoc a kontakt** – výchozí šablona při zapnutém modulu Kontakt nebo Chat vykreslí ve footeru pojmenovanou help navigaci se stabilním pořadím odkazů; runtime audit a HTTP integrace hlídají markup, CSS, module gating i render na homepage a vyhledávání.

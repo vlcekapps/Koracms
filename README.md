@@ -294,7 +294,7 @@ Veřejný index blogu zobrazuje doporučený článek v přirozenějším pořad
 
 Editor článku umožňuje ručně vybrat související články ze stejného blogu. Veřejný detail článku zobrazí ruční výběr jako první a pokud je položek méně, doplní zbytek automaticky podle kategorie, štítků a novosti. Při změně blogu se ruční výběr validuje proti cílovému blogu, takže se do detailu nepropíše odkaz na článek z cizího blogu.
 
-Blogy mají také tematické série článků. Správa série patří ke konkrétnímu blogu, umožňuje název, slug, popis, aktivní stav a ruční pořadí článků. Editor článku pak nabídne zařazení jen do sérií cílového blogu. Čtenář na detailu článku uvidí blok `Tento článek je součástí série`, aktuální díl je označený pro asistivní technologie a veřejná stránka série má URL `/{blog-slug}/serie/{series-slug}`.
+Blogy mají také tematické série článků. Správa série patří ke konkrétnímu blogu, umožňuje název, slug, popis, aktivní stav a ruční pořadí článků. Editor článku pak nabídne zařazení jen do sérií cílového blogu, textově oznamuje počet vybraných sérií a umožní zařazení jedním tlačítkem odebrat ze všech sérií. Čtenář na detailu článku uvidí blok `Tento článek je součástí série`, aktuální díl je označený pro asistivní technologie a veřejná stránka série má URL `/{blog-slug}/serie/{series-slug}`.
 
 Delší blogové články dostanou na veřejném detailu automatickou osnovu `V tomto článku`, pokud obsah obsahuje alespoň dva viditelné nadpisy `h2` nebo `h3`. Kora CMS doplní stabilní kotvy k nadpisům, ručně zadaná `id` zachová a odkazy v osnově pomáhají čtenářům i čtečkám obrazovky rychle přeskakovat mezi částmi článku.
 

@@ -11955,6 +11955,10 @@ if (!str_contains($blogExportSource, 'article_related') || !str_contains($blogIm
 }
 if (!str_contains($blogFormSource, 'name="series_ids[]"')
     || !str_contains($blogFormSource, 'blog-series-help')
+    || !str_contains($blogFormSource, 'blog-series-status')
+    || !str_contains($blogFormSource, 'id="blog-series-clear"')
+    || !str_contains($blogFormSource, 'Odebrat ze všech sérií')
+    || !str_contains($blogFormSource, 'updateSeriesSelectionStatus')
     || !str_contains($blogFormSource, 'blog-link-series')
     || !str_contains($blogFormSource, 'id="blog-series-options"')
     || !str_contains($blogFormSource, 'type="checkbox"')

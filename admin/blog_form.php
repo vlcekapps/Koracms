@@ -558,7 +558,8 @@ adminHeader($pageTitle);
     <?php endif; ?>
   </fieldset>
 
-  <fieldset id="article-series-fieldset" class="blog-form-fieldset" aria-describedby="blog-series-help blog-series-empty<?= $err === 'series_target' ? ' blog-series-error' : '' ?>"<?= $err === 'series_target' ? ' aria-invalid="true"' : '' ?>>
+  <?php $selectedSeriesCount = count(array_intersect(array_map('intval', $articleSeriesIds), array_map(static fn (array $seriesOption): int => (int)$seriesOption['id'], $blogSeriesOptions))); ?>
+  <fieldset id="article-series-fieldset" class="blog-form-fieldset" aria-describedby="blog-series-help blog-series-status blog-series-empty<?= $err === 'series_target' ? ' blog-series-error' : '' ?>"<?= $err === 'series_target' ? ' aria-invalid="true"' : '' ?>>
     <legend>Série článků</legend>
     <div id="blog-series-options" class="blog-form-check-list"<?= $blogSeriesOptions === [] ? ' hidden' : '' ?>>
       <?php foreach ($blogSeriesOptions as $seriesOption): ?>
@@ -573,12 +574,16 @@ adminHeader($pageTitle);
         <div class="blog-form-checkbox-row">
           <input type="checkbox" id="<?= h($seriesInputId) ?>" name="series_ids[]" value="<?= $seriesId ?>"
                  <?= in_array($seriesId, $articleSeriesIds, true) ? ' checked' : '' ?>
-                 <?= adminFieldAttributes('series_ids', $err, $fieldErrorMap, ['blog-series-help', 'blog-series-empty'], 'blog-series-error') ?>>
+                 <?= adminFieldAttributes('series_ids', $err, $fieldErrorMap, ['blog-series-help', 'blog-series-status', 'blog-series-empty'], 'blog-series-error') ?>>
           <label for="<?= h($seriesInputId) ?>" class="admin-checkbox-label"><?= h($seriesLabel) ?></label>
         </div>
       <?php endforeach; ?>
     </div>
     <small id="blog-series-help" class="field-help">Zaškrtněte jednu nebo více sérií stejného blogu, do kterých článek patří. Když nemá patřit do žádné série, nechte všechna políčka nezaškrtnutá. Pořadí článků v sérii upravíte na stránce <a id="blog-series-manage-link" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $currentBlogId ?>">Série článků</a>.</small>
+    <small id="blog-series-status" class="field-help" role="status" aria-live="polite" aria-atomic="true"<?= $blogSeriesOptions === [] ? ' hidden' : '' ?>>
+      <?= $selectedSeriesCount > 0 ? 'Vybraných sérií: ' . $selectedSeriesCount . '.' : 'Článek není zařazený do žádné série.' ?>
+    </small>
+    <button type="button" id="blog-series-clear" class="btn btn-secondary"<?= $blogSeriesOptions === [] || $selectedSeriesCount === 0 ? ' hidden' : '' ?>>Odebrat ze všech sérií</button>
     <small id="blog-series-empty" class="field-help"<?= $blogSeriesOptions === [] ? '' : ' hidden' ?>>V tomto blogu zatím nejsou vytvořené žádné série článků.</small>
     <?php adminRenderFieldError('series_ids', $err, $fieldErrorMap, $fieldErrorMessages['series_target'], 'blog-series-error'); ?>
   </fieldset>
@@ -761,6 +766,8 @@ adminHeader($pageTitle);
     const categorySelectionModeInput = document.getElementById('category-selection-mode');
     const tagSelectionModeInput = document.getElementById('tag-selection-mode');
     const seriesContainer = document.getElementById('blog-series-options');
+    const seriesStatus = document.getElementById('blog-series-status');
+    const seriesClearButton = document.getElementById('blog-series-clear');
     const seriesEmpty = document.getElementById('blog-series-empty');
     const relatedSelect = document.getElementById('related_article_ids');
     const relatedEmpty = document.getElementById('blog-related-empty');
@@ -898,6 +905,22 @@ adminHeader($pageTitle);
     const selectedRadioValue = (inputs, fallbackValue = 'drop') => {
         const checkedInput = inputs.find((input) => input.checked);
         return checkedInput ? checkedInput.value : fallbackValue;
+    };
+
+    const updateSeriesSelectionStatus = () => {
+        if (!seriesContainer || !seriesStatus || !seriesClearButton) {
+            return;
+        }
+
+        const seriesInputs = Array.from(seriesContainer.querySelectorAll('input[name="series_ids[]"]'));
+        const selectedCount = seriesInputs.filter((input) => input.checked).length;
+        const hasSeries = seriesInputs.length > 0;
+
+        seriesStatus.hidden = !hasSeries;
+        seriesStatus.textContent = selectedCount > 0
+            ? 'Vybraných sérií: ' + String(selectedCount) + '.'
+            : 'Článek není zařazený do žádné série.';
+        seriesClearButton.hidden = !hasSeries || selectedCount === 0;
     };
 
     const updateMissingTaxonomyChoices = (blogId, state) => {
@@ -1072,6 +1095,7 @@ adminHeader($pageTitle);
                     + '<label for="' + inputId + '" class="admin-checkbox-label">' + escapeHtml(seriesLabel(series)) + '</label>'
                     + '</div>';
             }).join('');
+            updateSeriesSelectionStatus();
             if (seriesEmpty) {
                 seriesEmpty.hidden = seriesRows.length > 0;
             }
@@ -1157,7 +1181,25 @@ adminHeader($pageTitle);
         input.addEventListener('change', rememberCurrentSelections);
     });
     relatedSelect?.addEventListener('change', rememberCurrentSelections);
-    seriesContainer?.addEventListener('change', rememberCurrentSelections);
+    seriesContainer?.addEventListener('change', function () {
+        rememberCurrentSelections();
+        updateSeriesSelectionStatus();
+    });
+    seriesClearButton?.addEventListener('click', function () {
+        if (!seriesContainer) {
+            return;
+        }
+        seriesContainer.querySelectorAll('input[name="series_ids[]"]:checked').forEach((input) => {
+            input.checked = false;
+        });
+        rememberCurrentSelections();
+        updateSeriesSelectionStatus();
+        const firstSeriesInput = seriesContainer.querySelector('input[name="series_ids[]"]');
+        if (firstSeriesInput instanceof HTMLElement) {
+            firstSeriesInput.focus();
+        }
+    });
+    updateSeriesSelectionStatus();
 })();
 </script>
 

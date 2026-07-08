@@ -365,7 +365,7 @@ Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden 
 
 Každý blog má vlastní správu sérií v odkazu **Série článků**. Série má název, slug, volitelný popis, aktivní stav a ručně seřazené články daného blogu. Článek lze v první verzi zařadit do více sérií, ale vždy jen do sérií blogu, do kterého článek patří.
 
-V editoru článku se série vybírají zaškrtávacími políčky. Pokud článek nemá být v žádné sérii, nechte všechna políčka nezaškrtnutá; není potřeba hledat zvláštní volbu `Žádná`.
+V editoru článku se série vybírají zaškrtávacími políčky. Pokud článek nemá být v žádné sérii, nechte všechna políčka nezaškrtnutá nebo použijte tlačítko `Odebrat ze všech sérií`; není potřeba hledat zvláštní volbu `Žádná`. Editor zároveň textově oznamuje, zda článek není v žádné sérii, nebo kolik sérií je vybraných.
 
 Veřejně se série zobrazí jen tehdy, když je aktivní a obsahuje alespoň jeden publikovaný, nesmazaný a nebudoucí článek. Index blogu zobrazí blok `Série článků` nad výpisem článků, detail článku zobrazí blok `Tento článek je součástí série` s aktuálním dílem označeným přes `aria-current="page"` a samostatná stránka série má tvar `/{blog-slug}/serie/{series-slug}`.
 

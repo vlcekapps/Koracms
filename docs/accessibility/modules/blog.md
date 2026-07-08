@@ -45,7 +45,8 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 - `blog_management_validation_http` pro správu blogů a validační chyby,
 - runtime blog guardraily v `build/runtime_audit.php` pro osnovu článku, série, taxonomie, redirecty, blogové stránky, výpisy a přístupné nadpisy,
 - `public_error_suggestion_guardrails` pro sdílenou chybovou hlášku matematického ověření,
-- nově také field-level guardrail a HTTP scénář pro veřejný komentářový formulář.
+- field-level guardrail a HTTP scénář pro veřejný komentářový formulář,
+- nově také guardrail a HTTP scénář pro srozumitelné odebrání článku ze všech sérií v editoru článku.
 
 ## WCAG 2.2 A/AA Shrnutí
 
@@ -86,6 +87,21 @@ Oprava:
 
 Snížené riziko: WCAG `3.3.1 Error Identification`, `3.3.3 Error Suggestion` a `4.1.3 Status Messages`.
 
+### Výběr sérií v editoru článku nebyl dostatečně zřejmý při odebrání všech sérií
+
+Priorita: střední.
+
+Riziko: editor článku technicky používal zaškrtávací políčka, ale správce neměl jednoznačný stavový text ani rychlou akci pro návrat na „bez série“. Při přepínání blogu mohlo působit matoucím dojmem, proč je v seznamu série a zároveň se pracuje s prázdným stavem.
+
+Oprava:
+
+- sekce sérií oznamuje textový stav `Článek není zařazený do žádné série` nebo počet vybraných sérií,
+- tlačítko `Odebrat ze všech sérií` odškrtne všechny série a vrátí focus do seznamu,
+- checkboxy sérií mají stavový text v `aria-describedby`,
+- runtime audit a HTTP integrace hlídají návrat patternu.
+
+Snížené riziko: WCAG `2.1.1 Keyboard`, `3.3.2 Labels or Instructions`, `4.1.2 Name, Role, Value` a `4.1.3 Status Messages`.
+
 ## Ruční Scénáře Pro Blog
 
 Veřejný Blog:
@@ -98,7 +114,7 @@ Veřejný Blog:
 
 Administrace Blogu:
 
-1. Editor článku bez myši: titulek, slug, změna blogu, kategorie, štítky, série, související články, publikace a uložení.
+1. Editor článku bez myši: titulek, slug, změna blogu, kategorie, štítky, série, tlačítko pro odebrání ze všech sérií, související články, publikace a uložení.
 2. Vyvolat chyby: chybějící titulek/text, duplicitní slug, cizí kategorie, cizí série a cizí související článek.
 3. Správa kategorií, štítků, sérií, externích odkazů a blogových stránek: ověřit labely, field-level chyby, zachování hodnot a focus po PRG.
 4. Dlouhá editace: nechat vypršet session, ověřit heartbeat live hlášku, návrat přes login a recovery koncept.
