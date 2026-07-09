@@ -161,6 +161,8 @@ Poznámka k `3.3.4` z 2026-07-09: mazání témat kontaktu a chatu má vlastní 
 
 Poznámka k `3.3.4` z 2026-07-09: mazání rezervačních kategorií a míst má navazující review-and-confirm guardrail. Řádkové formuláře popisují počet navázaných rezervačních zdrojů a dopad na existující zdroje/rezervace, vyžadují `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` a při chybějícím potvrzení vrací textový atomický alert s field-level chybou u checkboxu. Server odmítne nepotvrzený POST před zrušením vazby zdroje, smazáním číselníku nebo audit logem; HTTP `reservations_http` ověřuje odmítnutí bez změny vazeb/logu i potvrzený cleanup.
 
+Poznámka k `3.3.4` z 2026-07-09: mazání kategorií vývěsky a typů akcí má navazující review-and-confirm guardrail. Řádkové formuláře popisují počet navázaných položek vývěsky a odběrů nebo počet navázaných událostí, vyžadují `confirm_board_category_delete_<id>` nebo `confirm_event_type_delete_<id>` a při chybějícím potvrzení vrací textový atomický alert s field-level chybou u checkboxu. Server odmítne nepotvrzený POST před odpojením vazeb, smazáním taxonomie nebo audit logem; HTTP `board_save_http` a `events_types_places_recurrence_http` ověřují odmítnutí bez změny vazeb/logu i potvrzený cleanup.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

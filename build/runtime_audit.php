@@ -15303,6 +15303,7 @@ $formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_f
 $formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save.php');
 $presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
 $boardCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php');
+$boardCategoryDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cat_delete.php');
 $boardFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_form.php');
 $boardOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board.php');
 $downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
@@ -17928,6 +17929,12 @@ foreach ([
             '$error = \'Slug veřejné kategorie vývěsky už používá jiná kategorie. U pole Slug je konkrétní nápověda.\';',
             '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
             '$error = \'Meta title kategorie vývěsky je příliš dlouhý. U pole Meta title je konkrétní nápověda.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '$deleteConfirmField = \'confirm_board_category_delete_\' . $categoryId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Kategorii vývěsky nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na položky vývěsky a odběry.',
             '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('name', \$editId === null ? \$fieldErrors : [], [], ['name-help'])",
             "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['meta_title'] ?? '');",
@@ -17950,6 +17957,13 @@ foreach ([
             '$error = \'Slug veřejného typu akce už používá jiný typ. U pole Slug je konkrétní nápověda.\';',
             '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.\';',
             '$error = \'Meta title typu akce je příliš dlouhý. U pole Meta titulek je konkrétní nápověda.\';',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '$confirmFieldName = \'confirm_event_type_delete_\' . $deleteId;',
+            '$deleteConfirmField = \'confirm_event_type_delete_\' . $typeId;',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+            'Typ akce nejde smazat bez potvrzení kontroly dopadu.',
+            'Před smazáním typu akce potvrďte, že jste zkontrolovali dopad na navázané události.',
             '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('title', \$fieldErrors, [], ['event-type-help'])",
             "adminRenderFieldError('meta_title', \$fieldErrors, [], \$fieldErrorMessages['meta_title'] ?? '');",
@@ -18065,6 +18079,19 @@ foreach ([
             $adminFieldErrorIssues[] = $adminTaxonomySuggestionLabel . ' still uses a generic validation alert or field-level message without actionable context';
         }
     }
+}
+if (!str_contains($boardCategoryDeleteSource, "\$confirmFieldName = 'confirm_board_category_delete_' . \$id;")
+    || !str_contains($boardCategoryDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($boardCategoryDeleteSource, "DELETE FROM cms_board_subscriber_categories WHERE category_id = ?")
+    || !str_contains($boardCategoryDeleteSource, "UPDATE cms_board SET category_id = NULL WHERE category_id = ?")
+    || !str_contains($boardCategoryDeleteSource, "logAction('board_cat_delete'")) {
+    $adminFieldErrorIssues[] = 'board category delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($eventTypesAdminSource, "\$confirmFieldName = 'confirm_event_type_delete_' . \$deleteId;")
+    || !str_contains($eventTypesAdminSource, 'delete_error=confirm_required&delete_error_id=')
+    || !str_contains($eventTypesAdminSource, 'UPDATE cms_events SET event_type_id = NULL WHERE event_type_id = ?')
+    || !str_contains($eventTypesAdminSource, "logAction('event_type_delete'")) {
+    $adminFieldErrorIssues[] = 'event type delete action is missing server-side review-and-confirm guardrails';
 }
 if (!str_contains($reservationCategoryDeleteSource, "\$confirmFieldName = 'confirm_res_category_delete_' . \$id;")
     || !str_contains($reservationCategoryDeleteSource, "'delete_error' => 'confirm_required'")
@@ -18398,6 +18425,17 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_res_location_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing reservation taxonomy delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('board_save_http'")
+    || !str_contains($httpIntegrationSource, 'smazání kategorie vývěsky bez potvrzení změnilo vazby, smazalo kategorii nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_board_category_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání kategorie vývěsky neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('events_types_places_recurrence_http'")
+    || !str_contains($httpIntegrationSource, 'smazání typu akce bez potvrzení změnilo vazbu události, smazalo typ nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_event_type_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání typu akce neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing board/event taxonomy delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')

@@ -134,6 +134,8 @@ Additional `3.3.4` ACR evidence, 2026-07-09: Contact and Chat topic deletion now
 
 Additional `3.3.4` ACR evidence, 2026-07-09: Reservation category and location deletion now use row-level review-and-confirm forms. The UI describes the number of affected reservation resources and the impact on existing resources/bookings, requires `confirm_res_category_delete_<id>` or `confirm_res_location_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before unlinking resources, deleting taxonomy rows or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `reservations_http` cover rendered review text, rejected unconfirmed deletion without relationship/log changes and confirmed cleanup.
 
+Additional `3.3.4` ACR evidence, 2026-07-09: Board category and event type deletion now use row-level review-and-confirm forms. Board category deletion describes affected board items and subscriptions and requires `confirm_board_category_delete_<id>`; event type deletion describes affected events and requires `confirm_event_type_delete_<id>`. Unconfirmed POST requests return text-backed atomic alerts and field-level checkbox errors without unlinking relationships, deleting taxonomy rows or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `board_save_http` / `events_types_places_recurrence_http` cover rendered review text, rejected unconfirmed paths and confirmed cleanup.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

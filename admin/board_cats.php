@@ -8,6 +8,8 @@ $success = false;
 $error = '';
 $fieldErrors = [];
 $fieldErrorMessages = [];
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
 
 $editId = inputInt('get', 'edit');
 $formState = [
@@ -115,18 +117,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if ($deleteConfirmError) {
+    $error = 'Kategorii vývěsky nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$successMessage = $success ? 'Kategorie uložena.' : '';
+if (trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $successMessage = 'Kategorie byla smazána.';
+}
+$createFormHasError = $error !== '' && $editId === null && !$deleteConfirmError;
+
 $categories = $pdo->query(
-    "SELECT id, name, slug, description, meta_title, meta_description, sort_order, updated_at
-     FROM cms_board_categories
-     ORDER BY sort_order, name"
+    "SELECT c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description, c.sort_order, c.updated_at,
+            COUNT(DISTINCT b.id) AS board_count,
+            COUNT(DISTINCT sc.subscriber_id) AS subscriber_count
+     FROM cms_board_categories c
+     LEFT JOIN cms_board b ON b.category_id = c.id AND b.deleted_at IS NULL
+     LEFT JOIN cms_board_subscriber_categories sc ON sc.category_id = c.id
+     GROUP BY c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description, c.sort_order, c.updated_at
+     ORDER BY c.sort_order, c.name"
 )->fetchAll();
 
 adminHeader('Vývěska a oznámení – kategorie');
 ?>
-<?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
-<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
+<form method="post" novalidate<?= $createFormHasError ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
@@ -195,53 +211,62 @@ adminHeader('Vývěska a oznámení – kategorie');
     </thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
+      <?php
+        $categoryId = (int)$category['id'];
+        $deleteConfirmField = 'confirm_board_category_delete_' . $categoryId;
+        $deleteConfirmId = 'confirm-board-category-delete-' . $categoryId;
+        $deleteReviewId = 'board-category-delete-review-' . $categoryId;
+        $deleteFieldErrorId = 'confirm-board-category-delete-' . $categoryId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $categoryId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <?php if ($editId === (int)$category['id']): ?>
-          <?php $editCategoryHasError = $error !== '' && $editId === (int)$category['id']; ?>
+        <?php if ($editId === $categoryId): ?>
+          <?php $editCategoryHasError = $error !== '' && $editId === $categoryId && !$deleteConfirmError; ?>
           <td colspan="4">
             <form method="post" novalidate<?= $editCategoryHasError ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
+              <input type="hidden" name="update_id" value="<?= $categoryId ?>">
               <fieldset>
                 <legend>Upravit kategorii <?= h((string)$category['name']) ?></legend>
                 <div class="form-grid">
                   <div class="form-group">
-                    <label for="name-<?= (int)$category['id'] ?>">Název <span aria-hidden="true">*</span></label>
-                    <input type="text" id="name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
+                    <label for="name-<?= $categoryId ?>">Název <span aria-hidden="true">*</span></label>
+                    <input type="text" id="name-<?= $categoryId ?>" name="name" required aria-required="true" maxlength="255"
                            value="<?= h($editCategoryHasError ? $formState['name'] : (string)$category['name']) ?>"
-                           <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['name-help-' . (int)$category['id']], 'name-error-' . (int)$category['id']) ?>>
-                    <small id="name-help-<?= (int)$category['id'] ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech vývěsky.</small>
-                    <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . (int)$category['id']); ?>
+                           <?= adminFieldAttributes('name', $editCategoryHasError ? $fieldErrors : [], [], ['name-help-' . $categoryId], 'name-error-' . $categoryId) ?>>
+                    <small id="name-help-<?= $categoryId ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech vývěsky.</small>
+                    <?php adminRenderFieldError('name', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['name'] ?? '', 'name-error-' . $categoryId); ?>
                   </div>
                   <div class="form-group">
-                    <label for="slug-<?= (int)$category['id'] ?>">Slug</label>
-                    <input type="text" id="slug-<?= (int)$category['id'] ?>" name="slug" maxlength="150"
+                    <label for="slug-<?= $categoryId ?>">Slug</label>
+                    <input type="text" id="slug-<?= $categoryId ?>" name="slug" maxlength="150"
                            value="<?= h($editCategoryHasError ? $formState['slug'] : (string)$category['slug']) ?>"
-                           <?= adminFieldAttributes('slug', $editCategoryHasError ? $fieldErrors : [], [], ['slug-help-' . (int)$category['id']], 'slug-error-' . (int)$category['id']) ?>>
-                    <small id="slug-help-<?= (int)$category['id'] ?>" class="field-help">Volitelné. Když pole necháte prázdné, CMS slug vytvoří z názvu.</small>
-                    <?php adminRenderFieldError('slug', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? '', 'slug-error-' . (int)$category['id']); ?>
+                           <?= adminFieldAttributes('slug', $editCategoryHasError ? $fieldErrors : [], [], ['slug-help-' . $categoryId], 'slug-error-' . $categoryId) ?>>
+                    <small id="slug-help-<?= $categoryId ?>" class="field-help">Volitelné. Když pole necháte prázdné, CMS slug vytvoří z názvu.</small>
+                    <?php adminRenderFieldError('slug', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['slug'] ?? '', 'slug-error-' . $categoryId); ?>
                   </div>
                   <div class="form-group">
-                    <label for="sort-<?= (int)$category['id'] ?>">Pořadí</label>
-                    <input type="number" id="sort-<?= (int)$category['id'] ?>" name="sort_order" min="0"
+                    <label for="sort-<?= $categoryId ?>">Pořadí</label>
+                    <input type="number" id="sort-<?= $categoryId ?>" name="sort_order" min="0"
                            value="<?= h($editCategoryHasError ? $formState['sort_order'] : (string)$category['sort_order']) ?>">
                   </div>
                 </div>
                 <div class="form-group">
-                  <label for="description-<?= (int)$category['id'] ?>">Popis</label>
-                  <textarea id="description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                  <label for="description-<?= $categoryId ?>">Popis</label>
+                  <textarea id="description-<?= $categoryId ?>" name="description" rows="4"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
                 </div>
                 <div class="form-grid">
                   <div class="form-group">
-                    <label for="meta-title-<?= (int)$category['id'] ?>">Meta title</label>
-                    <input type="text" id="meta-title-<?= (int)$category['id'] ?>" name="meta_title" maxlength="160"
+                    <label for="meta-title-<?= $categoryId ?>">Meta title</label>
+                    <input type="text" id="meta-title-<?= $categoryId ?>" name="meta_title" maxlength="160"
                            value="<?= h($editCategoryHasError ? $formState['meta_title'] : (string)($category['meta_title'] ?? '')) ?>"
-                           <?= adminFieldAttributes('meta_title', $editCategoryHasError ? $fieldErrors : [], [], [], 'meta-title-error-' . (int)$category['id']) ?>>
-                    <?php adminRenderFieldError('meta_title', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? '', 'meta-title-error-' . (int)$category['id']); ?>
+                           <?= adminFieldAttributes('meta_title', $editCategoryHasError ? $fieldErrors : [], [], [], 'meta-title-error-' . $categoryId) ?>>
+                    <?php adminRenderFieldError('meta_title', $editCategoryHasError ? $fieldErrors : [], [], $fieldErrorMessages['meta_title'] ?? '', 'meta-title-error-' . $categoryId); ?>
                   </div>
                   <div class="form-group">
-                    <label for="meta-description-<?= (int)$category['id'] ?>">Meta description</label>
-                    <textarea id="meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h($editCategoryHasError ? $formState['meta_description'] : (string)($category['meta_description'] ?? '')) ?></textarea>
+                    <label for="meta-description-<?= $categoryId ?>">Meta description</label>
+                    <textarea id="meta-description-<?= $categoryId ?>" name="meta_description" rows="3"><?= h($editCategoryHasError ? $formState['meta_description'] : (string)($category['meta_description'] ?? '')) ?></textarea>
                   </div>
                 </div>
                 <div class="button-row button-row--start">
@@ -263,14 +288,33 @@ adminHeader('Vývěska a oznámení – kategorie');
           <td><a href="<?= h(boardCategoryPath($category)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a></td>
         <?php endif; ?>
         <td class="actions">
-          <?php if ($editId !== (int)$category['id']): ?>
-            <a href="board_cats.php?edit=<?= (int)$category['id'] ?>" class="btn">Upravit</a>
+          <?php if ($editId !== $categoryId): ?>
+            <a href="board_cats.php?edit=<?= $categoryId ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="board_cat_delete.php" method="post">
+          <form action="board_cat_delete.php" method="post"
+                class="admin-inline-form"
+                novalidate<?= $deleteHasError ? ' aria-describedby="form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat kategorii? Dokumenty bez kategorie zůstanou na desce.">Smazat</button>
+            <input type="hidden" name="id" value="<?= $categoryId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání kategorie vývěsky <?= h((string)$category['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání odebere kategorii z <?= (int)$category['board_count'] ?> položek vývěsky a z <?= (int)$category['subscriber_count'] ?> odběrů. Položky i odběratelé zůstanou zachovaní bez této kategorie.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání této kategorie vývěsky.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na položky vývěsky a odběry.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat kategorii? Dokumenty bez kategorie zůstanou na desce.">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

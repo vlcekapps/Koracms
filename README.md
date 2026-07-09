@@ -480,6 +480,8 @@ Kategorie a série ke stažení mají stejný field-level pattern pro hlavní va
 
 Mazání kategorií a sérií Ke stažení navazuje na stejný error-prevention princip. Řádkový formulář popíše počet navázaných položek, u série i dopad na aktuální verzi, vyžaduje checkbox `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` a server nepotvrzené smazání odmítne bez změny vazeb nebo audit logu.
 
+Mazání kategorií vývěsky a typů akcí používá stejný review-and-confirm princip. Řádkový formulář ukáže počet navázaných položek vývěsky a odběrů nebo počet událostí, vyžaduje checkbox `confirm_board_category_delete_<id>` nebo `confirm_event_type_delete_<id>` a server nepotvrzené smazání odmítne bez změny taxonomie, vazeb nebo audit logu.
+
 Mazání témat kontaktu a chatu používá stejný review-and-confirm princip. Řádkový formulář popíše dopad na veřejný kontaktní formulář nebo chat a existující zprávy, vyžaduje checkbox `confirm_contact_topic_delete_<id>` nebo `confirm_chat_topic_delete_<id>` a server nepotvrzené smazání odmítne bez změny tématu, vazby zpráv nebo audit logu.
 
 Mazání rezervačních kategorií a míst navazuje stejným principem. Řádkový formulář popíše počet navázaných rezervačních zdrojů a dopad na existující zdroje/rezervace, vyžaduje checkbox `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` a server nepotvrzené smazání odmítne bez změny číselníku, vazby zdroje nebo audit logu.

@@ -7,6 +7,8 @@ $pdo = db_connect();
 $error = '';
 $fieldErrors = [];
 $fieldErrorMessages = [];
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
 $editId = inputInt('get', 'edit');
 $formState = [
     'title' => '',
@@ -20,50 +22,106 @@ $formState = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $updateId = inputInt('post', 'update_id');
-    $formState = [
-        'title' => trim((string)($_POST['title'] ?? '')),
-        'slug' => trim((string)($_POST['slug'] ?? '')),
-        'description' => trim((string)($_POST['description'] ?? '')),
-        'meta_title' => trim((string)($_POST['meta_title'] ?? '')),
-        'meta_description' => trim((string)($_POST['meta_description'] ?? '')),
-        'is_active' => isset($_POST['is_active']) ? '1' : '0',
-        'sort_order' => (string)max(0, (int)($_POST['sort_order'] ?? 0)),
-    ];
-    $editId = $updateId;
+    $action = trim((string)($_POST['action'] ?? 'save'));
 
-    if ($formState['title'] === '') {
-        $error = 'Typ akce nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
-        $fieldErrors[] = 'title';
-        $fieldErrorMessages['title'] = 'Doplňte krátký název typu akce, například Workshop.';
-    } elseif (mb_strlen($formState['meta_title'], 'UTF-8') > 160) {
-        $error = 'Meta title typu akce je příliš dlouhý. U pole Meta titulek je konkrétní nápověda.';
-        $fieldErrors[] = 'meta_title';
-        $fieldErrorMessages['meta_title'] = 'Zkraťte meta titulek nejvýše na 160 znaků, nebo pole nechte prázdné.';
+    if ($action === 'delete') {
+        $deleteId = inputInt('post', 'id');
+        if ($deleteId !== null) {
+            $confirmFieldName = 'confirm_event_type_delete_' . $deleteId;
+            $deleteConfirmed = isset($_POST[$confirmFieldName])
+                && (string)$_POST[$confirmFieldName] === '1';
+            if (!$deleteConfirmed) {
+                header('Location: ' . BASE_URL . '/admin/event_types.php?delete_error=confirm_required&delete_error_id=' . $deleteId);
+                exit;
+            }
+
+            $typeStmt = $pdo->prepare('SELECT id FROM cms_event_types WHERE id = ? LIMIT 1');
+            $typeStmt->execute([$deleteId]);
+            if (!$typeStmt->fetch()) {
+                header('Location: ' . BASE_URL . '/admin/event_types.php');
+                exit;
+            }
+
+            $eventCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_events WHERE event_type_id = ? AND deleted_at IS NULL');
+            $eventCountStmt->execute([$deleteId]);
+            $eventCount = (int)$eventCountStmt->fetchColumn();
+
+            $pdo->prepare('UPDATE cms_events SET event_type_id = NULL WHERE event_type_id = ?')->execute([$deleteId]);
+            $pdo->prepare('DELETE FROM cms_event_types WHERE id = ?')->execute([$deleteId]);
+            logAction('event_type_delete', "id={$deleteId};event_count={$eventCount}");
+            header('Location: ' . BASE_URL . '/admin/event_types.php?ok=delete');
+            exit;
+        }
+        $error = 'Typ akce se nepodařilo najít.';
     } else {
-        $submittedSlug = eventTypeSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['title']);
-        if ($submittedSlug === '') {
-            $error = 'Slug veřejného typu akce není možné vytvořit. U pole Slug je konkrétní nápověda.';
-            $fieldErrors[] = 'slug';
-            $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba workshop.';
+        $updateId = inputInt('post', 'update_id');
+        $formState = [
+            'title' => trim((string)($_POST['title'] ?? '')),
+            'slug' => trim((string)($_POST['slug'] ?? '')),
+            'description' => trim((string)($_POST['description'] ?? '')),
+            'meta_title' => trim((string)($_POST['meta_title'] ?? '')),
+            'meta_description' => trim((string)($_POST['meta_description'] ?? '')),
+            'is_active' => isset($_POST['is_active']) ? '1' : '0',
+            'sort_order' => (string)max(0, (int)($_POST['sort_order'] ?? 0)),
+        ];
+        $editId = $updateId;
+
+        if ($formState['title'] === '') {
+            $error = 'Typ akce nejde uložit bez názvu. U pole Název je konkrétní nápověda.';
+            $fieldErrors[] = 'title';
+            $fieldErrorMessages['title'] = 'Doplňte krátký název typu akce, například Workshop.';
+        } elseif (mb_strlen($formState['meta_title'], 'UTF-8') > 160) {
+            $error = 'Meta title typu akce je příliš dlouhý. U pole Meta titulek je konkrétní nápověda.';
+            $fieldErrors[] = 'meta_title';
+            $fieldErrorMessages['meta_title'] = 'Zkraťte meta titulek nejvýše na 160 znaků, nebo pole nechte prázdné.';
         } else {
-            $uniqueSlug = uniqueEventTypeSlug($pdo, $submittedSlug, $updateId);
-            if ($uniqueSlug !== $submittedSlug) {
-                $error = 'Slug veřejného typu akce už používá jiný typ. U pole Slug je konkrétní nápověda.';
+            $submittedSlug = eventTypeSlug($formState['slug'] !== '' ? $formState['slug'] : $formState['title']);
+            if ($submittedSlug === '') {
+                $error = 'Slug veřejného typu akce není možné vytvořit. U pole Slug je konkrétní nápověda.';
                 $fieldErrors[] = 'slug';
-                $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.';
-            } elseif ($updateId !== null) {
-                $existingStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE id = ?");
-                $existingStmt->execute([$updateId]);
-                $existingType = $existingStmt->fetch() ?: null;
-                if (!$existingType) {
-                    $error = 'Upravovaný typ akce neexistuje.';
+                $fieldErrorMessages['slug'] = 'Použijte alespoň jedno písmeno nebo číslo. Vhodný slug může vypadat třeba workshop.';
+            } else {
+                $uniqueSlug = uniqueEventTypeSlug($pdo, $submittedSlug, $updateId);
+                if ($uniqueSlug !== $submittedSlug) {
+                    $error = 'Slug veřejného typu akce už používá jiný typ. U pole Slug je konkrétní nápověda.';
+                    $fieldErrors[] = 'slug';
+                    $fieldErrorMessages['slug'] = 'Zadejte jiný unikátní slug z malých písmen, číslic a pomlček, nebo upravte název typu.';
+                } elseif ($updateId !== null) {
+                    $existingStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE id = ?");
+                    $existingStmt->execute([$updateId]);
+                    $existingType = $existingStmt->fetch() ?: null;
+                    if (!$existingType) {
+                        $error = 'Upravovaný typ akce neexistuje.';
+                    } else {
+                        $pdo->prepare(
+                            "UPDATE cms_event_types
+                             SET title = ?, slug = ?, description = ?, meta_title = ?, meta_description = ?,
+                                 is_active = ?, sort_order = ?, updated_at = NOW()
+                             WHERE id = ?"
+                        )->execute([
+                            $formState['title'],
+                            $uniqueSlug,
+                            $formState['description'],
+                            $formState['meta_title'],
+                            $formState['meta_description'],
+                            (int)$formState['is_active'],
+                            (int)$formState['sort_order'],
+                            $updateId,
+                        ]);
+
+                        $updatedType = ['id' => $updateId, 'slug' => $uniqueSlug];
+                        if (eventTypePath($existingType) !== eventTypePath($updatedType)) {
+                            upsertPathRedirect($pdo, eventTypePath($existingType), eventTypePath($updatedType));
+                        }
+                        logAction('event_type_edit', "id={$updateId} title={$formState['title']} slug={$uniqueSlug}");
+                        header('Location: ' . BASE_URL . '/admin/event_types.php?ok=save');
+                        exit;
+                    }
                 } else {
                     $pdo->prepare(
-                        "UPDATE cms_event_types
-                         SET title = ?, slug = ?, description = ?, meta_title = ?, meta_description = ?,
-                             is_active = ?, sort_order = ?, updated_at = NOW()
-                         WHERE id = ?"
+                        "INSERT INTO cms_event_types
+                         (legacy_key, title, slug, description, meta_title, meta_description, is_active, sort_order, created_at, updated_at)
+                         VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
                     )->execute([
                         $formState['title'],
                         $uniqueSlug,
@@ -72,34 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $formState['meta_description'],
                         (int)$formState['is_active'],
                         (int)$formState['sort_order'],
-                        $updateId,
                     ]);
-
-                    $updatedType = ['id' => $updateId, 'slug' => $uniqueSlug];
-                    if (eventTypePath($existingType) !== eventTypePath($updatedType)) {
-                        upsertPathRedirect($pdo, eventTypePath($existingType), eventTypePath($updatedType));
-                    }
-                    logAction('event_type_edit', "id={$updateId} title={$formState['title']} slug={$uniqueSlug}");
+                    logAction('event_type_add', "title={$formState['title']} slug={$uniqueSlug}");
                     header('Location: ' . BASE_URL . '/admin/event_types.php?ok=save');
                     exit;
                 }
-            } else {
-                $pdo->prepare(
-                    "INSERT INTO cms_event_types
-                     (legacy_key, title, slug, description, meta_title, meta_description, is_active, sort_order, created_at, updated_at)
-                     VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
-                )->execute([
-                    $formState['title'],
-                    $uniqueSlug,
-                    $formState['description'],
-                    $formState['meta_title'],
-                    $formState['meta_description'],
-                    (int)$formState['is_active'],
-                    (int)$formState['sort_order'],
-                ]);
-                logAction('event_type_add', "title={$formState['title']} slug={$uniqueSlug}");
-                header('Location: ' . BASE_URL . '/admin/event_types.php?ok=save');
-                exit;
             }
         }
     }
@@ -124,7 +159,15 @@ if ($editId !== null && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     }
 }
 
-$success = (string)($_GET['ok'] ?? '') === 'save';
+$success = match ((string)($_GET['ok'] ?? '')) {
+    'save' => 'Typ akce byl uložen.',
+    'delete' => 'Typ akce byl smazán.',
+    default => '',
+};
+if ($deleteConfirmError) {
+    $error = 'Typ akce nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$saveFormHasError = $error !== '' && !$deleteConfirmError;
 $types = $pdo->query(
     "SELECT t.*, COUNT(e.id) AS event_count
      FROM cms_event_types t
@@ -137,14 +180,14 @@ $types = $pdo->query(
 adminHeader('Události – typy akcí');
 ?>
 
-<?php if ($success): ?><p class="success" role="status">Typ akce byl uložen.</p><?php endif; ?>
+<?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="events.php"><span aria-hidden="true">←</span> Zpět na události</a>
 </p>
 
-<form method="post" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
+<form method="post" novalidate<?= $saveFormHasError ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <?php if ($editId !== null): ?>
     <input type="hidden" name="update_id" value="<?= (int)$editId ?>">
@@ -224,6 +267,15 @@ adminHeader('Události – typy akcí');
     </thead>
     <tbody>
       <?php foreach ($types as $type): ?>
+        <?php
+          $typeId = (int)$type['id'];
+          $deleteConfirmField = 'confirm_event_type_delete_' . $typeId;
+          $deleteConfirmId = 'confirm-event-type-delete-' . $typeId;
+          $deleteReviewId = 'event-type-delete-review-' . $typeId;
+          $deleteFieldErrorId = 'confirm-event-type-delete-' . $typeId . '-error';
+          $deleteHasError = $deleteConfirmError && $deleteErrorId === $typeId;
+          $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+          ?>
         <tr>
           <td>
             <strong><?= h((string)$type['title']) ?></strong>
@@ -242,7 +294,33 @@ adminHeader('Události – typy akcí');
             <?php endif; ?>
           </td>
           <td class="actions">
-            <a href="event_types.php?edit=<?= (int)$type['id'] ?>" class="btn">Upravit</a>
+            <a href="event_types.php?edit=<?= $typeId ?>" class="btn">Upravit</a>
+            <form method="post" action="<?= BASE_URL ?>/admin/event_types.php"
+                  class="admin-inline-form"
+                  novalidate<?= $deleteHasError ? ' aria-describedby="form-error"' : '' ?>
+                  data-confirm="Smazat tento typ akce? Události zůstanou zachované bez typu.">
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="id" value="<?= $typeId ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Smazání typu akce <?= h((string)$type['title']) ?></legend>
+                <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                  Smazání odebere typ z <?= (int)$type['event_count'] ?> událostí. Události zůstanou zachované bez tohoto typu.
+                </p>
+                <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="<?= h($deleteConfirmId) ?>"
+                    name="<?= h($deleteConfirmField) ?>"
+                    value="1"
+                    required
+                    aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                  Potvrzuji smazání tohoto typu akce.
+                </label>
+                <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním typu akce potvrďte, že jste zkontrolovali dopad na navázané události.', $deleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger">Smazat</button>
+              </fieldset>
+            </form>
           </td>
         </tr>
       <?php endforeach; ?>

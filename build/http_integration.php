@@ -9479,6 +9479,132 @@ try {
         }
     }
 
+    $boardDeleteCategorySlug = 'http-board-delete-category-' . bin2hex(random_bytes(4));
+    $boardDeleteCategoryName = 'HTTP smazání kategorie vývěsky';
+    $pdo->prepare(
+        "INSERT INTO cms_board_categories
+         (name, slug, description, meta_title, meta_description, sort_order)
+         VALUES (?, ?, '', '', '', 90)"
+    )->execute([$boardDeleteCategoryName, $boardDeleteCategorySlug]);
+    $boardDeleteCategoryId = (int)$pdo->lastInsertId();
+    $createdBoardCategoryIds[] = $boardDeleteCategoryId;
+
+    $boardDeleteSlug = 'http-board-delete-item-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_board
+         (title, slug, board_type, category_id, posted_date, status, is_published)
+         VALUES (?, ?, 'notice', ?, ?, 'published', 1)"
+    )->execute([
+        'HTTP položka pro smazání kategorie',
+        $boardDeleteSlug,
+        $boardDeleteCategoryId,
+        date('Y-m-d'),
+    ]);
+    $boardDeleteItemId = (int)$pdo->lastInsertId();
+    $createdBoardIds[] = $boardDeleteItemId;
+
+    $boardDeleteSubscriberEmail = 'http-board-delete-subscriber-' . bin2hex(random_bytes(4)) . '@example.test';
+    $pdo->prepare(
+        "INSERT INTO cms_board_subscribers (email, token, confirmed, all_categories)
+         VALUES (?, ?, 1, 0)"
+    )->execute([
+        $boardDeleteSubscriberEmail,
+        bin2hex(random_bytes(16)),
+    ]);
+    $boardDeleteSubscriberId = (int)$pdo->lastInsertId();
+    $createdBoardSubscriberIds[] = $boardDeleteSubscriberId;
+    $pdo->prepare('INSERT INTO cms_board_subscriber_categories (subscriber_id, category_id) VALUES (?, ?)')->execute([
+        $boardDeleteSubscriberId,
+        $boardDeleteCategoryId,
+    ]);
+
+    $boardCategoryDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/board_cats.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($boardCategoryDeletePage) !== 200
+        || !str_contains($boardCategoryDeletePage['body'], 'confirm_board_category_delete_' . $boardDeleteCategoryId)
+        || !str_contains($boardCategoryDeletePage['body'], 'board-category-delete-review-' . $boardDeleteCategoryId)
+        || !str_contains($boardCategoryDeletePage['body'], 'Smazání odebere kategorii z 1 položek vývěsky a z 1 odběrů.')) {
+        $boardIssues[] = 'správa kategorií vývěsky nevykreslila review checkbox pro smazání kategorie';
+    }
+
+    $boardCategoryDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'board_cat_delete'")
+        ->fetchColumn();
+    $boardCategoryMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/board_cat_delete.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$boardDeleteCategoryId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $boardCategoryExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_board_categories WHERE id = ?');
+    $boardCategoryExistsStmt->execute([$boardDeleteCategoryId]);
+    $boardCategoryBoardLinkStmt = $pdo->prepare('SELECT category_id FROM cms_board WHERE id = ?');
+    $boardCategoryBoardLinkStmt->execute([$boardDeleteItemId]);
+    $boardCategoryAfterMissing = $boardCategoryBoardLinkStmt->fetchColumn();
+    $boardCategorySubscriberLinkStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_board_subscriber_categories WHERE subscriber_id = ? AND category_id = ?');
+    $boardCategorySubscriberLinkStmt->execute([$boardDeleteSubscriberId, $boardDeleteCategoryId]);
+    $boardCategoryDeleteLogCountAfterMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'board_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($boardCategoryMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $boardCategoryMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/board_cats.php?delete_error=confirm_required&delete_error_id=' . $boardDeleteCategoryId,
+            $baseUrl
+        )
+        || (int)$boardCategoryExistsStmt->fetchColumn() !== 1
+        || (int)$boardCategoryAfterMissing !== $boardDeleteCategoryId
+        || (int)$boardCategorySubscriberLinkStmt->fetchColumn() !== 1
+        || $boardCategoryDeleteLogCountAfterMissing !== $boardCategoryDeleteLogCountBefore) {
+        $boardIssues[] = 'smazání kategorie vývěsky bez potvrzení změnilo vazby, smazalo kategorii nebo zapsalo audit log';
+    }
+
+    $boardCategoryDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/board_cats.php?delete_error=confirm_required&delete_error_id=' . $boardDeleteCategoryId,
+        $adminSession['cookie'],
+        0
+    );
+    $boardCategoryConfirmInputId = 'confirm-board-category-delete-' . $boardDeleteCategoryId;
+    if (httpIntegrationStatusCode($boardCategoryDeleteErrorPage) !== 200
+        || !str_contains($boardCategoryDeleteErrorPage['body'], 'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii vývěsky nejde smazat bez potvrzení kontroly dopadu.')
+        || !httpIntegrationInputHasAttributes($boardCategoryDeleteErrorPage['body'], $boardCategoryConfirmInputId, [
+            'name' => 'confirm_board_category_delete_' . $boardDeleteCategoryId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'board-category-delete-review-' . $boardDeleteCategoryId . ' confirm-board-category-delete-' . $boardDeleteCategoryId . '-error',
+        ])
+        || !str_contains($boardCategoryDeleteErrorPage['body'], 'id="confirm-board-category-delete-' . $boardDeleteCategoryId . '-error"')
+        || !str_contains($boardCategoryDeleteErrorPage['body'], 'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na položky vývěsky a odběry.')) {
+        $boardIssues[] = 'smazání kategorie vývěsky bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $boardCategoryConfirmedDeleteResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/board_cat_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($boardCategoryDeleteErrorPage['body'], 'csrf_token'),
+            'id' => (string)$boardDeleteCategoryId,
+            'confirm_board_category_delete_' . $boardDeleteCategoryId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $boardCategoryExistsStmt->execute([$boardDeleteCategoryId]);
+    $boardCategoryBoardLinkStmt->execute([$boardDeleteItemId]);
+    $boardCategoryAfterConfirm = $boardCategoryBoardLinkStmt->fetchColumn();
+    $boardCategorySubscriberLinkStmt->execute([$boardDeleteSubscriberId, $boardDeleteCategoryId]);
+    $boardCategoryDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'board_cat_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($boardCategoryConfirmedDeleteResponse) !== 302
+        || !responseHasLocationHeader($boardCategoryConfirmedDeleteResponse['headers'], BASE_URL . '/admin/board_cats.php?deleted=1', $baseUrl)
+        || (int)$boardCategoryExistsStmt->fetchColumn() !== 0
+        || $boardCategoryAfterConfirm !== null
+        || (int)$boardCategorySubscriberLinkStmt->fetchColumn() !== 0
+        || $boardCategoryDeleteLogCountAfterConfirm !== $boardCategoryDeleteLogCountBefore + 1) {
+        $boardIssues[] = 'potvrzené smazání kategorie vývěsky neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem';
+    }
+
     httpIntegrationPrintResult('board_save_http', $boardIssues, $failures);
 
     $eventIssues = [];
@@ -9923,6 +10049,116 @@ try {
         $sitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
         if (!str_contains($sitemapResponse['body'], h($baseUrl . eventTypePath($eventType)))) {
             $eventIssues[] = 'sitemap neobsahuje veřejný typ akce s publikovanou událostí';
+        }
+
+        $eventDeleteTypeSlug = 'http-event-type-delete-' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_event_types
+             (legacy_key, title, slug, description, meta_title, meta_description, is_active, sort_order, created_at, updated_at)
+             VALUES (NULL, ?, ?, '', '', '', 1, 90, NOW(), NOW())"
+        )->execute([
+            'HTTP typ akce pro smazání',
+            $eventDeleteTypeSlug,
+        ]);
+        $eventDeleteTypeId = (int)$pdo->lastInsertId();
+        $createdEventTypeIds[] = $eventDeleteTypeId;
+
+        $eventDeleteSlug = 'http-event-delete-type-item-' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_events
+             (title, slug, event_kind, event_type_id, excerpt, description, event_date, is_published, status)
+             VALUES (?, ?, 'general', ?, '', '', ?, 1, 'published')"
+        )->execute([
+            'HTTP událost pro smazání typu',
+            $eventDeleteSlug,
+            $eventDeleteTypeId,
+            $eventDate . ' 12:00:00',
+        ]);
+        $eventDeleteItemId = (int)$pdo->lastInsertId();
+        $createdEventIds[] = $eventDeleteItemId;
+
+        $eventTypeDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/event_types.php', $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($eventTypeDeletePage) !== 200
+            || !str_contains($eventTypeDeletePage['body'], 'confirm_event_type_delete_' . $eventDeleteTypeId)
+            || !str_contains($eventTypeDeletePage['body'], 'event-type-delete-review-' . $eventDeleteTypeId)
+            || !str_contains($eventTypeDeletePage['body'], 'Smazání odebere typ z 1 událostí.')) {
+            $eventIssues[] = 'správa typů akcí nevykreslila review checkbox pro smazání typu';
+        }
+
+        $eventTypeDeleteLogCountBefore = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'event_type_delete'")
+            ->fetchColumn();
+        $eventTypeMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_types.php',
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'delete',
+                'id' => (string)$eventDeleteTypeId,
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $eventTypeExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_event_types WHERE id = ?');
+        $eventTypeExistsStmt->execute([$eventDeleteTypeId]);
+        $eventTypeEventLinkStmt = $pdo->prepare('SELECT event_type_id FROM cms_events WHERE id = ?');
+        $eventTypeEventLinkStmt->execute([$eventDeleteItemId]);
+        $eventTypeAfterMissing = $eventTypeEventLinkStmt->fetchColumn();
+        $eventTypeDeleteLogCountAfterMissing = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'event_type_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($eventTypeMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader(
+                $eventTypeMissingConfirmResponse['headers'],
+                BASE_URL . '/admin/event_types.php?delete_error=confirm_required&delete_error_id=' . $eventDeleteTypeId,
+                $baseUrl
+            )
+            || (int)$eventTypeExistsStmt->fetchColumn() !== 1
+            || (int)$eventTypeAfterMissing !== $eventDeleteTypeId
+            || $eventTypeDeleteLogCountAfterMissing !== $eventTypeDeleteLogCountBefore) {
+            $eventIssues[] = 'smazání typu akce bez potvrzení změnilo vazbu události, smazalo typ nebo zapsalo audit log';
+        }
+
+        $eventTypeDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/event_types.php?delete_error=confirm_required&delete_error_id=' . $eventDeleteTypeId,
+            $adminSession['cookie'],
+            0
+        );
+        $eventTypeConfirmInputId = 'confirm-event-type-delete-' . $eventDeleteTypeId;
+        if (httpIntegrationStatusCode($eventTypeDeleteErrorPage) !== 200
+            || !str_contains($eventTypeDeleteErrorPage['body'], 'id="form-error" class="error" role="alert" aria-atomic="true">Typ akce nejde smazat bez potvrzení kontroly dopadu.')
+            || !httpIntegrationInputHasAttributes($eventTypeDeleteErrorPage['body'], $eventTypeConfirmInputId, [
+                'name' => 'confirm_event_type_delete_' . $eventDeleteTypeId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'event-type-delete-review-' . $eventDeleteTypeId . ' confirm-event-type-delete-' . $eventDeleteTypeId . '-error',
+            ])
+            || !str_contains($eventTypeDeleteErrorPage['body'], 'id="confirm-event-type-delete-' . $eventDeleteTypeId . '-error"')
+            || !str_contains($eventTypeDeleteErrorPage['body'], 'Před smazáním typu akce potvrďte, že jste zkontrolovali dopad na navázané události.')) {
+            $eventIssues[] = 'smazání typu akce bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+        }
+
+        $eventTypeConfirmedDeleteResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/event_types.php',
+            [
+                'csrf_token' => extractHiddenInputValue($eventTypeDeleteErrorPage['body'], 'csrf_token'),
+                'action' => 'delete',
+                'id' => (string)$eventDeleteTypeId,
+                'confirm_event_type_delete_' . $eventDeleteTypeId => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $eventTypeExistsStmt->execute([$eventDeleteTypeId]);
+        $eventTypeEventLinkStmt->execute([$eventDeleteItemId]);
+        $eventTypeAfterConfirm = $eventTypeEventLinkStmt->fetchColumn();
+        $eventTypeDeleteLogCountAfterConfirm = (int)$pdo
+            ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'event_type_delete'")
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($eventTypeConfirmedDeleteResponse) !== 302
+            || !responseHasLocationHeader($eventTypeConfirmedDeleteResponse['headers'], BASE_URL . '/admin/event_types.php?ok=delete', $baseUrl)
+            || (int)$eventTypeExistsStmt->fetchColumn() !== 0
+            || $eventTypeAfterConfirm !== null
+            || $eventTypeDeleteLogCountAfterConfirm !== $eventTypeDeleteLogCountBefore + 1) {
+            $eventIssues[] = 'potvrzené smazání typu akce neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
         }
     }
 

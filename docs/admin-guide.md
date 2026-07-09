@@ -1119,6 +1119,8 @@ Mazání nepoužitého média má stejný review krok v kartě souboru. Správce
 
 Mazání kategorií a sérií Ke stažení používá stejný princip v řádkových akcích. Správce vidí dopad na navázané položky, musí potvrdit kontrolu checkboxem a server bez `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` nezruší vazby, nesmaže taxonomii ani nezapíše audit log.
 
+Mazání kategorií vývěsky a typů akcí používá stejný review krok. Správce vidí počet navázaných položek vývěsky a odběrů nebo počet událostí, musí potvrdit kontrolu checkboxem a server bez `confirm_board_category_delete_<id>` nebo `confirm_event_type_delete_<id>` nezmění vazby, nesmaže taxonomii ani nezapíše audit log.
+
 Mazání témat kontaktu a chatu používá stejný review krok. Správce vidí dopad na veřejný kontaktní formulář nebo chat a na existující zprávy, musí potvrdit kontrolu checkboxem a server bez `confirm_contact_topic_delete_<id>` nebo `confirm_chat_topic_delete_<id>` nezmění vazby zpráv, nesmaže téma ani nezapíše audit log.
 
 Mazání rezervačních kategorií a míst používá stejný review krok. Správce vidí počet navázaných rezervačních zdrojů a dopad na existující zdroje/rezervace, musí potvrdit kontrolu checkboxem a server bez `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` nezmění vazby zdrojů, nesmaže číselník ani nezapíše audit log.

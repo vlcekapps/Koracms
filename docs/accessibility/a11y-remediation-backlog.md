@@ -37,6 +37,8 @@ Poznámka 2026-07-09: mazání témat kontaktu a chatu už není součástí ote
 
 Poznámka 2026-07-09: mazání rezervačních kategorií a míst už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních akcí. Má řádkový review počtu navázaných rezervačních zdrojů, serverové odmítnutí bez `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` a HTTP důkaz zachování číselníku, vazby zdroje a audit logu i potvrzeného odpojení vazby; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
 
+Poznámka 2026-07-09: mazání kategorií vývěsky a typů akcí už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních akcí. Má řádkový review počtu navázaných položek/odběrů nebo událostí, serverové odmítnutí bez `confirm_board_category_delete_<id>` nebo `confirm_event_type_delete_<id>` a HTTP důkaz zachování taxonomie, vazeb a audit logu i potvrzeného odpojení vazeb; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |
