@@ -55,20 +55,20 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 1.1.1 Non-text Content | Partially Supports | Média, galerie a blog logo mají metadata a fallbacky. | Ručně ověřit reálné alt texty v publikovaných článcích. |
 | 1.3.1 Info and Relationships | Supports | Veřejné sekce mají nadpisy, formuláře fieldset/legend a tabulkové/admin přehledy používají strukturální prvky. | Ručně projít dlouhé custom články s vlastním HTML. |
 | 1.3.2 Meaningful Sequence | Supports | Šablony drží logické pořadí: nadpis, metadata, obsah, související obsah, komentáře. | Ručně ověřit mobilní pořadí doporučeného článku a dlouhého detailu. |
-| 1.4.10 Reflow | Partially Supports | Admin/mobile guardraily pokrývají dlouhé formuláře a veřejné šablony mají responzivní baseline. | Ověřit Blog při 400% zoomu, zejména TOC, filtry a editor článku. |
+| 1.4.10 Reflow | Partially Supports | Admin/mobile guardraily pokrývají dlouhé formuláře a veřejné šablony mají responzivní baseline; ruční NVDA průchod blogů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Vizuálně ověřit Blog při 400% zoomu, zejména TOC, filtry, sticky prvky a editor článku. |
 | 1.4.12 Text Spacing | Partially Supports | Core CSS neblokuje text spacing patterny. | Projít blogový index/detail s text-spacing override. |
-| 2.1.1 Keyboard | Partially Supports | Formuláře, odkazy, kopírování a admin ovládání jsou běžné klávesové prvky. | Ručně projít editor článku, série, související články a content picker bez myši. |
+| 2.1.1 Keyboard | Supports | Formuláře, odkazy, kopírování a admin ovládání jsou běžné klávesové prvky; ruční NVDA/keyboard průchod blogů, dlouhých formulářů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách blog editoru, sérií, souvisejících článků nebo pickerů zopakovat NVDA/keyboard průchod. |
 | 2.4.1 Bypass Blocks | Supports | Veřejný i admin layout zachovává skip link. | Ověřit ve všech aktivních theme variantách. |
 | 2.4.4 Link Purpose | Supports | Odkazy kategorií, štítků, sérií a článků mají kontextový text; nové okno používá textové doplnění. | Ručně projít opakované odkazy ve výpisech. |
 | 2.4.6 Headings and Labels | Supports | Blog index, detail, TOC, série a sidebar/footer widgety používají pojmenované sekce. | Ručně ověřit pořadí nadpisů v dlouhém článku s author contentem. |
-| 2.4.11 Focus Not Obscured | Partially Supports | TOC a anchor cíle mají scroll offset. | Ověřit skoky na kotvy při 400% zoomu a se sticky prvky. |
+| 2.4.11 Focus Not Obscured | Partially Supports | TOC a anchor cíle mají scroll offset; ruční NVDA průchod blogů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Vizuálně ověřit skoky na kotvy při 400% zoomu a se sticky prvky. |
 | 2.5.8 Target Size | Partially Supports | Sdílené CSS řeší tlačítka, akční řádky a mobilní baseline. | Ručně změřit malé tag/category/series odkazy v custom theme. |
 | 3.1.2 Language of Parts | Partially Supports | HTML editor nabízí helper pro `lang`; checklist vysvětluje odpovědnost autora. | Ručně ověřit cizojazyčné citace v článcích. |
 | 3.3.1 Error Identification | Supports | Admin editory i veřejné komentáře mají form-level alert a field-level chyby. | Ručně projít kombinované chybové stavy editoru článku. |
 | 3.3.3 Error Suggestion | Partially Supports | Blog admin formuláře a veřejný komentář používají konkrétní návrhy oprav. | Pokračovat copy passem u méně častých validačních větví. |
 | 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových kategorií, štítků a sérií má item-level review, potvrzovací checkbox, serverové odmítnutí bez potvrzení a HTTP důkaz. | Ručně rozhodnout, zda některé blogové hromadné akce potřebují další review krok. |
-| 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav. | Ručně projít content/media picker v blog editoru po změnách. |
-| 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region. | Ručně ověřit, že live regiony nejsou rušivé při dlouhé editaci. |
+| 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav; ruční NVDA průchod blogů a blogové administrace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách content/media pickeru nebo blog editoru zopakovat NVDA/keyboard průchod. |
+| 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region a ruční NVDA průchod dlouhé editace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách live regionů nebo autosave/content-lock chování zopakovat NVDA průchod. |
 
 ## Nález Opravený V Tomto Passu
 
@@ -118,6 +118,12 @@ Oprava:
 
 Snížené riziko: WCAG `3.3.4 Error Prevention` a `4.1.3 Status Messages`.
 
+## Ruční Evidence
+
+2026-07-09: uživatel ručně zrevidoval blogy s NVDA bez nahlášené regrese. Evidence pokrývá veřejný i administrační blogový průchod včetně focus order, dlouhých formulářů, statických stránek a blogových stránek. Pro aktuální ACR draft tím už Blog nezůstává otevřený jen kvůli základnímu screen-reader/keyboard průchodu.
+
+Zbývající blogové ruční oblasti jsou vizuální: 400% zoom, text-spacing override, sticky/anchor skoky, custom theme variace, kontrast malých štítků/focus stavů a kvalita reálného author contentu podle `author-content-checklist.md`.
+
 ## Ruční Scénáře Pro Blog
 
 Veřejný Blog:
@@ -147,5 +153,5 @@ Střední priorita:
 
 Nízká priorita:
 
-- Přidat ruční NVDA/Firefox evidenci pro blogový detail s komentáři, sérií, TOC a souvisejícími články.
+- Opakovat ruční NVDA/Firefox evidenci při změnách blogového detailu, komentářů, série, TOC, souvisejících článků nebo blogové administrace.
 - Ověřit custom theme varianty blogového indexu a detailu, zejména kontrast malých štítků a focus stavů.
