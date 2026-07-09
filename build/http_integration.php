@@ -11308,6 +11308,117 @@ try {
             $faqIssues[] = 'sitemap neobsahuje veřejnou FAQ kategorii s publikovanou otázkou';
         }
 
+        $deleteFaqCategorySlug = 'http-faq-delete-category-' . bin2hex(random_bytes(4));
+        $deleteFaqChildCategorySlug = 'http-faq-delete-child-' . bin2hex(random_bytes(4));
+        $deleteFaqQuestionSlug = 'http-faq-delete-question-' . bin2hex(random_bytes(4));
+        $pdo->prepare(
+            "INSERT INTO cms_faq_categories
+             (name, slug, description, meta_title, meta_description, sort_order, parent_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 9, NULL, NOW(), NOW())"
+        )->execute([
+            'HTTP FAQ kategorie ke smazání',
+            $deleteFaqCategorySlug,
+            'Kategorie pro error-prevention delete test.',
+            '',
+            '',
+        ]);
+        $deleteFaqCategoryId = (int)$pdo->lastInsertId();
+        $createdFaqCategoryIds[] = $deleteFaqCategoryId;
+        $pdo->prepare(
+            "INSERT INTO cms_faq_categories
+             (name, slug, description, meta_title, meta_description, sort_order, parent_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, 10, ?, NOW(), NOW())"
+        )->execute([
+            'HTTP FAQ podkategorie ke kontrole',
+            $deleteFaqChildCategorySlug,
+            'Podkategorie pro error-prevention delete test.',
+            '',
+            '',
+            $deleteFaqCategoryId,
+        ]);
+        $deleteFaqChildCategoryId = (int)$pdo->lastInsertId();
+        $createdFaqCategoryIds[] = $deleteFaqChildCategoryId;
+        $pdo->prepare(
+            "INSERT INTO cms_faqs
+             (category_id, question, slug, excerpt, answer, meta_title, meta_description,
+              sort_order, is_published, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, '', '', 0, 1, 'published', NOW(), NOW())"
+        )->execute([
+            $deleteFaqCategoryId,
+            'HTTP otázka v mazané FAQ kategorii?',
+            $deleteFaqQuestionSlug,
+            'Otázka pro error-prevention delete test.',
+            '<p>Odpověď zůstane zachovaná bez FAQ kategorie.</p>',
+        ]);
+        $deleteFaqId = (int)$pdo->lastInsertId();
+        $createdFaqIds[] = $deleteFaqId;
+
+        $faqCategoryDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/faq_cats.php', $adminSession['cookie'], 0);
+        $faqCategoryDeleteCsrf = extractHiddenInputValue($faqCategoryDeletePage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($faqCategoryDeletePage) !== 200
+            || $faqCategoryDeleteCsrf === ''
+            || !str_contains($faqCategoryDeletePage['body'], 'confirm_faq_category_delete_' . $deleteFaqCategoryId)
+            || !str_contains($faqCategoryDeletePage['body'], 'faq-category-delete-review-' . $deleteFaqCategoryId)
+            || !str_contains($faqCategoryDeletePage['body'], 'Smazání odebere kategorii z 1 otázek a 1 podkategorií přesune na kořen.')) {
+            $faqIssues[] = 'mazání FAQ kategorie nevykreslilo review text a checkbox';
+        }
+        $faqCategoryDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_cat_delete'")->fetchColumn();
+        $faqCategoryMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/faq_cat_delete.php', [
+            'csrf_token' => $faqCategoryDeleteCsrf,
+            'id' => (string)$deleteFaqCategoryId,
+        ], $adminSession['cookie'], 0);
+        $faqCategoryAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_faq_categories WHERE id = ?');
+        $faqCategoryAfterMissingConfirmStmt->execute([$deleteFaqCategoryId]);
+        $faqAfterMissingConfirmStmt = $pdo->prepare('SELECT category_id FROM cms_faqs WHERE id = ?');
+        $faqAfterMissingConfirmStmt->execute([$deleteFaqId]);
+        $faqChildAfterMissingConfirmStmt = $pdo->prepare('SELECT parent_id FROM cms_faq_categories WHERE id = ?');
+        $faqChildAfterMissingConfirmStmt->execute([$deleteFaqChildCategoryId]);
+        $faqCategoryDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_cat_delete'")->fetchColumn();
+        if (httpIntegrationStatusCode($faqCategoryMissingConfirmResponse) !== 302
+            || !responseHasLocationHeader($faqCategoryMissingConfirmResponse['headers'], BASE_URL . '/admin/faq_cats.php?delete_error=confirm_required&delete_error_id=' . $deleteFaqCategoryId, $baseUrl)
+            || (int)$faqCategoryAfterMissingConfirmStmt->fetchColumn() !== 1
+            || (int)$faqAfterMissingConfirmStmt->fetchColumn() !== $deleteFaqCategoryId
+            || (int)$faqChildAfterMissingConfirmStmt->fetchColumn() !== $deleteFaqCategoryId
+            || $faqCategoryDeleteLogAfterMissingConfirm !== $faqCategoryDeleteLogBefore) {
+            $faqIssues[] = 'smazání FAQ kategorie bez potvrzení změnilo otázky, podkategorie nebo audit log';
+        }
+        $faqCategoryDeleteErrorPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/faq_cats.php?delete_error=confirm_required&delete_error_id=' . $deleteFaqCategoryId,
+            $adminSession['cookie'],
+            0
+        );
+        $faqCategoryDeleteErrorCsrf = extractHiddenInputValue($faqCategoryDeleteErrorPage['body'], 'csrf_token');
+        if ($faqCategoryDeleteErrorCsrf === ''
+            || !str_contains($faqCategoryDeleteErrorPage['body'], 'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii FAQ nejde smazat bez potvrzení kontroly dopadu.')
+            || !str_contains($faqCategoryDeleteErrorPage['body'], 'id="confirm-faq-category-delete-' . $deleteFaqCategoryId . '-error"')
+            || !httpIntegrationInputHasAttributes($faqCategoryDeleteErrorPage['body'], 'confirm-faq-category-delete-' . $deleteFaqCategoryId, [
+                'name' => 'confirm_faq_category_delete_' . $deleteFaqCategoryId,
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'faq-category-delete-review-' . $deleteFaqCategoryId . ' confirm-faq-category-delete-' . $deleteFaqCategoryId . '-error',
+            ])) {
+            $faqIssues[] = 'chybový stav mazání FAQ kategorie nevrátil alert a field-level checkbox chybu';
+        }
+        $faqCategoryConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/faq_cat_delete.php', [
+            'csrf_token' => $faqCategoryDeleteErrorCsrf,
+            'id' => (string)$deleteFaqCategoryId,
+            'confirm_faq_category_delete_' . $deleteFaqCategoryId => '1',
+        ], $adminSession['cookie'], 0);
+        $faqCategoryAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_faq_categories WHERE id = ?');
+        $faqCategoryAfterConfirmedStmt->execute([$deleteFaqCategoryId]);
+        $faqAfterConfirmedStmt = $pdo->prepare('SELECT category_id FROM cms_faqs WHERE id = ?');
+        $faqAfterConfirmedStmt->execute([$deleteFaqId]);
+        $faqChildAfterConfirmedStmt = $pdo->prepare('SELECT parent_id FROM cms_faq_categories WHERE id = ?');
+        $faqChildAfterConfirmedStmt->execute([$deleteFaqChildCategoryId]);
+        $faqCategoryDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'faq_cat_delete'")->fetchColumn();
+        if (httpIntegrationStatusCode($faqCategoryConfirmedResponse) !== 302
+            || !responseHasLocationHeader($faqCategoryConfirmedResponse['headers'], BASE_URL . '/admin/faq_cats.php?deleted=1', $baseUrl)
+            || (int)$faqCategoryAfterConfirmedStmt->fetchColumn() !== 0
+            || $faqAfterConfirmedStmt->fetchColumn() !== null
+            || $faqChildAfterConfirmedStmt->fetchColumn() !== null
+            || $faqCategoryDeleteLogAfterConfirmed !== $faqCategoryDeleteLogBefore + 1) {
+            $faqIssues[] = 'potvrzené smazání FAQ kategorie neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem';
+        }
+
         httpIntegrationClearLocalRateLimits($pdo, ['faq_feedback']);
         $faqFeedbackSession = koraPrimeTestSession([], 'kora-http-faq-feedback-' . bin2hex(random_bytes(4)));
         $faqDetailPath = faqPublicPath($faqRow);

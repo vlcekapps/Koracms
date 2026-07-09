@@ -1129,6 +1129,8 @@ Mazání rezervačních kategorií a míst používá stejný review krok. Sprá
 
 Mazání blogových kategorií, štítků a sérií článků používá stejný review krok. Správce vidí počet navázaných článků a u kategorie i počet podkategorií, musí potvrdit kontrolu checkboxem a server bez `confirm_blog_category_delete_<id>`, `confirm_blog_tag_delete_<id>` nebo `confirm_blog_series_delete_<id>` nezmění vazby, nesmaže taxonomii ani nezapíše audit log.
 
+Mazání FAQ kategorií používá stejný review krok. Správce vidí počet navázaných otázek a podkategorií, musí potvrdit kontrolu checkboxem a server bez `confirm_faq_category_delete_<id>` neodpojí otázky, nepřesune podkategorie na kořen, nesmaže kategorii ani nezapíše audit log.
+
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.
@@ -1168,6 +1170,8 @@ Editor statických stránek používá stejný field-level pattern pro název, s
 Editor FAQ používá stejný field-level pattern pro povinnou otázku, odpověď a slug veřejné stránky. Souhrnný alert je atomický a lokální text poradí, jak otázku formulovat pro návštěvníka, doplnit odpověď nebo zadat unikátní slug z malých písmen, číslic a pomlček.
 
 Editor FAQ kategorií navazuje u názvu, slugu a meta title. Chyba má správci poradit krátký název kategorie, slug s použitelným písmenem nebo číslem, jiný unikátní slug nebo zkrácení meta title na 160 znaků.
+
+Mazání FAQ kategorií má vlastní kontrolu dopadu. Před odesláním správce vidí počet otázek, které zůstanou bez kategorie, a počet podkategorií přesouvaných na kořen; bez potvrzení `confirm_faq_category_delete_<id>` server akci odmítne.
 
 Blogové kategorie a štítky používají stejný princip u povinného názvu a duplicitního slugu. Chyba má správci poradit krátký srozumitelný název, jiný unikátní slug nebo prázdné slug pole pro automatické vytvoření.
 

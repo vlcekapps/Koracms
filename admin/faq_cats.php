@@ -9,6 +9,8 @@ $error = '';
 $fieldErrors = [];
 $fieldErrorMessages = [];
 $editId = inputInt('get', 'edit');
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
 $formState = [
     'name' => '',
     'slug' => '',
@@ -148,11 +150,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$successMessage = $success ? 'Kategorie uložena.' : '';
+if (trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $successMessage = 'Kategorie FAQ byla smazána.';
+}
+if ($deleteConfirmError) {
+    $error = 'Kategorii FAQ nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$createFormHasError = $error !== '' && $editId === null && !$deleteConfirmError;
+
 $categories = $pdo->query(
     "SELECT c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description,
-            c.sort_order, c.parent_id, c.updated_at, COUNT(f.id) AS faq_count
+            c.sort_order, c.parent_id, c.updated_at,
+            COUNT(DISTINCT f.id) AS faq_count,
+            COUNT(DISTINCT child.id) AS child_count
      FROM cms_faq_categories c
      LEFT JOIN cms_faqs f ON f.category_id = c.id AND f.deleted_at IS NULL
+     LEFT JOIN cms_faq_categories child ON child.parent_id = c.id
      GROUP BY c.id, c.name, c.slug, c.description, c.meta_title, c.meta_description,
               c.sort_order, c.parent_id, c.updated_at
      ORDER BY c.sort_order, c.name"
@@ -166,10 +180,10 @@ foreach ($categories as $cat) {
 
 adminHeader('Kategorie znalostní báze');
 ?>
-<?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
-<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
+<form method="post" novalidate<?= $createFormHasError ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <fieldset>
     <legend>Nová kategorie</legend>
@@ -245,12 +259,22 @@ adminHeader('Kategorie znalostní báze');
     </thead>
     <tbody>
     <?php foreach ($categories as $category): ?>
+      <?php
+        $categoryId = (int)$category['id'];
+        $deleteConfirmField = 'confirm_faq_category_delete_' . $categoryId;
+        $deleteConfirmId = 'confirm-faq-category-delete-' . $categoryId;
+        $deleteReviewId = 'faq-category-delete-review-' . $categoryId;
+        $deleteFieldErrorId = 'confirm-faq-category-delete-' . $categoryId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $categoryId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <?php if ($editId === (int)$category['id']): ?>
+        <?php if ($editId === $categoryId): ?>
           <td colspan="5">
-            <form method="post" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
+            <?php $categoryEditHasErrors = $fieldErrors !== [] && !$deleteConfirmError; ?>
+            <form method="post" novalidate<?= $categoryEditHasErrors ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
+              <input type="hidden" name="update_id" value="<?= $categoryId ?>">
               <fieldset>
                 <legend>Upravit kategorii <?= h((string)$category['name']) ?></legend>
                 <div class="form-grid">
@@ -315,14 +339,31 @@ adminHeader('Kategorie znalostní báze');
           <td><a href="<?= h(faqCategoryPath($category)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a></td>
         <?php endif; ?>
         <td class="actions">
-          <?php if ($editId !== (int)$category['id']): ?>
-            <a href="faq_cats.php?edit=<?= (int)$category['id'] ?>" class="btn">Upravit</a>
+          <?php if ($editId !== $categoryId): ?>
+            <a href="faq_cats.php?edit=<?= $categoryId ?>" class="btn">Upravit</a>
           <?php endif; ?>
-          <form action="faq_cat_delete.php" method="post">
+          <form action="faq_cat_delete.php" method="post" class="admin-inline-form" novalidate<?= $deleteHasError ? ' aria-describedby="form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="<?= h('Smazat kategorii? Otázky bez kategorie se zobrazí v sekci „Ostatní“.') ?>">Smazat</button>
+            <input type="hidden" name="id" value="<?= $categoryId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání FAQ kategorie <?= h((string)$category['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání odebere kategorii z <?= (int)$category['faq_count'] ?> otázek a <?= (int)$category['child_count'] ?> podkategorií přesune na kořen. Otázky i podkategorie zůstanou zachované bez této kategorie.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání této FAQ kategorie.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním FAQ kategorie potvrďte, že jste zkontrolovali dopad na otázky a podkategorie.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="<?= h('Smazat kategorii? Otázky i podkategorie zůstanou zachované bez této kategorie.') ?>">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

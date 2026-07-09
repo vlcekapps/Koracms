@@ -15311,6 +15311,7 @@ $boardOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/boar
 $downloadCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php');
 $eventFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
 $faqCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cats.php');
+$faqCatDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_cat_delete.php');
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
 $formSubmissionDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission.php');
@@ -17831,6 +17832,7 @@ foreach ([
 }
 foreach ([
     '$fieldErrorMessages = [];',
+    '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
     '$error = \'Kategorii FAQ nejde uložit bez názvu. U pole Název je konkrétní nápověda.\';',
     '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Účet a přihlášení.\';',
     '$error = \'Meta title kategorie FAQ je příliš dlouhý. U pole Meta title je konkrétní nápověda.\';',
@@ -17840,9 +17842,14 @@ foreach ([
     '$error = \'Slug veřejné FAQ kategorie už používá jiná kategorie. U pole Slug je konkrétní nápověda.\';',
     '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
     '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
+    '$error = \'Kategorii FAQ nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.\';',
     "adminRenderFieldError('name', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['name'] ?? '');",
     "adminRenderFieldError('slug', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['slug'] ?? '');",
     "adminRenderFieldError('meta_title', \$editId === null ? \$fieldErrors : [], [], \$fieldErrorMessages['meta_title'] ?? '');",
+    '$deleteConfirmField = \'confirm_faq_category_delete_\' . $categoryId;',
+    'Smazání odebere kategorii z <?= (int)$category[\'faq_count\'] ?> otázek',
+    'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+    'adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], \'Před smazáním FAQ kategorie potvrďte',
 ] as $faqCategorySuggestionFragment) {
     if (!str_contains($faqCatsSource, $faqCategorySuggestionFragment)) {
         $adminFieldErrorIssues[] = 'FAQ categories editor is missing actionable field-level error fragment: ' . $faqCategorySuggestionFragment;
@@ -18112,6 +18119,13 @@ if (!str_contains($reservationLocationDeleteSource, "\$confirmFieldName = 'confi
     || !str_contains($reservationLocationDeleteSource, "DELETE FROM cms_res_resource_locations WHERE location_id = ?")
     || !str_contains($reservationLocationDeleteSource, "logAction('res_location_delete'")) {
     $adminFieldErrorIssues[] = 'reservation location delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($faqCatDeleteSource, "\$confirmFieldName = 'confirm_faq_category_delete_' . \$id;")
+    || !str_contains($faqCatDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($faqCatDeleteSource, 'UPDATE cms_faqs SET category_id = NULL WHERE category_id = ?')
+    || !str_contains($faqCatDeleteSource, 'UPDATE cms_faq_categories SET parent_id = NULL WHERE parent_id = ?')
+    || !str_contains($faqCatDeleteSource, "logAction('faq_cat_delete',")) {
+    $adminFieldErrorIssues[] = 'FAQ category delete handler is missing server-side review-and-confirm guardrails';
 }
 if (!str_contains($blogCatDeleteSource, "\$confirmFieldName = 'confirm_blog_category_delete_' . \$id;")
     || !str_contains($blogCatDeleteSource, "'delete_error' => 'confirm_required'")
@@ -18489,6 +18503,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_blog_series_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání série článků neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing blog taxonomy/series delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('faq_categories_feedback_http'")
+    || !str_contains($httpIntegrationSource, 'smazání FAQ kategorie bez potvrzení změnilo otázky, podkategorie nebo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_faq_category_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání FAQ kategorie neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing FAQ category delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')
