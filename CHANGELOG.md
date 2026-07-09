@@ -10,6 +10,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **Veřejný changelog CMS** – návštěvníci mohou otevřít `/changelog`, kde se celý `CHANGELOG.md` včetně `Unreleased` vykreslí v běžné veřejné šabloně místo surového Markdown souboru; runtime audit a HTTP integrace hlídají route před blogovým catch-all a bezpečné pevné načítání changelogu.
 - **GPL-3.0-or-later licence** – repozitář nově obsahuje plný text licence v `LICENSE`, projektové oznámení v `NOTICE.md`, Composer metadata používají SPDX `GPL-3.0-or-later` a release guardraily hlídají, aby licenční soubory byly součástí instalačního ZIPu i source archivu.
 
+### Změněno
+- **Timeout pro module-ready CI** – agentí a vývojářská dokumentace nově připomíná, že `composer ci:module-ready` má při spuštění přes lokální automation běžet s timeoutem alespoň 15 minut (`900000 ms`), protože kombinuje `ci:basic`, modulový audit, runtime audit a HTTP integraci.
+
 ## [5.0.0-beta.1] – 2026-07-09
 
 ### Přidáno
