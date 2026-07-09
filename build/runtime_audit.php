@@ -16067,6 +16067,26 @@ if (!str_contains($pollFormValidationSource, '<h2 id="poll-results-heading"')
 if (str_contains($auditLogSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin audit log still contains inline style attributes';
 }
+foreach ([
+    "\$requestMethod = requireHttpMethods(\$isCsvExport ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD']);",
+    '$renderAuditLogCsvExportForm = static function',
+    'CSV export audit logu nejde stáhnout bez potvrzení kontroly citlivosti provozních záznamů',
+    'id="audit-log-csv-export-form-error" class="error" role="alert" aria-atomic="true"',
+    'id="audit-log-csv-export-review-help" class="field-help field-help--flush"',
+    'confirm_audit_log_csv_export',
+    "adminFieldAttributes('confirm_audit_log_csv_export', \$exportErrorFields, [], ['audit-log-csv-export-review-help'], 'confirm-audit-log-csv-export-error')",
+    "adminRenderFieldError('confirm_audit_log_csv_export'",
+    "\$confirmAuditLogCsvExport = isset(\$_POST['confirm_audit_log_csv_export'])",
+    '!$confirmAuditLogCsvExport',
+    "logAction(\n        'audit_log_export_csv'",
+    'sendAdminAttachmentHeaders(',
+    "fputcsv(\$outputHandle, ['ID', 'Datum a čas', 'Uživatel', 'ID uživatele', 'Akce', 'Podrobnosti']",
+    'Zkontrolovat CSV export',
+] as $auditLogExportPreventionFragment) {
+    if (!str_contains($auditLogSource, $auditLogExportPreventionFragment)) {
+        $adminFieldErrorIssues[] = 'admin audit log is missing CSV export error-prevention fragment: ' . $auditLogExportPreventionFragment;
+    }
+}
 if (str_contains($backupAdminSource, 'style=')) {
     $adminFieldErrorIssues[] = 'admin backup page still contains inline style attributes';
 }
@@ -18511,6 +18531,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export odpovědí nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions CSV export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('audit_log_csv_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export audit logu nevrátil field-level chybu, poslal attachment nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_audit_log_csv_export')
+    || !str_contains($httpIntegrationSource, "audit_log_export_csv")) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing audit log CSV export error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_delete_error_prevention_http'")

@@ -2475,6 +2475,93 @@ try {
     httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $formSubmissionsCsvErrorPreventionIssues, 'potvrzený CSV export odpovědí');
     httpIntegrationPrintResult('form_submissions_csv_error_prevention_http', $formSubmissionsCsvErrorPreventionIssues, $failures);
 
+    $auditLogCsvErrorPreventionIssues = [];
+    $auditLogCsvAction = 'http_audit_log_export_' . bin2hex(random_bytes(4));
+    $auditLogCsvDetail = 'Citlivý auditní detail pro CSV export ' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_log (action, detail, user_id, created_at)
+         VALUES (?, ?, ?, NOW())"
+    )->execute([
+        $auditLogCsvAction,
+        $auditLogCsvDetail,
+        $adminUserId,
+    ]);
+    $auditLogCsvUrl = $baseUrl . BASE_URL . '/admin/audit_log.php?' . http_build_query([
+        'action' => $auditLogCsvAction,
+        'export' => 'csv',
+    ]);
+    $auditLogCsvReviewResponse = fetchUrl($auditLogCsvUrl, $adminSession['cookie'], 0);
+    $auditLogCsvCsrf = extractHiddenInputValue($auditLogCsvReviewResponse['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($auditLogCsvReviewResponse) !== 200
+        || $auditLogCsvCsrf === ''
+        || httpIntegrationHeaderContains($auditLogCsvReviewResponse, 'Content-Disposition', 'attachment')
+        || !str_contains($auditLogCsvReviewResponse['body'], 'CSV export audit logu obsahuje administrační akce')
+        || !httpIntegrationInputHasAttributes(
+            $auditLogCsvReviewResponse['body'],
+            'confirm_audit_log_csv_export',
+            [
+                'name' => 'confirm_audit_log_csv_export',
+                'aria-describedby' => 'audit-log-csv-export-review-help',
+            ]
+        )) {
+        $auditLogCsvErrorPreventionIssues[] = 'CSV export audit logu nevykreslil review text a potvrzovací checkbox místo přímého downloadu';
+    }
+
+    $auditLogCsvLogCountBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'audit_log_export_csv'")->fetchColumn();
+    $auditLogCsvMissingConfirmResponse = postUrl(
+        $auditLogCsvUrl,
+        [
+            'csrf_token' => $auditLogCsvCsrf,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $auditLogCsvLogCountAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'audit_log_export_csv'")->fetchColumn();
+    if (httpIntegrationStatusCode($auditLogCsvMissingConfirmResponse) !== 200
+        || httpIntegrationHeaderContains($auditLogCsvMissingConfirmResponse, 'Content-Disposition', 'attachment')
+        || str_contains($auditLogCsvMissingConfirmResponse['body'], $auditLogCsvDetail)
+        || !str_contains($auditLogCsvMissingConfirmResponse['body'], 'id="audit-log-csv-export-form-error" class="error" role="alert" aria-atomic="true"')
+        || !str_contains($auditLogCsvMissingConfirmResponse['body'], 'id="confirm-audit-log-csv-export-error"')
+        || !httpIntegrationInputHasAttributes(
+            $auditLogCsvMissingConfirmResponse['body'],
+            'confirm_audit_log_csv_export',
+            [
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'audit-log-csv-export-review-help confirm-audit-log-csv-export-error',
+            ]
+        )
+        || $auditLogCsvLogCountAfterMissingConfirm !== $auditLogCsvLogCountBefore) {
+        $auditLogCsvErrorPreventionIssues[] = 'nepotvrzený CSV export audit logu nevrátil field-level chybu, poslal attachment nebo zapsal audit log';
+    }
+
+    $auditLogCsvConfirmedCsrf = extractHiddenInputValue($auditLogCsvMissingConfirmResponse['body'], 'csrf_token');
+    if ($auditLogCsvConfirmedCsrf === '') {
+        $auditLogCsvErrorPreventionIssues[] = 'nepotvrzený CSV export audit logu nevrátil nový csrf_token pro opravené odeslání';
+        $auditLogCsvConfirmedCsrf = $auditLogCsvCsrf;
+    }
+    $auditLogCsvDownloadResponse = postUrl(
+        $auditLogCsvUrl,
+        [
+            'csrf_token' => $auditLogCsvConfirmedCsrf,
+            'confirm_audit_log_csv_export' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $auditLogCsvLogCountAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'audit_log_export_csv'")->fetchColumn();
+    if (httpIntegrationStatusCode($auditLogCsvDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !str_contains($auditLogCsvDownloadResponse['body'], $auditLogCsvAction)
+        || !str_contains($auditLogCsvDownloadResponse['body'], $auditLogCsvDetail)
+        || $auditLogCsvLogCountAfterConfirmed !== $auditLogCsvLogCountBefore + 1) {
+        $auditLogCsvErrorPreventionIssues[] = 'potvrzený CSV export audit logu nevrátil bezpečný attachment nebo nezapsal audit log';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $auditLogCsvErrorPreventionIssues, 'potvrzený CSV export audit logu');
+    httpIntegrationPrintResult('audit_log_csv_error_prevention_http', $auditLogCsvErrorPreventionIssues, $failures);
+
     $adminDownloadHeaderIssues = [];
     if (httpIntegrationStatusCode($adminExportDownloadResponse) !== 200
         || !httpIntegrationHeaderContains($adminExportDownloadResponse, 'Content-Disposition', 'attachment')
@@ -2496,6 +2583,16 @@ try {
         || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'X-Robots-Tag', 'noindex')
         || !httpIntegrationHeaderContains($formSubmissionsCsvDownloadResponse, 'Referrer-Policy', 'no-referrer')) {
         $adminDownloadHeaderIssues[] = 'admin/form_submissions.php CSV export neposlal bezpečné sdílené download hlavičky';
+    }
+    if (httpIntegrationStatusCode($auditLogCsvDownloadResponse) !== 200
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Content-Disposition', 'attachment')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Content-Disposition', 'filename*=')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Cache-Control', 'max-age=0')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'X-Content-Type-Options', 'nosniff')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'X-Robots-Tag', 'noindex')
+        || !httpIntegrationHeaderContains($auditLogCsvDownloadResponse, 'Referrer-Policy', 'no-referrer')) {
+        $adminDownloadHeaderIssues[] = 'admin/audit_log.php CSV export neposlal bezpečné sdílené download hlavičky';
     }
     httpIntegrationPrintResult('admin_download_headers_http', $adminDownloadHeaderIssues, $failures);
 
