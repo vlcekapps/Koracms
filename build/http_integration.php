@@ -2545,6 +2545,185 @@ try {
     httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $formSubmissionsBulkErrorPreventionIssues, 'potvrzený bulk delete odpovědí');
     httpIntegrationPrintResult('form_submissions_bulk_error_prevention_http', $formSubmissionsBulkErrorPreventionIssues, $failures);
 
+    $formSubmissionDeleteErrorPreventionIssues = [];
+    $formSubmissionDeleteData = json_encode([
+        'email_pro_odpoved' => 'individual-delete-' . bin2hex(random_bytes(3)) . '@example.test',
+        'popis_pozadavku' => 'Dočasná odpověď pro ověření individuálního mazání.',
+        'attachment' => [
+            'stored_name' => 'http-form-submission-delete-missing.txt',
+            'original_name' => 'missing-delete.txt',
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($formSubmissionDeleteData)) {
+        $formSubmissionDeleteData = '{}';
+    }
+    $pdo->prepare(
+        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, status, priority, labels, internal_note, created_at, updated_at)
+         VALUES (?, ?, ?, 'new', 'critical', 'Individuální delete', 'Interní poznámka k individuálnímu smazání', NOW(), NOW())"
+    )->execute([
+        $formSubmissionsCsvFormId,
+        $formSubmissionDeleteData,
+        hash('sha256', 'form-submission-delete-' . bin2hex(random_bytes(4))),
+    ]);
+    $formSubmissionDeleteId = (int)$pdo->lastInsertId();
+    $createdFormSubmissionIds[] = $formSubmissionDeleteId;
+    $pdo->prepare(
+        "INSERT INTO cms_form_submission_history (submission_id, actor_user_id, event_type, message, created_at)
+         VALUES (?, ?, 'note', 'Historie před individuálním smazáním odpovědi.', NOW())"
+    )->execute([$formSubmissionDeleteId, $adminUserId]);
+
+    $formSubmissionDeleteRedirect = BASE_URL . '/admin/form_submissions.php?id=' . $formSubmissionsCsvFormId . '&status=all';
+    $formSubmissionDeleteOverviewPage = fetchUrl($baseUrl . $formSubmissionDeleteRedirect, $adminSession['cookie'], 0);
+    $formSubmissionDeleteOverviewCsrf = extractHiddenInputValue($formSubmissionDeleteOverviewPage['body'], 'csrf_token');
+    $formSubmissionDeleteConfirmInputId = 'confirm-form-submission-delete-' . $formSubmissionDeleteId;
+    if (httpIntegrationStatusCode($formSubmissionDeleteOverviewPage) !== 200
+        || $formSubmissionDeleteOverviewCsrf === ''
+        || !str_contains($formSubmissionDeleteOverviewPage['body'], 'form-submission-delete-review-' . $formSubmissionDeleteId)
+        || !str_contains($formSubmissionDeleteOverviewPage['body'], '1 záznamů interní historie')
+        || !str_contains($formSubmissionDeleteOverviewPage['body'], '1 nahraných souborů')
+        || !httpIntegrationInputHasAttributes($formSubmissionDeleteOverviewPage['body'], $formSubmissionDeleteConfirmInputId, [
+            'name' => 'confirm_form_submission_delete_' . $formSubmissionDeleteId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'form-submission-delete-review-' . $formSubmissionDeleteId,
+        ])) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'přehled odpovědí formuláře nevykreslil review checkbox pro individuální smazání odpovědi';
+    }
+
+    $formSubmissionDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_delete'")
+        ->fetchColumn();
+    $formSubmissionDeleteMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_submission_delete.php',
+        [
+            'csrf_token' => $formSubmissionDeleteOverviewCsrf,
+            'id' => (string)$formSubmissionDeleteId,
+            'form_id' => (string)$formSubmissionsCsvFormId,
+            'redirect' => $formSubmissionDeleteRedirect,
+            'error_redirect' => $formSubmissionDeleteRedirect,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionDeleteExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submissions WHERE id = ?');
+    $formSubmissionDeleteHistoryStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ?');
+    $formSubmissionDeleteExistsStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteHistoryStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteLogCountAfterOverviewMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_delete'")
+        ->fetchColumn();
+    $formSubmissionDeleteOverviewErrorLocation = $formSubmissionDeleteRedirect
+        . '&delete_error=confirm_required&delete_error_id=' . $formSubmissionDeleteId;
+    if (httpIntegrationStatusCode($formSubmissionDeleteMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($formSubmissionDeleteMissingConfirmResponse['headers'], $formSubmissionDeleteOverviewErrorLocation, $baseUrl)
+        || (int)$formSubmissionDeleteExistsStmt->fetchColumn() !== 1
+        || (int)$formSubmissionDeleteHistoryStmt->fetchColumn() !== 1
+        || $formSubmissionDeleteLogCountAfterOverviewMissing !== $formSubmissionDeleteLogCountBefore) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'individuální smazání odpovědi bez potvrzení smazalo data nebo zapsalo audit log';
+    }
+
+    $formSubmissionDeleteOverviewErrorPage = fetchUrl($baseUrl . $formSubmissionDeleteOverviewErrorLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($formSubmissionDeleteOverviewErrorPage) !== 200
+        || !str_contains($formSubmissionDeleteOverviewErrorPage['body'], 'id="form-submission-delete-error" class="error" role="alert" aria-atomic="true">Odpověď formuláře nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($formSubmissionDeleteOverviewErrorPage['body'], 'id="confirm-form-submission-delete-' . $formSubmissionDeleteId . '-error"')
+        || !str_contains($formSubmissionDeleteOverviewErrorPage['body'], 'aria-describedby="form-submission-delete-error"')
+        || !httpIntegrationInputHasAttributes($formSubmissionDeleteOverviewErrorPage['body'], $formSubmissionDeleteConfirmInputId, [
+            'name' => 'confirm_form_submission_delete_' . $formSubmissionDeleteId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'form-submission-delete-review-' . $formSubmissionDeleteId . ' confirm-form-submission-delete-' . $formSubmissionDeleteId . '-error',
+        ])) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'individuální smazání odpovědi bez potvrzení v přehledu nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $formSubmissionDeleteDetailUrl = BASE_URL . '/admin/form_submission.php?id=' . $formSubmissionDeleteId
+        . '&form_id=' . $formSubmissionsCsvFormId
+        . '&redirect=' . rawurlencode($formSubmissionDeleteRedirect);
+    $formSubmissionDeleteDetailPage = fetchUrl($baseUrl . $formSubmissionDeleteDetailUrl, $adminSession['cookie'], 0);
+    $formSubmissionDeleteDetailCsrf = extractHiddenInputValue($formSubmissionDeleteDetailPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($formSubmissionDeleteDetailPage) !== 200
+        || $formSubmissionDeleteDetailCsrf === ''
+        || !str_contains($formSubmissionDeleteDetailPage['body'], 'form-submission-delete-review-' . $formSubmissionDeleteId)
+        || !str_contains($formSubmissionDeleteDetailPage['body'], 'name="error_redirect"')
+        || !httpIntegrationInputHasAttributes($formSubmissionDeleteDetailPage['body'], $formSubmissionDeleteConfirmInputId, [
+            'name' => 'confirm_form_submission_delete_' . $formSubmissionDeleteId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'form-submission-delete-review-' . $formSubmissionDeleteId,
+        ])) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'detail odpovědi formuláře nevykreslil review checkbox pro individuální smazání odpovědi';
+    }
+
+    $formSubmissionDeleteDetailMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_submission_delete.php',
+        [
+            'csrf_token' => $formSubmissionDeleteDetailCsrf,
+            'id' => (string)$formSubmissionDeleteId,
+            'form_id' => (string)$formSubmissionsCsvFormId,
+            'redirect' => $formSubmissionDeleteRedirect,
+            'error_redirect' => $formSubmissionDeleteDetailUrl,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionDeleteExistsStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteHistoryStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteLogCountAfterDetailMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_delete'")
+        ->fetchColumn();
+    $formSubmissionDeleteDetailErrorLocation = appendUrlQuery($formSubmissionDeleteDetailUrl, [
+        'delete_error' => 'confirm_required',
+        'delete_error_id' => $formSubmissionDeleteId,
+    ]);
+    if (httpIntegrationStatusCode($formSubmissionDeleteDetailMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($formSubmissionDeleteDetailMissingConfirmResponse['headers'], $formSubmissionDeleteDetailErrorLocation, $baseUrl)
+        || (int)$formSubmissionDeleteExistsStmt->fetchColumn() !== 1
+        || (int)$formSubmissionDeleteHistoryStmt->fetchColumn() !== 1
+        || $formSubmissionDeleteLogCountAfterDetailMissing !== $formSubmissionDeleteLogCountBefore) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'individuální smazání odpovědi z detailu bez potvrzení smazalo data nebo zapsalo audit log';
+    }
+
+    $formSubmissionDeleteDetailErrorPage = fetchUrl($baseUrl . $formSubmissionDeleteDetailErrorLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($formSubmissionDeleteDetailErrorPage) !== 200
+        || !str_contains($formSubmissionDeleteDetailErrorPage['body'], 'id="form-submission-delete-error" class="error" role="alert" aria-atomic="true">Odpověď formuláře nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($formSubmissionDeleteDetailErrorPage['body'], 'id="confirm-form-submission-delete-' . $formSubmissionDeleteId . '-error"')
+        || !str_contains($formSubmissionDeleteDetailErrorPage['body'], 'aria-describedby="form-submission-delete-error"')
+        || !httpIntegrationInputHasAttributes($formSubmissionDeleteDetailErrorPage['body'], $formSubmissionDeleteConfirmInputId, [
+            'name' => 'confirm_form_submission_delete_' . $formSubmissionDeleteId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'form-submission-delete-review-' . $formSubmissionDeleteId . ' confirm-form-submission-delete-' . $formSubmissionDeleteId . '-error',
+        ])) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'individuální smazání odpovědi bez potvrzení v detailu nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $formSubmissionDeleteConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_submission_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($formSubmissionDeleteDetailErrorPage['body'], 'csrf_token'),
+            'id' => (string)$formSubmissionDeleteId,
+            'form_id' => (string)$formSubmissionsCsvFormId,
+            'redirect' => $formSubmissionDeleteRedirect,
+            'error_redirect' => $formSubmissionDeleteDetailUrl,
+            'confirm_form_submission_delete_' . $formSubmissionDeleteId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formSubmissionDeleteExistsStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteHistoryStmt->execute([$formSubmissionDeleteId]);
+    $formSubmissionDeleteLogCountAfterConfirmed = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_delete'")
+        ->fetchColumn();
+    $formSubmissionDeleteSuccessLocation = $formSubmissionDeleteRedirect . '&deleted=1';
+    $formSubmissionDeleteSuccessPage = fetchUrl($baseUrl . $formSubmissionDeleteSuccessLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($formSubmissionDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($formSubmissionDeleteConfirmedResponse['headers'], $formSubmissionDeleteSuccessLocation, $baseUrl)
+        || !str_contains($formSubmissionDeleteSuccessPage['body'], '<p class="success" role="status">Odpověď formuláře byla smazána.</p>')
+        || (int)$formSubmissionDeleteExistsStmt->fetchColumn() !== 0
+        || (int)$formSubmissionDeleteHistoryStmt->fetchColumn() !== 0
+        || $formSubmissionDeleteLogCountAfterConfirmed !== $formSubmissionDeleteLogCountBefore + 1) {
+        $formSubmissionDeleteErrorPreventionIssues[] = 'potvrzené individuální smazání odpovědi neproběhlo s očekávaným PRG stavem, cleanupem nebo audit logem';
+    }
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $formSubmissionDeleteErrorPreventionIssues, 'potvrzené individuální smazání odpovědi');
+    httpIntegrationPrintResult('form_submission_delete_error_prevention_http', $formSubmissionDeleteErrorPreventionIssues, $failures);
+
     $adminJsonPostOnlyEndpointIssues = [];
     $adminJsonPostOnlyEndpointUrls = [
         '/admin/content_lock_refresh.php' => 'admin/content_lock_refresh.php',

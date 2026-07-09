@@ -520,6 +520,8 @@ Individuální mazání odběratele newsletteru používá stejný review-and-co
 
 Hromadné akce nad odpověďmi Form Builderu používají stejný review-and-confirm pattern. Změna stavu i trvalé smazání vybraných odpovědí vyžaduje potvrzení kontroly výběru a zvolené akce; server nepotvrzený požadavek odmítne před změnou dat, odstraněním příloh/historie nebo zápisem audit logu.
 
+Individuální mazání odpovědi Form Builderu má stejný guardrail v přehledu odpovědí i detailu odpovědi. Akce ukazuje referenci, stav, počet záznamů interní historie a počet nahraných souborů uložených v odpovědi, vyžaduje `confirm_form_submission_delete_<id>` a server bez potvrzení neodstraní odpověď, historii, přílohy ani audit log; HTTP integrace ověřuje přehled, detail, chybový stav i potvrzený cleanup.
+
 Mazání celého Form Builder formuláře má vlastní řádkový review krok v přehledu formulářů. Správce před smazáním vidí veřejnou URL, počet polí, odpovědí, záznamů historie odpovědí a upozornění na nahrané soubory v odpovědích; bez `confirm_form_delete_<id>` server formulář, pole, odpovědi, historii, přílohy ani audit log nezmění.
 
 Hromadné akce nad alby galerie mají stejný guardrail. Smazání vybraných alb i ZIP export vyžadují potvrzení kontroly výběru a zvolené akce; server nepotvrzené smazání odmítne před odstraněním alb, fotografií a revizí a nepotvrzený ZIP export před odesláním attachmentu nebo zápisem audit logu.

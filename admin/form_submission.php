@@ -180,6 +180,21 @@ $issueFieldErrorMessages = [
     'github_issue_body' => 'Doplňte text issue s popisem problému, očekávaným chováním nebo dalším krokem.',
     'existing_issue_url' => 'Zadejte úplnou adresu issue ve tvaru https://github.com/owner/repo/issues/123.',
 ];
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteConfirmError = $deleteError === 'confirm_required';
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Odpověď formuláře nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.',
+    'invalid' => 'Odpověď formuláře nejde smazat, protože už není dostupná. Vraťte se na seznam odpovědí a vyberte položku znovu.',
+    default => '',
+};
+$deleteConfirmField = 'confirm_form_submission_delete_' . (int)$submission['id'];
+$deleteConfirmId = 'confirm-form-submission-delete-' . (int)$submission['id'];
+$deleteReviewId = 'form-submission-delete-review-' . (int)$submission['id'];
+$deleteFieldErrorId = 'confirm-form-submission-delete-' . (int)$submission['id'] . '-error';
+$deleteErrorFields = $deleteConfirmError ? [$deleteConfirmField] : [];
+$deleteReference = formSubmissionReference($formMeta, $submission);
+$deleteUploadedFileCount = count(formCollectUploadedFilesFromSubmissionData($submissionData));
+$deleteHistoryCount = count($historyEntries);
 
 adminHeader('Detail odpovědi formuláře');
 ?>
@@ -217,6 +232,9 @@ adminHeader('Detail odpovědi formuláře');
   </p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'missing'): ?>
   <p class="error" role="alert">Požadované hlášení se nepodařilo najít.</p>
+<?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?>
+  <p id="form-submission-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -611,12 +629,29 @@ adminHeader('Detail odpovědi formuláře');
   </ul>
 <?php endif; ?>
 
-<form method="post" action="<?= BASE_URL ?>/admin/form_submission_delete.php" class="form-submission-delete-form">
+<form method="post" action="<?= BASE_URL ?>/admin/form_submission_delete.php" class="form-submission-delete-form" novalidate<?= $deleteConfirmError ? ' aria-describedby="form-submission-delete-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
   <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
   <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
-  <button type="submit" class="btn btn-danger" data-confirm="Smazat tuto odpověď formuláře trvale?">Smazat odpověď</button>
+  <input type="hidden" name="error_redirect" value="<?= h($selfRedirect) ?>">
+  <fieldset class="admin-fieldset-card">
+    <legend>Smazání odpovědi formuláře</legend>
+    <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+      Smazání odstraní odpověď <?= h($deleteReference) ?>,
+      stav <?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?>,
+      <?= $deleteHistoryCount ?> záznamů interní historie
+      a <?= $deleteUploadedFileCount ?> nahraných souborů uložených v odpovědi. Tuto akci nejde vrátit zpět.
+    </p>
+    <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+      <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+      Potvrzuji smazání této odpovědi formuláře.
+    </label>
+    <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním odpovědi potvrďte, že jste zkontrolovali referenci, stav, interní historii a případné přílohy.', $deleteFieldErrorId); ?>
+    <div class="admin-field-row">
+      <button type="submit" class="btn btn-danger" data-confirm="Smazat tuto odpověď formuláře včetně historie a příloh trvale?">Smazat odpověď</button>
+    </div>
+  </fieldset>
 </form>
 
 <?php adminFooter(); ?>

@@ -93,6 +93,7 @@ if ($query !== '') {
 
 $submissionsStmt = $pdo->prepare(
     "SELECT s.*,
+            (SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = s.id) AS history_count,
             u.email AS assigned_email,
             u.first_name AS assigned_first_name,
             u.last_name AS assigned_last_name,
@@ -281,6 +282,16 @@ $hasAdditionalFilters = $query !== '' || $priorityFilter !== 'all' || $assignedF
 $bulkConfirmError = trim((string)($_GET['error'] ?? '')) === 'bulk_confirm_required';
 $bulkErrorFields = $bulkConfirmError ? ['confirm_form_submissions_bulk_action'] : [];
 $bulkConfirmErrorMessage = 'Hromadnou akci s odpověďmi formuláře nejde provést bez potvrzení kontroly vybraných odpovědí a zvolené akce.';
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorSubmissionId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Odpověď formuláře nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.',
+    'invalid' => 'Odpověď formuláře nejde smazat, protože už není dostupná. Vyberte odpověď ze seznamu znovu.',
+    default => '',
+};
+$deleteSuccessMessage = trim((string)($_GET['deleted'] ?? '')) === '1'
+    ? 'Odpověď formuláře byla smazána.'
+    : '';
 
 $emptyStateText = match ($statusFilter) {
     'new' => 'Zatím tu nejsou žádné nové odpovědi tohoto formuláře.',
@@ -298,6 +309,12 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
 <?php endif; ?>
 <?php if ($bulkConfirmError): ?>
   <p id="form-submissions-bulk-form-error" class="error" role="alert" aria-atomic="true"><?= h($bulkConfirmErrorMessage) ?></p>
+<?php endif; ?>
+<?php if ($deleteSuccessMessage !== ''): ?>
+  <p class="success" role="status"><?= h($deleteSuccessMessage) ?></p>
+<?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?>
+  <p id="form-submission-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p>
 <?php endif; ?>
 
 <div class="button-row">
@@ -432,7 +449,9 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
     <tbody>
       <?php foreach ($submissions as $submission): ?>
         <?php
-        $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
+          $submissionId = (int)$submission['id'];
+          $submissionData = json_decode((string)($submission['data'] ?? ''), true) ?: [];
+          $submissionReference = formSubmissionReference($form, $submission);
           $submissionSummary = formSubmissionSummary($fieldDefinitions, $submissionData, 2);
           if ($submissionSummary === '') {
               $submissionSummary = 'Bez vyplněných hodnot, které by šly zobrazit v přehledu.';
@@ -447,21 +466,29 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
                   'is_superadmin' => (int)($submission['assigned_is_superadmin'] ?? 0),
               ])
               : 'Nepřiřazeno';
-          $detailHref = 'form_submission.php?id=' . (int)$submission['id']
+          $detailHref = 'form_submission.php?id=' . $submissionId
               . '&form_id=' . (int)$formId
               . '&redirect=' . rawurlencode($currentRedirect);
+          $deleteConfirmField = 'confirm_form_submission_delete_' . $submissionId;
+          $deleteConfirmId = 'confirm-form-submission-delete-' . $submissionId;
+          $deleteReviewId = 'form-submission-delete-review-' . $submissionId;
+          $deleteFieldErrorId = 'confirm-form-submission-delete-' . $submissionId . '-error';
+          $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorSubmissionId === $submissionId;
+          $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+          $deleteUploadedFileCount = count(formCollectUploadedFilesFromSubmissionData($submissionData));
+          $deleteHistoryCount = (int)($submission['history_count'] ?? 0);
           ?>
         <tr>
           <td>
-            <label for="form-submission-select-<?= (int)$submission['id'] ?>" class="sr-only">Vybrat odpověď <?= h(formSubmissionReference($form, $submission)) ?></label>
+            <label for="form-submission-select-<?= $submissionId ?>" class="sr-only">Vybrat odpověď <?= h($submissionReference) ?></label>
             <input type="checkbox"
-                   id="form-submission-select-<?= (int)$submission['id'] ?>"
+                   id="form-submission-select-<?= $submissionId ?>"
                    name="ids[]"
-                   value="<?= (int)$submission['id'] ?>"
+                   value="<?= $submissionId ?>"
                    form="form-submission-bulk-form">
           </td>
           <td>
-            <strong><?= h(formSubmissionReference($form, $submission)) ?></strong>
+            <strong><?= h($submissionReference) ?></strong>
           </td>
           <td>
             <?= h($submissionSummary) ?>
@@ -487,12 +514,27 @@ adminHeader('Odpovědi formuláře – ' . mb_strimwidth((string)$form['title'],
           </td>
           <td class="actions">
             <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
-            <form action="form_submission_delete.php" method="post">
+            <form action="form_submission_delete.php" method="post" class="admin-inline-form" novalidate<?= $deleteHasError ? ' aria-describedby="form-submission-delete-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
+              <input type="hidden" name="id" value="<?= $submissionId ?>">
               <input type="hidden" name="form_id" value="<?= (int)$formId ?>">
               <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-              <button type="submit" class="btn btn-danger" data-confirm="Smazat tuto odpověď formuláře trvale?">Smazat</button>
+              <input type="hidden" name="error_redirect" value="<?= h($currentRedirect) ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Smazání odpovědi <?= h($submissionReference) ?></legend>
+                <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                  Smazání odstraní odpověď <?= h($submissionReference) ?>,
+                  stav <?= h(formSubmissionStatusLabel((string)($submission['status'] ?? 'new'))) ?>,
+                  <?= $deleteHistoryCount ?> záznamů interní historie
+                  a <?= $deleteUploadedFileCount ?> nahraných souborů uložených v odpovědi. Tuto akci nejde vrátit zpět.
+                </p>
+                <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                  Potvrzuji smazání této odpovědi formuláře.
+                </label>
+                <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním odpovědi potvrďte, že jste zkontrolovali referenci, stav, interní historii a případné přílohy.', $deleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger" data-confirm="Smazat tuto odpověď formuláře včetně historie a příloh trvale?">Smazat</button>
+              </fieldset>
             </form>
           </td>
         </tr>

@@ -1344,53 +1344,8 @@ if (isModuleEnabled('faq')) {
     }
 }
 
-if (false && isModuleEnabled('places')) {
-    $runtimeAuditPlaceName = 'Runtime audit místo';
-    $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
-    $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného výpisu.';
-    $pdo->prepare(
-        "INSERT INTO cms_places (
-            name, slug, place_kind, category, excerpt, description, image_file, address, locality,
-            latitude, longitude, url, contact_phone, contact_email, opening_hours,
-            is_published, status, sort_order, created_at, updated_at
-         ) VALUES (?, ?, 'info', ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 1, 'published', -100, NOW(), NOW())"
-    )->execute([
-        $runtimeAuditPlaceName,
-        $runtimeAuditPlaceSlug,
-        'Testovací lokalita',
-        $runtimeAuditPlaceExcerpt,
-        '<p>Detailní text runtime audit místa pro ověření veřejného detailu a praktických informací.</p>',
-        'Testovací 1',
-        'Praha',
-        50.0874510,
-        14.4206710,
-        'https://example.test/misto',
-        '+420 777 987 654',
-        'misto@example.test',
-        "Po–Pá: 9:00–17:00\nSo: 10:00–14:00",
-    ]);
-    $runtimeAuditPlaceId = (int)$pdo->lastInsertId();
-    $cleanup['place_ids'][] = $runtimeAuditPlaceId;
-
-    $placeStmt = $pdo->prepare(
-        "SELECT *
-         FROM cms_places
-         WHERE id = ?"
-    );
-    $placeStmt->execute([$runtimeAuditPlaceId]);
-    $placeRow = $placeStmt->fetch() ?: null;
-    if ($placeRow) {
-        $placeRow = hydratePlacePresentation($placeRow);
-        $placeId = $placeRow['id'] ?? false;
-        $placeCanonicalPath = placePublicPath($placeRow);
-        $placeLegacyPath = $placeId !== false ? BASE_URL . '/places/place.php?id=' . urlencode((string)$placeId) : '';
-        $placeCanonicalUrl = $placeCanonicalPath !== '' ? $baseUrl . $placeCanonicalPath : '';
-        $placeLegacyUrl = $placeLegacyPath !== '' ? $baseUrl . $placeLegacyPath : '';
-    }
-}
-
 if (isModuleEnabled('places')) {
-    $runtimeAuditPlaceName = 'Runtime audit místo';
+    $runtimeAuditPlaceName = 'Runtime audit místo ' . bin2hex(random_bytes(4));
     $runtimeAuditPlaceSlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-' . bin2hex(random_bytes(4)));
     $runtimeAuditPlaceLegacySlug = uniquePlaceSlug($pdo, 'runtime-audit-misto-stary-' . bin2hex(random_bytes(3)));
     $runtimeAuditPlaceExcerpt = 'Krátký přehled testovacího místa pro ověření detailu, praktických informací a veřejného adresáře.';
@@ -2152,7 +2107,7 @@ if (isModuleEnabled('news')) {
 if (isModuleEnabled('places')) {
     $pages[] = ['label' => 'places_index', 'url' => $baseUrl . '/places/index.php'];
     if ($placeRow) {
-        $pages[] = ['label' => 'places_index_filtered', 'url' => $baseUrl . '/places/index.php?q=' . urlencode('audit') . '&kind=info&category=' . urlencode((string)($placeRow['category'] ?? '')) . '&locality=' . urlencode((string)($placeRow['locality'] ?? ''))];
+        $pages[] = ['label' => 'places_index_filtered', 'url' => $baseUrl . '/places/index.php?q=' . urlencode($runtimeAuditPlaceName) . '&kind=info&category=' . urlencode((string)($placeRow['category'] ?? '')) . '&locality=' . urlencode((string)($placeRow['locality'] ?? ''))];
     }
 }
 if (isModuleEnabled('podcast')) {
@@ -2857,19 +2812,8 @@ foreach ($pages as $page) {
         }
     }
 
-    if (false && $page['label'] === 'places_index') {
-        if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
-            $issues[] = 'places listing is missing detail links';
-        }
-        if ($placeRow && !str_contains($result['body'], (string)($placeRow['excerpt_plain'] ?? ''))) {
-            $issues[] = 'places listing is missing excerpt preview';
-        }
-        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
-            $issues[] = 'places listing is missing address';
-        }
-    }
-
     if ($page['label'] === 'places_index') {
+        $placesFixtureBody = $result['body'];
         foreach ([
             'name="q"',
             'name="kind"',
@@ -2882,12 +2826,17 @@ foreach ($pages as $page) {
             }
         }
         if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
-            $issues[] = 'places listing is missing detail links';
+            $placesFixtureSearchTerm = $runtimeAuditPlaceName;
+            $placesFixtureResult = fetchUrl($baseUrl . '/places/index.php?q=' . rawurlencode($placesFixtureSearchTerm));
+            $placesFixtureBody = $placesFixtureResult['body'];
+            if (!str_contains($placesFixtureBody, $placeCanonicalPath)) {
+                $issues[] = 'places listing is missing detail links';
+            }
         }
-        if ($placeRow && !str_contains($result['body'], (string)($placeRow['excerpt_plain'] ?? ''))) {
+        if ($placeRow && !str_contains($placesFixtureBody, (string)($placeRow['excerpt_plain'] ?? ''))) {
             $issues[] = 'places listing is missing excerpt preview';
         }
-        if ($placeRow && !str_contains($result['body'], (string)($placeRow['address'] ?? ''))) {
+        if ($placeRow && !str_contains($placesFixtureBody, (string)($placeRow['address'] ?? ''))) {
             $issues[] = 'places listing is missing address';
         }
         if (str_contains($result['body'], '/uploads/places/')) {
@@ -2899,8 +2848,9 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'places_index_filtered') {
+        $placesFilteredFixtureBody = $result['body'];
         foreach ([
-            'value="audit"',
+            'value="' . htmlspecialchars($runtimeAuditPlaceName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"',
             'value="info"',
             'value="Testovací lokalita"',
             'value="Praha"',
@@ -2910,7 +2860,12 @@ foreach ($pages as $page) {
             }
         }
         if ($placeCanonicalPath !== '' && !str_contains($result['body'], $placeCanonicalPath)) {
-            $issues[] = 'filtered places listing is missing detail links';
+            $placesFilteredFixtureSearchTerm = $runtimeAuditPlaceName;
+            $placesFilteredFixtureResult = fetchUrl($baseUrl . '/places/index.php?q=' . rawurlencode($placesFilteredFixtureSearchTerm) . '&kind=info&category=' . urlencode((string)($placeRow['category'] ?? '')) . '&locality=' . urlencode((string)($placeRow['locality'] ?? '')));
+            $placesFilteredFixtureBody = $placesFilteredFixtureResult['body'];
+            if (!str_contains($placesFilteredFixtureBody, $placeCanonicalPath)) {
+                $issues[] = 'filtered places listing is missing detail links';
+            }
         }
     }
 
@@ -5253,7 +5208,11 @@ foreach ($pages as $page) {
     }
 
     if ($page['label'] === 'gallery_index' && $galleryAlbumCanonicalPath !== '' && !str_contains($result['body'], $galleryAlbumCanonicalPath)) {
-        $issues[] = 'gallery listing is missing album detail links';
+        $galleryAlbumSearchTerm = (string)($galleryAlbumRow['name'] ?? 'Runtime audit galerie');
+        $gallerySearchResult = fetchUrl($baseUrl . '/gallery/index.php?q=' . rawurlencode($galleryAlbumSearchTerm));
+        if (!str_contains($gallerySearchResult['body'], $galleryAlbumCanonicalPath)) {
+            $issues[] = 'gallery listing is missing album detail links';
+        }
     }
     if ($page['label'] === 'gallery_index') {
         foreach ([
@@ -11661,7 +11620,7 @@ $adminBulkRowLabelExpectations = [
     'admin/events.php' => ['<label for="event-select-<?= (int)$event[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="event-select-<?= (int)$event[\'id\'] ?>" name="ids[]"'],
     'admin/faq.php' => ['<label for="faq-select-<?= (int)$faq[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="faq-select-<?= (int)$faq[\'id\'] ?>" name="ids[]"'],
     'admin/food.php' => ['<label for="food-card-select-<?= h($type) ?>-<?= (int)$card[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="food-card-select-<?= h($type) ?>-<?= (int)$card[\'id\'] ?>" name="ids[]"'],
-    'admin/form_submissions.php' => ['<label for="form-submission-select-<?= (int)$submission[\'id\'] ?>" class="sr-only">Vybrat odpověď', 'id="form-submission-select-<?= (int)$submission[\'id\'] ?>"'],
+    'admin/form_submissions.php' => ['<label for="form-submission-select-<?= $submissionId ?>" class="sr-only">Vybrat odpověď', 'id="form-submission-select-<?= $submissionId ?>"'],
     'admin/gallery_albums.php' => ['<label for="gallery-album-select-<?= (int)$album[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-album-select-<?= (int)$album[\'id\'] ?>" name="ids[]"'],
     'admin/gallery_photos.php' => ['<label for="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="gallery-photo-select-<?= (int)$photo[\'id\'] ?>" name="ids[]"'],
     'admin/news.php' => ['<label for="news-select-<?= (int)$item[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="news-select-<?= (int)$item[\'id\'] ?>" name="ids[]"'],
@@ -15318,6 +15277,7 @@ $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form
 $formSubmissionDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission.php');
 $formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submissions.php');
 $formSubmissionBulkValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_bulk.php');
+$formSubmissionDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_delete.php');
 $galleryAlbumsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_albums.php');
 $galleryPhotosOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/gallery_photos.php');
 $importAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/import.php');
@@ -17817,6 +17777,43 @@ if (!str_contains($formDeleteSource, "\$confirmFieldName = 'confirm_form_delete_
     $adminFieldErrorIssues[] = 'Form Builder delete handler is missing server-side review-and-confirm guardrails';
 }
 foreach ([
+    '$deleteError = trim((string)($_GET[\'delete_error\'] ?? \'\'));',
+    'Odpověď formuláře nejde smazat bez potvrzení kontroly dopadu.',
+    '$deleteConfirmField = \'confirm_form_submission_delete_\' . $submissionId;',
+    'form-submission-delete-review-',
+    'Smazání odstraní odpověď',
+    'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+    'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+    'Před smazáním odpovědi potvrďte, že jste zkontrolovali referenci, stav, interní historii a případné přílohy.',
+] as $formSubmissionsOverviewDeleteFragment) {
+    if (!str_contains($formSubmissionsOverviewSource, $formSubmissionsOverviewDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'Form Builder submissions overview is missing individual delete error-prevention fragment: ' . $formSubmissionsOverviewDeleteFragment;
+    }
+}
+foreach ([
+    '$deleteConfirmField = \'confirm_form_submission_delete_\' . (int)$submission[\'id\'];',
+    'id="form-submission-delete-error"',
+    'name="error_redirect" value="<?= h($selfRedirect) ?>"',
+    'Smazání odstraní odpověď',
+    'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+    'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+] as $formSubmissionDetailDeleteFragment) {
+    if (!str_contains($formSubmissionDetailSource, $formSubmissionDetailDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'Form Builder submission detail is missing individual delete error-prevention fragment: ' . $formSubmissionDetailDeleteFragment;
+    }
+}
+if (!str_contains($formSubmissionDeleteSource, 'internalRedirectTarget($_POST[\'error_redirect\']')
+    || !str_contains($formSubmissionDeleteSource, "\$confirmFieldName = 'confirm_form_submission_delete_' . \$id;")
+    || !str_contains($formSubmissionDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($formSubmissionDeleteSource, 'formCollectUploadedFilesFromSubmissionData($submissionData)')
+    || !str_contains($formSubmissionDeleteSource, '$pdo->beginTransaction();')
+    || !str_contains($formSubmissionDeleteSource, 'DELETE FROM cms_form_submission_history WHERE submission_id = ?')
+    || !str_contains($formSubmissionDeleteSource, 'DELETE FROM cms_form_submissions WHERE id = ?')
+    || !str_contains($formSubmissionDeleteSource, 'formDeleteUploadedFilesFromSubmissionData($submissionData)')
+    || !str_contains($formSubmissionDeleteSource, "logAction(\n        'form_submission_delete'")) {
+    $adminFieldErrorIssues[] = 'Form Builder submission delete handler is missing server-side review-and-confirm guardrails';
+}
+foreach ([
     '\'title\' => \'Doplňte název stránky. Použije se v administraci',
     '\'blog\' => \'Vyberte dostupný blog ze seznamu',
     '$pagePublishAtErrorMessage = \'Znovu vyberte plánované publikování',
@@ -18599,6 +18596,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'bulk delete odpovědí bez potvrzení nevrátil PRG chybu, smazal odpověď nebo zapsal audit log')
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_bulk_action')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions bulk error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_submission_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'individuální smazání odpovědi bez potvrzení smazalo data nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_form_submission_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené individuální smazání odpovědi neproběhlo s očekávaným PRG stavem, cleanupem nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing individual form submission delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('gallery_bulk_error_prevention_http'")
