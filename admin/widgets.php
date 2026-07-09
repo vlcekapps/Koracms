@@ -12,6 +12,16 @@ $selectedAddZone = trim((string)($_GET['zone'] ?? 'homepage'));
 if (!isset($zones[$selectedAddZone])) {
     $selectedAddZone = 'homepage';
 }
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorWidgetId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Widget nejde odebrat bez potvrzení kontroly dopadu. U pole Potvrzení odebrání je konkrétní nápověda.',
+    'invalid' => 'Widget nejde odebrat, protože už není dostupný. Vyberte položku ze seznamu znovu.',
+    default => '',
+};
+$deleteSuccessMessage = trim((string)($_GET['deleted'] ?? '')) === '1'
+    ? 'Widget byl odebrán.'
+    : '';
 
 $allBlogs = getAllBlogs();
 $allAlbums = [];
@@ -44,6 +54,13 @@ try {
 
 adminHeader('Widgety');
 ?>
+
+<?php if ($deleteSuccessMessage !== ''): ?>
+  <p class="success" role="status"><?= h($deleteSuccessMessage) ?></p>
+<?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?>
+  <p id="widget-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p>
+<?php endif; ?>
 
 <p class="widgets-intro">Přidávejte, přesouvejte a nastavujte widgety v jednotlivých zónách webu. Přetažením myší nebo klávesou Ctrl+šipka změníte pořadí. Aktivní widgety, které se teď na webu nedokážou zobrazit, tu uvidíte s vysvětlením přímo nad tlačítkem Nastavení.</p>
 
@@ -81,11 +98,13 @@ adminHeader('Widgety');
     <?php else: ?>
       <ol class="widget-sort-list" data-sortable="widgets" data-zone="<?= h($zoneKey) ?>">
         <?php foreach ($allWidgets[$zoneKey] as $w):
+            $wId = (int)$w['id'];
             $wSettings = widgetSettings($w);
             $wTypeDef = $types[$w['widget_type']] ?? null;
             $wTypeName = $wTypeDef ? $wTypeDef['name'] : $w['widget_type'];
             $wTitle = trim((string)($w['title'] ?? ''));
             $wDisplayTitle = $wTitle !== '' ? $wTitle : $wTypeName;
+            $wZoneLabel = $zones[(string)($w['zone'] ?? '')] ?? (string)($w['zone'] ?? $zoneLabel);
             $wMetaParts = [];
             if ($wTitle !== '' && $wTitle !== $wTypeName) {
                 $wMetaParts[] = $wTypeName;
@@ -100,10 +119,16 @@ adminHeader('Widgety');
             if ($wDisplayWarning) {
                 $wMetaParts[] = 'na webu se teď nezobrazí';
             }
-            $wDomId = 'widget-item-' . (int)$w['id'];
+            $wDomId = 'widget-item-' . $wId;
             $wTitleId = $wDomId . '-title';
             $wMetaId = $wDomId . '-meta';
             $wWarningId = $wDomId . '-warning';
+            $wDeleteConfirmField = 'confirm_widget_delete_' . $wId;
+            $wDeleteConfirmId = 'confirm-widget-delete-' . $wId;
+            $wDeleteReviewId = 'widget-delete-review-' . $wId;
+            $wDeleteFieldErrorId = 'confirm-widget-delete-' . $wId . '-error';
+            $wDeleteHasError = $deleteError === 'confirm_required' && $deleteErrorWidgetId === $wId;
+            $wDeleteErrorFields = $wDeleteHasError ? [$wDeleteConfirmField] : [];
             $wDescriptionIds = [];
             if ($wMetaParts !== []) {
                 $wDescriptionIds[] = $wMetaId;
@@ -132,17 +157,31 @@ adminHeader('Widgety');
                         aria-haspopup="dialog"
                         aria-controls="widget-dialog"
                         aria-expanded="false"
-                        data-widget-id="<?= (int)$w['id'] ?>"
+                        data-widget-id="<?= $wId ?>"
                         data-widget-title="<?= h($w['title']) ?>"
                         data-widget-type="<?= h($w['widget_type']) ?>"
                         data-widget-zone="<?= h($w['zone']) ?>"
                         data-widget-active="<?= (int)$w['is_active'] ?>"
                         data-widget-settings="<?= h(json_encode($wSettings, JSON_UNESCAPED_UNICODE)) ?>">Nastavení<span class="sr-only"> widgetu <?= h($wDisplayTitle) ?></span></button>
-                <form method="post" action="widget_delete.php" class="widget-inline-form">
+                <form method="post" action="widget_delete.php" class="widget-inline-form admin-inline-form" novalidate<?= $wDeleteHasError ? ' aria-describedby="widget-delete-error"' : '' ?>>
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                  <input type="hidden" name="widget_id" value="<?= (int)$w['id'] ?>">
-                  <button type="submit" class="btn btn-danger widget-button--compact"
-                          data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“?') ?>"><span aria-hidden="true">✕</span><span class="sr-only">Odebrat widget <?= h($wDisplayTitle) ?></span></button>
+                  <input type="hidden" name="widget_id" value="<?= $wId ?>">
+                  <fieldset class="admin-inline-fieldset">
+                    <legend class="sr-only">Odebrání widgetu <?= h($wDisplayTitle) ?></legend>
+                    <p id="<?= h($wDeleteReviewId) ?>" class="field-help field-help--flush">
+                      Odebrání odstraní widget <?= h($wDisplayTitle) ?>,
+                      typ <?= h((string)$wTypeName) ?>,
+                      ze zóny <?= h((string)$wZoneLabel) ?>.
+                      <?= (int)$w['is_active'] === 1 ? 'Aktivní widget se přestane zobrazovat na veřejném webu.' : 'Widget je neaktivní, ale jeho nastavení se odstraní trvale.' ?>
+                    </p>
+                    <label for="<?= h($wDeleteConfirmId) ?>" class="admin-checkbox-label">
+                      <input type="checkbox" id="<?= h($wDeleteConfirmId) ?>" name="<?= h($wDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($wDeleteConfirmField, $wDeleteErrorFields, [], [$wDeleteReviewId], $wDeleteFieldErrorId) ?>>
+                      Potvrzuji odebrání tohoto widgetu.
+                    </label>
+                    <?php adminRenderFieldError($wDeleteConfirmField, $wDeleteErrorFields, [], 'Před odebráním widgetu potvrďte, že jste zkontrolovali jeho název, typ, zónu a dopad na veřejné zobrazení.', $wDeleteFieldErrorId); ?>
+                    <button type="submit" class="btn btn-danger widget-button--compact"
+                            data-confirm="<?= h('Odebrat widget „' . $wDisplayTitle . '“ ze zóny „' . $wZoneLabel . '“?') ?>"><span aria-hidden="true">✕</span><span class="sr-only">Odebrat widget <?= h($wDisplayTitle) ?></span></button>
+                  </fieldset>
                 </form>
               </div>
             </div>

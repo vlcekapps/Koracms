@@ -19769,6 +19769,7 @@ if (isModuleEnabled('forms')) {
     }
 }
 $widgetSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_save.php');
+$widgetDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widget_delete.php');
 $widgetLibSource = (string)file_get_contents(dirname(__DIR__) . '/lib/widgets.php');
 $widgetPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
 $widgetsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/widgets.php');
@@ -19827,6 +19828,33 @@ foreach ([
     if (!str_contains($widgetsAdminSource, $widgetAdminListA11yFragment)) {
         $widgetRenderIssues[] = 'admin widgets list is missing accessibility fragment: ' . $widgetAdminListA11yFragment;
     }
+}
+foreach ([
+    '$deleteError = trim((string)($_GET[\'delete_error\'] ?? \'\'));',
+    'Widget nejde odebrat bez potvrzení kontroly dopadu.',
+    '$wDeleteConfirmField = \'confirm_widget_delete_\' . $wId;',
+    'widget-delete-review-',
+    'Odebrání odstraní widget',
+    'adminFieldAttributes($wDeleteConfirmField, $wDeleteErrorFields, [], [$wDeleteReviewId], $wDeleteFieldErrorId)',
+    'adminRenderFieldError($wDeleteConfirmField, $wDeleteErrorFields',
+] as $widgetDeleteAdminFragment) {
+    if (!str_contains($widgetsAdminSource, $widgetDeleteAdminFragment)) {
+        $widgetRenderIssues[] = 'admin widgets page is missing delete error-prevention fragment: ' . $widgetDeleteAdminFragment;
+    }
+}
+if (!str_contains($widgetDeleteSource, "if (\$_SERVER['REQUEST_METHOD'] !== 'POST')")
+    || !str_contains($widgetDeleteSource, "\$confirmFieldName = 'confirm_widget_delete_' . \$id;")
+    || !str_contains($widgetDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($widgetDeleteSource, 'DELETE FROM cms_widgets WHERE id = ?')
+    || !str_contains($widgetDeleteSource, "logAction(\n    'widget_delete'")) {
+    $widgetRenderIssues[] = 'widget delete handler is missing server-side review-and-confirm guardrails';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('widget_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'widget bez potvrzení odebrání smazal data nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_widget_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené odebrání widgetu neproběhlo s očekávaným PRG stavem nebo audit logem')) {
+    $widgetRenderIssues[] = 'HTTP integration is missing widget delete error-prevention coverage';
 }
 foreach ([
     'aria-label="<?= h($wDisplayTitle) ?> (<?= h($wTypeName) ?>)"',

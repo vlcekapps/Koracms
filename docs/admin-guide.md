@@ -1141,6 +1141,8 @@ Mazání FAQ kategorií používá stejný review krok. Správce vidí počet na
 
 Mazání celého blogu má samostatný review krok. Správce vidí počet článků, kategorií, štítků, sérií a týmových přiřazení, musí potvrdit kontrolu checkboxem a server bez `confirm_blog_delete_<id>` nepřesune obsah, neodstraní série, nezruší týmové vazby, nesmaže blog ani nezapíše audit log.
 
+Odebrání widgetu ve správě widgetů používá stejný review-and-confirm pattern. Správce před odesláním vidí název widgetu, typ, zónu a dopad na veřejné zobrazení; server bez `confirm_widget_delete_<id>` widget nesmaže ani nezapíše audit log.
+
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.
@@ -1400,6 +1402,8 @@ Zároveň ale platí, že i aktivní widget se může dočasně nevykreslit. Typ
 - neplatná vazba na formulář, album, pořad nebo blog
 
 Správa widgetů tyto stavy nově ukazuje přímo v přehledu textem `Na webu se teď nezobrazí: ...`, takže správce nemusí zkoušet metodou pokus–omyl, proč je blok aktivní, ale na webu se neukazuje.
+
+Odebrání widgetu nejdřív popíše konkrétní název, typ, zónu a dopad na veřejné zobrazení. Akce vyžaduje potvrzovací checkbox `confirm_widget_delete_<id>`; chybějící potvrzení se vrátí na přehled s textovým alertem a field-level chybou u checkboxu, aniž by se widget nebo audit log změnil.
 
 Praktická poznámka k footeru:
 

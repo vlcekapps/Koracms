@@ -4767,6 +4767,108 @@ try {
 
     httpIntegrationPrintResult('widgets_admin_availability_http', $widgetsAdminAvailabilityIssues, $failures);
 
+    $widgetDeleteIssues = [];
+    $widgetDeleteTitle = 'HTTP widget delete ' . bin2hex(random_bytes(4));
+    $widgetDeleteSortOrder = (int)$pdo->query(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM cms_widgets WHERE zone = 'footer'"
+    )->fetchColumn();
+    $widgetDeleteSettings = json_encode([
+        'content' => '<p>Dočasný widget pro ověření odebrání.</p>',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($widgetDeleteSettings)) {
+        $widgetDeleteSettings = '{}';
+    }
+    $pdo->prepare(
+        "INSERT INTO cms_widgets (zone, widget_type, title, settings, sort_order, is_active)
+         VALUES ('footer', 'custom_html', ?, ?, ?, 1)"
+    )->execute([$widgetDeleteTitle, $widgetDeleteSettings, $widgetDeleteSortOrder]);
+    $widgetDeleteId = (int)$pdo->lastInsertId();
+    $createdWidgetIds[] = $widgetDeleteId;
+
+    $widgetDeletePage = fetchUrl($widgetsAdminUrl, $adminSession['cookie'], 0);
+    $widgetDeleteCsrf = extractHiddenInputValue($widgetDeletePage['body'], 'csrf_token');
+    $widgetDeleteConfirmInputId = 'confirm-widget-delete-' . $widgetDeleteId;
+    if (httpIntegrationStatusCode($widgetDeletePage) !== 200
+        || $widgetDeleteCsrf === ''
+        || !str_contains($widgetDeletePage['body'], 'widget-delete-review-' . $widgetDeleteId)
+        || !str_contains($widgetDeletePage['body'], $widgetDeleteTitle)
+        || !str_contains($widgetDeletePage['body'], 'Aktivní widget se přestane zobrazovat na veřejném webu.')
+        || !httpIntegrationInputHasAttributes($widgetDeletePage['body'], $widgetDeleteConfirmInputId, [
+            'name' => 'confirm_widget_delete_' . $widgetDeleteId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'widget-delete-review-' . $widgetDeleteId,
+        ])) {
+        $widgetDeleteIssues[] = 'správa widgetů nevykreslila review checkbox pro odebrání widgetu';
+    }
+
+    $widgetDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'widget_delete'")
+        ->fetchColumn();
+    $widgetDeleteMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/widget_delete.php',
+        [
+            'csrf_token' => $widgetDeleteCsrf,
+            'widget_id' => (string)$widgetDeleteId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $widgetDeleteExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_widgets WHERE id = ?');
+    $widgetDeleteExistsStmt->execute([$widgetDeleteId]);
+    $widgetDeleteLogCountAfterMissingConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'widget_delete'")
+        ->fetchColumn();
+    $widgetDeleteErrorLocation = BASE_URL . '/admin/widgets.php?delete_error=confirm_required&delete_error_id=' . $widgetDeleteId;
+    if (httpIntegrationStatusCode($widgetDeleteMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($widgetDeleteMissingConfirmResponse['headers'], $widgetDeleteErrorLocation, $baseUrl)
+        || (int)$widgetDeleteExistsStmt->fetchColumn() !== 1
+        || $widgetDeleteLogCountAfterMissingConfirm !== $widgetDeleteLogCountBefore) {
+        $widgetDeleteIssues[] = 'widget bez potvrzení odebrání smazal data nebo zapsal audit log';
+    }
+
+    $widgetDeleteErrorPage = fetchUrl($baseUrl . $widgetDeleteErrorLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetDeleteErrorPage) !== 200
+        || !str_contains($widgetDeleteErrorPage['body'], 'id="widget-delete-error" class="error" role="alert" aria-atomic="true">Widget nejde odebrat bez potvrzení kontroly dopadu.')
+        || !str_contains($widgetDeleteErrorPage['body'], 'id="confirm-widget-delete-' . $widgetDeleteId . '-error"')
+        || !str_contains($widgetDeleteErrorPage['body'], 'aria-describedby="widget-delete-error"')
+        || !httpIntegrationInputHasAttributes($widgetDeleteErrorPage['body'], $widgetDeleteConfirmInputId, [
+            'name' => 'confirm_widget_delete_' . $widgetDeleteId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'widget-delete-review-' . $widgetDeleteId . ' confirm-widget-delete-' . $widgetDeleteId . '-error',
+        ])) {
+        $widgetDeleteIssues[] = 'odebrání widgetu bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $widgetDeleteConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/widget_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($widgetDeleteErrorPage['body'], 'csrf_token'),
+            'widget_id' => (string)$widgetDeleteId,
+            'confirm_widget_delete_' . $widgetDeleteId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $widgetDeleteExistsStmt->execute([$widgetDeleteId]);
+    $widgetDeleteLogCountAfterConfirmed = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'widget_delete'")
+        ->fetchColumn();
+    $widgetDeleteSuccessLocation = BASE_URL . '/admin/widgets.php?deleted=1';
+    $widgetDeleteSuccessPage = fetchUrl($baseUrl . $widgetDeleteSuccessLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($widgetDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($widgetDeleteConfirmedResponse['headers'], $widgetDeleteSuccessLocation, $baseUrl)
+        || !str_contains($widgetDeleteSuccessPage['body'], '<p class="success" role="status">Widget byl odebrán.</p>')
+        || (int)$widgetDeleteExistsStmt->fetchColumn() !== 0
+        || $widgetDeleteLogCountAfterConfirmed !== $widgetDeleteLogCountBefore + 1) {
+        $widgetDeleteIssues[] = 'potvrzené odebrání widgetu neproběhlo s očekávaným PRG stavem nebo audit logem';
+    }
+    $createdWidgetIds = array_values(array_filter(
+        $createdWidgetIds,
+        static fn (int $existingWidgetId): bool => $existingWidgetId !== $widgetDeleteId
+    ));
+    httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $widgetDeleteIssues, 'potvrzené odebrání widgetu');
+    httpIntegrationPrintResult('widget_delete_error_prevention_http', $widgetDeleteIssues, $failures);
+
     $footerDiscoveryWidgetIssues = [];
     $footerOriginalModuleNewsletter = getSetting('module_newsletter', '0');
     saveSetting('module_newsletter', '1');
