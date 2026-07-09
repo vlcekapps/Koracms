@@ -492,6 +492,8 @@ Mazání témat kontaktu a chatu používá stejný review-and-confirm princip. 
 
 Mazání rezervačních kategorií a míst navazuje stejným principem. Řádkový formulář popíše počet navázaných rezervačních zdrojů a dopad na existující zdroje/rezervace, vyžaduje checkbox `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` a server nepotvrzené smazání odmítne bez změny číselníku, vazby zdroje nebo audit logu.
 
+Mazání rezervačního zdroje má vlastní review-and-confirm krok. Přehled zdrojů ukáže počet budoucích nezrušených rezervací, vazeb na místa, pravidel otevírací doby, slotů a blokovaných dnů; server bez `confirm_res_resource_delete_<id>` nezruší rezervace, nesmaže dostupnost, zdroj ani audit log.
+
 Stejný pattern používají i další administrační taxonomie: kategorie vývěsky, typy akcí, témata kontaktu/chatu a rezervační kategorie/místa. Povinný název, nepoužitelný nebo duplicitní slug a příliš dlouhý meta title se naváže na konkrétní pole přes existující `aria-describedby`; u rezervačních číselníků se po chybě zachová rozepsaný název i adresa.
 
 Stejný pattern se rozšířil i na další běžná administrační workflow mimo číselníky: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Souhrnné alerty jsou textové a atomické, field-level texty radí doplnit název, opravit URL, slug, kapacitu, RSS limit, cover obrázek nebo doplnit předmět a text rozesílky.

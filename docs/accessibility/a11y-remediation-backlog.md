@@ -45,6 +45,8 @@ Poznámka 2026-07-09: mazání FAQ kategorií už není součástí otevřeného
 
 Poznámka 2026-07-09: mazání celého blogu už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních blogových akcí. Má řádkový review počtu článků, kategorií, štítků, sérií a týmových přiřazení, serverové odmítnutí bez `confirm_blog_delete_<id>`, transakční potvrzený průchod a HTTP důkaz zachování blogu, obsahu, taxonomií, sérií, týmu a audit logu bez potvrzení; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
 
+Poznámka 2026-07-09: mazání rezervačního zdroje už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních rezervačních akcí. Má řádkový review počtu budoucích nezrušených rezervací, vazeb na místa, pravidel otevírací doby, slotů a blokovaných dnů, serverové odmítnutí bez `confirm_res_resource_delete_<id>`, transakční potvrzený průchod a HTTP důkaz zachování rezervace, dostupnosti, zdroje a audit logu bez potvrzení; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |

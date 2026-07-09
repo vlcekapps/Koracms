@@ -1127,6 +1127,8 @@ Mazání témat kontaktu a chatu používá stejný review krok. Správce vidí 
 
 Mazání rezervačních kategorií a míst používá stejný review krok. Správce vidí počet navázaných rezervačních zdrojů a dopad na existující zdroje/rezervace, musí potvrdit kontrolu checkboxem a server bez `confirm_res_category_delete_<id>` nebo `confirm_res_location_delete_<id>` nezmění vazby zdrojů, nesmaže číselník ani nezapíše audit log.
 
+Mazání rezervačního zdroje má samostatný review krok. Správce vidí počet budoucích nezrušených rezervací, vazeb na místa, pravidel otevírací doby, slotů a blokovaných dnů, musí potvrdit kontrolu checkboxem a server bez `confirm_res_resource_delete_<id>` nezruší budoucí rezervace, nesmaže dostupnost, zdroj ani nezapíše audit log.
+
 Mazání blogových kategorií, štítků a sérií článků používá stejný review krok. Správce vidí počet navázaných článků a u kategorie i počet podkategorií, musí potvrdit kontrolu checkboxem a server bez `confirm_blog_category_delete_<id>`, `confirm_blog_tag_delete_<id>` nebo `confirm_blog_series_delete_<id>` nezmění vazby, nesmaže taxonomii ani nezapíše audit log.
 
 Mazání FAQ kategorií používá stejný review krok. Správce vidí počet navázaných otázek a podkategorií, musí potvrdit kontrolu checkboxem a server bez `confirm_faq_category_delete_<id>` neodpojí otázky, nepřesune podkategorie na kořen, nesmaže kategorii ani nezapíše audit log.

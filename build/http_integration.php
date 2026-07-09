@@ -9015,6 +9015,171 @@ try {
         $reservationIssues[] = 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem';
     }
 
+    $reservationResourceDeleteSlug = 'http-resource-delete-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_res_resources
+            (name, slug, description, capacity, slot_mode, slot_duration_min,
+             min_advance_hours, max_advance_days, cancellation_hours, requires_approval,
+             allow_guests, max_concurrent, is_active)
+         VALUES (?, ?, ?, 2, 'slots', 60, 1, 30, 24, 0, 1, 1, 1)"
+    )->execute([
+        'HTTP mazání rezervačního zdroje',
+        $reservationResourceDeleteSlug,
+        'Dočasný zdroj pro HTTP review smazání.',
+    ]);
+    $reservationResourceDeleteId = (int)$pdo->lastInsertId();
+    $createdResourceIds[] = $reservationResourceDeleteId;
+    $reservationResourceDeleteDate = (string)$pdo->query("SELECT DATE(DATE_ADD(NOW(), INTERVAL 2 DAY))")->fetchColumn();
+    if ($reservationResourceDeleteDate === '') {
+        $reservationResourceDeleteDate = (new DateTimeImmutable('+2 days'))->format('Y-m-d');
+    }
+    $reservationResourceDeleteDayOfWeek = ((int)(new DateTimeImmutable($reservationResourceDeleteDate))->format('N')) - 1;
+    $reservationResourceDeleteLocationName = 'HTTP místo pro smazání zdroje ' . bin2hex(random_bytes(3));
+    $pdo->prepare('INSERT INTO cms_res_locations (name, address) VALUES (?, ?)')->execute([
+        $reservationResourceDeleteLocationName,
+        'HTTP adresa pro review smazání zdroje',
+    ]);
+    $reservationResourceDeleteLocationId = (int)$pdo->lastInsertId();
+    $createdReservationLocationIds[] = $reservationResourceDeleteLocationId;
+    $pdo->prepare('INSERT INTO cms_res_resource_locations (resource_id, location_id) VALUES (?, ?)')->execute([
+        $reservationResourceDeleteId,
+        $reservationResourceDeleteLocationId,
+    ]);
+    $pdo->prepare(
+        "INSERT INTO cms_res_hours (resource_id, day_of_week, open_time, close_time, is_closed)
+         VALUES (?, ?, '09:00:00', '17:00:00', 0)"
+    )->execute([$reservationResourceDeleteId, $reservationResourceDeleteDayOfWeek]);
+    $pdo->prepare(
+        "INSERT INTO cms_res_slots (resource_id, day_of_week, start_time, end_time, max_bookings)
+         VALUES (?, ?, '09:00:00', '10:00:00', 1)"
+    )->execute([$reservationResourceDeleteId, $reservationResourceDeleteDayOfWeek]);
+    $pdo->prepare(
+        "INSERT INTO cms_res_blocked (resource_id, blocked_date, reason)
+         VALUES (?, DATE_ADD(?, INTERVAL 1 DAY), 'HTTP blokovaný den před smazáním zdroje')"
+    )->execute([$reservationResourceDeleteId, $reservationResourceDeleteDate]);
+    $reservationResourceDeleteToken = bin2hex(random_bytes(16));
+    $pdo->prepare(
+        "INSERT INTO cms_res_bookings
+         (resource_id, guest_name, guest_email, guest_phone, booking_date, start_time, end_time,
+          party_size, notes, status, confirmation_token, calendar_token, created_at, updated_at)
+         VALUES (?, 'HTTP Resource Delete Host', 'resource-delete@example.test', '', ?, '09:00:00', '10:00:00',
+                 1, 'HTTP reservation resource delete guard', 'pending', ?, NULL, NOW(), NOW())"
+    )->execute([$reservationResourceDeleteId, $reservationResourceDeleteDate, $reservationResourceDeleteToken]);
+    $reservationResourceDeleteBookingId = (int)$pdo->lastInsertId();
+
+    $reservationResourceDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/res_resources.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($reservationResourceDeletePage) !== 200
+        || !str_contains($reservationResourceDeletePage['body'], 'confirm_res_resource_delete_' . $reservationResourceDeleteId)
+        || !str_contains($reservationResourceDeletePage['body'], 'res-resource-delete-review-' . $reservationResourceDeleteId)
+        || !str_contains($reservationResourceDeletePage['body'], 'budoucí nezrušené rezervace 1,')
+        || !str_contains($reservationResourceDeletePage['body'], 'vazby na místa 1,')
+        || !str_contains($reservationResourceDeletePage['body'], 'pravidla otevírací doby 1,')) {
+        $reservationIssues[] = 'správa rezervačních zdrojů nevykreslila review checkbox pro smazání zdroje';
+    }
+
+    $reservationResourceDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_resource_delete'")
+        ->fetchColumn();
+    $reservationResourceMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_resource_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($reservationResourceDeletePage['body'], 'csrf_token'),
+            'id' => (string)$reservationResourceDeleteId,
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationResourceExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_resources WHERE id = ?');
+    $reservationResourceExistsStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceBookingStatusStmt = $pdo->prepare('SELECT status FROM cms_res_bookings WHERE id = ?');
+    $reservationResourceBookingStatusStmt->execute([$reservationResourceDeleteBookingId]);
+    $reservationResourceBookingStatusAfterMissing = (string)$reservationResourceBookingStatusStmt->fetchColumn();
+    $reservationResourceBookingCancelledAtStmt = $pdo->prepare('SELECT cancelled_at FROM cms_res_bookings WHERE id = ?');
+    $reservationResourceBookingCancelledAtStmt->execute([$reservationResourceDeleteBookingId]);
+    $reservationResourceBookingCancelledAtAfterMissing = (string)($reservationResourceBookingCancelledAtStmt->fetchColumn() ?: '');
+    $reservationResourceLinkStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_resource_locations WHERE resource_id = ?');
+    $reservationResourceLinkStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceHoursStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_hours WHERE resource_id = ?');
+    $reservationResourceHoursStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceSlotsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_slots WHERE resource_id = ?');
+    $reservationResourceSlotsStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceBlockedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_res_blocked WHERE resource_id = ?');
+    $reservationResourceBlockedStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceDeleteLogCountAfterMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_resource_delete'")
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($reservationResourceMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader(
+            $reservationResourceMissingConfirmResponse['headers'],
+            BASE_URL . '/admin/res_resources.php?delete_error=confirm_required&delete_error_id=' . $reservationResourceDeleteId,
+            $baseUrl
+        )
+        || (int)$reservationResourceExistsStmt->fetchColumn() !== 1
+        || $reservationResourceBookingStatusAfterMissing !== 'pending'
+        || $reservationResourceBookingCancelledAtAfterMissing !== ''
+        || (int)$reservationResourceLinkStmt->fetchColumn() !== 1
+        || (int)$reservationResourceHoursStmt->fetchColumn() !== 1
+        || (int)$reservationResourceSlotsStmt->fetchColumn() !== 1
+        || (int)$reservationResourceBlockedStmt->fetchColumn() !== 1
+        || $reservationResourceDeleteLogCountAfterMissing !== $reservationResourceDeleteLogCountBefore) {
+        $reservationIssues[] = 'smazání rezervačního zdroje bez potvrzení zrušilo rezervaci, smazalo zdroj/dostupnost nebo zapsalo audit log';
+    }
+
+    $reservationResourceDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/res_resources.php?delete_error=confirm_required&delete_error_id=' . $reservationResourceDeleteId,
+        $adminSession['cookie'],
+        0
+    );
+    $reservationResourceConfirmInputId = 'confirm-res-resource-delete-' . $reservationResourceDeleteId;
+    if (httpIntegrationStatusCode($reservationResourceDeleteErrorPage) !== 200
+        || !str_contains($reservationResourceDeleteErrorPage['body'], 'id="res-resource-form-error" class="error" role="alert" aria-atomic="true">Zdroj rezervací nejde smazat bez potvrzení kontroly dopadu.')
+        || !httpIntegrationInputHasAttributes($reservationResourceDeleteErrorPage['body'], $reservationResourceConfirmInputId, [
+            'name' => 'confirm_res_resource_delete_' . $reservationResourceDeleteId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'res-resource-delete-review-' . $reservationResourceDeleteId . ' confirm-res-resource-delete-' . $reservationResourceDeleteId . '-error',
+        ])
+        || !str_contains($reservationResourceDeleteErrorPage['body'], 'id="confirm-res-resource-delete-' . $reservationResourceDeleteId . '-error"')
+        || !str_contains($reservationResourceDeleteErrorPage['body'], 'Před smazáním zdroje potvrďte, že jste zkontrolovali budoucí rezervace, dostupnost a veřejnou stránku zdroje.')) {
+        $reservationIssues[] = 'smazání rezervačního zdroje bez potvrzení nezobrazilo text-backed alert a field-level chybu';
+    }
+
+    $reservationResourceConfirmedDeleteResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/res_resource_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($reservationResourceDeleteErrorPage['body'], 'csrf_token'),
+            'id' => (string)$reservationResourceDeleteId,
+            'confirm_res_resource_delete_' . $reservationResourceDeleteId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $reservationResourceExistsStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceBookingStatusStmt->execute([$reservationResourceDeleteBookingId]);
+    $reservationResourceBookingStatusAfterConfirm = (string)$reservationResourceBookingStatusStmt->fetchColumn();
+    $reservationResourceBookingCancelledAtStmt->execute([$reservationResourceDeleteBookingId]);
+    $reservationResourceBookingCancelledAtAfterConfirm = (string)($reservationResourceBookingCancelledAtStmt->fetchColumn() ?: '');
+    $reservationResourceLinkStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceHoursStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceSlotsStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceBlockedStmt->execute([$reservationResourceDeleteId]);
+    $reservationResourceDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'res_resource_delete'")
+        ->fetchColumn();
+    $reservationResourceDeleteSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/res_resources.php?deleted=1', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($reservationResourceConfirmedDeleteResponse) !== 302
+        || !responseHasLocationHeader($reservationResourceConfirmedDeleteResponse['headers'], BASE_URL . '/admin/res_resources.php?deleted=1', $baseUrl)
+        || !str_contains($reservationResourceDeleteSuccessPage['body'], '<p class="success" role="status">Zdroj rezervací byl smazán.</p>')
+        || (int)$reservationResourceExistsStmt->fetchColumn() !== 0
+        || $reservationResourceBookingStatusAfterConfirm !== 'cancelled'
+        || $reservationResourceBookingCancelledAtAfterConfirm === ''
+        || (int)$reservationResourceLinkStmt->fetchColumn() !== 0
+        || (int)$reservationResourceHoursStmt->fetchColumn() !== 0
+        || (int)$reservationResourceSlotsStmt->fetchColumn() !== 0
+        || (int)$reservationResourceBlockedStmt->fetchColumn() !== 0
+        || $reservationResourceDeleteLogCountAfterConfirm !== $reservationResourceDeleteLogCountBefore + 1) {
+        $reservationIssues[] = 'potvrzené smazání rezervačního zdroje neproběhlo s očekávaným PRG stavem, zrušením budoucí rezervace nebo audit logem';
+    }
+
     $reservationResponse = fetchUrl(
         $baseUrl . BASE_URL . '/reservations/book.php?slug=' . rawurlencode($resourceSlug) . '&date=2026-02-31',
         '',

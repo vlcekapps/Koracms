@@ -31,8 +31,13 @@ $stmt = $pdo->prepare(
     "SELECT r.id, r.name, r.slug, r.slot_mode, r.capacity, r.is_active, r.description,
             c.name AS category_name,
             GROUP_CONCAT(DISTINCT l.name ORDER BY l.name SEPARATOR ', ') AS location_names,
+            COUNT(DISTINCT l.id) AS location_count,
             COUNT(DISTINCT CASE WHEN b.status = 'pending' THEN b.id END) AS pending_count,
-            COUNT(DISTINCT CASE WHEN b.status IN ('pending', 'confirmed') THEN b.id END) AS open_count
+            COUNT(DISTINCT CASE WHEN b.status IN ('pending', 'confirmed') THEN b.id END) AS open_count,
+            (SELECT COUNT(*) FROM cms_res_bookings b2 WHERE b2.resource_id = r.id AND b2.status != 'cancelled' AND b2.booking_date >= CURDATE()) AS future_cancel_count,
+            (SELECT COUNT(*) FROM cms_res_hours h WHERE h.resource_id = r.id) AS hours_count,
+            (SELECT COUNT(*) FROM cms_res_slots s WHERE s.resource_id = r.id) AS slot_count,
+            (SELECT COUNT(*) FROM cms_res_blocked bl WHERE bl.resource_id = r.id) AS blocked_count
      FROM cms_res_resources r
      LEFT JOIN cms_res_categories c ON c.id = r.category_id
      LEFT JOIN cms_res_resource_locations rl ON rl.resource_id = r.id
@@ -51,8 +56,20 @@ $slotModeLabels = [
     'duration' => 'Pevná délka',
 ];
 
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
+$errorMessage = $deleteConfirmError
+    ? 'Zdroj rezervací nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.'
+    : '';
+$successMessage = trim((string)($_GET['deleted'] ?? '')) === '1'
+    ? 'Zdroj rezervací byl smazán.'
+    : '';
+
 adminHeader('Zdroje rezervací');
 ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
+<?php if ($errorMessage !== ''): ?><p id="res-resource-form-error" class="error" role="alert" aria-atomic="true"><?= h($errorMessage) ?></p><?php endif; ?>
+
 <p class="button-row button-row--start admin-stack-sm">
   <a href="res_resource_form.php" class="btn">+ Přidat zdroj</a>
   <a href="res_categories.php" class="btn">Kategorie zdrojů rezervací</a>
@@ -102,7 +119,16 @@ adminHeader('Zdroje rezervací');
     </thead>
     <tbody>
     <?php foreach ($resources as $resource): ?>
-      <?php $publicPath = reservationResourcePublicPath($resource); ?>
+      <?php
+        $resourceId = (int)$resource['id'];
+        $publicPath = reservationResourcePublicPath($resource);
+        $deleteConfirmField = 'confirm_res_resource_delete_' . $resourceId;
+        $deleteConfirmId = 'confirm-res-resource-delete-' . $resourceId;
+        $deleteReviewId = 'res-resource-delete-review-' . $resourceId;
+        $deleteFieldErrorId = 'confirm-res-resource-delete-' . $resourceId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $resourceId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
         <td>
           <strong><?= h((string)$resource['name']) ?></strong>
@@ -125,15 +151,40 @@ adminHeader('Zdroje rezervací');
         </td>
         <td><?= (int)$resource['is_active'] === 1 ? 'Aktivní' : 'Neaktivní' ?></td>
         <td class="actions">
-          <a href="res_resource_form.php?id=<?= (int)$resource['id'] ?>" class="btn">Upravit</a>
+          <a href="res_resource_form.php?id=<?= $resourceId ?>" class="btn">Upravit</a>
           <?php if ((int)$resource['is_active'] === 1): ?>
             <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
-          <form action="res_resource_delete.php" method="post">
+          <form action="res_resource_delete.php" method="post"
+                class="admin-inline-form"
+                novalidate<?= $deleteHasError ? ' aria-describedby="res-resource-form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$resource['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat zdroj? Budoucí rezervace budou zrušeny.">Smazat</button>
+            <input type="hidden" name="id" value="<?= $resourceId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání rezervačního zdroje <?= h((string)$resource['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání zruší budoucí nezrušené rezervace tohoto zdroje a odstraní jeho dostupnost. Počty:
+                budoucí nezrušené rezervace <?= (int)$resource['future_cancel_count'] ?>,
+                vazby na místa <?= (int)$resource['location_count'] ?>,
+                pravidla otevírací doby <?= (int)$resource['hours_count'] ?>,
+                sloty <?= (int)$resource['slot_count'] ?>,
+                blokované dny <?= (int)$resource['blocked_count'] ?>.
+                Historické rezervace zůstanou v přehledu, ale po odstranění zdroje už nepovedou na veřejnou stránku zdroje.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání tohoto rezervačního zdroje.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním zdroje potvrďte, že jste zkontrolovali budoucí rezervace, dostupnost a veřejnou stránku zdroje.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat zdroj? Budoucí nezrušené rezervace budou zrušeny a dostupnost zdroje odstraněna.">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

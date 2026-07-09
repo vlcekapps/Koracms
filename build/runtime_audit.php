@@ -15335,6 +15335,7 @@ $reservationBookingsOverviewSource = (string)file_get_contents(dirname(__DIR__) 
 $reservationLocationsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_locations.php');
 $reservationLocationDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_location_delete.php');
 $reservationResourcesSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resources.php');
+$reservationResourceDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/res_resource_delete.php');
 $revisionsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/revisions.php');
 $reviewQueueSource = (string)file_get_contents(dirname(__DIR__) . '/admin/review_queue.php');
 $redirectsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/redirects.php');
@@ -16711,6 +16712,12 @@ foreach ([
             'class="admin-input-auto"',
             'class="table-meta"',
             '<td class="actions">',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '$deleteConfirmField = \'confirm_res_resource_delete_\' . $resourceId;',
+            'res-resource-delete-review-',
+            'Smazání zruší budoucí nezrušené rezervace tohoto zdroje',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
         ],
     ],
     'revisions admin' => [
@@ -18127,6 +18134,14 @@ if (!str_contains($reservationLocationDeleteSource, "\$confirmFieldName = 'confi
     || !str_contains($reservationLocationDeleteSource, "logAction('res_location_delete'")) {
     $adminFieldErrorIssues[] = 'reservation location delete handler is missing server-side review-and-confirm guardrails';
 }
+if (!str_contains($reservationResourceDeleteSource, "\$confirmFieldName = 'confirm_res_resource_delete_' . \$id;")
+    || !str_contains($reservationResourceDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($reservationResourceDeleteSource, '$pdo->beginTransaction();')
+    || !str_contains($reservationResourceDeleteSource, "SET status = 'cancelled', cancelled_at = COALESCE(cancelled_at, NOW()), updated_at = NOW()")
+    || !str_contains($reservationResourceDeleteSource, "DELETE FROM cms_res_resource_locations WHERE resource_id = ?")
+    || !str_contains($reservationResourceDeleteSource, "logAction(\n        'res_resource_delete'")) {
+    $adminFieldErrorIssues[] = 'reservation resource delete handler is missing server-side review-and-confirm guardrails';
+}
 if (!str_contains($faqCatDeleteSource, "\$confirmFieldName = 'confirm_faq_category_delete_' . \$id;")
     || !str_contains($faqCatDeleteSource, "'delete_error' => 'confirm_required'")
     || !str_contains($faqCatDeleteSource, 'UPDATE cms_faqs SET category_id = NULL WHERE category_id = ?')
@@ -18490,7 +18505,10 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervační kategorie neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')
     || !str_contains($httpIntegrationSource, 'smazání rezervačního místa bez potvrzení změnilo vazbu zdroje, smazalo místo nebo zapsalo audit log')
     || !str_contains($httpIntegrationSource, 'confirm_res_location_delete_')
-    || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervačního místa neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')
+    || !str_contains($httpIntegrationSource, 'smazání rezervačního zdroje bez potvrzení zrušilo rezervaci')
+    || !str_contains($httpIntegrationSource, 'confirm_res_resource_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání rezervačního zdroje neproběhlo s očekávaným PRG stavem, zrušením budoucí rezervace nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing reservation taxonomy delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
