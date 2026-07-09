@@ -45,7 +45,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 - `blog_management_validation_http` pro správu blogů, validační chyby a review-and-confirm mazání celého blogu,
 - runtime blog guardraily v `build/runtime_audit.php` pro osnovu článku, série, taxonomie, redirecty, blogové stránky, výpisy a přístupné nadpisy,
 - `public_error_suggestion_guardrails` pro sdílenou chybovou hlášku matematického ověření,
-- field-level guardrail a HTTP scénář pro veřejný komentářový formulář,
+- field-level guardrail a HTTP scénář pro veřejný komentářový formulář včetně předvyplnění jména/e-mailu přihlášeného veřejného uživatele přes `currentUserContactDefaults()`,
 - nově také guardrail a HTTP scénář pro srozumitelné odebrání článku ze všech sérií v editoru článku.
 
 ## WCAG 2.2 A/AA Shrnutí
@@ -55,6 +55,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 1.1.1 Non-text Content | Partially Supports | Média, galerie a blog logo mají metadata a fallbacky. | Ručně ověřit reálné alt texty v publikovaných článcích. |
 | 1.3.1 Info and Relationships | Supports | Veřejné sekce mají nadpisy, formuláře fieldset/legend a tabulkové/admin přehledy používají strukturální prvky. | Ručně projít dlouhé custom články s vlastním HTML. |
 | 1.3.2 Meaningful Sequence | Supports | Šablony drží logické pořadí: nadpis, metadata, obsah, související obsah, komentáře. | Ručně ověřit mobilní pořadí doporučeného článku a dlouhého detailu. |
+| 1.3.5 Identify Input Purpose | Partially Supports | Komentářový formulář používá `autocomplete="name"` a `autocomplete="email"` a HTTP integrace hlídá render. | Ručně ověřit chování autofillu v prohlížeči. |
 | 1.4.10 Reflow | Partially Supports | Admin/mobile guardraily pokrývají dlouhé formuláře a veřejné šablony mají responzivní baseline; ruční NVDA průchod blogů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Vizuálně ověřit Blog při 400% zoomu, zejména TOC, filtry, sticky prvky a editor článku. |
 | 1.4.12 Text Spacing | Partially Supports | Core CSS neblokuje text spacing patterny. | Projít blogový index/detail s text-spacing override. |
 | 2.1.1 Keyboard | Supports | Formuláře, odkazy, kopírování a admin ovládání jsou běžné klávesové prvky; ruční NVDA/keyboard průchod blogů, dlouhých formulářů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách blog editoru, sérií, souvisejících článků nebo pickerů zopakovat NVDA/keyboard průchod. |
@@ -67,6 +68,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 3.3.1 Error Identification | Supports | Admin editory i veřejné komentáře mají form-level alert a field-level chyby. | Ručně projít kombinované chybové stavy editoru článku. |
 | 3.3.3 Error Suggestion | Partially Supports | Blog admin formuláře a veřejný komentář používají konkrétní návrhy oprav. | Pokračovat copy passem u méně častých validačních větví. |
 | 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových kategorií, štítků a sérií má item-level review, potvrzovací checkbox, serverové odmítnutí bez potvrzení a HTTP důkaz. | Ručně rozhodnout, zda některé blogové hromadné akce potřebují další review krok. |
+| 3.3.7 Redundant Entry | Partially Supports | Přihlášený veřejný uživatel dostane v komentářovém formuláři předvyplněné jméno a e-mail z profilu a POST chyba zachová ručně zadané hodnoty. | Ručně ověřit sdílená zařízení a širší custom komentářové workflow. |
 | 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav; ruční NVDA průchod blogů a blogové administrace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách content/media pickeru nebo blog editoru zopakovat NVDA/keyboard průchod. |
 | 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region a ruční NVDA průchod dlouhé editace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách live regionů nebo autosave/content-lock chování zopakovat NVDA průchod. |
 

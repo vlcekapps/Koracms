@@ -75,7 +75,7 @@
         <div class="field">
           <label for="reply-name">Jméno <span aria-hidden="true">*</span></label>
           <input type="text" id="reply-name" name="name" class="form-control" required aria-required="true" maxlength="100"
-                 value="<?= h($formData['name']) ?>">
+                 autocomplete="name" value="<?= h($formData['name']) ?>">
         </div>
         <div class="field">
           <label for="reply-email">E-mail</label>

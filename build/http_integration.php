@@ -6294,6 +6294,29 @@ try {
         }
 
         $chatMessageUrl = $baseUrl . chatMessagePath(['id' => $approvedChatId]);
+        if ($prefillPublicUserId > 0) {
+            $chatPrefillSession = koraPrimeTestSession([
+                'cms_user_id' => $prefillPublicUserId,
+                'cms_user_name' => $prefillPublicName,
+            ], 'kora-http-chat-prefill-' . bin2hex(random_bytes(3)));
+            $chatPrefillPage = fetchUrl(
+                $baseUrl . BASE_URL . '/chat/tema/' . rawurlencode($chatTopicSlug),
+                $chatPrefillSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($chatPrefillPage) !== 200
+                || !httpIntegrationInputHasAttributes($chatPrefillPage['body'], 'name', [
+                    'value' => $prefillPublicName,
+                    'autocomplete' => 'name',
+                ])
+                || !httpIntegrationInputHasAttributes($chatPrefillPage['body'], 'email', [
+                    'value' => $prefillPublicEmail,
+                    'autocomplete' => 'email',
+                ])) {
+                $chatCenterIssues[] = 'přihlášený veřejný uživatel nemá v chatu předvyplněné kontaktní údaje z profilu';
+            }
+        }
+
         $replySession = koraPrimeTestSession([], 'kora-http-chat-reply-' . bin2hex(random_bytes(3)));
         $chatMessageResponse = fetchUrl($chatMessageUrl, $replySession['cookie'], 0);
         $replyCookie = responseMergeCookies($chatMessageResponse['headers'], $replySession['cookie']);
@@ -6304,6 +6327,25 @@ try {
             || !str_contains($chatMessageResponse['body'], 'Přidat odpověď')) {
             $chatCenterIssues[] = 'veřejný detail chat zprávy nezobrazil formulář odpovědi';
         } else {
+            if ($prefillPublicUserId > 0) {
+                $chatReplyPrefillSession = koraPrimeTestSession([
+                    'cms_user_id' => $prefillPublicUserId,
+                    'cms_user_name' => $prefillPublicName,
+                ], 'kora-http-chat-reply-prefill-' . bin2hex(random_bytes(3)));
+                $chatReplyPrefillPage = fetchUrl($chatMessageUrl, $chatReplyPrefillSession['cookie'], 0);
+                if (httpIntegrationStatusCode($chatReplyPrefillPage) !== 200
+                    || !httpIntegrationInputHasAttributes($chatReplyPrefillPage['body'], 'reply-name', [
+                        'value' => $prefillPublicName,
+                        'autocomplete' => 'name',
+                    ])
+                    || !httpIntegrationInputHasAttributes($chatReplyPrefillPage['body'], 'reply-email', [
+                        'value' => $prefillPublicEmail,
+                        'autocomplete' => 'email',
+                    ])) {
+                    $chatCenterIssues[] = 'přihlášený veřejný uživatel nemá v odpovědi chatu předvyplněné kontaktní údaje z profilu';
+                }
+            }
+
             $replyText = 'HTTP odpověď do veřejného vlákna ' . bin2hex(random_bytes(4));
             $replyPost = postUrl(
                 $chatMessageUrl,
@@ -8136,6 +8178,25 @@ try {
     if (httpIntegrationStatusCode($blogCommentFormResponse) !== 200 || $blogCommentCsrf === '') {
         $blogRelatedIssues[] = 'veřejný detail článku nevykreslil komentářový formulář s csrf_token';
     } else {
+        if ($prefillPublicUserId > 0) {
+            $blogCommentPrefillSession = koraPrimeTestSession([
+                'cms_user_id' => $prefillPublicUserId,
+                'cms_user_name' => $prefillPublicName,
+            ], 'kora-http-blog-comment-prefill-' . bin2hex(random_bytes(3)));
+            $blogCommentPrefillResponse = fetchUrl($blogCommentUrl, $blogCommentPrefillSession['cookie'], 0);
+            if (httpIntegrationStatusCode($blogCommentPrefillResponse) !== 200
+                || !httpIntegrationInputHasAttributes($blogCommentPrefillResponse['body'], 'author_name', [
+                    'value' => $prefillPublicName,
+                    'autocomplete' => 'name',
+                ])
+                || !httpIntegrationInputHasAttributes($blogCommentPrefillResponse['body'], 'author_email', [
+                    'value' => $prefillPublicEmail,
+                    'autocomplete' => 'email',
+                ])) {
+                $blogRelatedIssues[] = 'přihlášený veřejný uživatel nemá v komentáři předvyplněné kontaktní údaje z profilu';
+            }
+        }
+
         $invalidBlogCommentResponse = postUrl($blogCommentUrl, [
             'csrf_token' => $blogCommentCsrf,
             'author_name' => '',

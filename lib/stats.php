@@ -559,14 +559,18 @@ function statsUpsertContentDailyRows(PDO $pdo, array $dailyRows): void
     }
 }
 
-function statsAggregateContentDaily(PDO $pdo): void
+/**
+ * @return list<string>
+ */
+function statsContentDailyMismatchDates(PDO $pdo, int $limit = 7): array
 {
+    $limit = max(1, min(30, $limit));
+
     try {
         $pageTypes = array_values(array_unique(array_merge(['page'], array_keys(moduleStatsPageTypeMap()))));
         $pageTypePlaceholders = implode(',', array_fill(0, count($pageTypes), '?'));
-        $rangeStmt = $pdo->prepare(
-            "SELECT MIN(raw_stats.stat_date) AS min_date,
-                    MAX(raw_stats.stat_date) AS max_date
+        $stmt = $pdo->prepare(
+            "SELECT raw_stats.stat_date
              FROM (
                 SELECT DATE(created_at) AS stat_date,
                        COUNT(*) AS raw_views
@@ -581,25 +585,32 @@ function statsAggregateContentDaily(PDO $pdo): void
                 FROM cms_stats_content_daily
                 GROUP BY stat_date
              ) content_stats ON content_stats.stat_date = raw_stats.stat_date
-             WHERE COALESCE(content_stats.aggregate_views, -1) <> raw_stats.raw_views"
+             WHERE COALESCE(content_stats.aggregate_views, -1) <> raw_stats.raw_views
+             ORDER BY raw_stats.stat_date DESC
+             LIMIT {$limit}"
         );
-        $rangeStmt->execute($pageTypes);
-        $range = $rangeStmt->fetch();
-        if (!is_array($range) || empty($range['min_date']) || empty($range['max_date'])) {
-            return;
-        }
+        $stmt->execute($pageTypes);
 
-        $dateFrom = (string)$range['min_date'];
-        $dateTo = (string)$range['max_date'];
-        $pdo->prepare(
-            "DELETE FROM cms_stats_content_daily
-             WHERE stat_date >= ?
-               AND stat_date <= ?"
-        )->execute([$dateFrom, $dateTo]);
-        statsUpsertContentDailyRows(
-            $pdo,
-            statsBuildRawContentDailyRows($pdo, $dateFrom, $dateTo)
-        );
+        return array_values(array_filter(
+            array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN)),
+            static fn (string $statDate): bool => preg_match('/^\d{4}-\d{2}-\d{2}$/', $statDate) === 1
+        ));
+    } catch (\PDOException $e) {
+        return [];
+    }
+}
+
+function statsAggregateContentDaily(PDO $pdo): void
+{
+    try {
+        $deleteStmt = $pdo->prepare("DELETE FROM cms_stats_content_daily WHERE stat_date = ?");
+        foreach (statsContentDailyMismatchDates($pdo) as $statDate) {
+            $deleteStmt->execute([$statDate]);
+            statsUpsertContentDailyRows(
+                $pdo,
+                statsBuildRawContentDailyRows($pdo, $statDate, $statDate)
+            );
+        }
     } catch (\PDOException $e) {
     }
 }

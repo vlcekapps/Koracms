@@ -11,6 +11,8 @@ if (!isModuleEnabled('chat')) {
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 $errors = [];
+$contactDefaults = currentUserContactDefaults($pdo);
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 $successState = trim((string)($_GET['ok'] ?? ''));
 $successReference = trim((string)($_GET['ref'] ?? ''));
 $searchQuery = trim((string)($_GET['q'] ?? ''));
@@ -31,7 +33,7 @@ if ($topicSlug !== '') {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     rateLimit('chat', 5, 120);
 
     if (honeypotTriggered()) {
@@ -190,8 +192,8 @@ renderPublicPage([
         'pagination' => $pagination,
         'pagerBaseUrl' => $pagerBaseUrl,
         'formData' => [
-            'name' => trim((string)($_POST['name'] ?? '')),
-            'email' => trim((string)($_POST['email'] ?? '')),
+            'name' => $isPostRequest ? trim((string)($_POST['name'] ?? '')) : $contactDefaults['name'],
+            'email' => $isPostRequest ? trim((string)($_POST['email'] ?? '')) : $contactDefaults['email'],
             'message' => trim((string)($_POST['message'] ?? '')),
             'conversation_type' => normalizeChatConversationType((string)($_POST['conversation_type'] ?? 'public')),
             'topic_id' => trim((string)($_POST['topic_id'] ?? ($activeTopic['id'] ?? ''))),

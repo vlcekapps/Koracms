@@ -12,6 +12,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Změněno
 - **Timeout pro module-ready CI** – agentí a vývojářská dokumentace nově připomíná, že `composer ci:module-ready` má při spuštění přes lokální automation běžet s timeoutem alespoň 15 minut (`900000 ms`), protože kombinuje `ci:basic`, modulový audit, runtime audit a HTTP integraci.
+- **Redundant-entry guardrail pro chat a blogové komentáře** – veřejný chat, odpovědi v chatu a blogové komentáře u přihlášeného veřejného uživatele předvyplňují jméno/e-mail z profilu přes `currentUserContactDefaults()`, doplňují chybějící `autocomplete="name"` a runtime/HTTP guardraily hlídají render pro WCAG `1.3.5` a `3.3.7`.
+- **Stabilnější lazy agregace obsahových statistik** – `statsCleanup()` přepočítává jen konkrétní nesouladné dny v omezené dávce místo souvislého rozsahu mezi prvním a posledním rozdílem, takže první render administračních statistik po testovacím seeding scénáři nepadá na HTTP timeoutu.
 
 ## [5.0.0-beta.1] – 2026-07-09
 

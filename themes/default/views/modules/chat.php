@@ -162,7 +162,7 @@
         <div class="field">
           <label for="name">Jméno <span aria-hidden="true">*</span></label>
           <input type="text" id="name" name="name" class="form-control" required maxlength="100"
-                 aria-required="true" value="<?= h($formData['name']) ?>">
+                 aria-required="true" autocomplete="name" value="<?= h($formData['name']) ?>">
         </div>
 
         <div class="field">

@@ -112,6 +112,8 @@ try {
 $siteName = getSetting('site_name', 'Kora CMS');
 $commentErrors = [];
 $commentFieldErrors = [];
+$commentContactDefaults = currentUserContactDefaults($pdo);
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 $addCommentError = static function (string $field, string $message) use (&$commentErrors, &$commentFieldErrors): void {
     $commentErrors[] = $message;
     $commentFieldErrors[$field] = $message;
@@ -129,7 +131,7 @@ if ($previewToken !== '') {
     ];
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     if (!$commentsState['enabled']) {
         $commentErrors[] = $commentsState['message'];
     } else {
@@ -274,8 +276,8 @@ renderPublicPage([
         'captchaExpr' => $captchaExpr,
         'related' => $related,
         'formData' => [
-            'author_name' => trim($_POST['author_name'] ?? ''),
-            'author_email' => trim($_POST['author_email'] ?? ''),
+            'author_name' => $isPostRequest ? trim((string)($_POST['author_name'] ?? '')) : $commentContactDefaults['name'],
+            'author_email' => $isPostRequest ? trim((string)($_POST['author_email'] ?? '')) : $commentContactDefaults['email'],
             'comment' => trim($_POST['comment'] ?? ''),
         ],
     ],

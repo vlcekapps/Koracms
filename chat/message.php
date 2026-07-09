@@ -40,13 +40,15 @@ if (!$message) {
 
 $errors = [];
 $successState = trim((string)($_GET['reply'] ?? ''));
+$contactDefaults = currentUserContactDefaults($pdo);
+$isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
 $formData = [
-    'name' => '',
-    'email' => '',
+    'name' => $contactDefaults['name'],
+    'email' => $contactDefaults['email'],
     'message' => '',
 ];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($isPostRequest) {
     rateLimit('chat_reply', 5, 120);
 
     if (honeypotTriggered()) {

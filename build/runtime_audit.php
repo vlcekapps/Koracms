@@ -14414,6 +14414,12 @@ $redundantEntryIssues = [];
 $contactPublicSource = (string)file_get_contents(dirname(__DIR__) . '/contact/index.php');
 $foodOrderSource = (string)file_get_contents(dirname(__DIR__) . '/food/order.php');
 $reservationBookSource = (string)file_get_contents(dirname(__DIR__) . '/reservations/book.php');
+$chatIndexSource = (string)file_get_contents(dirname(__DIR__) . '/chat/index.php');
+$chatMessageSource = (string)file_get_contents(dirname(__DIR__) . '/chat/message.php');
+$blogArticleControllerSource = (string)file_get_contents(dirname(__DIR__) . '/blog/article.php');
+$chatViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat.php');
+$chatMessageViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/chat-message.php');
+$blogArticleViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-article.php');
 foreach ([
     'function currentUserContactDefaults(?PDO $pdo = null): array',
     'SELECT email, first_name, last_name, nickname, phone',
@@ -14459,10 +14465,54 @@ foreach ([
     }
 }
 foreach ([
+    '$contactDefaults = currentUserContactDefaults($pdo);',
+    '$isPostRequest = $_SERVER[\'REQUEST_METHOD\'] === \'POST\';',
+    '\'name\' => $isPostRequest ? trim((string)($_POST[\'name\'] ?? \'\')) : $contactDefaults[\'name\'],',
+    '\'email\' => $isPostRequest ? trim((string)($_POST[\'email\'] ?? \'\')) : $contactDefaults[\'email\'],',
+] as $redundantEntryChatFragment) {
+    if (!str_contains($chatIndexSource, $redundantEntryChatFragment)) {
+        $redundantEntryIssues[] = 'chat index controller is missing redundant-entry fragment: ' . $redundantEntryChatFragment;
+    }
+}
+foreach ([
+    '$contactDefaults = currentUserContactDefaults($pdo);',
+    '\'name\' => $contactDefaults[\'name\'],',
+    '\'email\' => $contactDefaults[\'email\'],',
+] as $redundantEntryChatMessageFragment) {
+    if (!str_contains($chatMessageSource, $redundantEntryChatMessageFragment)) {
+        $redundantEntryIssues[] = 'chat message controller is missing redundant-entry fragment: ' . $redundantEntryChatMessageFragment;
+    }
+}
+foreach ([
+    '$commentContactDefaults = currentUserContactDefaults($pdo);',
+    '$isPostRequest = $_SERVER[\'REQUEST_METHOD\'] === \'POST\';',
+    '\'author_name\' => $isPostRequest ? trim((string)($_POST[\'author_name\'] ?? \'\')) : $commentContactDefaults[\'name\'],',
+    '\'author_email\' => $isPostRequest ? trim((string)($_POST[\'author_email\'] ?? \'\')) : $commentContactDefaults[\'email\'],',
+] as $redundantEntryBlogCommentFragment) {
+    if (!str_contains($blogArticleControllerSource, $redundantEntryBlogCommentFragment)) {
+        $redundantEntryIssues[] = 'blog article controller is missing redundant-entry fragment: ' . $redundantEntryBlogCommentFragment;
+    }
+}
+foreach ([
+    'chat name autocomplete' => [$chatViewSource, 'autocomplete="name" value="<?= h($formData[\'name\']) ?>"'],
+    'chat reply name autocomplete' => [$chatMessageViewSource, 'autocomplete="name" value="<?= h($formData[\'name\']) ?>"'],
+    'blog comment name autocomplete' => [$blogArticleViewSource, 'autocomplete="name" value="<?= h($formData[\'author_name\']) ?>"'],
+] as $redundantEntryViewLabel => [$redundantEntryViewSource, $redundantEntryViewFragment]) {
+    if (!str_contains((string)$redundantEntryViewSource, (string)$redundantEntryViewFragment)) {
+        $redundantEntryIssues[] = 'public repeated-contact view is missing fragment: ' . $redundantEntryViewLabel;
+    }
+}
+foreach ([
     'kora-http-contact-prefill',
     'kora-http-food-order-prefill',
     'kora-http-reservation-profile-reuse',
+    'kora-http-chat-prefill',
+    'kora-http-chat-reply-prefill',
+    'kora-http-blog-comment-prefill',
     'předvyplněné kontaktní údaje z profilu',
+    'přihlášený veřejný uživatel nemá v chatu předvyplněné kontaktní údaje z profilu',
+    'přihlášený veřejný uživatel nemá v odpovědi chatu předvyplněné kontaktní údaje z profilu',
+    'přihlášený veřejný uživatel nemá v komentáři předvyplněné kontaktní údaje z profilu',
     'přihlášená veřejná rezervace pořád vyžaduje opakované kontaktní údaje nebo captchu',
     'přihlášená veřejná rezervace neuložila kontaktní snapshot z profilu přes currentUserContactDefaults()',
 ] as $redundantEntryHttpFragment) {
@@ -14484,6 +14534,8 @@ foreach ([
     'kontakt',
     'Food objednávka',
     'přihlášené veřejné rezervace',
+    'veřejný chat',
+    'blogové komentáře',
 ] as $redundantEntryCzechDocFragment) {
     if (!str_contains($wcagConformanceSource, $redundantEntryCzechDocFragment)
         || !str_contains($manualTestProtocolSource, $redundantEntryCzechDocFragment)) {
@@ -14494,13 +14546,15 @@ foreach ([
     'public contact',
     'Food order',
     'public reservations',
+    'public chat',
+    'blog comments',
 ] as $redundantEntryAcrFragment) {
     if (!str_contains($acrVpatDraftSource, $redundantEntryAcrFragment)) {
         $redundantEntryIssues[] = 'ACR draft is missing redundant-entry fragment: ' . $redundantEntryAcrFragment;
     }
 }
-if (!str_contains($a11yBacklogSource, 'Základní guardrail pro kontakt, Food objednávku a přihlášené veřejné rezervace je hotový')) {
-    $redundantEntryIssues[] = 'a11y backlog must describe remaining redundant-entry work after contact/Food/reservation guardrails';
+if (!str_contains($a11yBacklogSource, 'Guardrail pro hlavní veřejná opakovaná kontaktní flow je hotový')) {
+    $redundantEntryIssues[] = 'a11y backlog must describe remaining redundant-entry work after public repeated-contact guardrails';
 }
 if (!str_contains($developerModulesDocSource, 'currentUserContactDefaults()')) {
     $redundantEntryIssues[] = 'developer module guide must mention currentUserContactDefaults() for repeated contact details';
@@ -15991,11 +16045,17 @@ if (!$installTableContains('cms_stats_content_daily', 'normalized_path')
 }
 if (!str_contains($statsSource, 'function statsNormalizePagePath(')
     || !str_contains($statsSource, 'function statsBuildRawContentDailyRows(')
+    || !str_contains($statsSource, 'function statsContentDailyMismatchDates(')
     || !str_contains($statsSource, 'function statsLoadContentTrendRows(')
     || $statsContentAggregatePos === false
     || $statsRawRetentionDeletePos === false
     || $statsContentAggregatePos > $statsRawRetentionDeletePos) {
     $adminFieldErrorIssues[] = 'content statistics must normalize paths and aggregate before raw page view retention cleanup';
+}
+if (!str_contains($statsSource, 'foreach (statsContentDailyMismatchDates($pdo) as $statDate)')
+    || !str_contains($statsSource, 'DELETE FROM cms_stats_content_daily WHERE stat_date = ?')
+    || !str_contains($statsSource, 'statsBuildRawContentDailyRows($pdo, $statDate, $statDate)')) {
+    $adminFieldErrorIssues[] = 'content statistics lazy aggregation must rebuild only concrete mismatched days in bounded batches';
 }
 if (!str_contains($adminStatisticsSource, 'Výkon obsahu')
     || !str_contains($adminStatisticsSource, 'sec-content-performance')

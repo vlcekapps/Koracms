@@ -302,7 +302,7 @@ $renderCommentFieldError = static function (string $field) use ($commentFieldErr
         <div class="field">
           <label for="author_name">Jméno <span aria-hidden="true">*</span></label>
           <input type="text" id="author_name" name="author_name" class="form-control" required
-                 aria-required="true" maxlength="100" value="<?= h($formData['author_name']) ?>"<?= $commentFieldAttributes('author_name') ?>>
+                 aria-required="true" maxlength="100" autocomplete="name" value="<?= h($formData['author_name']) ?>"<?= $commentFieldAttributes('author_name') ?>>
           <?php $renderCommentFieldError('author_name'); ?>
         </div>
 
