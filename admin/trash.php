@@ -11,6 +11,9 @@ $success = match ((string)($_GET['ok'] ?? '')) {
     'purged' => 'Položka byla trvale smazána.',
     default => '',
 };
+$purgeConfirmError = trim((string)($_GET['err'] ?? '')) === 'confirm_purge';
+$purgeErrorModule = trim((string)($_GET['purge_module'] ?? ''));
+$purgeErrorItemId = inputInt('get', 'purge_id');
 $error = match ((string)($_GET['err'] ?? '')) {
     'confirm_purge' => 'Před trvalým smazáním potvrďte, že položku už nebude možné obnovit.',
     'invalid_action' => 'Akci se nepodařilo provést. Vyberte položku z koše znovu.',
@@ -71,7 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirmedPermanentDelete = isset($_POST['confirm_permanent_delete'])
                 && (string)$_POST['confirm_permanent_delete'] === '1';
             if (!$confirmedPermanentDelete) {
-                $redirectQuery = 'err=confirm_purge';
+                $redirectQuery = http_build_query([
+                    'err' => 'confirm_purge',
+                    'purge_module' => $module,
+                    'purge_id' => $itemId,
+                ]);
             } else {
                 if ($module === 'articles') {
                     $articleRedirectStmt = $pdo->prepare(
@@ -186,7 +193,7 @@ usort($trashItems, fn ($a, $b) => $b['deleted_at'] <=> $a['deleted_at']);
 adminHeader('Koš');
 ?>
 <?php if ($success !== ''): ?><p class="success" role="status"><?= h($success) ?></p><?php endif; ?>
-<?php if ($error !== ''): ?><p class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="trash-purge-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="admin-description">Smazané položky lze obnovit nebo trvale odstranit. Položky v koši se nezobrazují na veřejném webu ani v admin přehledech. Trvalé smazání je nevratné a před odesláním vyžaduje samostatné potvrzení u konkrétní položky.</p>
 
@@ -210,7 +217,13 @@ adminHeader('Koš');
         $trashItemTitle = trim((string)$item['title']) !== '' ? (string)$item['title'] : ('ID ' . (string)$item['id']);
         $trashItemContext = (string)$item['label'] . ' „' . $trashItemTitle . '“';
         $purgeReviewId = $trashItemDomId . '-purge-review';
+        $purgeConfirmField = 'confirm_permanent_delete';
         $purgeConfirmId = $trashItemDomId . '-purge-confirm';
+        $purgeConfirmErrorId = $trashItemDomId . '-purge-confirm-error';
+        $purgeHasError = $purgeConfirmError
+            && $purgeErrorModule === (string)$item['module']
+            && $purgeErrorItemId === (int)$item['id'];
+        $purgeErrorFields = $purgeHasError ? [$purgeConfirmField] : [];
         ?>
       <tr>
         <td><?= h($item['label']) ?></td>
@@ -228,6 +241,7 @@ adminHeader('Koš');
             </fieldset>
           </form>
           <form method="post" class="admin-trash-action-form admin-trash-action-form--purge"
+                novalidate<?= $purgeHasError ? ' aria-describedby="trash-purge-error"' : '' ?>
                 data-confirm="<?= h('Trvale smazat položku ' . $trashItemContext . '? Tuto akci nelze vrátit zpět.') ?>">
             <fieldset class="admin-filter-fieldset">
               <legend class="sr-only">Trvale smazat položku <?= h($trashItemContext) ?></legend>
@@ -237,9 +251,10 @@ adminHeader('Koš');
               <input type="hidden" name="action" value="purge">
               <p id="<?= h($purgeReviewId) ?>" class="admin-description admin-description--muted admin-copy--compact">Zkontrolujte typ, název a datum smazání v tomto řádku. Trvalé smazání nejde vrátit zpět.</p>
               <label for="<?= h($purgeConfirmId) ?>" class="admin-checkbox-label">
-                <input type="checkbox" id="<?= h($purgeConfirmId) ?>" name="confirm_permanent_delete" value="1" required aria-describedby="<?= h($purgeReviewId) ?>">
+                <input type="checkbox" id="<?= h($purgeConfirmId) ?>" name="<?= h($purgeConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($purgeConfirmField, $purgeErrorFields, [], [$purgeReviewId], $purgeConfirmErrorId) ?>>
                 Rozumím, že položku nepůjde obnovit.
               </label>
+              <?php adminRenderFieldError($purgeConfirmField, $purgeErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali typ, název a datum smazání této položky.', $purgeConfirmErrorId); ?>
               <button type="submit" class="btn btn-danger">Trvale smazat<span class="sr-only"> položku <?= h($trashItemContext) ?></span></button>
             </fieldset>
           </form>

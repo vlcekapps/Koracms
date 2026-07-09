@@ -1111,7 +1111,7 @@ Správa `301/302` přesměrování dovoluje jako starou adresu jen interní cest
 
 Řádkové smazání přesměrování je POST akce s vlastním review textem. Správce musí zaškrtnout potvrzení u konkrétního redirectu; server bez něj požadavek odmítne s textovým alertem a field-level chybou, aniž smaže záznam nebo zapíše audit log.
 
-Koš v administraci funguje jako review krok před nevratným odstraněním. Běžné mazání přesune obsah do koše, trvalé smazání v koši zobrazuje typ, název a datum smazání v řádku, vyžaduje samostatné potvrzení checkboxem u konkrétní položky a server odmítne purge bez tohoto potvrzení. HTTP integrace zároveň ověřuje, že nepotvrzené trvalé smazání položku neodstraní a potvrzené smazání projde s PRG stavem.
+Koš v administraci funguje jako review krok před nevratným odstraněním. Běžné mazání přesune obsah do koše, trvalé smazání v koši zobrazuje typ, název a datum smazání v řádku, vyžaduje samostatné potvrzení checkboxem u konkrétní položky a server odmítne purge bez tohoto potvrzení. Chybějící potvrzení se vrátí na konkrétní položku s textovým alertem, `aria-invalid` a field-level chybou u checkboxu. HTTP integrace zároveň ověřuje, že nepotvrzené trvalé smazání položku neodstraní, nezapíše audit log a potvrzené smazání projde s PRG stavem.
 
 Stejný princip se používá i při změně role uživatelského účtu. Editační formulář ukazuje aktuální a novou roli, změna oprávnění vyžaduje potvrzovací checkbox a server nepotvrzenou změnu odmítne bez uložení nové role. Běžné úpravy profilu, které roli nemění, tímto potvrzením blokované nejsou.
 

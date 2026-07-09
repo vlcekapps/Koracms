@@ -1693,7 +1693,6 @@ try {
             'data-confirm="Trvale smazat položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“? Tuto akci nelze vrátit zpět."',
             'id="' . $trashDomPrefix . '-purge-review"',
             'Zkontrolujte typ, název a datum smazání v tomto řádku. Trvalé smazání nejde vrátit zpět.',
-            'id="' . $trashDomPrefix . '-purge-confirm" name="confirm_permanent_delete" value="1" required aria-describedby="' . $trashDomPrefix . '-purge-review"',
             'Rozumím, že položku nepůjde obnovit.',
             'Trvale smazat<span class="sr-only"> položku Článek „' . htmlspecialchars($trashArticleTitle, ENT_QUOTES, 'UTF-8') . '“</span>',
         ] as $trashExpectedFragment) {
@@ -1701,12 +1700,23 @@ try {
                 $trashErrorPreventionIssues[] = 'admin koš neobsahuje error-prevention fragment: ' . $trashExpectedFragment;
             }
         }
+        if (!httpIntegrationInputHasAttributes($trashPageResponse['body'], $trashDomPrefix . '-purge-confirm', [
+            'name' => 'confirm_permanent_delete',
+            'aria-required' => 'true',
+            'aria-describedby' => $trashDomPrefix . '-purge-review',
+        ])) {
+            $trashErrorPreventionIssues[] = 'admin koš nevykreslil potvrzovací checkbox trvalého smazání s review vazbou';
+        }
     }
 
+    $trashPurgeLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")
+        ->fetchColumn();
+    $trashPageCsrf = extractHiddenInputValue($trashPageResponse['body'], 'csrf_token');
     $trashMissingConfirmResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/trash.php',
         [
-            'csrf_token' => $adminSession['csrf'],
+            'csrf_token' => $trashPageCsrf,
             'module' => 'articles',
             'id' => (string)$trashArticleId,
             'action' => 'purge',
@@ -1716,20 +1726,37 @@ try {
     );
     $trashArticleStillDeletedStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_articles WHERE id = ? AND deleted_at IS NOT NULL");
     $trashArticleStillDeletedStmt->execute([$trashArticleId]);
-    $trashMissingConfirmPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php?err=confirm_purge', $trashSession['cookie'], 0);
+    $trashPurgeLogCountAfterMissingConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")
+        ->fetchColumn();
+    $trashMissingConfirmLocation = BASE_URL . '/admin/trash.php?err=confirm_purge&purge_module=articles&purge_id=' . $trashArticleId;
+    $trashMissingConfirmPage = fetchUrl($baseUrl . $trashMissingConfirmLocation, $trashSession['cookie'], 0);
     if (
         httpIntegrationStatusCode($trashMissingConfirmResponse) !== 302
-        || !responseHasLocationHeader($trashMissingConfirmResponse['headers'], BASE_URL . '/admin/trash.php?err=confirm_purge', $baseUrl)
-        || !str_contains($trashMissingConfirmPage['body'], 'role="alert" aria-atomic="true">Před trvalým smazáním potvrďte, že položku už nebude možné obnovit.')
+        || !responseHasLocationHeader($trashMissingConfirmResponse['headers'], $trashMissingConfirmLocation, $baseUrl)
+        || !str_contains($trashMissingConfirmPage['body'], 'id="trash-purge-error" class="error" role="alert" aria-atomic="true">Před trvalým smazáním potvrďte, že položku už nebude možné obnovit.')
+        || !str_contains($trashMissingConfirmPage['body'], 'id="' . $trashDomPrefix . '-purge-confirm-error"')
+        || !str_contains($trashMissingConfirmPage['body'], 'Před trvalým smazáním potvrďte, že jste zkontrolovali typ, název a datum smazání této položky.')
+        || !httpIntegrationInputHasAttributes($trashMissingConfirmPage['body'], $trashDomPrefix . '-purge-confirm', [
+            'name' => 'confirm_permanent_delete',
+            'aria-invalid' => 'true',
+            'aria-describedby' => $trashDomPrefix . '-purge-review ' . $trashDomPrefix . '-purge-confirm-error',
+        ])
         || (int)$trashArticleStillDeletedStmt->fetchColumn() !== 1
+        || $trashPurgeLogCountAfterMissingConfirm !== $trashPurgeLogCountBefore
     ) {
-        $trashErrorPreventionIssues[] = 'admin koš neodmítl trvalé smazání bez serverového potvrzení';
+        $trashErrorPreventionIssues[] = 'admin koš neodmítl trvalé smazání bez serverového potvrzení nebo nevrátil field-level chybu';
     }
 
+    $trashConfirmedCsrf = extractHiddenInputValue($trashMissingConfirmPage['body'], 'csrf_token');
+    if ($trashConfirmedCsrf === '') {
+        $trashErrorPreventionIssues[] = 'admin koš po chybějícím potvrzení nevrátil csrf_token pro opravené odeslání';
+        $trashConfirmedCsrf = $trashPageCsrf;
+    }
     $trashConfirmedPurgeResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/trash.php',
         [
-            'csrf_token' => $adminSession['csrf'],
+            'csrf_token' => $trashConfirmedCsrf,
             'module' => 'articles',
             'id' => (string)$trashArticleId,
             'action' => 'purge',
@@ -1740,14 +1767,18 @@ try {
     );
     $trashArticleGoneStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_articles WHERE id = ?");
     $trashArticleGoneStmt->execute([$trashArticleId]);
+    $trashPurgeLogCountAfterConfirmed = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")
+        ->fetchColumn();
     $trashPurgeSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php?ok=purged', $trashSession['cookie'], 0);
     if (
         httpIntegrationStatusCode($trashConfirmedPurgeResponse) !== 302
         || !responseHasLocationHeader($trashConfirmedPurgeResponse['headers'], BASE_URL . '/admin/trash.php?ok=purged', $baseUrl)
         || !str_contains($trashPurgeSuccessPage['body'], 'role="status">Položka byla trvale smazána.')
         || (int)$trashArticleGoneStmt->fetchColumn() !== 0
+        || $trashPurgeLogCountAfterConfirmed !== $trashPurgeLogCountBefore + 1
     ) {
-        $trashErrorPreventionIssues[] = 'admin koš neprovedl potvrzené trvalé smazání s PRG stavem';
+        $trashErrorPreventionIssues[] = 'admin koš neprovedl potvrzené trvalé smazání s PRG stavem a audit logem';
     }
     httpIntegrationPrintResult('trash_error_prevention_http', $trashErrorPreventionIssues, $failures);
 
