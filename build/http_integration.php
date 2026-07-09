@@ -7210,6 +7210,159 @@ try {
             }
         }
     }
+
+    $blogDeleteTargetSlug = 'http-blog-delete-target-' . bin2hex(random_bytes(4));
+    $blogDeleteSourceSlug = 'http-blog-delete-source-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, sort_order, created_by_user_id) VALUES (?, ?, -100000, ?)")
+        ->execute(['HTTP cílový blog pro mazání', $blogDeleteTargetSlug, $adminUserId]);
+    $blogDeleteTargetId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $blogDeleteTargetId;
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, sort_order, created_by_user_id) VALUES (?, ?, -99999, ?)")
+        ->execute(['HTTP blog ke smazání', $blogDeleteSourceSlug, $adminUserId]);
+    $blogDeleteSourceId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $blogDeleteSourceId;
+
+    $blogDeleteCategorySlug = 'http-blog-delete-category-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_categories (name, slug, blog_id, description, meta_title, meta_description)
+         VALUES (?, ?, ?, '', '', '')"
+    )->execute(['HTTP kategorie mazaného blogu', $blogDeleteCategorySlug, $blogDeleteSourceId]);
+    $blogDeleteCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $blogDeleteCategoryId;
+
+    $blogDeleteTagSlug = 'http-blog-delete-tag-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_tags (name, slug, blog_id, description, meta_title, meta_description)
+         VALUES (?, ?, ?, '', '', '')"
+    )->execute(['HTTP štítek mazaného blogu', $blogDeleteTagSlug, $blogDeleteSourceId]);
+    $blogDeleteTagId = (int)$pdo->lastInsertId();
+    $createdTags[] = $blogDeleteTagId;
+
+    $blogDeleteArticleSlug = 'http-blog-delete-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, category_id, author_id, status)
+         VALUES (?, ?, ?, '', '<p>Článek pro ověření mazání blogu.</p>', 1, ?, ?, 'draft')"
+    )->execute([
+        'HTTP článek mazaného blogu',
+        $blogDeleteArticleSlug,
+        $blogDeleteSourceId,
+        $blogDeleteCategoryId,
+        $adminUserId,
+    ]);
+    $blogDeleteArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $blogDeleteArticleId;
+    $pdo->prepare('INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)')
+        ->execute([$blogDeleteArticleId, $blogDeleteTagId]);
+
+    $blogDeleteSeriesSlug = 'http-blog-delete-series-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order)
+         VALUES (?, ?, ?, '', 1, 1)"
+    )->execute([$blogDeleteSourceId, 'HTTP série mazaného blogu', $blogDeleteSeriesSlug]);
+    $blogDeleteSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $blogDeleteSeriesId;
+    $pdo->prepare('INSERT INTO cms_blog_series_items (series_id, article_id, sort_order) VALUES (?, ?, 1)')
+        ->execute([$blogDeleteSeriesId, $blogDeleteArticleId]);
+    $pdo->prepare(
+        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+         VALUES (?, ?, 'manager')
+         ON DUPLICATE KEY UPDATE member_role = VALUES(member_role)"
+    )->execute([$blogDeleteSourceId, $adminUserId]);
+
+    $blogDeleteFallbackStmt = $pdo->prepare('SELECT id FROM cms_blogs WHERE id != ? ORDER BY sort_order, id LIMIT 1');
+    $blogDeleteFallbackStmt->execute([$blogDeleteSourceId]);
+    $blogDeleteFallbackId = (int)$blogDeleteFallbackStmt->fetchColumn();
+    $blogDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_delete'")->fetchColumn();
+
+    $blogDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/blogs.php', $adminSession['cookie'], 0);
+    $blogDeleteCsrf = extractHiddenInputValue($blogDeletePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($blogDeletePage) !== 200
+        || $blogDeleteCsrf === ''
+        || !str_contains($blogDeletePage['body'], 'confirm_blog_delete_' . $blogDeleteSourceId)
+        || !str_contains($blogDeletePage['body'], 'blog-delete-review-' . $blogDeleteSourceId)
+        || !str_contains($blogDeletePage['body'], 'Smazání přesune 1 článků, 1 kategorií a 1 štítků do prvního zbývajícího blogu podle pořadí. 1 sérií článků tohoto blogu bude odstraněno a 1 přiřazení týmu skončí.')) {
+        $blogManagementValidationIssues[] = 'mazání blogu nevykreslilo review text a checkbox';
+    }
+
+    $blogDeleteMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_blog_delete.php', [
+        'csrf_token' => $blogDeleteCsrf,
+        'id' => (string)$blogDeleteSourceId,
+    ], $adminSession['cookie'], 0);
+    $blogAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blogs WHERE id = ?');
+    $blogAfterMissingConfirmStmt->execute([$blogDeleteSourceId]);
+    $blogArticleAfterMissingConfirmStmt = $pdo->prepare('SELECT blog_id FROM cms_articles WHERE id = ?');
+    $blogArticleAfterMissingConfirmStmt->execute([$blogDeleteArticleId]);
+    $blogCategoryAfterMissingConfirmStmt = $pdo->prepare('SELECT blog_id FROM cms_categories WHERE id = ?');
+    $blogCategoryAfterMissingConfirmStmt->execute([$blogDeleteCategoryId]);
+    $blogTagAfterMissingConfirmStmt = $pdo->prepare('SELECT blog_id FROM cms_tags WHERE id = ?');
+    $blogTagAfterMissingConfirmStmt->execute([$blogDeleteTagId]);
+    $blogSeriesAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series WHERE id = ?');
+    $blogSeriesAfterMissingConfirmStmt->execute([$blogDeleteSeriesId]);
+    $blogMemberAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_members WHERE blog_id = ? AND user_id = ?');
+    $blogMemberAfterMissingConfirmStmt->execute([$blogDeleteSourceId, $adminUserId]);
+    $blogDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($blogDeleteMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($blogDeleteMissingConfirmResponse['headers'], BASE_URL . '/admin/blogs.php?delete_error=confirm_required&delete_error_id=' . $blogDeleteSourceId, $baseUrl)
+        || (int)$blogAfterMissingConfirmStmt->fetchColumn() !== 1
+        || (int)$blogArticleAfterMissingConfirmStmt->fetchColumn() !== $blogDeleteSourceId
+        || (int)$blogCategoryAfterMissingConfirmStmt->fetchColumn() !== $blogDeleteSourceId
+        || (int)$blogTagAfterMissingConfirmStmt->fetchColumn() !== $blogDeleteSourceId
+        || (int)$blogSeriesAfterMissingConfirmStmt->fetchColumn() !== 1
+        || (int)$blogMemberAfterMissingConfirmStmt->fetchColumn() !== 1
+        || $blogDeleteLogAfterMissingConfirm !== $blogDeleteLogBefore) {
+        $blogManagementValidationIssues[] = 'smazání blogu bez potvrzení změnilo blog, články, taxonomie, série, tým nebo audit log';
+    }
+
+    $blogDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blogs.php?delete_error=confirm_required&delete_error_id=' . $blogDeleteSourceId,
+        $adminSession['cookie'],
+        0
+    );
+    $blogDeleteErrorCsrf = extractHiddenInputValue($blogDeleteErrorPage['body'], 'csrf_token');
+    if ($blogDeleteErrorCsrf === ''
+        || !str_contains($blogDeleteErrorPage['body'], 'id="blog-form-error" class="error" role="alert" aria-atomic="true">Blog nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($blogDeleteErrorPage['body'], 'id="confirm-blog-delete-' . $blogDeleteSourceId . '-error"')
+        || !httpIntegrationInputHasAttributes($blogDeleteErrorPage['body'], 'confirm-blog-delete-' . $blogDeleteSourceId, [
+            'name' => 'confirm_blog_delete_' . $blogDeleteSourceId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-delete-review-' . $blogDeleteSourceId . ' confirm-blog-delete-' . $blogDeleteSourceId . '-error',
+        ])) {
+        $blogManagementValidationIssues[] = 'chybový stav mazání blogu nevrátil alert a field-level checkbox chybu';
+    }
+
+    $blogDeleteConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_blog_delete.php', [
+        'csrf_token' => $blogDeleteErrorCsrf,
+        'id' => (string)$blogDeleteSourceId,
+        'confirm_blog_delete_' . $blogDeleteSourceId => '1',
+    ], $adminSession['cookie'], 0);
+    $blogAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blogs WHERE id = ?');
+    $blogAfterConfirmedStmt->execute([$blogDeleteSourceId]);
+    $blogArticleAfterConfirmedStmt = $pdo->prepare('SELECT blog_id FROM cms_articles WHERE id = ?');
+    $blogArticleAfterConfirmedStmt->execute([$blogDeleteArticleId]);
+    $blogCategoryAfterConfirmedStmt = $pdo->prepare('SELECT blog_id FROM cms_categories WHERE id = ?');
+    $blogCategoryAfterConfirmedStmt->execute([$blogDeleteCategoryId]);
+    $blogTagAfterConfirmedStmt = $pdo->prepare('SELECT blog_id FROM cms_tags WHERE id = ?');
+    $blogTagAfterConfirmedStmt->execute([$blogDeleteTagId]);
+    $blogSeriesAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series WHERE id = ?');
+    $blogSeriesAfterConfirmedStmt->execute([$blogDeleteSeriesId]);
+    $blogSeriesItemAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series_items WHERE series_id = ?');
+    $blogSeriesItemAfterConfirmedStmt->execute([$blogDeleteSeriesId]);
+    $blogMemberAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_members WHERE blog_id = ?');
+    $blogMemberAfterConfirmedStmt->execute([$blogDeleteSourceId]);
+    $blogDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($blogDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($blogDeleteConfirmedResponse['headers'], BASE_URL . '/admin/blogs.php?deleted=1', $baseUrl)
+        || (int)$blogAfterConfirmedStmt->fetchColumn() !== 0
+        || (int)$blogArticleAfterConfirmedStmt->fetchColumn() !== $blogDeleteFallbackId
+        || (int)$blogCategoryAfterConfirmedStmt->fetchColumn() !== $blogDeleteFallbackId
+        || (int)$blogTagAfterConfirmedStmt->fetchColumn() !== $blogDeleteFallbackId
+        || (int)$blogSeriesAfterConfirmedStmt->fetchColumn() !== 0
+        || (int)$blogSeriesItemAfterConfirmedStmt->fetchColumn() !== 0
+        || (int)$blogMemberAfterConfirmedStmt->fetchColumn() !== 0
+        || $blogDeleteLogAfterConfirmed !== $blogDeleteLogBefore + 1) {
+        $blogManagementValidationIssues[] = 'potvrzené smazání blogu neproběhlo s očekávaným PRG stavem, přesunem obsahu nebo audit logem';
+    }
+
     httpIntegrationPrintResult('blog_management_validation_http', $blogManagementValidationIssues, $failures);
 
     $blogRelatedIssues = [];

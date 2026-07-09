@@ -8,6 +8,8 @@ $pdo = db_connect();
 $success = '';
 $error   = '';
 $message = trim($_GET['msg'] ?? '');
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorBlogId = inputInt('get', 'delete_error_id');
 $fieldErrors = [];
 $createFormHasError = false;
 $fieldErrorMessages = [
@@ -156,11 +158,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $success = 'Blog byl smazán.';
+}
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $deleteConfirmError) {
+    $error = 'Blog nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+
 $blogs = $pdo->query(
     "SELECT b.*,
             u.email AS creator_email,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email, '') AS creator_label,
             (SELECT COUNT(*) FROM cms_articles WHERE blog_id = b.id) AS article_count,
+            (SELECT COUNT(*) FROM cms_categories WHERE blog_id = b.id) AS category_count,
+            (SELECT COUNT(*) FROM cms_tags WHERE blog_id = b.id) AS tag_count,
+            (SELECT COUNT(*) FROM cms_blog_series WHERE blog_id = b.id) AS series_count,
             (SELECT COUNT(*) FROM cms_blog_members WHERE blog_id = b.id) AS member_count
      FROM cms_blogs b
      LEFT JOIN cms_users u ON u.id = b.created_by_user_id
@@ -267,10 +279,20 @@ adminHeader('Správa blogů');
     </thead>
     <tbody data-sortable="blogs">
     <?php foreach ($blogs as $blog): ?>
-      <tr data-sort-id="<?= (int)$blog['id'] ?>" tabindex="0" class="blog-sort-row">
+      <?php
+        $blogId = (int)$blog['id'];
+        $blogDeleteConfirmField = 'confirm_blog_delete_' . $blogId;
+        $blogDeleteConfirmId = 'confirm-blog-delete-' . $blogId;
+        $blogDeleteReviewId = 'blog-delete-review-' . $blogId;
+        $blogDeleteFieldErrorId = 'confirm-blog-delete-' . $blogId . '-error';
+        $blogDeleteHasError = $deleteConfirmError && $deleteErrorBlogId === $blogId;
+        $blogDeleteErrorFields = $blogDeleteHasError ? [$blogDeleteConfirmField] : [];
+        $isLastBlog = count($blogs) === 1;
+        ?>
+      <tr data-sort-id="<?= $blogId ?>" tabindex="0" class="blog-sort-row">
         <td>
           <?= h((string)$blog['name']) ?>
-          <?php if ((int)$blog['id'] === $defaultBlogId): ?>
+          <?php if ($blogId === $defaultBlogId): ?>
             <small class="field-help">(výchozí blog)</small>
           <?php endif; ?>
           <?php if (!(int)($blog['show_in_nav'] ?? 1)): ?>
@@ -322,22 +344,43 @@ adminHeader('Správa blogů');
                   data-blog-nav="<?= (int)($blog['show_in_nav'] ?? 1) ?>"
                   data-blog-logo-alt="<?= h((string)($blog['logo_alt_text'] ?? '')) ?>"
                   data-blog-logo-url="<?= h(blogLogoUrl($blog)) ?>">Upravit<span class="sr-only"> blog <?= h((string)$blog['name']) ?></span></button>
-          <a href="blog.php?blog=<?= (int)$blog['id'] ?>" class="btn">Články blogu</a>
-          <a href="blog_series.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Série článků</a>
-          <a href="blog_cats.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Kategorie blogu</a>
-          <a href="blog_tags.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Štítky blogu</a>
-          <a href="blog_pages.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Stránky a odkazy blogu</a>
-          <a href="blog_members.php?blog_id=<?= (int)$blog['id'] ?>" class="btn">Tým blogu</a>
-          <form action="blog_blog_delete.php" method="post" class="blog-inline-form">
+          <a href="blog.php?blog=<?= $blogId ?>" class="btn">Články blogu</a>
+          <a href="blog_series.php?blog_id=<?= $blogId ?>" class="btn">Série článků</a>
+          <a href="blog_cats.php?blog_id=<?= $blogId ?>" class="btn">Kategorie blogu</a>
+          <a href="blog_tags.php?blog_id=<?= $blogId ?>" class="btn">Štítky blogu</a>
+          <a href="blog_pages.php?blog_id=<?= $blogId ?>" class="btn">Stránky a odkazy blogu</a>
+          <a href="blog_members.php?blog_id=<?= $blogId ?>" class="btn">Tým blogu</a>
+          <form action="blog_blog_delete.php" method="post" class="blog-inline-form admin-inline-form" novalidate<?= $blogDeleteHasError ? ' aria-describedby="blog-form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$blog['id'] ?>">
-            <?php if (count($blogs) > 1): ?>
+            <input type="hidden" name="id" value="<?= $blogId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání blogu <?= h((string)$blog['name']) ?></legend>
+              <p id="<?= h($blogDeleteReviewId) ?>" class="field-help field-help--flush">
+                <?php if (!$isLastBlog): ?>
+                  Smazání přesune <?= (int)$blog['article_count'] ?> článků, <?= (int)$blog['category_count'] ?> kategorií a <?= (int)$blog['tag_count'] ?> štítků do prvního zbývajícího blogu podle pořadí. <?= (int)$blog['series_count'] ?> sérií článků tohoto blogu bude odstraněno a <?= (int)$blog['member_count'] ?> přiřazení týmu skončí.
+                <?php else: ?>
+                  Toto je poslední blog. Smazání trvale odstraní <?= (int)$blog['article_count'] ?> článků, <?= (int)$blog['category_count'] ?> kategorií, <?= (int)$blog['tag_count'] ?> štítků a <?= (int)$blog['series_count'] ?> sérií článků; obsah nebude přesunut do koše a <?= (int)$blog['member_count'] ?> přiřazení týmu skončí.
+                <?php endif; ?>
+              </p>
+              <label for="<?= h($blogDeleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($blogDeleteConfirmId) ?>"
+                  name="<?= h($blogDeleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($blogDeleteConfirmField, $blogDeleteErrorFields, [], [$blogDeleteReviewId], $blogDeleteFieldErrorId) ?>>
+                Potvrzuji smazání tohoto blogu a kontrolu dopadu na obsah.
+              </label>
+              <?php adminRenderFieldError($blogDeleteConfirmField, $blogDeleteErrorFields, [], 'Před smazáním blogu potvrďte, že jste zkontrolovali dopad na články, taxonomie, série a tým.', $blogDeleteFieldErrorId); ?>
+            <?php if (!$isLastBlog): ?>
               <button type="submit" class="btn btn-danger"
                       data-confirm="<?= h('Smazat blog „' . (string)$blog['name'] . '“? Články, kategorie a štítky budou přesunuty do jiného blogu.') ?>">Smazat</button>
             <?php else: ?>
               <button type="submit" class="btn btn-danger"
                       data-confirm="POZOR: Toto je poslední blog! Smazáním nenávratně odstraníte VŠECHNY články (<?= (int)$blog['article_count'] ?>), kategorie i tagy. Opravdu chcete pokračovat?">Smazat</button>
             <?php endif; ?>
+            </fieldset>
           </form>
         </td>
       </tr>

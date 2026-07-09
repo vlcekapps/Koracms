@@ -42,7 +42,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 - `blog_related_articles_http` pro ručně související články a field-level chyby editoru článku,
 - `blog_taxonomy_landing_http` pro kategorie/štítky, čisté URL, SEO metadata a duplicitní slugy,
 - `blog_static_pages_http` pro blogové statické stránky, kontextovou unikátnost slugu a zachování rozepsaného obsahu,
-- `blog_management_validation_http` pro správu blogů a validační chyby,
+- `blog_management_validation_http` pro správu blogů, validační chyby a review-and-confirm mazání celého blogu,
 - runtime blog guardraily v `build/runtime_audit.php` pro osnovu článku, série, taxonomie, redirecty, blogové stránky, výpisy a přístupné nadpisy,
 - `public_error_suggestion_guardrails` pro sdílenou chybovou hlášku matematického ověření,
 - field-level guardrail a HTTP scénář pro veřejný komentářový formulář,
@@ -66,7 +66,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 3.1.2 Language of Parts | Partially Supports | HTML editor nabízí helper pro `lang`; checklist vysvětluje odpovědnost autora. | Ručně ověřit cizojazyčné citace v článcích. |
 | 3.3.1 Error Identification | Supports | Admin editory i veřejné komentáře mají form-level alert a field-level chyby. | Ručně projít kombinované chybové stavy editoru článku. |
 | 3.3.3 Error Suggestion | Partially Supports | Blog admin formuláře a veřejný komentář používají konkrétní návrhy oprav. | Pokračovat copy passem u méně častých validačních větví. |
-| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; blog používá CSRF, PRG a koš/soft delete vzory. | Ručně rozhodnout, zda některé blogové hromadné akce potřebují další review krok. |
+| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových kategorií, štítků a sérií má item-level review, potvrzovací checkbox, serverové odmítnutí bez potvrzení a HTTP důkaz. | Ručně rozhodnout, zda některé blogové hromadné akce potřebují další review krok. |
 | 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav. | Ručně projít content/media picker v blog editoru po změnách. |
 | 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region. | Ručně ověřit, že live regiony nejsou rušivé při dlouhé editaci. |
 
@@ -102,6 +102,22 @@ Oprava:
 
 Snížené riziko: WCAG `2.1.1 Keyboard`, `3.3.2 Labels or Instructions`, `4.1.2 Name, Role, Value` a `4.1.3 Status Messages`.
 
+### Mazání celého blogu nemělo server-side review potvrzení
+
+Priorita: střední.
+
+Riziko: smazání blogu má dopad na veřejné URL, články, taxonomie, série a týmová přiřazení. Při více blozích se obsah přesouvá do fallback blogu, při posledním blogu jde o nevratné odstranění obsahu.
+
+Oprava:
+
+- přehled blogů zobrazuje počet dotčených článků, kategorií, štítků, sérií a týmových přiřazení,
+- formulář vyžaduje `confirm_blog_delete_<id>` a chybějící potvrzení vrací atomický alert s field-level chybou,
+- handler odmítá nepotvrzený POST před přesunem obsahu, smazáním sérií, zrušením týmu, smazáním blogu nebo audit logem,
+- potvrzený databázový průchod běží v transakci a explicitně uklízí `cms_blog_members`,
+- runtime audit a HTTP integrace hlídají render, odmítnutí i potvrzený cleanup.
+
+Snížené riziko: WCAG `3.3.4 Error Prevention` a `4.1.3 Status Messages`.
+
 ## Ruční Scénáře Pro Blog
 
 Veřejný Blog:
@@ -117,8 +133,9 @@ Administrace Blogu:
 1. Editor článku bez myši: titulek, slug, změna blogu, kategorie, štítky, série, tlačítko pro odebrání ze všech sérií, související články, publikace a uložení.
 2. Vyvolat chyby: chybějící titulek/text, duplicitní slug, cizí kategorie, cizí série a cizí související článek.
 3. Správa kategorií, štítků, sérií, externích odkazů a blogových stránek: ověřit labely, field-level chyby, zachování hodnot a focus po PRG.
-4. Dlouhá editace: nechat vypršet session, ověřit heartbeat live hlášku, návrat přes login a recovery koncept.
-5. Ověřit content/media picker, HTML helper `Jazyk části textu` a author-content checklist pro reálný článek.
+4. Ve správě blogů zkusit smazání celého blogu bez `confirm_blog_delete_<id>`: čtečka má oznámit review dopadu, alert i field-level chybu, obsah/tým/audit log se nesmí změnit; potvrzený průchod má vrátit PRG stav.
+5. Dlouhá editace: nechat vypršet session, ověřit heartbeat live hlášku, návrat přes login a recovery koncept.
+6. Ověřit content/media picker, HTML helper `Jazyk části textu` a author-content checklist pro reálný článek.
 
 ## Backlog
 

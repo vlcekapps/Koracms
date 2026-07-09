@@ -1131,6 +1131,8 @@ Mazání blogových kategorií, štítků a sérií článků používá stejný
 
 Mazání FAQ kategorií používá stejný review krok. Správce vidí počet navázaných otázek a podkategorií, musí potvrdit kontrolu checkboxem a server bez `confirm_faq_category_delete_<id>` neodpojí otázky, nepřesune podkategorie na kořen, nesmaže kategorii ani nezapíše audit log.
 
+Mazání celého blogu má samostatný review krok. Správce vidí počet článků, kategorií, štítků, sérií a týmových přiřazení, musí potvrdit kontrolu checkboxem a server bez `confirm_blog_delete_<id>` nepřesune obsah, neodstraní série, nezruší týmové vazby, nesmaže blog ani nezapíše audit log.
+
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.

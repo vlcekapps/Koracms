@@ -43,6 +43,8 @@ Poznámka 2026-07-09: mazání blogových kategorií, štítků a sérií člán
 
 Poznámka 2026-07-09: mazání FAQ kategorií už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních taxonomických akcí. Má řádkový review počtu navázaných otázek a podkategorií, serverové odmítnutí bez `confirm_faq_category_delete_<id>` a HTTP důkaz zachování otázek, podkategorií a audit logu i potvrzeného cleanupu; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
 
+Poznámka 2026-07-09: mazání celého blogu už není součástí otevřeného základního `3.3.4` rizika individuálních destruktivních blogových akcí. Má řádkový review počtu článků, kategorií, štítků, sérií a týmových přiřazení, serverové odmítnutí bez `confirm_blog_delete_<id>`, transakční potvrzený průchod a HTTP důkaz zachování blogu, obsahu, taxonomií, sérií, týmu a audit logu bez potvrzení; zůstává jen pozdější ruční NVDA/keyboard-only ověření oznámení review textu, checkboxu a chybového stavu.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |

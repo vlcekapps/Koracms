@@ -140,6 +140,8 @@ Additional `3.3.4` ACR evidence, 2026-07-09: Blog category, tag and article-seri
 
 Additional `3.3.4` ACR evidence, 2026-07-09: FAQ category deletion now uses a row-level review-and-confirm form. The UI describes affected FAQ questions and child categories, requires `confirm_faq_category_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before unlinking FAQ questions, moving child categories to the root, deleting the category or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `faq_categories_feedback_http` cover rendered review text, rejected unconfirmed deletion without relationship/log changes and confirmed cleanup.
 
+Additional `3.3.4` ACR evidence, 2026-07-09: whole-blog deletion now uses a row-level review-and-confirm form. The UI describes the number of affected articles, categories, tags, article series and team assignments, requires `confirm_blog_delete_<id>`, and returns a text-backed atomic alert plus a field-level checkbox error when confirmation is missing. The server rejects unconfirmed POST requests before moving content to the fallback blog, deleting article series, clearing team membership, deleting the blog or writing the audit log. The confirmed path runs the database changes in a transaction. Runtime `admin_field_error_guardrails` and HTTP `blog_management_validation_http` cover rendered review text, rejected unconfirmed deletion without content/team/log changes and confirmed cleanup.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

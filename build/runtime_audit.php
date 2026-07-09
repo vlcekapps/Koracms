@@ -17282,15 +17282,22 @@ foreach ([
     'blog management core form' => [
         'source' => $blogsManagementSource,
         'required' => [
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
             '$error = \'Blog nejde uložit bez názvu. U pole Název blogu je konkrétní nápověda.\';',
             '$error = \'Slug blogu není možné vytvořit. U pole Slug (URL) je konkrétní nápověda.\';',
             '$error = \'Slug blogu je vyhrazený pro systémovou stránku. U pole Slug (URL) je konkrétní nápověda.\';',
+            '$error = \'Blog nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.\';',
             '? \'Slug blogu už používá jiný blog. U pole Slug (URL) je konkrétní nápověda.\'',
             '\'name\' => \'Doplňte krátký název blogu, například Novinky školy.\',',
             '\'slug\' => \'Použijte jedinečný slug z malých písmen, číslic a pomlček, například novinky-skoly.\',',
             '<p id="blog-form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             "adminFieldAttributes('name', \$fieldErrors)",
             "adminFieldAttributes('slug', \$fieldErrors, [], ['blog-slug-help'])",
+            '$blogDeleteConfirmField = \'confirm_blog_delete_\' . $blogId;',
+            'Smazání přesune <?= (int)$blog[\'article_count\'] ?> článků',
+            'Toto je poslední blog. Smazání trvale odstraní',
+            'adminFieldAttributes($blogDeleteConfirmField, $blogDeleteErrorFields, [], [$blogDeleteReviewId], $blogDeleteFieldErrorId)',
+            'adminRenderFieldError($blogDeleteConfirmField, $blogDeleteErrorFields, [], \'Před smazáním blogu potvrďte',
         ],
         'forbidden' => [
             '$error = \'Název blogu je povinný.\';',
@@ -18127,6 +18134,13 @@ if (!str_contains($faqCatDeleteSource, "\$confirmFieldName = 'confirm_faq_catego
     || !str_contains($faqCatDeleteSource, "logAction('faq_cat_delete',")) {
     $adminFieldErrorIssues[] = 'FAQ category delete handler is missing server-side review-and-confirm guardrails';
 }
+if (!str_contains($blogDeleteSource, "\$confirmFieldName = 'confirm_blog_delete_' . \$id;")
+    || !str_contains($blogDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($blogDeleteSource, '$pdo->beginTransaction();')
+    || !str_contains($blogDeleteSource, "DELETE FROM cms_blog_members WHERE blog_id = ?")
+    || !str_contains($blogDeleteSource, "logAction('blog_delete',")) {
+    $adminFieldErrorIssues[] = 'blog delete handler is missing server-side review-and-confirm guardrails';
+}
 if (!str_contains($blogCatDeleteSource, "\$confirmFieldName = 'confirm_blog_category_delete_' . \$id;")
     || !str_contains($blogCatDeleteSource, "'delete_error' => 'confirm_required'")
     || !str_contains($blogCatDeleteSource, "UPDATE cms_articles SET category_id = NULL WHERE category_id = ?")
@@ -18503,6 +18517,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_blog_series_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání série článků neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing blog taxonomy/series delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('blog_management_validation_http'")
+    || !str_contains($httpIntegrationSource, 'smazání blogu bez potvrzení změnilo blog, články, taxonomie, série, tým nebo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_blog_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání blogu neproběhlo s očekávaným PRG stavem, přesunem obsahu nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing blog delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('faq_categories_feedback_http'")
