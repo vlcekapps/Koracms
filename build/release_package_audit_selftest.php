@@ -267,6 +267,19 @@ assertReleasePackageAuditFails(
 );
 
 assertReleasePackageAuditFails(
+    'Missing release smoke license guard',
+    static function (string $tempRoot): void {
+        releasePackageAuditSelfTestReplaceInFile(
+            $tempRoot . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'release_smoke.php',
+            "        'LICENSE',\n",
+            '',
+            'missing release smoke LICENSE guard'
+        );
+    },
+    "build/release_smoke.php is missing release artifact guard: 'LICENSE',"
+);
+
+assertReleasePackageAuditFails(
     'Missing source archive export-ignore guard',
     static function (string $tempRoot): void {
         releasePackageAuditSelfTestReplaceInFile(

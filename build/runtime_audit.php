@@ -106,6 +106,8 @@ $eventIcsSource = (string) file_get_contents(__DIR__ . '/../events/ics.php');
 $composerSource = is_file(__DIR__ . '/../composer.json') ? (string) file_get_contents(__DIR__ . '/../composer.json') : '';
 $phpstanConfigSource = is_file(__DIR__ . '/../phpstan.neon.dist') ? (string) file_get_contents(__DIR__ . '/../phpstan.neon.dist') : '';
 $readmeSource = is_file(__DIR__ . '/../README.md') ? (string) file_get_contents(__DIR__ . '/../README.md') : '';
+$licenseSource = is_file(__DIR__ . '/../LICENSE') ? (string) file_get_contents(__DIR__ . '/../LICENSE') : '';
+$noticeSource = is_file(__DIR__ . '/../NOTICE.md') ? (string) file_get_contents(__DIR__ . '/../NOTICE.md') : '';
 $adminGuideSource = is_file(__DIR__ . '/../docs/admin-guide.md') ? (string) file_get_contents(__DIR__ . '/../docs/admin-guide.md') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
@@ -8914,6 +8916,7 @@ $foundationChecks = [
         && str_contains($releasePackageAuditSelftestSource, 'build/release.ps1 does not exclude .codex.')
         && str_contains($releasePackageAuditSelftestSource, 'build/release.ps1 must not use Compress-Archive')
         && str_contains($releasePackageAuditSelftestSource, "build/release_smoke.php is missing release artifact guard: 'config.sample.php',")
+        && str_contains($releasePackageAuditSelftestSource, "build/release_smoke.php is missing release artifact guard: 'LICENSE',")
         && str_contains($releasePackageAuditSelftestSource, '.gitattributes is missing source archive rule: vendor/** export-ignore')
         && str_contains($releasePackageAuditSelftestSource, '.gitignore is missing local/generated file rule: node_modules/')
         && str_contains($releasePackageAuditSelftestSource, '.gitignore is missing local/generated file rule: dist/')
@@ -8935,6 +8938,8 @@ $foundationChecks = [
         && str_contains($releaseSmokeSource, 'System.IO.Compression.ZipFile')
         && str_contains($releaseSmokeSource, 'ConvertTo-Json')
         && str_contains($releaseSmokeSource, 'README.md')
+        && str_contains($releaseSmokeSource, 'LICENSE')
+        && str_contains($releaseSmokeSource, 'NOTICE.md')
         && str_contains($releaseSmokeSource, 'docs/admin-guide.md')
         && str_contains($releaseSmokeSource, 'uploads/.htaccess')
         && str_contains($releaseSmokeSource, 'themes/default/theme.json')
@@ -8946,8 +8951,19 @@ $foundationChecks = [
         && str_contains($releaseSmokeSource, 'Source archive unexpectedly contains Node dependencies')
         && str_contains($releaseSmokeSource, 'Source archive unexpectedly contains docs content')
         && str_contains($releaseSmokeSource, 'Release smoke OK'),
+    'project license metadata is GPL-3.0-or-later' => str_contains($composerSource, '"license": "GPL-3.0-or-later"')
+        && !str_contains($composerSource, '"license": "proprietary"')
+        && str_contains($licenseSource, 'GNU GENERAL PUBLIC LICENSE')
+        && str_contains($licenseSource, 'Version 3, 29 June 2007')
+        && str_contains($noticeSource, 'Copyright (C) 2026 Pavel Vlček / vlcekapps')
+        && str_contains($noticeSource, 'GPL-3.0-or-later')
+        && str_contains($noticeSource, 'Website content created by administrators')
+        && str_contains($readmeSource, 'GPL-3.0-or-later')
+        && str_contains($adminGuideSource, 'LICENSE')
+        && str_contains($adminGuideSource, 'NOTICE.md'),
     'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
         && str_contains($gitattributesSource, '*.php text eol=lf')
+        && str_contains($gitattributesSource, 'LICENSE text eol=lf')
         && str_contains($gitattributesSource, '*.json text eol=lf')
         && str_contains($gitattributesSource, '*.md text eol=lf')
         && str_contains($gitattributesSource, '*.neon.dist text eol=lf')

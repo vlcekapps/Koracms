@@ -2,7 +2,7 @@
   "name": "vlcekapps/koracms",
   "description": "Kora CMS development tooling. Production runtime remains dependency-free.",
   "type": "project",
-  "license": "proprietary",
+  "license": "GPL-3.0-or-later",
   "require": {},
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.75",

@@ -124,6 +124,8 @@ if (!is_file($releaseSmokePath)) {
     $releaseSmokeSource = (string) file_get_contents($releaseSmokePath);
     $requiredReleaseSmokeSnippets = [
         "'.htaccess',",
+        "'LICENSE',",
+        "'NOTICE.md',",
         "'config.sample.php',",
         "'install.php',",
         "'migrate.php',",

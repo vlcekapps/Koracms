@@ -6,6 +6,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **GPL-3.0-or-later licence** – repozitář nově obsahuje plný text licence v `LICENSE`, projektové oznámení v `NOTICE.md`, Composer metadata používají SPDX `GPL-3.0-or-later` a release guardraily hlídají, aby licenční soubory byly součástí instalačního ZIPu i source archivu.
+
 ## [5.0.0-beta.1] – 2026-07-09
 
 ### Přidáno
