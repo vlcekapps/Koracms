@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu typů akcí nemáte potřebné oprávnění.');
 requireModuleEnabled('events');
 
@@ -221,7 +222,8 @@ adminHeader('Události – typy akcí');
     <div class="form-group">
       <label for="description">Popis</label>
       <textarea id="description" name="description" rows="4" aria-describedby="event-type-description-help"><?= h($formState['description']) ?></textarea>
-      <small id="event-type-description-help" class="field-help">Zobrazí se na veřejné stránce typu nad výpisem akcí.</small>
+      <small id="event-type-description-help" class="field-help">Zobrazí se na veřejné stránce typu nad výpisem akcí. <?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     </div>
 
     <div class="form-grid">

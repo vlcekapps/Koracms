@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií úřední desky nemáte potřebné oprávnění.');
 requireModuleEnabled('board');
 
@@ -173,7 +174,8 @@ adminHeader('Vývěska a oznámení – kategorie');
     <div class="form-group">
       <label for="description">Popis</label>
       <textarea id="description" name="description" rows="4" aria-describedby="description-help"><?= h($editId === null ? $formState['description'] : '') ?></textarea>
-      <small id="description-help" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek.</small>
+      <small id="description-help" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek. <?= adminHtmlSnippetSupportMarkup() ?></small>
+      <?php renderAdminContentReferencePicker('description'); ?>
     </div>
 
     <div class="form-grid">
@@ -254,7 +256,9 @@ adminHeader('Vývěska a oznámení – kategorie');
                 </div>
                 <div class="form-group">
                   <label for="description-<?= $categoryId ?>">Popis</label>
-                  <textarea id="description-<?= $categoryId ?>" name="description" rows="4"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                  <textarea id="description-<?= $categoryId ?>" name="description" rows="4" aria-describedby="description-help-<?= $categoryId ?>"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                  <small id="description-help-<?= $categoryId ?>" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek. <?= adminHtmlSnippetSupportMarkup() ?></small>
+                  <?php renderAdminContentReferencePicker('description-' . $categoryId); ?>
                 </div>
                 <div class="form-grid">
                   <div class="form-group">

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu sérií ke stažení nemáte potřebné oprávnění.');
 requireModuleEnabled('downloads');
 
@@ -211,7 +212,8 @@ adminHeader('Ke stažení – série a verze');
 
     <label for="series-description">Popis série</label>
     <textarea id="series-description" name="description" rows="4" aria-describedby="series-description-help"><?= h((string)$formState['description']) ?></textarea>
-    <small id="series-description-help" class="field-help">Zobrazí se na veřejné stránce série nad seznamem verzí.</small>
+    <small id="series-description-help" class="field-help">Zobrazí se na veřejné stránce série nad seznamem verzí. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('series-description'); ?>
 
     <label for="series-sort">Pořadí</label>
     <input type="number" id="series-sort" name="sort_order" min="0" value="<?= (int)$formState['sort_order'] ?>" aria-describedby="series-sort-help">

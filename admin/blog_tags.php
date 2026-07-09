@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireLogin(BASE_URL . '/admin/login.php');
 requireModuleEnabled('blog');
 
@@ -194,7 +195,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
   <fieldset>
     <legend>Nový štítek</legend>
     <p id="tag-slug-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</p>
-    <p id="tag-description-help">Popis se zobrazí na veřejné stránce štítku nad výpisem článků.</p>
+    <p id="tag-description-help" class="field-help">Popis se zobrazí na veřejné stránce štítku nad výpisem článků. <?= adminHtmlSnippetSupportMarkup() ?></p>
     <div class="form-grid">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
@@ -217,6 +218,7 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
     <div>
       <label for="description">Popis</label>
       <textarea id="description" name="description" rows="4" aria-describedby="tag-description-help"><?= h($formValues['description']) ?></textarea>
+      <?php renderAdminContentReferencePicker('description'); ?>
     </div>
     <div>
       <label for="meta_description">Meta description</label>
@@ -282,7 +284,9 @@ adminHeader('Štítky blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curre
               </div>
               <div>
                 <label for="edit-description-<?= $tagId ?>">Popis</label>
-                <textarea id="edit-description-<?= $tagId ?>" name="description" rows="4"><?= h($tagEditDescription) ?></textarea>
+                <textarea id="edit-description-<?= $tagId ?>" name="description" rows="4" aria-describedby="edit-tag-description-help-<?= $tagId ?>"><?= h($tagEditDescription) ?></textarea>
+                <small id="edit-tag-description-help-<?= $tagId ?>" class="field-help">Popis se zobrazí na veřejné stránce štítku nad výpisem článků. <?= adminHtmlSnippetSupportMarkup() ?></small>
+                <?php renderAdminContentReferencePicker('edit-description-' . $tagId); ?>
               </div>
               <div>
                 <label for="edit-meta-description-<?= $tagId ?>">Meta description</label>

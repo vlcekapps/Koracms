@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireLogin(BASE_URL . '/admin/login.php');
 requireModuleEnabled('blog');
 
@@ -345,7 +346,8 @@ adminHeader('Série článků blogu');
 
     <label for="series-description">Popis série</label>
     <textarea id="series-description" name="description" rows="3" aria-describedby="series-description-help"><?= h((string)$seriesForm['description']) ?></textarea>
-    <small id="series-description-help" class="field-help">Volitelné. Zobrazí se na veřejné stránce série a pomůže čtenářům pochopit souvislost článků.</small>
+    <small id="series-description-help" class="field-help">Volitelné. Zobrazí se na veřejné stránce série a pomůže čtenářům pochopit souvislost článků. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('series-description'); ?>
 
     <label><input type="checkbox" name="is_active" value="1"<?= (int)$seriesForm['is_active'] === 1 ? ' checked' : '' ?>> Zobrazovat sérii na webu</label>
   </fieldset>

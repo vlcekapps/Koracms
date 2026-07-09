@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireLogin(BASE_URL . '/admin/login.php');
 requireModuleEnabled('blog');
 
@@ -244,7 +245,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
   <fieldset>
     <legend>Nová kategorie</legend>
     <p id="category-slug-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</p>
-    <p id="category-description-help">Popis se zobrazí na veřejné stránce kategorie nad výpisem článků.</p>
+    <p id="category-description-help" class="field-help">Popis se zobrazí na veřejné stránce kategorie nad výpisem článků. <?= adminHtmlSnippetSupportMarkup() ?></p>
     <div class="form-grid">
       <div>
         <label for="name">Název <span aria-hidden="true">*</span></label>
@@ -274,6 +275,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
     <div>
       <label for="description">Popis</label>
       <textarea id="description" name="description" rows="4" aria-describedby="category-description-help"><?= h($formValues['description']) ?></textarea>
+      <?php renderAdminContentReferencePicker('description'); ?>
     </div>
     <div>
       <label for="meta_description">Meta description</label>
@@ -350,7 +352,9 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
               </div>
               <div>
                 <label for="edit-description-<?= $categoryId ?>">Popis</label>
-                <textarea id="edit-description-<?= $categoryId ?>" name="description" rows="4"><?= h($categoryEditDescription) ?></textarea>
+                <textarea id="edit-description-<?= $categoryId ?>" name="description" rows="4" aria-describedby="edit-category-description-help-<?= $categoryId ?>"><?= h($categoryEditDescription) ?></textarea>
+                <small id="edit-category-description-help-<?= $categoryId ?>" class="field-help">Popis se zobrazí na veřejné stránce kategorie nad výpisem článků. <?= adminHtmlSnippetSupportMarkup() ?></small>
+                <?php renderAdminContentReferencePicker('edit-description-' . $categoryId); ?>
               </div>
               <div>
                 <label for="edit-meta-description-<?= $categoryId ?>">Meta description</label>

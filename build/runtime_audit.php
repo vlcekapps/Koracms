@@ -7062,6 +7062,122 @@ if (!str_contains($contentHttpIntegrationSource, '/media/preview.php?id=')) {
     $contentSnippetIssues[] = 'build/http_integration.php is missing media preview endpoint coverage for PDF';
 }
 
+$contentLanguageCoverageSources = [
+    'themes/default/views/modules/blog-index.php' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/blog-index.php'),
+    'themes/default/views/modules/board-index.php' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/board-index.php'),
+    'themes/default/views/modules/events-index.php' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/events-index.php'),
+    'themes/default/views/modules/downloads-index.php' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-index.php'),
+    'themes/default/views/modules/downloads-series.php' => (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/downloads-series.php'),
+    'admin/blog_cats.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php'),
+    'admin/blog_tags.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php'),
+    'admin/blog_series.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/blog_series.php'),
+    'admin/board_cats.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php'),
+    'admin/event_types.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/event_types.php'),
+    'admin/dl_cats.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/dl_cats.php'),
+    'admin/download_series.php' => (string)file_get_contents(dirname(__DIR__) . '/admin/download_series.php'),
+];
+foreach ([
+    'blog taxonomy public render' => [
+        'file' => 'themes/default/views/modules/blog-index.php',
+        'fragments' => ['renderContent($taxonomyDescription)'],
+    ],
+    'board category public render' => [
+        'file' => 'themes/default/views/modules/board-index.php',
+        'fragments' => ['renderContent($activeCategoryDescription)'],
+    ],
+    'event type public render' => [
+        'file' => 'themes/default/views/modules/events-index.php',
+        'fragments' => ["renderContent((string)\$activeEventType['description'])"],
+    ],
+    'download category public render' => [
+        'file' => 'themes/default/views/modules/downloads-index.php',
+        'fragments' => ["renderContent((string)\$activeCategory['description'])"],
+    ],
+    'download series public render' => [
+        'file' => 'themes/default/views/modules/downloads-series.php',
+        'fragments' => ["renderContent((string)\$series['description'])"],
+    ],
+    'blog category language editor coverage' => [
+        'file' => 'admin/blog_cats.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'category-description-help',
+            'edit-category-description-help-',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('description')",
+            "renderAdminContentReferencePicker('edit-description-' . \$categoryId)",
+        ],
+    ],
+    'blog tag language editor coverage' => [
+        'file' => 'admin/blog_tags.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'tag-description-help',
+            'edit-tag-description-help-',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('description')",
+            "renderAdminContentReferencePicker('edit-description-' . \$tagId)",
+        ],
+    ],
+    'blog series language editor coverage' => [
+        'file' => 'admin/blog_series.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'series-description-help',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('series-description')",
+        ],
+    ],
+    'board category language editor coverage' => [
+        'file' => 'admin/board_cats.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'description-help',
+            'description-help-',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('description')",
+            "renderAdminContentReferencePicker('description-' . \$categoryId)",
+        ],
+    ],
+    'event type language editor coverage' => [
+        'file' => 'admin/event_types.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'event-type-description-help',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('description')",
+        ],
+    ],
+    'download category language editor coverage' => [
+        'file' => 'admin/dl_cats.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'download-category-description-help',
+            'download-category-description-help-',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('description')",
+            "renderAdminContentReferencePicker('description-' . \$categoryId)",
+        ],
+    ],
+    'download series language editor coverage' => [
+        'file' => 'admin/download_series.php',
+        'fragments' => [
+            "require_once __DIR__ . '/content_reference_picker.php';",
+            'series-description-help',
+            'adminHtmlSnippetSupportMarkup()',
+            "renderAdminContentReferencePicker('series-description')",
+        ],
+    ],
+] as $contentLanguageCoverageLabel => $contentLanguageCoverageSpec) {
+    $coverageFile = $contentLanguageCoverageSpec['file'];
+    $coverageSource = $contentLanguageCoverageSources[$coverageFile] ?? '';
+    foreach ($contentLanguageCoverageSpec['fragments'] as $contentLanguageCoverageFragment) {
+        if (!str_contains($coverageSource, $contentLanguageCoverageFragment)) {
+            $contentSnippetIssues[] = $contentLanguageCoverageLabel . ' is missing fragment in ' . $coverageFile . ': ' . $contentLanguageCoverageFragment;
+        }
+    }
+}
+
 if ($contentSnippetIssues === []) {
     echo "OK\n";
 } else {

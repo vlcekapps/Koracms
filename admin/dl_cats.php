@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu kategorií ke stažení nemáte potřebné oprávnění.');
 requireModuleEnabled('downloads');
 
@@ -157,7 +158,8 @@ adminHeader('Ke stažení – kategorie');
 
     <label for="description">Popis</label>
     <textarea id="description" name="description" rows="4" aria-describedby="download-category-description-help"><?= h($editId === null ? $formState['description'] : '') ?></textarea>
-    <small id="download-category-description-help" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek.</small>
+    <small id="download-category-description-help" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek. <?= adminHtmlSnippetSupportMarkup() ?></small>
+    <?php renderAdminContentReferencePicker('description'); ?>
 
     <div class="form-grid">
       <div class="form-group">
@@ -233,7 +235,9 @@ adminHeader('Ke stažení – kategorie');
                   </div>
                 </div>
                 <label for="description-<?= $categoryId ?>">Popis</label>
-                <textarea id="description-<?= $categoryId ?>" name="description" rows="4"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                <textarea id="description-<?= $categoryId ?>" name="description" rows="4" aria-describedby="download-category-description-help-<?= $categoryId ?>"><?= h($editCategoryHasError ? $formState['description'] : (string)($category['description'] ?? '')) ?></textarea>
+                <small id="download-category-description-help-<?= $categoryId ?>" class="field-help">Zobrazí se na veřejné stránce kategorie nad výpisem položek. <?= adminHtmlSnippetSupportMarkup() ?></small>
+                <?php renderAdminContentReferencePicker('description-' . $categoryId); ?>
                 <div class="form-grid">
                   <div class="form-group">
                     <label for="meta-title-<?= $categoryId ?>">Meta title</label>

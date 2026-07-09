@@ -2,7 +2,7 @@
 
 Tento checklist odděluje odpovědnost Kora CMS od odpovědnosti autora obsahu. CMS poskytuje pole, snippety, guardraily a bezpečné výchozí chování, ale nemůže automaticky zaručit kvalitu ručně vloženého textu, médií, titulků, přepisů, odkazů nebo HTML.
 
-Použijte ho před publikací nového nebo výrazně upraveného obsahu. Pokud nález vzniká ručně vloženým obsahem autora, zapisuje se jako author-content issue, ne jako chyba core CMS nebo výchozí šablony.
+Použijte ho před publikací nového nebo výrazně upraveného obsahu. Patří sem nejen články a stránky, ale i veřejně renderované popisy kategorií, štítků, sérií, typů akcí nebo dalších taxonomií. Pokud nález vzniká ručně vloženým obsahem autora, zapisuje se jako author-content issue, ne jako chyba core CMS nebo výchozí šablony.
 
 ## Rychlá kontrola před publikací
 
@@ -49,6 +49,8 @@ Titulky musí být synchronizované s řečí a mají zahrnovat podstatné zvuky
 Stránka Kora CMS je ve výchozím stavu česky. Delší nebo významné cizojazyčné části označte atributem `lang`, aby je čtečka obrazovky četla správným hlasem.
 
 V čistém HTML editoru můžete použít nástroj `Jazyk části textu`: vyberte cizojazyčný úsek, zadejte kód jazyka, například `en`, a vložte označení. Helper vytvoří inline značku typu `<span lang="en">open source</span>`.
+
+Stejný helper používejte i v taxonomických popisech, které se veřejně vykreslují jako HTML: blogové kategorie, štítky a série, kategorie vývěsky, typy akcí a kategorie nebo série Ke stažení. Krátký popis kategorie může čtečka číst stejně často jako úvod článku, takže cizojazyčnou citaci nebo název označte i tam.
 
 Příklady:
 
