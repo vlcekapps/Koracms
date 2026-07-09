@@ -125,6 +125,8 @@ CSV export odpovědí může obsahovat osobní a provozní údaje z formuláře,
 
 Hromadné akce nad odpověďmi, například změna stavu nebo trvalé smazání vybraných odpovědí, vyžadují kontrolní checkbox potvrzující kontrolu výběru a zvolené akce. Bez potvrzení server akci odmítne ještě před změnou dat, odstraněním příloh/historie nebo zápisem audit logu.
 
+Smazání celého formuláře je samostatně potvrzované v přehledu formulářů. Řádkový review text předem popíše veřejnou URL formuláře, počet polí, odpovědí, záznamů historie odpovědí a dopad na nahrané soubory v odpovědích; bez checkboxu `confirm_form_delete_<id>` server formulář, pole, odpovědi, historii ani audit log nezmění.
+
 ### GitHub issue bridge
 
 Z detailu odpovědi lze:
@@ -1142,6 +1144,8 @@ Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojis
 Individuální mazání odběratele newsletteru má stejný review krok v přehledu i detailu odběratele. Formulář popisuje, že se odstraní e-mail z aktivních odběrů a historie odeslaných rozesílek zůstane zachovaná; bez `confirm_newsletter_subscriber_delete_<id>` server odběratele nesmaže ani nezapíše audit log.
 
 Hromadné akce nad odpověďmi Form Builderu navazují stejným principem. Před změnou stavu nebo trvalým smazáním vybraných odpovědí musí správce potvrdit, že zkontroloval výběr i zvolenou akci; bez potvrzení se odpovědi, přílohy, historie ani audit log nezmění.
+
+Mazání celého Form Builder formuláře používá stejný review-and-confirm pattern přímo v přehledu formulářů. Formulář popíše veřejnou URL, počet polí, odpovědí, záznamů historie odpovědí a dopad na nahrané soubory; bez `confirm_form_delete_<id>` server nesmaže formulář, pole, odpovědi, historii ani nezapíše audit log.
 
 Hromadné akce nad alby galerie používají stejný review-and-confirm pattern. Před smazáním vybraných alb nebo ZIP exportem fotografií musí správce potvrdit, že zkontroloval výběr i zvolenou akci; bez potvrzení se alba, fotografie a revize nesmažou a ZIP export se neodešle ani nezapíše do audit logu.
 

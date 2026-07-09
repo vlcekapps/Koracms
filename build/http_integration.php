@@ -6494,6 +6494,152 @@ try {
 
     httpIntegrationPrintResult('forms_nav_http', $formsNavIssues, $failures);
 
+    $formDeleteIssues = [];
+    $deleteFormTitle = 'HTTP mazání Form Builder formuláře ' . bin2hex(random_bytes(3));
+    $deleteFormSlug = uniqueFormSlug($pdo, 'http-delete-form-' . bin2hex(random_bytes(4)));
+    $pdo->prepare(
+        "INSERT INTO cms_forms (
+            title, slug, description, success_message, submit_label, notification_email, notification_subject,
+            redirect_url, success_behavior, success_primary_label, success_primary_url, success_secondary_label,
+            success_secondary_url, webhook_enabled, webhook_url, webhook_secret, webhook_events, use_honeypot,
+            submitter_confirmation_enabled, submitter_email_field, submitter_confirmation_subject,
+            submitter_confirmation_message, show_in_nav, is_active
+        )
+         VALUES (?, ?, 'Dočasný formulář pro HTTP review smazání.', '', 'Odeslat formulář', '', '', '', 'message', '', '', '', '', 0, '', '', '', 1, 0, '', '', '', 0, 1)"
+    )->execute([
+        $deleteFormTitle,
+        $deleteFormSlug,
+    ]);
+    $deleteFormId = (int)$pdo->lastInsertId();
+    $createdFormIds[] = $deleteFormId;
+    $deleteFormFieldStmt = $pdo->prepare(
+        "INSERT INTO cms_form_fields (
+            form_id, field_type, label, name, placeholder, default_value, help_text, options,
+            accept_types, max_file_size_mb, allow_multiple, layout_width, start_new_row,
+            show_if_field, show_if_operator, show_if_value, is_required, sort_order
+        )
+         VALUES (?, ?, ?, ?, '', '', '', '', '', 1, 0, 'full', 0, '', '', '', ?, ?)"
+    );
+    $deleteFormFieldStmt->execute([$deleteFormId, 'text', 'Jméno', 'full_name', 1, 10]);
+    $deleteFormFieldStmt->execute([$deleteFormId, 'file', 'Příloha', 'attachment', 0, 20]);
+    $deleteFormSubmissionData = json_encode([
+        'full_name' => 'HTTP Form Delete',
+        'attachment' => [
+            'stored_name' => 'http-form-delete-missing.txt',
+            'original_name' => 'missing.txt',
+        ],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $pdo->prepare(
+        "INSERT INTO cms_form_submissions (form_id, data, ip_hash, status, priority, labels, created_at, updated_at)
+         VALUES (?, ?, ?, 'new', 'medium', 'HTTP delete', NOW(), NOW())"
+    )->execute([
+        $deleteFormId,
+        $deleteFormSubmissionData !== false ? $deleteFormSubmissionData : '{}',
+        hash('sha256', 'http-form-delete'),
+    ]);
+    $deleteFormSubmissionId = (int)$pdo->lastInsertId();
+    $createdFormSubmissionIds[] = $deleteFormSubmissionId;
+    $pdo->prepare(
+        "INSERT INTO cms_form_submission_history (submission_id, actor_user_id, event_type, message, created_at)
+         VALUES (?, ?, 'note', 'Historie před smazáním formuláře.', NOW())"
+    )->execute([$deleteFormSubmissionId, $adminUserId]);
+
+    $formDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/forms.php', $adminSession['cookie'], 0);
+    $formDeleteConfirmInputId = 'confirm-form-delete-' . $deleteFormId;
+    if (httpIntegrationStatusCode($formDeletePage) !== 200
+        || !str_contains($formDeletePage['body'], htmlspecialchars($deleteFormTitle, ENT_QUOTES, 'UTF-8'))
+        || !str_contains($formDeletePage['body'], 'form-delete-review-' . $deleteFormId)
+        || !str_contains($formDeletePage['body'], '2 polí,')
+        || !str_contains($formDeletePage['body'], '1 odpovědí,')
+        || !str_contains($formDeletePage['body'], '1 záznamů historie odpovědí')
+        || !httpIntegrationInputHasAttributes($formDeletePage['body'], $formDeleteConfirmInputId, [
+            'name' => 'confirm_form_delete_' . $deleteFormId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'form-delete-review-' . $deleteFormId,
+        ])) {
+        $formDeleteIssues[] = 'přehled formulářů nevykreslil review checkbox pro smazání Form Builder formuláře';
+    }
+
+    $formDeleteLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_delete'")
+        ->fetchColumn();
+    $formDeleteMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($formDeletePage['body'], 'csrf_token'),
+            'id' => (string)$deleteFormId,
+            'redirect' => BASE_URL . '/admin/forms.php',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formDeleteExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_forms WHERE id = ?');
+    $formDeleteExistsStmt->execute([$deleteFormId]);
+    $formDeleteFieldsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_fields WHERE form_id = ?');
+    $formDeleteFieldsStmt->execute([$deleteFormId]);
+    $formDeleteSubmissionsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submissions WHERE form_id = ?');
+    $formDeleteSubmissionsStmt->execute([$deleteFormId]);
+    $formDeleteHistoryStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ?');
+    $formDeleteHistoryStmt->execute([$deleteFormSubmissionId]);
+    $formDeleteLogCountAfterMissing = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_delete'")
+        ->fetchColumn();
+    $formDeleteMissingConfirmLocation = BASE_URL . '/admin/forms.php?delete_error=confirm_required&delete_error_id=' . $deleteFormId;
+    if (httpIntegrationStatusCode($formDeleteMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($formDeleteMissingConfirmResponse['headers'], $formDeleteMissingConfirmLocation, $baseUrl)
+        || (int)$formDeleteExistsStmt->fetchColumn() !== 1
+        || (int)$formDeleteFieldsStmt->fetchColumn() !== 2
+        || (int)$formDeleteSubmissionsStmt->fetchColumn() !== 1
+        || (int)$formDeleteHistoryStmt->fetchColumn() !== 1
+        || $formDeleteLogCountAfterMissing !== $formDeleteLogCountBefore) {
+        $formDeleteIssues[] = 'smazání Form Builder formuláře bez potvrzení smazalo data nebo zapsalo audit log';
+    }
+
+    $formDeleteErrorPage = fetchUrl($baseUrl . $formDeleteMissingConfirmLocation, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($formDeleteErrorPage) !== 200
+        || !str_contains($formDeleteErrorPage['body'], 'id="form-delete-error" class="error" role="alert" aria-atomic="true">Formulář nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($formDeleteErrorPage['body'], 'id="confirm-form-delete-' . $deleteFormId . '-error"')
+        || !str_contains($formDeleteErrorPage['body'], 'Před smazáním formuláře potvrďte, že jste zkontrolovali počet polí, odpovědí, historii odpovědí a případné přílohy.')
+        || !httpIntegrationInputHasAttributes($formDeleteErrorPage['body'], $formDeleteConfirmInputId, [
+            'name' => 'confirm_form_delete_' . $deleteFormId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'form-delete-review-' . $deleteFormId . ' confirm-form-delete-' . $deleteFormId . '-error',
+        ])) {
+        $formDeleteIssues[] = 'smazání Form Builder formuláře bez potvrzení nevrátilo text-backed alert a field-level chybu';
+    }
+
+    $formDeleteConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/form_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($formDeleteErrorPage['body'], 'csrf_token'),
+            'id' => (string)$deleteFormId,
+            'redirect' => BASE_URL . '/admin/forms.php',
+            'confirm_form_delete_' . $deleteFormId => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $formDeleteExistsStmt->execute([$deleteFormId]);
+    $formDeleteFieldsStmt->execute([$deleteFormId]);
+    $formDeleteSubmissionsStmt->execute([$deleteFormId]);
+    $formDeleteHistoryStmt->execute([$deleteFormSubmissionId]);
+    $formDeleteLogCountAfterConfirm = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_delete'")
+        ->fetchColumn();
+    $formDeleteSuccessPage = fetchUrl($baseUrl . BASE_URL . '/admin/forms.php?deleted=1', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($formDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($formDeleteConfirmedResponse['headers'], BASE_URL . '/admin/forms.php?deleted=1', $baseUrl)
+        || !str_contains($formDeleteSuccessPage['body'], '<p class="success" role="status">Formulář byl smazán.</p>')
+        || (int)$formDeleteExistsStmt->fetchColumn() !== 0
+        || (int)$formDeleteFieldsStmt->fetchColumn() !== 0
+        || (int)$formDeleteSubmissionsStmt->fetchColumn() !== 0
+        || (int)$formDeleteHistoryStmt->fetchColumn() !== 0
+        || $formDeleteLogCountAfterConfirm !== $formDeleteLogCountBefore + 1) {
+        $formDeleteIssues[] = 'potvrzené smazání Form Builder formuláře neproběhlo s očekávaným PRG stavem, cleanupem nebo audit logem';
+    }
+
+    httpIntegrationPrintResult('form_delete_error_prevention_http', $formDeleteIssues, $failures);
+
     $galleryPickerIssues = [];
     $galleryAlbumSlug = 'http-picker-gallery-' . bin2hex(random_bytes(4));
     $galleryAlbumTitle = 'HTTP Picker Letecký den ' . date('His');

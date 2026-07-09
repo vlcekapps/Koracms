@@ -15303,6 +15303,7 @@ $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $pollsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls.php');
 $formBuilderSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_form.php');
 $formSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_save.php');
+$formDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_delete.php');
 $presentationHelpersSource = (string)file_get_contents(dirname(__DIR__) . '/lib/presentation.php');
 $boardCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cats.php');
 $boardCategoryDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_cat_delete.php');
@@ -17792,6 +17793,30 @@ foreach ([
     }
 }
 foreach ([
+    '$deleteError = trim((string)($_GET[\'delete_error\'] ?? \'\'));',
+    'Formulář nejde smazat bez potvrzení kontroly dopadu.',
+    '$deleteConfirmField = \'confirm_form_delete_\' . $formId;',
+    'form-delete-review-',
+    'Smazání odstraní veřejný formulář',
+    'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+    'adminRenderFieldError($deleteConfirmField, $deleteErrorFields',
+    'Před smazáním formuláře potvrďte, že jste zkontrolovali počet polí, odpovědí, historii odpovědí a případné přílohy.',
+] as $formsOverviewDeleteFragment) {
+    if (!str_contains($formsOverviewSource, $formsOverviewDeleteFragment)) {
+        $adminFieldErrorIssues[] = 'Form Builder overview is missing delete error-prevention fragment: ' . $formsOverviewDeleteFragment;
+    }
+}
+if (!str_contains($formDeleteSource, "\$confirmFieldName = 'confirm_form_delete_' . \$id;")
+    || !str_contains($formDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($formDeleteSource, '$pdo->beginTransaction();')
+    || !str_contains($formDeleteSource, 'DELETE FROM cms_form_submission_history WHERE submission_id IN')
+    || !str_contains($formDeleteSource, 'DELETE FROM cms_form_submissions WHERE form_id = ?')
+    || !str_contains($formDeleteSource, 'DELETE FROM cms_form_fields WHERE form_id = ?')
+    || !str_contains($formDeleteSource, 'formDeleteUploadedFilesFromSubmissionData($submissionData)')
+    || !str_contains($formDeleteSource, "logAction(\n        'form_delete'")) {
+    $adminFieldErrorIssues[] = 'Form Builder delete handler is missing server-side review-and-confirm guardrails';
+}
+foreach ([
     '\'title\' => \'Doplňte název stránky. Použije se v administraci',
     '\'blog\' => \'Vyberte dostupný blog ze seznamu',
     '$pagePublishAtErrorMessage = \'Znovu vyberte plánované publikování',
@@ -18452,6 +18477,13 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzený CSV export odpovědí nevrátil field-level chybu nebo zapsal export')
     || !str_contains($httpIntegrationSource, 'confirm_form_submissions_csv_export')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing form submissions CSV export error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('form_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'smazání Form Builder formuláře bez potvrzení smazalo data nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_form_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání Form Builder formuláře neproběhlo s očekávaným PRG stavem, cleanupem nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing Form Builder delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('poll_voting_modes_http'")
