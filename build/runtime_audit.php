@@ -34,6 +34,7 @@ $presentationSource = (string) file_get_contents(__DIR__ . '/../lib/presentation
 $themeSource = (string) file_get_contents(__DIR__ . '/../lib/theme.php');
 $publicHeaderSource = (string) file_get_contents(__DIR__ . '/../themes/default/partials/header.php');
 $defaultNotFoundViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/not-found.php');
+$defaultChangelogViewSource = is_file(__DIR__ . '/../themes/default/views/changelog.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/changelog.php') : '';
 $authorViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/account/author.php');
 $authorsViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/account/authors.php');
 $themeAccountReservationsViewSource = (string) file_get_contents(__DIR__ . '/../themes/default/views/account/reservations.php');
@@ -42,6 +43,7 @@ $webhooksSource = (string) file_get_contents(__DIR__ . '/../lib/webhooks.php');
 $mailSource = (string) file_get_contents(__DIR__ . '/../lib/mail.php');
 $messagesSource = (string) file_get_contents(__DIR__ . '/../lib/messages.php');
 $commentsSource = (string) file_get_contents(__DIR__ . '/../lib/comments.php');
+$contentSource = (string) file_get_contents(__DIR__ . '/../lib/content.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
 $errorPageCssSource = is_file(__DIR__ . '/../assets/error.css') ? (string) file_get_contents(__DIR__ . '/../assets/error.css') : '';
@@ -63,6 +65,7 @@ $robotsSource = (string) file_get_contents(__DIR__ . '/../robots.php');
 $healthSource = (string) file_get_contents(__DIR__ . '/../health.php');
 $sitemapSource = (string) file_get_contents(__DIR__ . '/../sitemap.php');
 $searchSource = (string) file_get_contents(__DIR__ . '/../search.php');
+$changelogSource = is_file(__DIR__ . '/../changelog.php') ? (string) file_get_contents(__DIR__ . '/../changelog.php') : '';
 $pageSource = (string) file_get_contents(__DIR__ . '/../page.php');
 $authorSource = (string) file_get_contents(__DIR__ . '/../author.php');
 $authorsIndexSource = (string) file_get_contents(__DIR__ . '/../authors/index.php');
@@ -7955,6 +7958,8 @@ $adminFormSubmissionFileCapabilityPosition = strpos($adminFormSubmissionFileSour
 $adminFormSubmissionFileMethodGuardBeforeCapability = is_int($adminFormSubmissionFileMethodGuardPosition)
     && is_int($adminFormSubmissionFileCapabilityPosition)
     && $adminFormSubmissionFileMethodGuardPosition < $adminFormSubmissionFileCapabilityPosition;
+$publicChangelogRoutePosition = strpos($htaccessSource, 'RewriteRule ^changelog/?$ changelog.php [L,QSA,NC]');
+$blogCatchAllRoutePosition = strpos($htaccessSource, 'RewriteRule ^([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1');
 $foundationChecks = [
     'composer dev tooling exists' => str_contains($composerSource, '"require-dev"')
         && str_contains($composerSource, 'phpstan/phpstan')
@@ -8961,6 +8966,22 @@ $foundationChecks = [
         && str_contains($readmeSource, 'GPL-3.0-or-later')
         && str_contains($adminGuideSource, 'LICENSE')
         && str_contains($adminGuideSource, 'NOTICE.md'),
+    'public changelog page is wired safely' => is_int($publicChangelogRoutePosition)
+        && is_int($blogCatchAllRoutePosition)
+        && $publicChangelogRoutePosition < $blogCatchAllRoutePosition
+        && str_contains($changelogSource, "__DIR__ . '/CHANGELOG.md'")
+        && str_contains($changelogSource, 'renderProjectMarkdown($changelogMarkdown)')
+        && !str_contains($changelogSource, '$_GET')
+        && str_contains($contentSource, 'function renderProjectMarkdown(string $text): string')
+        && str_contains($contentSource, '$parsedown->setSafeMode(true);')
+        && str_contains($httpServerRouterSource, "#^changelog/?$#i")
+        && str_contains($httpServerRouterSource, "routeToScript('changelog.php')")
+        && str_contains($httpServerRouterSelftestSource, '/changelog')
+        && str_contains($httpServerRouterSelftestSource, "'changelog.php' => 'changelog'")
+        && str_contains($defaultChangelogViewSource, 'aria-labelledby="changelog-title"')
+        && str_contains($defaultChangelogViewSource, 'id="changelog-title"')
+        && str_contains($readmeSource, '/changelog')
+        && str_contains($adminGuideSource, '/changelog'),
     'repository attributes protect source archives and line endings' => str_contains($gitattributesSource, '.gitattributes text eol=lf')
         && str_contains($gitattributesSource, '*.php text eol=lf')
         && str_contains($gitattributesSource, 'LICENSE text eol=lf')

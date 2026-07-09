@@ -27,6 +27,7 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 - [Nginx](#nginx)
 - [Ověření po změnách](#ověření-po-změnách)
 - [Licence](#licence)
+- [Veřejný changelog](#veřejný-changelog)
 - [Další dokumentace](#další-dokumentace)
 
 ---
@@ -935,6 +936,12 @@ Součástí návrhu nového modulu je také kontrola dokumentů [docs/accessibil
 Kora CMS je svobodný software licencovaný pod `GPL-3.0-or-later`. Plné znění licence je v souboru `LICENSE` a projektové copyright/licenční oznámení v `NOTICE.md`. Tato licence se vztahuje na zdrojový kód Kora CMS, přibalené šablony, skripty, styly a runtime assety distribuované s projektem, pokud konkrétní soubor neuvádí jinak.
 
 Obsah vytvořený administrátory, autory nebo návštěvníky webu, nahraná média, databázové záznamy a site-specific data nejsou automaticky licencované pod GPL jen proto, že běží v Kora CMS; jejich licenci určuje vlastník webu nebo autor obsahu.
+
+---
+
+## Veřejný changelog
+
+Veřejný seznam změn CMS je dostupný na `/changelog`. Stránka vykresluje celý `CHANGELOG.md` v běžné veřejné šabloně, včetně sekce `Unreleased`, aby návštěvníci nemuseli otevírat surový Markdown soubor. Odkaz se automaticky nepřidává do navigace ani sitemapu; pokud jej chcete návštěvníkům nabídnout viditelně, přidejte `/changelog` do menu, patičky nebo obsahu ručně.
 
 ---
 

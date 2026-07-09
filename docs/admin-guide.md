@@ -1098,6 +1098,8 @@ Kora CMS drží produkční běh bez Composer závislostí. Adresář `vendor/` 
 
 Kora CMS je licencovaný pod `GPL-3.0-or-later`. Plné znění licence je v root souboru `LICENSE` a krátké projektové oznámení v `NOTICE.md`; oba soubory jsou povinnou součástí instalačního ZIPu i source archivu. Licence se vztahuje na zdrojový kód CMS, přibalené šablony, skripty, styly a runtime assety distribuované s projektem, pokud konkrétní soubor neuvádí jinak. Obsah webu, nahraná média, databázová data a texty vložené správci nebo návštěvníky zůstávají pod licencí vlastníka webu nebo autora obsahu.
 
+Veřejný changelog Kora CMS je dostupný na `/changelog`. Jde o read-only systémovou stránku, která vykresluje celý `CHANGELOG.md` včetně `Unreleased` v běžné veřejné šabloně. CMS ji záměrně nepřidává automaticky do hlavní navigace ani sitemapu; pokud ji má konkrétní web ukazovat návštěvníkům, přidejte odkaz ručně do menu, patičky nebo obsahu.
+
 Přihlašování a obnova hesla používají kombinovaný rate limiting:
 
 - limit podle IP adresy

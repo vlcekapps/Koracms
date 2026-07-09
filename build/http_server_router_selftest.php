@@ -265,6 +265,7 @@ try {
         'robots.php' => 'robots',
         'sitemap.php' => 'sitemap',
         'authors/index.php' => 'authors',
+        'changelog.php' => 'changelog',
         'author.php' => 'author',
         'blog/article.php' => 'blog-article',
         'chat/index.php' => 'chat-index',
@@ -297,6 +298,7 @@ try {
     httpServerRouterSelfTestAssertRoute(httpServerRouterSelfTestFetchJson($baseUrl . '/robots.txt'), 'robots', '/robots.php');
     httpServerRouterSelfTestAssertRoute(httpServerRouterSelfTestFetchJson($baseUrl . '/sitemap.xml'), 'sitemap', '/sitemap.php');
     httpServerRouterSelfTestAssertRoute(httpServerRouterSelfTestFetchJson($baseUrl . '/authors'), 'authors', '/authors/index.php');
+    httpServerRouterSelfTestAssertRoute(httpServerRouterSelfTestFetchJson($baseUrl . '/changelog'), 'changelog', '/changelog.php');
 
     $authorRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/author/pavel-vlcek?source=test');
     httpServerRouterSelfTestAssertRoute($authorRoute, 'author', '/author.php');

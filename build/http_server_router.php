@@ -108,6 +108,8 @@ if ($routePath === '') {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('sitemap.php');
 } elseif (preg_match('#^authors/?$#i', $routePath) === 1) {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('authors/index.php');
+} elseif (preg_match('#^changelog/?$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('changelog.php');
 } else {
     $routeMap = [
         '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],

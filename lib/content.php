@@ -1376,6 +1376,18 @@ function renderContent(string $text): string
     return $parsedown->text(renderContentShortcodes($text));
 }
 
+function renderProjectMarkdown(string $text): string
+{
+    static $parsedown = null;
+    if ($parsedown === null) {
+        require_once __DIR__ . '/Parsedown.php';
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+    }
+
+    return $parsedown->text($text);
+}
+
 function formatFileSize(int $bytes): string
 {
     if ($bytes >= 1048576) {

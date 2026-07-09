@@ -681,6 +681,30 @@ try {
     }
     httpIntegrationPrintResult('robots_http', $robotsIssues, $failures);
 
+    $changelogIssues = [];
+    foreach ([
+        'changelog.php' => $baseUrl . BASE_URL . '/changelog.php',
+        'changelog_clean_url' => $baseUrl . BASE_URL . '/changelog',
+    ] as $changelogLabel => $changelogUrl) {
+        $changelogResponse = fetchUrl($changelogUrl, '', 0);
+        if (httpIntegrationStatusCode($changelogResponse) !== 200) {
+            $changelogIssues[] = $changelogLabel . ' nevrátil veřejnou 200 odpověď';
+            continue;
+        }
+        if (!httpIntegrationHeaderContains($changelogResponse, 'Content-Type', 'text/html')) {
+            $changelogIssues[] = $changelogLabel . ' neposlal HTML odpověď';
+        }
+        foreach (['<main', 'Changelog', 'Unreleased', '5.0.0-beta.1'] as $expectedChangelogFragment) {
+            if (!str_contains($changelogResponse['body'], $expectedChangelogFragment)) {
+                $changelogIssues[] = $changelogLabel . ' neobsahuje očekávaný obsah: ' . $expectedChangelogFragment;
+            }
+        }
+        if (str_contains($changelogResponse['body'], "\n## [Unreleased]")) {
+            $changelogIssues[] = $changelogLabel . ' vykreslil raw Markdown nadpis místo HTML obsahu';
+        }
+    }
+    httpIntegrationPrintResult('public_changelog_http', $changelogIssues, $failures);
+
     $publicModuleNavigationIssues = [];
     foreach (array_keys(moduleNavigationDefaults()) as $moduleKey) {
         saveSetting(moduleSettingKey($moduleKey), '0');
