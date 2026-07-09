@@ -6,6 +6,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+## [5.0.0-beta.1] – 2026-07-09
+
 ### Přidáno
 - **Konfigurovatelný limit uploadů** – obecná nastavení webu nově obsahují maximální velikost uploadu v MB. Hodnota se používá v knihovně médií, hromadném uploadu galerie a jako výchozí limit nových souborových polí ve Form Builderu; instalace i migrace zachovávají výchozích 10 MB.
 - **Návrhová šablona nového modulu** – dokument `docs/module-proposal-template.md` pomáhá před implementací zachytit workflow, datový model, `install.php`/`migrate.php`, export/import, bezpečnost, ACR dopady, testy a dokumentaci; module contract audit hlídá, aby šablona i odkazy zůstaly součástí module-ready procesu.
