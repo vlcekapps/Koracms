@@ -20,6 +20,8 @@ if (!canCurrentUserWriteToBlog($blogId)) {
 $seriesError = '';
 $message = trim((string)($_GET['msg'] ?? ''));
 $editSeriesId = inputInt('get', 'edit');
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorSeriesId = inputInt('get', 'delete_error_id');
 $seriesFieldErrors = [];
 $seriesFieldErrorMessages = [
     'title' => 'Doplňte krátký název série, například Průvodce začátečníka.',
@@ -96,9 +98,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_series') {
         $deleteSeriesId = inputInt('post', 'series_id');
         if ($deleteSeriesId !== null) {
+            $seriesStmt = $pdo->prepare(
+                "SELECT id
+                 FROM cms_blog_series
+                 WHERE id = ? AND blog_id = ?
+                 LIMIT 1"
+            );
+            $seriesStmt->execute([$deleteSeriesId, $blogId]);
+            $seriesForDelete = $seriesStmt->fetch() ?: null;
+            if (!$seriesForDelete) {
+                header('Location: ' . BASE_URL . '/admin/blog_series.php?blog_id=' . $blogId);
+                exit;
+            }
+
+            $confirmFieldName = 'confirm_blog_series_delete_' . $deleteSeriesId;
+            $deleteConfirmed = isset($_POST[$confirmFieldName])
+                && (string)$_POST[$confirmFieldName] === '1';
+            if (!$deleteConfirmed) {
+                header('Location: ' . BASE_URL . '/admin/blog_series.php?blog_id=' . $blogId . '&delete_error=confirm_required&delete_error_id=' . $deleteSeriesId);
+                exit;
+            }
+
+            $articleCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series_items WHERE series_id = ?');
+            $articleCountStmt->execute([$deleteSeriesId]);
+            $seriesArticleCount = (int)$articleCountStmt->fetchColumn();
+
             $pdo->prepare("DELETE FROM cms_blog_series_items WHERE series_id = ?")->execute([$deleteSeriesId]);
             $pdo->prepare("DELETE FROM cms_blog_series WHERE id = ? AND blog_id = ?")->execute([$deleteSeriesId, $blogId]);
-            logAction('blog_series_delete', 'blog_id=' . $blogId . ', id=' . $deleteSeriesId);
+            logAction('blog_series_delete', "blog_id={$blogId};id={$deleteSeriesId};article_count={$seriesArticleCount}");
         }
         header('Location: ' . BASE_URL . '/admin/blog_series.php?blog_id=' . $blogId . '&msg=deleted');
         exit;
@@ -283,6 +310,9 @@ adminHeader('Série článků blogu');
 <?php elseif ($message === 'deleted'): ?>
   <p class="success" role="status">Série článků byla smazána.</p>
 <?php endif; ?>
+<?php if ($deleteConfirmError): ?>
+  <p id="blog-series-delete-error" class="error" role="alert" aria-atomic="true">Sérii článků nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.</p>
+<?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="<?= BASE_URL ?>/admin/blog.php?blog=<?= $blogId ?>"><span aria-hidden="true">←</span> Zpět na články blogu</a>
@@ -374,6 +404,15 @@ adminHeader('Série článků blogu');
     </thead>
     <tbody>
       <?php foreach ($seriesRows as $seriesRow): ?>
+        <?php
+          $seriesId = (int)$seriesRow['id'];
+          $deleteConfirmField = 'confirm_blog_series_delete_' . $seriesId;
+          $deleteConfirmId = 'confirm-blog-series-delete-' . $seriesId;
+          $deleteReviewId = 'blog-series-delete-review-' . $seriesId;
+          $deleteFieldErrorId = 'confirm-blog-series-delete-' . $seriesId . '-error';
+          $deleteHasError = $deleteConfirmError && $deleteErrorSeriesId === $seriesId;
+          $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+          ?>
         <tr>
           <td>
             <?= h((string)$seriesRow['title']) ?>
@@ -388,13 +427,30 @@ adminHeader('Série článků blogu');
             <?php if ((int)$seriesRow['is_active'] === 1 && (int)$seriesRow['article_count'] > 0): ?>
               <a class="btn" href="<?= h(blogSeriesPath($blog, $seriesRow)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
-            <a class="btn" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $blogId ?>&amp;edit=<?= (int)$seriesRow['id'] ?>">Upravit</a>
-            <form method="post" class="admin-inline-form">
+            <a class="btn" href="<?= BASE_URL ?>/admin/blog_series.php?blog_id=<?= $blogId ?>&amp;edit=<?= $seriesId ?>">Upravit</a>
+            <form method="post" class="admin-inline-form" novalidate<?= $deleteHasError ? ' aria-describedby="blog-series-delete-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
               <input type="hidden" name="action" value="delete_series">
-              <input type="hidden" name="series_id" value="<?= (int)$seriesRow['id'] ?>">
-              <button type="submit" class="btn btn-danger" data-confirm="Smazat sérii článků? Články zůstanou zachované, smaže se jen jejich zařazení do této série.">Smazat</button>
+              <input type="hidden" name="series_id" value="<?= $seriesId ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Smazání série článků <?= h((string)$seriesRow['title']) ?></legend>
+                <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                  Smazání odebere sérii z <?= (int)$seriesRow['article_count'] ?> článků. Články zůstanou zachované bez této série.
+                </p>
+                <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="<?= h($deleteConfirmId) ?>"
+                    name="<?= h($deleteConfirmField) ?>"
+                    value="1"
+                    required
+                    aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                  Potvrzuji smazání této série článků.
+                </label>
+                <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním série potvrďte, že jste zkontrolovali dopad na zařazené články.', $deleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger" data-confirm="Smazat sérii článků? Články zůstanou zachované bez této série.">Smazat</button>
+              </fieldset>
             </form>
           </td>
         </tr>

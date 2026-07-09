@@ -11652,7 +11652,7 @@ echo "=== admin_bulk_row_label_guardrails ===\n";
 $adminBulkRowLabelIssues = [];
 $adminBulkRowLabelExpectations = [
     'admin/blog.php' => ['<label for="article-select-<?= (int)$article[\'id\'] ?>" class="sr-only">Vybrat článek', '<input type="checkbox" id="article-select-<?= (int)$article[\'id\'] ?>" name="ids[]"'],
-    'admin/blog_cats.php' => ['<label for="blog-category-select-<?= (int)$category[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="blog-category-select-<?= (int)$category[\'id\'] ?>" name="ids[]"'],
+    'admin/blog_cats.php' => ['<label for="blog-category-select-<?= $categoryId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="blog-category-select-<?= $categoryId ?>" name="ids[]"'],
     'admin/board.php' => ['<label for="board-document-select-<?= (int)$document[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="board-document-select-<?= (int)$document[\'id\'] ?>" name="ids[]"'],
     'admin/chat.php' => ['<label for="chat-message-select-<?= (int)$message[\'id\'] ?>" class="sr-only">Vybrat chat zprávu od', '<input type="checkbox" id="chat-message-select-<?= (int)$message[\'id\'] ?>" name="ids[]"'],
     'admin/comments.php' => ['<label for="comment-select-<?= (int)$comment[\'id\'] ?>" class="sr-only">Vybrat komentář od', '<input type="checkbox" id="comment-select-<?= (int)$comment[\'id\'] ?>" name="ids[]"'],
@@ -11828,7 +11828,9 @@ $blogLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.
 $blogListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $blogCatsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cats.php');
+$blogCatDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_cat_delete.php');
 $blogTagsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tags.php');
+$blogTagDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_tag_delete.php');
 $blogDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_blog_delete.php');
 $blogTransferSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $blogMembersSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
@@ -17224,6 +17226,12 @@ foreach ([
             '<p id="blog-series-error" class="error" role="alert" aria-atomic="true"><?= h($seriesError) ?></p>',
             "adminFieldAttributes('title', \$seriesFieldErrors, [], ['series-title-help'])",
             "adminRenderFieldError('title', \$seriesFieldErrors, [], \$seriesFieldErrorMessages['title']);",
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
+            '<p id="blog-series-delete-error" class="error" role="alert" aria-atomic="true">Sérii článků nejde smazat bez potvrzení kontroly dopadu.',
+            '$deleteConfirmField = \'confirm_blog_series_delete_\' . $seriesId;',
+            'Smazání odebere sérii z <?= (int)$seriesRow[\'article_count\'] ?> článků.',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], \'Před smazáním série potvrďte',
         ],
         'forbidden' => [
             '$seriesError = \'Zadejte název série.\';',
@@ -18105,14 +18113,35 @@ if (!str_contains($reservationLocationDeleteSource, "\$confirmFieldName = 'confi
     || !str_contains($reservationLocationDeleteSource, "logAction('res_location_delete'")) {
     $adminFieldErrorIssues[] = 'reservation location delete handler is missing server-side review-and-confirm guardrails';
 }
+if (!str_contains($blogCatDeleteSource, "\$confirmFieldName = 'confirm_blog_category_delete_' . \$id;")
+    || !str_contains($blogCatDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($blogCatDeleteSource, "UPDATE cms_articles SET category_id = NULL WHERE category_id = ?")
+    || !str_contains($blogCatDeleteSource, "UPDATE cms_categories SET parent_id = NULL WHERE parent_id = ? AND blog_id = ?")
+    || !str_contains($blogCatDeleteSource, "logAction('blog_cat_delete'")) {
+    $adminFieldErrorIssues[] = 'blog category delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($blogTagDeleteSource, "\$confirmFieldName = 'confirm_blog_tag_delete_' . \$id;")
+    || !str_contains($blogTagDeleteSource, "'delete_error' => 'confirm_required'")
+    || !str_contains($blogTagDeleteSource, "DELETE FROM cms_article_tags WHERE tag_id = ?")
+    || !str_contains($blogTagDeleteSource, "logAction('tag_delete'")) {
+    $adminFieldErrorIssues[] = 'blog tag delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($blogSeriesAdminSource, "\$confirmFieldName = 'confirm_blog_series_delete_' . \$deleteSeriesId;")
+    || !str_contains($blogSeriesAdminSource, 'delete_error=confirm_required&delete_error_id=')
+    || !str_contains($blogSeriesAdminSource, "DELETE FROM cms_blog_series_items WHERE series_id = ?")
+    || !str_contains($blogSeriesAdminSource, "logAction('blog_series_delete'")) {
+    $adminFieldErrorIssues[] = 'blog series delete action is missing server-side review-and-confirm guardrails';
+}
 foreach ([
     'blog categories editor' => [
         'source' => $blogCatsSource,
         'required' => [
             '$fieldErrorMessages = [];',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
             '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název kategorie, například Novinky z oboru.\';',
             '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
             '$error = \'Kategorii blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '$error = \'Kategorii blogu nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.\';',
             '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             'aria-describedby="category-name-help<?= isset($fieldErrors[\'name\']) ? \' category-name-error\' : \'\' ?>"',
             '<small id="category-name-help" class="field-help">Použijte krátký název',
@@ -18120,6 +18149,10 @@ foreach ([
             '<?= h($fieldErrorMessages[\'slug\']) ?>',
             'edit-category-name-error-',
             'edit-category-slug-error-',
+            '$deleteConfirmField = \'confirm_blog_category_delete_\' . $categoryId;',
+            'Smazání odebere kategorii z <?= (int)$category[\'article_count\'] ?> článků',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], \'Před smazáním kategorie potvrďte',
         ],
         'forbidden' => [
             '$fieldErrors[\'name\'] = \'Název kategorie je povinný.\';',
@@ -18135,9 +18168,11 @@ foreach ([
         'source' => $blogTagsSource,
         'required' => [
             '$fieldErrorMessages = [];',
+            '$deleteConfirmError = trim((string)($_GET[\'delete_error\'] ?? \'\')) === \'confirm_required\';',
             '$fieldErrorMessages[\'name\'] = \'Doplňte krátký název štítku, například Rozhovory.\';',
             '$fieldErrorMessages[\'slug\'] = \'Zadejte jiný unikátní slug, nebo pole nechte prázdné a CMS ho vytvoří z názvu.\';',
             '$error = \'Štítek blogu nejde uložit. U zvýrazněných polí je konkrétní nápověda.\';',
+            '$error = \'Štítek blogu nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.\';',
             '<p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p>',
             'aria-describedby="tag-name-help<?= isset($fieldErrors[\'name\']) ? \' tag-name-error\' : \'\' ?>"',
             '<small id="tag-name-help" class="field-help">Použijte krátký štítek',
@@ -18145,6 +18180,10 @@ foreach ([
             '<?= h($fieldErrorMessages[\'slug\']) ?>',
             'edit-tag-name-error-',
             'edit-tag-slug-error-',
+            '$deleteConfirmField = \'confirm_blog_tag_delete_\' . $tagId;',
+            'Smazání odebere štítek z <?= (int)$tag[\'article_count\'] ?> článků.',
+            'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)',
+            'adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], \'Před smazáním štítku potvrďte',
         ],
         'forbidden' => [
             '$fieldErrors[\'name\'] = \'Název štítku je povinný.\';',
@@ -18436,6 +18475,20 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_event_type_delete_')
     || !str_contains($httpIntegrationSource, 'potvrzené smazání typu akce neproběhlo s očekávaným PRG stavem, odpojením vazby nebo audit logem')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing board/event taxonomy delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('blog_taxonomy_landing_http'")
+    || !str_contains($httpIntegrationSource, 'smazání blogové kategorie bez potvrzení změnilo vazby, smazalo kategorii nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_blog_category_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání blogové kategorie neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')
+    || !str_contains($httpIntegrationSource, 'smazání blogového štítku bez potvrzení změnilo vazby, smazalo štítek nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_blog_tag_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání blogového štítku neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('blog_article_series_http'")
+    || !str_contains($httpIntegrationSource, 'smazání série článků bez potvrzení změnilo vazby, smazalo sérii nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_blog_series_delete_')
+    || !str_contains($httpIntegrationSource, 'potvrzené smazání série článků neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing blog taxonomy/series delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_user_delete_')

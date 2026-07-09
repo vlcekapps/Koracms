@@ -13,6 +13,8 @@ $success = false;
 $error = '';
 $fieldErrors = [];
 $fieldErrorMessages = [];
+$deleteConfirmError = trim((string)($_GET['delete_error'] ?? '')) === 'confirm_required';
+$deleteErrorId = inputInt('get', 'delete_error_id');
 $formValues = [
     'name' => '',
     'slug' => '',
@@ -138,11 +140,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if ($deleteConfirmError) {
+    $error = 'Kategorii blogu nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.';
+}
+$successMessage = $success ? 'Kategorie uložena.' : '';
+if (trim((string)($_GET['deleted'] ?? '')) === '1') {
+    $successMessage = 'Kategorie byla smazána.';
+}
+$createFormHasError = $error !== '' && $editId === null && !$deleteConfirmError;
+
 $catStmt = $pdo->prepare(
-    "SELECT id, name, slug, parent_id, description, meta_title, meta_description
-     FROM cms_categories
-     WHERE blog_id = ?
-     ORDER BY name"
+    "SELECT c.id, c.name, c.slug, c.parent_id, c.description, c.meta_title, c.meta_description,
+            COUNT(DISTINCT a.id) AS article_count,
+            COUNT(DISTINCT child.id) AS child_count
+     FROM cms_categories c
+     LEFT JOIN cms_articles a ON a.category_id = c.id AND a.deleted_at IS NULL
+     LEFT JOIN cms_categories child ON child.parent_id = c.id AND child.blog_id = c.blog_id
+     WHERE c.blog_id = ?
+     GROUP BY c.id, c.name, c.slug, c.parent_id, c.description, c.meta_title, c.meta_description
+     ORDER BY c.name"
 );
 $catStmt->execute([$blogId]);
 $categories = $catStmt->fetchAll();
@@ -159,8 +175,8 @@ foreach ($categories as $cat) {
 }
 
 /**
- * @param array<int, list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null}>> $tree
- * @param array<int, array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null}> $byId
+ * @param array<int, list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null,article_count:int|string,child_count:int|string}>> $tree
+ * @param array<int, array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null,article_count:int|string,child_count:int|string}> $byId
  */
 function renderBlogCategoryOptions(array $tree, array $byId, int $parentId = 0, int $depth = 0, ?int $excludeId = null): string
 {
@@ -179,8 +195,8 @@ function renderBlogCategoryOptions(array $tree, array $byId, int $parentId = 0, 
 
 // Seřadíme kategorie dle stromu pro zobrazení v tabulce
 /**
- * @param array<int, list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null}>> $tree
- * @return list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null,_depth:int}>
+ * @param array<int, list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null,article_count:int|string,child_count:int|string}>> $tree
+ * @return list<array{id:int|string,name:string,slug?:string,parent_id:int|string|null,description?:string|null,meta_title?:string|null,meta_description?:string|null,article_count:int|string,child_count:int|string,_depth:int}>
  */
 function flattenBlogCategoryTree(array $tree, int $parentId = 0, int $depth = 0): array
 {
@@ -196,7 +212,7 @@ $flatCategories = flattenBlogCategoryTree($blogCatTree);
 
 adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $currentBlog['name'] : ''));
 ?>
-<?php if ($success): ?><p class="success" role="status">Kategorie uložena.</p><?php endif; ?>
+<?php if ($successMessage !== ''): ?><p class="success" role="status"><?= h($successMessage) ?></p><?php endif; ?>
 <?php if ($error !== ''): ?><p id="form-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
@@ -222,7 +238,7 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
 </form>
 <?php endif; ?>
 
-<form method="post" novalidate<?= $error !== '' && $editId === null ? ' aria-describedby="form-error"' : '' ?>>
+<form method="post" novalidate<?= $createFormHasError ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="blog_id" value="<?= $blogId ?>">
   <fieldset>
@@ -277,13 +293,22 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
     <thead><tr><th scope="col"><label for="check-all" class="sr-only">Vybrat vše</label><input type="checkbox" id="check-all"></th><th scope="col">Název</th><th scope="col">Slug</th><th scope="col">Akce</th></tr></thead>
     <tbody>
     <?php foreach ($flatCategories as $category): ?>
-      <?php $indent = str_repeat('— ', (int)$category['_depth']); ?>
+      <?php
+        $categoryId = (int)$category['id'];
+        $indent = str_repeat('— ', (int)$category['_depth']);
+        $deleteConfirmField = 'confirm_blog_category_delete_' . $categoryId;
+        $deleteConfirmId = 'confirm-blog-category-delete-' . $categoryId;
+        $deleteReviewId = 'blog-category-delete-review-' . $categoryId;
+        $deleteFieldErrorId = 'confirm-blog-category-delete-' . $categoryId . '-error';
+        $deleteHasError = $deleteConfirmError && $deleteErrorId === $categoryId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <td><label for="blog-category-select-<?= (int)$category['id'] ?>" class="sr-only">Vybrat <?= h((string)$category['name']) ?></label><input type="checkbox" id="blog-category-select-<?= (int)$category['id'] ?>" name="ids[]" value="<?= (int)$category['id'] ?>" form="bulk-form"></td>
+        <td><label for="blog-category-select-<?= $categoryId ?>" class="sr-only">Vybrat <?= h((string)$category['name']) ?></label><input type="checkbox" id="blog-category-select-<?= $categoryId ?>" name="ids[]" value="<?= $categoryId ?>" form="bulk-form"></td>
         <td>
-          <?php if ($editId === (int)$category['id']): ?>
+          <?php if ($editId === $categoryId): ?>
             <?php
-            $categoryEditHasErrors = $fieldErrors !== [];
+            $categoryEditHasErrors = $fieldErrors !== [] && !$deleteConfirmError;
               $categoryEditName = $categoryEditHasErrors ? $formValues['name'] : (string)$category['name'];
               $categoryEditSlug = $categoryEditHasErrors ? $formValues['slug'] : (string)($category['slug'] ?? '');
               $categoryEditParent = $categoryEditHasErrors ? $formValues['parent_id'] : (string)($category['parent_id'] ?? '');
@@ -291,49 +316,49 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
               $categoryEditMetaTitle = $categoryEditHasErrors ? $formValues['meta_title'] : (string)($category['meta_title'] ?? '');
               $categoryEditMetaDescription = $categoryEditHasErrors ? $formValues['meta_description'] : (string)($category['meta_description'] ?? '');
               ?>
-            <form method="post" class="form-stack" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
+            <form method="post" class="form-stack" novalidate<?= $categoryEditHasErrors ? ' aria-describedby="form-error"' : '' ?>>
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="update_id" value="<?= (int)$category['id'] ?>">
+              <input type="hidden" name="update_id" value="<?= $categoryId ?>">
               <input type="hidden" name="blog_id" value="<?= $blogId ?>">
               <div class="form-grid">
                 <div>
-                  <label for="edit-name-<?= (int)$category['id'] ?>">Název <span aria-hidden="true">*</span></label>
-                  <input type="text" id="edit-name-<?= (int)$category['id'] ?>" name="name" required aria-required="true" maxlength="255"
-                         value="<?= h($categoryEditName) ?>" class="admin-input-auto" aria-describedby="edit-category-name-help-<?= (int)$category['id'] ?><?= isset($fieldErrors['name']) ? ' edit-category-name-error-' . (int)$category['id'] : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
-                  <small id="edit-category-name-help-<?= (int)$category['id'] ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech blogu.</small>
-                  <?php if (isset($fieldErrors['name'])): ?><p id="edit-category-name-error-<?= (int)$category['id'] ?>" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
+                  <label for="edit-name-<?= $categoryId ?>">Název <span aria-hidden="true">*</span></label>
+                  <input type="text" id="edit-name-<?= $categoryId ?>" name="name" required aria-required="true" maxlength="255"
+                         value="<?= h($categoryEditName) ?>" class="admin-input-auto" aria-describedby="edit-category-name-help-<?= $categoryId ?><?= isset($fieldErrors['name']) ? ' edit-category-name-error-' . $categoryId : '' ?>"<?= isset($fieldErrors['name']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-category-name-help-<?= $categoryId ?>" class="field-help">Použijte krátký název, který správci i návštěvníci poznají ve filtrech blogu.</small>
+                  <?php if (isset($fieldErrors['name'])): ?><p id="edit-category-name-error-<?= $categoryId ?>" class="error"><?= h($fieldErrorMessages['name']) ?></p><?php endif; ?>
                 </div>
                 <div>
-                  <label for="edit-slug-<?= (int)$category['id'] ?>">Slug</label>
-                  <input type="text" id="edit-slug-<?= (int)$category['id'] ?>" name="slug" maxlength="150"
-                         value="<?= h($categoryEditSlug) ?>" class="admin-input-auto" aria-describedby="edit-category-slug-help-<?= (int)$category['id'] ?><?= isset($fieldErrors['slug']) ? ' edit-category-slug-error-' . (int)$category['id'] : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
-                  <small id="edit-category-slug-help-<?= (int)$category['id'] ?>" class="field-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</small>
-                  <?php if (isset($fieldErrors['slug'])): ?><p id="edit-category-slug-error-<?= (int)$category['id'] ?>" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
+                  <label for="edit-slug-<?= $categoryId ?>">Slug</label>
+                  <input type="text" id="edit-slug-<?= $categoryId ?>" name="slug" maxlength="150"
+                         value="<?= h($categoryEditSlug) ?>" class="admin-input-auto" aria-describedby="edit-category-slug-help-<?= $categoryId ?><?= isset($fieldErrors['slug']) ? ' edit-category-slug-error-' . $categoryId : '' ?>"<?= isset($fieldErrors['slug']) ? ' aria-invalid="true"' : '' ?>>
+                  <small id="edit-category-slug-help-<?= $categoryId ?>" class="field-help">Slug je veřejná část URL. Když ho necháte prázdný, vygeneruje se z názvu.</small>
+                  <?php if (isset($fieldErrors['slug'])): ?><p id="edit-category-slug-error-<?= $categoryId ?>" class="error"><?= h($fieldErrorMessages['slug']) ?></p><?php endif; ?>
                 </div>
                 <div>
-                  <label for="edit-parent-<?= (int)$category['id'] ?>">Nadřazená kategorie</label>
-                  <select id="edit-parent-<?= (int)$category['id'] ?>" name="parent_id" class="admin-input-auto">
+                  <label for="edit-parent-<?= $categoryId ?>">Nadřazená kategorie</label>
+                  <select id="edit-parent-<?= $categoryId ?>" name="parent_id" class="admin-input-auto">
                     <option value="">— Kořenová —</option>
-                    <?= renderBlogCategoryOptions($blogCatTree, $blogCatById, 0, 0, (int)$category['id']) ?>
+                    <?= renderBlogCategoryOptions($blogCatTree, $blogCatById, 0, 0, $categoryId) ?>
                   </select>
                 </div>
                 <div>
-                  <label for="edit-meta-title-<?= (int)$category['id'] ?>">Meta title</label>
-                  <input type="text" id="edit-meta-title-<?= (int)$category['id'] ?>" name="meta_title" maxlength="160"
+                  <label for="edit-meta-title-<?= $categoryId ?>">Meta title</label>
+                  <input type="text" id="edit-meta-title-<?= $categoryId ?>" name="meta_title" maxlength="160"
                          value="<?= h($categoryEditMetaTitle) ?>" class="admin-input-auto">
                 </div>
               </div>
               <div>
-                <label for="edit-description-<?= (int)$category['id'] ?>">Popis</label>
-                <textarea id="edit-description-<?= (int)$category['id'] ?>" name="description" rows="4"><?= h($categoryEditDescription) ?></textarea>
+                <label for="edit-description-<?= $categoryId ?>">Popis</label>
+                <textarea id="edit-description-<?= $categoryId ?>" name="description" rows="4"><?= h($categoryEditDescription) ?></textarea>
               </div>
               <div>
-                <label for="edit-meta-description-<?= (int)$category['id'] ?>">Meta description</label>
-                <textarea id="edit-meta-description-<?= (int)$category['id'] ?>" name="meta_description" rows="3"><?= h($categoryEditMetaDescription) ?></textarea>
+                <label for="edit-meta-description-<?= $categoryId ?>">Meta description</label>
+                <textarea id="edit-meta-description-<?= $categoryId ?>" name="meta_description" rows="3"><?= h($categoryEditMetaDescription) ?></textarea>
               </div>
               <script nonce="<?= cspNonce() ?>">
               (function(){
-                var sel = document.getElementById('edit-parent-<?= (int)$category['id'] ?>');
+                var sel = document.getElementById('edit-parent-<?= $categoryId ?>');
                 var val = '<?= (int)($categoryEditParent !== '' ? $categoryEditParent : 0) ?>';
                 if (val !== '0' && sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === val) { sel.selectedIndex = i; break; } } }
               })();
@@ -347,17 +372,36 @@ adminHeader('Kategorie blogu' . (isMultiBlog() && $currentBlog ? ' – ' . $curr
         </td>
         <td><code><?= h((string)($category['slug'] ?? '')) ?></code></td>
         <td class="actions">
-          <?php if ($editId !== (int)$category['id']): ?>
-            <a href="blog_cats.php?edit=<?= (int)$category['id'] ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>
+          <?php if ($editId !== $categoryId): ?>
+            <a href="blog_cats.php?edit=<?= $categoryId ?>&amp;blog_id=<?= $blogId ?>" class="btn">Upravit</a>
           <?php endif; ?>
           <?php if ($currentBlog && trim((string)($category['slug'] ?? '')) !== ''): ?>
             <a href="<?= h(blogCategoryPath($currentBlog, $category)) ?>" class="btn" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
-          <form action="blog_cat_delete.php" method="post">
+          <form action="blog_cat_delete.php" method="post"
+                class="admin-inline-form"
+                novalidate<?= $deleteHasError ? ' aria-describedby="form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat kategorii?">Smazat</button>
+            <input type="hidden" name="id" value="<?= $categoryId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání kategorie blogu <?= h((string)$category['name']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Smazání odebere kategorii z <?= (int)$category['article_count'] ?> článků a <?= (int)$category['child_count'] ?> podkategorií přesune na kořen. Články i podkategorie zůstanou zachované bez této kategorie.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input
+                  type="checkbox"
+                  id="<?= h($deleteConfirmId) ?>"
+                  name="<?= h($deleteConfirmField) ?>"
+                  value="1"
+                  required
+                  aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji smazání této kategorie blogu.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním kategorie potvrďte, že jste zkontrolovali dopad na články a podkategorie.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat kategorii? Články i podkategorie zůstanou zachované bez této kategorie.">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

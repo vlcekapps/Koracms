@@ -7639,6 +7639,81 @@ try {
         }
     }
 
+    $deleteSeriesTitle = 'HTTP Série ke smazání ' . bin2hex(random_bytes(3));
+    $deleteSeriesSlug = 'http-serie-ke-smazani-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order)
+         VALUES (?, ?, ?, 'Série pro error-prevention delete test.', 1, 2)"
+    )->execute([$relatedBlogId, $deleteSeriesTitle, $deleteSeriesSlug]);
+    $deleteSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $deleteSeriesId;
+    $pdo->prepare("INSERT IGNORE INTO cms_blog_series_items (series_id, article_id, sort_order) VALUES (?, ?, 1)")
+        ->execute([$deleteSeriesId, $mainRelatedArticleId]);
+
+    $seriesDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, $adminSession['cookie'], 0);
+    $seriesDeleteCsrf = extractHiddenInputValue($seriesDeletePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($seriesDeletePage) !== 200
+        || $seriesDeleteCsrf === ''
+        || !str_contains($seriesDeletePage['body'], 'confirm_blog_series_delete_' . $deleteSeriesId)
+        || !str_contains($seriesDeletePage['body'], 'blog-series-delete-review-' . $deleteSeriesId)
+        || !str_contains($seriesDeletePage['body'], 'Smazání odebere sérii z 1 článků.')) {
+        $blogSeriesIssues[] = 'mazání série článků nevykreslilo review text a checkbox';
+    }
+    $blogSeriesDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_series_delete'")->fetchColumn();
+    $seriesMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, [
+        'csrf_token' => $seriesDeleteCsrf,
+        'blog_id' => (string)$relatedBlogId,
+        'action' => 'delete_series',
+        'series_id' => (string)$deleteSeriesId,
+    ], $adminSession['cookie'], 0);
+    $seriesAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series WHERE id = ?');
+    $seriesAfterMissingConfirmStmt->execute([$deleteSeriesId]);
+    $seriesItemsAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series_items WHERE series_id = ?');
+    $seriesItemsAfterMissingConfirmStmt->execute([$deleteSeriesId]);
+    $blogSeriesDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_series_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($seriesMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($seriesMissingConfirmResponse['headers'], BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteSeriesId, $baseUrl)
+        || (int)$seriesAfterMissingConfirmStmt->fetchColumn() !== 1
+        || (int)$seriesItemsAfterMissingConfirmStmt->fetchColumn() !== 1
+        || $blogSeriesDeleteLogAfterMissingConfirm !== $blogSeriesDeleteLogBefore) {
+        $blogSeriesIssues[] = 'smazání série článků bez potvrzení změnilo vazby, smazalo sérii nebo zapsalo audit log';
+    }
+    $seriesDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteSeriesId,
+        $adminSession['cookie'],
+        0
+    );
+    $seriesDeleteErrorCsrf = extractHiddenInputValue($seriesDeleteErrorPage['body'], 'csrf_token');
+    if ($seriesDeleteErrorCsrf === ''
+        || !str_contains($seriesDeleteErrorPage['body'], 'id="blog-series-delete-error" class="error" role="alert" aria-atomic="true">Sérii článků nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($seriesDeleteErrorPage['body'], 'id="confirm-blog-series-delete-' . $deleteSeriesId . '-error"')
+        || !httpIntegrationInputHasAttributes($seriesDeleteErrorPage['body'], 'confirm-blog-series-delete-' . $deleteSeriesId, [
+            'name' => 'confirm_blog_series_delete_' . $deleteSeriesId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-series-delete-review-' . $deleteSeriesId . ' confirm-blog-series-delete-' . $deleteSeriesId . '-error',
+        ])) {
+        $blogSeriesIssues[] = 'chybový stav mazání série článků nevrátil alert a field-level checkbox chybu';
+    }
+    $seriesConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId, [
+        'csrf_token' => $seriesDeleteErrorCsrf,
+        'blog_id' => (string)$relatedBlogId,
+        'action' => 'delete_series',
+        'series_id' => (string)$deleteSeriesId,
+        'confirm_blog_series_delete_' . $deleteSeriesId => '1',
+    ], $adminSession['cookie'], 0);
+    $seriesAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series WHERE id = ?');
+    $seriesAfterConfirmedStmt->execute([$deleteSeriesId]);
+    $seriesItemsAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_blog_series_items WHERE series_id = ?');
+    $seriesItemsAfterConfirmedStmt->execute([$deleteSeriesId]);
+    $blogSeriesDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_series_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($seriesConfirmedResponse) !== 302
+        || !responseHasLocationHeader($seriesConfirmedResponse['headers'], BASE_URL . '/admin/blog_series.php?blog_id=' . $relatedBlogId . '&msg=deleted', $baseUrl)
+        || (int)$seriesAfterConfirmedStmt->fetchColumn() !== 0
+        || (int)$seriesItemsAfterConfirmedStmt->fetchColumn() !== 0
+        || $blogSeriesDeleteLogAfterConfirmed !== $blogSeriesDeleteLogBefore + 1) {
+        $blogSeriesIssues[] = 'potvrzené smazání série článků neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem';
+    }
+
     $foreignSeriesSlug = 'http-foreign-serie-' . bin2hex(random_bytes(4));
     $pdo->prepare(
         "INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order)
@@ -7906,6 +7981,175 @@ try {
     if (str_contains($duplicateTagResponse['body'], 'Tento slug už v tomto blogu používá jiný štítek.')
         || str_contains($duplicateTagResponse['body'], 'Zkontrolujte prosím zvýrazněná pole.')) {
         $blogTaxonomyIssues[] = 'duplicitní slug blogového štítku pořád používá starý obecný text';
+    }
+
+    $deleteCategorySlug = 'http-delete-kategorie-' . bin2hex(random_bytes(4));
+    $deleteChildCategorySlug = 'http-delete-podkategorie-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id, description) VALUES (?, ?, ?, ?)")
+        ->execute(['HTTP Kategorie ke smazání', $deleteCategorySlug, $taxonomyBlogId, 'Kategorie pro error-prevention delete test.']);
+    $deleteCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $deleteCategoryId;
+    $pdo->prepare("INSERT INTO cms_categories (name, slug, blog_id, parent_id, description) VALUES (?, ?, ?, ?, ?)")
+        ->execute(['HTTP Podkategorie ke kontrole', $deleteChildCategorySlug, $taxonomyBlogId, $deleteCategoryId, 'Podkategorie pro delete test.']);
+    $deleteChildCategoryId = (int)$pdo->lastInsertId();
+    $createdCategories[] = $deleteChildCategoryId;
+    $deleteCategoryArticleSlug = 'http-delete-category-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, category_id, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Článek pro mazání kategorie.</p>', ?, 1, ?, 'published', NOW())"
+    )->execute([
+        'HTTP Článek v mazané kategorii',
+        $deleteCategoryArticleSlug,
+        $taxonomyBlogId,
+        $deleteCategoryId,
+        $adminUserId,
+    ]);
+    $deleteCategoryArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $deleteCategoryArticleId;
+
+    $deleteTagSlug = 'http-delete-stitek-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_tags (name, slug, blog_id, description) VALUES (?, ?, ?, ?)")
+        ->execute(['HTTP Štítek ke smazání', $deleteTagSlug, $taxonomyBlogId, 'Štítek pro error-prevention delete test.']);
+    $deleteTagId = (int)$pdo->lastInsertId();
+    $createdTags[] = $deleteTagId;
+    $deleteTagArticleSlug = 'http-delete-tag-article-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Článek pro mazání štítku.</p>', 1, ?, 'published', NOW())"
+    )->execute([
+        'HTTP Článek s mazaným štítkem',
+        $deleteTagArticleSlug,
+        $taxonomyBlogId,
+        $adminUserId,
+    ]);
+    $deleteTagArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $deleteTagArticleId;
+    $pdo->prepare("INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)")->execute([$deleteTagArticleId, $deleteTagId]);
+
+    $categoryDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId, $adminSession['cookie'], 0);
+    $categoryDeleteCsrf = extractHiddenInputValue($categoryDeletePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($categoryDeletePage) !== 200
+        || $categoryDeleteCsrf === ''
+        || !str_contains($categoryDeletePage['body'], 'confirm_blog_category_delete_' . $deleteCategoryId)
+        || !str_contains($categoryDeletePage['body'], 'blog-category-delete-review-' . $deleteCategoryId)
+        || !str_contains($categoryDeletePage['body'], 'Smazání odebere kategorii z 1 článků a 1 podkategorií přesune na kořen.')) {
+        $blogTaxonomyIssues[] = 'mazání blogové kategorie nevykreslilo review text a checkbox';
+    }
+    $blogCategoryDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_cat_delete'")->fetchColumn();
+    $categoryMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cat_delete.php', [
+        'csrf_token' => $categoryDeleteCsrf,
+        'id' => (string)$deleteCategoryId,
+    ], $adminSession['cookie'], 0);
+    $categoryAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_categories WHERE id = ?');
+    $categoryAfterMissingConfirmStmt->execute([$deleteCategoryId]);
+    $categoryArticleAfterMissingConfirmStmt = $pdo->prepare('SELECT category_id FROM cms_articles WHERE id = ?');
+    $categoryArticleAfterMissingConfirmStmt->execute([$deleteCategoryArticleId]);
+    $childCategoryAfterMissingConfirmStmt = $pdo->prepare('SELECT parent_id FROM cms_categories WHERE id = ?');
+    $childCategoryAfterMissingConfirmStmt->execute([$deleteChildCategoryId]);
+    $blogCategoryDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_cat_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($categoryMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($categoryMissingConfirmResponse['headers'], BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteCategoryId, $baseUrl)
+        || (int)$categoryAfterMissingConfirmStmt->fetchColumn() !== 1
+        || (int)$categoryArticleAfterMissingConfirmStmt->fetchColumn() !== $deleteCategoryId
+        || (int)$childCategoryAfterMissingConfirmStmt->fetchColumn() !== $deleteCategoryId
+        || $blogCategoryDeleteLogAfterMissingConfirm !== $blogCategoryDeleteLogBefore) {
+        $blogTaxonomyIssues[] = 'smazání blogové kategorie bez potvrzení změnilo vazby, smazalo kategorii nebo zapsalo audit log';
+    }
+    $categoryDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteCategoryId,
+        $adminSession['cookie'],
+        0
+    );
+    $categoryDeleteErrorCsrf = extractHiddenInputValue($categoryDeleteErrorPage['body'], 'csrf_token');
+    if ($categoryDeleteErrorCsrf === ''
+        || !str_contains($categoryDeleteErrorPage['body'], 'id="form-error" class="error" role="alert" aria-atomic="true">Kategorii blogu nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($categoryDeleteErrorPage['body'], 'id="confirm-blog-category-delete-' . $deleteCategoryId . '-error"')
+        || !httpIntegrationInputHasAttributes($categoryDeleteErrorPage['body'], 'confirm-blog-category-delete-' . $deleteCategoryId, [
+            'name' => 'confirm_blog_category_delete_' . $deleteCategoryId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-category-delete-review-' . $deleteCategoryId . ' confirm-blog-category-delete-' . $deleteCategoryId . '-error',
+        ])) {
+        $blogTaxonomyIssues[] = 'chybový stav mazání blogové kategorie nevrátil alert a field-level checkbox chybu';
+    }
+    $categoryConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_cat_delete.php', [
+        'csrf_token' => $categoryDeleteErrorCsrf,
+        'id' => (string)$deleteCategoryId,
+        'confirm_blog_category_delete_' . $deleteCategoryId => '1',
+    ], $adminSession['cookie'], 0);
+    $categoryAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_categories WHERE id = ?');
+    $categoryAfterConfirmedStmt->execute([$deleteCategoryId]);
+    $categoryArticleAfterConfirmedStmt = $pdo->prepare('SELECT category_id FROM cms_articles WHERE id = ?');
+    $categoryArticleAfterConfirmedStmt->execute([$deleteCategoryArticleId]);
+    $childCategoryAfterConfirmedStmt = $pdo->prepare('SELECT parent_id FROM cms_categories WHERE id = ?');
+    $childCategoryAfterConfirmedStmt->execute([$deleteChildCategoryId]);
+    $blogCategoryDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_cat_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($categoryConfirmedResponse) !== 302
+        || !responseHasLocationHeader($categoryConfirmedResponse['headers'], BASE_URL . '/admin/blog_cats.php?blog_id=' . $taxonomyBlogId . '&deleted=1', $baseUrl)
+        || (int)$categoryAfterConfirmedStmt->fetchColumn() !== 0
+        || $categoryArticleAfterConfirmedStmt->fetchColumn() !== null
+        || $childCategoryAfterConfirmedStmt->fetchColumn() !== null
+        || $blogCategoryDeleteLogAfterConfirmed !== $blogCategoryDeleteLogBefore + 1) {
+        $blogTaxonomyIssues[] = 'potvrzené smazání blogové kategorie neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem';
+    }
+
+    $tagDeletePage = fetchUrl($baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId, $adminSession['cookie'], 0);
+    $tagDeleteCsrf = extractHiddenInputValue($tagDeletePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($tagDeletePage) !== 200
+        || $tagDeleteCsrf === ''
+        || !str_contains($tagDeletePage['body'], 'confirm_blog_tag_delete_' . $deleteTagId)
+        || !str_contains($tagDeletePage['body'], 'blog-tag-delete-review-' . $deleteTagId)
+        || !str_contains($tagDeletePage['body'], 'Smazání odebere štítek z 1 článků.')) {
+        $blogTaxonomyIssues[] = 'mazání blogového štítku nevykreslilo review text a checkbox';
+    }
+    $blogTagDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'tag_delete'")->fetchColumn();
+    $tagMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_tag_delete.php', [
+        'csrf_token' => $tagDeleteCsrf,
+        'id' => (string)$deleteTagId,
+    ], $adminSession['cookie'], 0);
+    $tagAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_tags WHERE id = ?');
+    $tagAfterMissingConfirmStmt->execute([$deleteTagId]);
+    $articleTagAfterMissingConfirmStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_article_tags WHERE article_id = ? AND tag_id = ?');
+    $articleTagAfterMissingConfirmStmt->execute([$deleteTagArticleId, $deleteTagId]);
+    $blogTagDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'tag_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($tagMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($tagMissingConfirmResponse['headers'], BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteTagId, $baseUrl)
+        || (int)$tagAfterMissingConfirmStmt->fetchColumn() !== 1
+        || (int)$articleTagAfterMissingConfirmStmt->fetchColumn() !== 1
+        || $blogTagDeleteLogAfterMissingConfirm !== $blogTagDeleteLogBefore) {
+        $blogTaxonomyIssues[] = 'smazání blogového štítku bez potvrzení změnilo vazby, smazalo štítek nebo zapsalo audit log';
+    }
+    $tagDeleteErrorPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId . '&delete_error=confirm_required&delete_error_id=' . $deleteTagId,
+        $adminSession['cookie'],
+        0
+    );
+    $tagDeleteErrorCsrf = extractHiddenInputValue($tagDeleteErrorPage['body'], 'csrf_token');
+    if ($tagDeleteErrorCsrf === ''
+        || !str_contains($tagDeleteErrorPage['body'], 'id="form-error" class="error" role="alert" aria-atomic="true">Štítek blogu nejde smazat bez potvrzení kontroly dopadu.')
+        || !str_contains($tagDeleteErrorPage['body'], 'id="confirm-blog-tag-delete-' . $deleteTagId . '-error"')
+        || !httpIntegrationInputHasAttributes($tagDeleteErrorPage['body'], 'confirm-blog-tag-delete-' . $deleteTagId, [
+            'name' => 'confirm_blog_tag_delete_' . $deleteTagId,
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-tag-delete-review-' . $deleteTagId . ' confirm-blog-tag-delete-' . $deleteTagId . '-error',
+        ])) {
+        $blogTaxonomyIssues[] = 'chybový stav mazání blogového štítku nevrátil alert a field-level checkbox chybu';
+    }
+    $tagConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_tag_delete.php', [
+        'csrf_token' => $tagDeleteErrorCsrf,
+        'id' => (string)$deleteTagId,
+        'confirm_blog_tag_delete_' . $deleteTagId => '1',
+    ], $adminSession['cookie'], 0);
+    $tagAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_tags WHERE id = ?');
+    $tagAfterConfirmedStmt->execute([$deleteTagId]);
+    $articleTagAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_article_tags WHERE article_id = ? AND tag_id = ?');
+    $articleTagAfterConfirmedStmt->execute([$deleteTagArticleId, $deleteTagId]);
+    $blogTagDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'tag_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($tagConfirmedResponse) !== 302
+        || !responseHasLocationHeader($tagConfirmedResponse['headers'], BASE_URL . '/admin/blog_tags.php?blog_id=' . $taxonomyBlogId . '&deleted=1', $baseUrl)
+        || (int)$tagAfterConfirmedStmt->fetchColumn() !== 0
+        || (int)$articleTagAfterConfirmedStmt->fetchColumn() !== 0
+        || $blogTagDeleteLogAfterConfirmed !== $blogTagDeleteLogBefore + 1) {
+        $blogTaxonomyIssues[] = 'potvrzené smazání blogového štítku neproběhlo s očekávaným PRG stavem, odpojením vazeb nebo audit logem';
     }
 
     $categoryLandingPath = '/' . rawurlencode($taxonomyBlogSlug) . '/kategorie/' . rawurlencode($taxonomyCategorySlug);

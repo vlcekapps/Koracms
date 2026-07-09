@@ -476,6 +476,8 @@ Editor FAQ kategorií pokračuje u názvu, slugu a meta title. Field-level nápo
 
 Editory blogových kategorií a štítků používají stejný princip u povinného názvu a duplicitního slugu. Souhrnný alert je atomický a field-level text radí krátký srozumitelný název, jiný unikátní slug nebo prázdné slug pole pro automatické vytvoření.
 
+Mazání blogových kategorií, štítků a sérií článků používá stejný review-and-confirm princip. Řádkový formulář popíše počet navázaných článků a u kategorie i počet podkategorií, vyžaduje checkbox `confirm_blog_category_delete_<id>`, `confirm_blog_tag_delete_<id>` nebo `confirm_blog_series_delete_<id>` a server nepotvrzené smazání odmítne bez změny vazeb nebo audit logu.
+
 Kategorie a série ke stažení mají stejný field-level pattern pro hlavní validační chyby taxonomií. Prázdný název, nepoužitelný nebo duplicitní slug a příliš dlouhý meta title kategorie se oznámí souhrnným alertem i textem u konkrétního pole; HTTP integrace hlídá render těchto stavů v reálném admin HTML.
 
 Mazání kategorií a sérií Ke stažení navazuje na stejný error-prevention princip. Řádkový formulář popíše počet navázaných položek, u série i dopad na aktuální verzi, vyžaduje checkbox `confirm_download_category_delete_<id>` nebo `confirm_download_series_delete_<id>` a server nepotvrzené smazání odmítne bez změny vazeb nebo audit logu.

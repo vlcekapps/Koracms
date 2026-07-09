@@ -136,6 +136,8 @@ Additional `3.3.4` ACR evidence, 2026-07-09: Reservation category and location d
 
 Additional `3.3.4` ACR evidence, 2026-07-09: Board category and event type deletion now use row-level review-and-confirm forms. Board category deletion describes affected board items and subscriptions and requires `confirm_board_category_delete_<id>`; event type deletion describes affected events and requires `confirm_event_type_delete_<id>`. Unconfirmed POST requests return text-backed atomic alerts and field-level checkbox errors without unlinking relationships, deleting taxonomy rows or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `board_save_http` / `events_types_places_recurrence_http` cover rendered review text, rejected unconfirmed paths and confirmed cleanup.
 
+Additional `3.3.4` ACR evidence, 2026-07-09: Blog category, tag and article-series deletion now use row-level review-and-confirm forms. Category deletion describes affected articles and child categories and requires `confirm_blog_category_delete_<id>`; tag deletion describes affected articles and requires `confirm_blog_tag_delete_<id>`; series deletion describes affected articles and requires `confirm_blog_series_delete_<id>`. Unconfirmed POST requests return text-backed atomic alerts and field-level checkbox errors without unlinking articles, child categories, tag/series relationships, deleting taxonomy rows or writing audit logs. Runtime `admin_field_error_guardrails` and HTTP `blog_taxonomy_landing_http` / `blog_article_series_http` cover rendered review text, rejected unconfirmed paths and confirmed cleanup.
+
 ## Current Summary
 
 - Supports: strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.
