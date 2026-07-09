@@ -20167,6 +20167,7 @@ if ($widgetRenderIssues === []) {
 echo "=== public_consistent_help_guardrails ===\n";
 $publicConsistentHelpIssues = [];
 $publicConsistentHelpCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
+$publicConsistentHelpThemeSource = (string)file_get_contents(dirname(__DIR__) . '/lib/theme.php');
 foreach ([
     'footer help navigation markup' => [
         'source' => $uiSource,
@@ -20192,10 +20193,50 @@ foreach ([
             'min-height: 2rem',
         ],
     ],
+    'portable theme help inheritance contract' => [
+        'source' => $publicConsistentHelpThemeSource,
+        'fragments' => [
+            'function themePortablePackageMode(): string',
+            "return 'portable-static';",
+            "'base_theme' => defaultThemeName(),",
+            'Balíček smí obsahovat jen `theme.json` a soubory v `assets/`.',
+            'function themePortablePackageAllowedExtensions(): array',
+            'function themeTemplatePath(string $bucket, string $templateName, ?string $themeKey = null): string',
+            '$candidates[] = themeBasePath() . DIRECTORY_SEPARATOR . defaultThemeName()',
+        ],
+    ],
 ] as $publicConsistentHelpLabel => $publicConsistentHelpGuardrail) {
     foreach ($publicConsistentHelpGuardrail['fragments'] as $publicConsistentHelpFragment) {
         if (!str_contains($publicConsistentHelpGuardrail['source'], $publicConsistentHelpFragment)) {
             $publicConsistentHelpIssues[] = $publicConsistentHelpLabel . ' is missing fragment: ' . $publicConsistentHelpFragment;
+        }
+    }
+}
+if (in_array('php', themePortablePackageAllowedExtensions(), true)) {
+    $publicConsistentHelpIssues[] = 'portable theme packages unexpectedly allow PHP files';
+}
+$publicConsistentHelpThemeRoot = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'themes';
+foreach (glob($publicConsistentHelpThemeRoot . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR) ?: [] as $publicConsistentHelpThemeDir) {
+    $publicConsistentHelpThemeKey = basename((string)$publicConsistentHelpThemeDir);
+    if ($publicConsistentHelpThemeKey === defaultThemeName()) {
+        continue;
+    }
+
+    foreach (['layouts', 'partials', 'views'] as $publicConsistentHelpOverrideBucket) {
+        if (is_dir($publicConsistentHelpThemeDir . DIRECTORY_SEPARATOR . $publicConsistentHelpOverrideBucket)) {
+            $publicConsistentHelpIssues[] = 'non-default theme `' . $publicConsistentHelpThemeKey . '` contains PHP override bucket `' . $publicConsistentHelpOverrideBucket . '`';
+        }
+    }
+
+    $publicConsistentHelpThemeIterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($publicConsistentHelpThemeDir, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($publicConsistentHelpThemeIterator as $publicConsistentHelpThemeFile) {
+        if ($publicConsistentHelpThemeFile instanceof SplFileInfo
+            && $publicConsistentHelpThemeFile->isFile()
+            && strtolower($publicConsistentHelpThemeFile->getExtension()) === 'php'
+        ) {
+            $publicConsistentHelpIssues[] = 'non-default theme `' . $publicConsistentHelpThemeKey . '` contains PHP file `' . str_replace('\\', '/', $publicConsistentHelpThemeFile->getFilename()) . '`';
         }
     }
 }

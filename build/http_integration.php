@@ -5511,19 +5511,20 @@ try {
     $publicConsistentHelpIssues = [];
     $publicHelpOriginalContactModule = getSetting('module_contact', '0');
     $publicHelpOriginalChatModule = getSetting('module_chat', '0');
+    $publicHelpOriginalActiveTheme = getSetting('active_theme', defaultThemeName());
     saveSetting('module_contact', '1');
     saveSetting('module_chat', '1');
     clearSettingsCache();
 
-    $publicHelpResponses = [
-        'homepage' => fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0),
-        'search' => fetchUrl($baseUrl . BASE_URL . '/search.php?q=kontakt', $publicWidgetSession['cookie'], 0),
-    ];
-    foreach ($publicHelpResponses as $publicHelpLabel => $publicHelpResponse) {
+    $assertPublicHelpNavigation = static function (
+        string $publicHelpLabel,
+        array $publicHelpResponse,
+        ?string $expectedThemeKey
+    ) use (&$publicConsistentHelpIssues): void {
         $publicHelpBody = $publicHelpResponse['body'];
         if (httpIntegrationStatusCode($publicHelpResponse) !== 200) {
             $publicConsistentHelpIssues[] = $publicHelpLabel . ' nevrátila 200 pro kontrolu veřejné help navigace';
-            continue;
+            return;
         }
         foreach ([
             'class="footer-help-nav" aria-labelledby="site-footer-help-heading"',
@@ -5535,6 +5536,11 @@ try {
                 $publicConsistentHelpIssues[] = $publicHelpLabel . ' neobsahuje očekávaný fragment veřejné help navigace: ' . $publicHelpNeedle;
             }
         }
+        if ($expectedThemeKey !== null
+            && !str_contains($publicHelpBody, BASE_URL . '/themes/' . rawurlencode($expectedThemeKey) . '/assets/public.css')
+        ) {
+            $publicConsistentHelpIssues[] = $publicHelpLabel . ' nevykreslila očekávaný stylesheet šablony `' . $expectedThemeKey . '`';
+        }
         $publicHelpFooterPosition = strpos($publicHelpBody, 'class="footer-help-nav"');
         $publicHelpFooterSearchOffset = $publicHelpFooterPosition !== false ? $publicHelpFooterPosition : 0;
         $publicHelpContactPosition = strpos($publicHelpBody, 'href="' . BASE_URL . '/contact/index.php"', $publicHelpFooterSearchOffset);
@@ -5542,8 +5548,34 @@ try {
         if ($publicHelpContactPosition === false || $publicHelpChatPosition === false || $publicHelpContactPosition > $publicHelpChatPosition) {
             $publicConsistentHelpIssues[] = $publicHelpLabel . ' nemá stabilní pořadí veřejné help navigace Kontakt, Chat';
         }
+    };
+
+    $publicHelpResponses = [
+        'homepage' => fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0),
+        'search' => fetchUrl($baseUrl . BASE_URL . '/search.php?q=kontakt', $publicWidgetSession['cookie'], 0),
+    ];
+    foreach ($publicHelpResponses as $publicHelpLabel => $publicHelpResponse) {
+        $assertPublicHelpNavigation($publicHelpLabel, $publicHelpResponse, null);
     }
 
+    $publicHelpThemeProbe = null;
+    foreach (availableThemes() as $publicHelpThemeKey) {
+        if ($publicHelpThemeKey !== defaultThemeName()) {
+            $publicHelpThemeProbe = $publicHelpThemeKey;
+            break;
+        }
+    }
+    if ($publicHelpThemeProbe !== null) {
+        saveSetting('active_theme', $publicHelpThemeProbe);
+        clearSettingsCache();
+        $assertPublicHelpNavigation(
+            'homepage s ne-default šablonou `' . $publicHelpThemeProbe . '`',
+            fetchUrl($publicHomeUrl, $publicWidgetSession['cookie'], 0),
+            $publicHelpThemeProbe
+        );
+    }
+
+    saveSetting('active_theme', $publicHelpOriginalActiveTheme);
     saveSetting('module_contact', '0');
     saveSetting('module_chat', '0');
     clearSettingsCache();
@@ -5554,6 +5586,7 @@ try {
 
     saveSetting('module_contact', $publicHelpOriginalContactModule);
     saveSetting('module_chat', $publicHelpOriginalChatModule);
+    saveSetting('active_theme', $publicHelpOriginalActiveTheme);
     clearSettingsCache();
 
     httpIntegrationPrintResult('public_consistent_help_http', $publicConsistentHelpIssues, $failures);

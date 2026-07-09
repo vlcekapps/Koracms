@@ -678,6 +678,70 @@ assert_equals(
     'navigation link hidden suffix combines description and new-window announcement'
 );
 
+test_section('theme portable package guardrails');
+
+assert_false(
+    in_array('php', themePortablePackageAllowedExtensions(), true),
+    'portable theme package does not allow PHP files'
+);
+$themeLayoutOverrideValidation = themePortablePackageFileValidation('layouts/base.php', '<?php echo "override";');
+assert_false(
+    $themeLayoutOverrideValidation['valid'],
+    'portable theme package rejects layout overrides'
+);
+assert_contains(
+    'jen `theme.json` a soubory v `assets/`',
+    $themeLayoutOverrideValidation['error'],
+    'layout override rejection explains portable static scope'
+);
+$themePartialOverrideValidation = themePortablePackageFileValidation('partials/footer.php', '<?php echo "override";');
+assert_false(
+    $themePartialOverrideValidation['valid'],
+    'portable theme package rejects footer partial overrides'
+);
+$themeViewOverrideValidation = themePortablePackageFileValidation('views/home.php', '<?php echo "override";');
+assert_false(
+    $themeViewOverrideValidation['valid'],
+    'portable theme package rejects view overrides'
+);
+$themePhpAssetValidation = themePortablePackageFileValidation('assets/footer.php', '<?php echo "override";');
+assert_false(
+    $themePhpAssetValidation['valid'],
+    'portable theme package rejects PHP assets'
+);
+assert_contains(
+    'nepovolený typ assetu',
+    $themePhpAssetValidation['error'],
+    'PHP asset rejection explains forbidden asset type'
+);
+$themeCssAssetValidation = themePortablePackageFileValidation('assets/public.css', '.site-footer { display: block; }');
+assert_true(
+    $themeCssAssetValidation['valid'],
+    'portable theme package still allows CSS assets'
+);
+$nonDefaultThemeKeys = array_values(array_filter(
+    availableThemes(),
+    static fn (string $themeKey): bool => $themeKey !== defaultThemeName()
+));
+if ($nonDefaultThemeKeys !== []) {
+    $sampleThemeKey = $nonDefaultThemeKeys[0];
+    assert_equals(
+        themeLayoutPath('base', defaultThemeName()),
+        themeLayoutPath('base', $sampleThemeKey),
+        'non-default portable theme inherits default base layout'
+    );
+    assert_equals(
+        themePartialPath('footer', defaultThemeName()),
+        themePartialPath('footer', $sampleThemeKey),
+        'non-default portable theme inherits default footer partial'
+    );
+    assert_equals(
+        themeViewPath('home', defaultThemeName()),
+        themeViewPath('home', $sampleThemeKey),
+        'non-default portable theme inherits default homepage view'
+    );
+}
+
 // ─── 4. Rate-limit keys ─────────────────────────────────────────────────────
 
 test_section('external URL normalizers');
