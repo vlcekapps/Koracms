@@ -504,6 +504,8 @@ Stejný pattern se rozšířil i na další běžná administrační workflow mi
 
 Editory podcastových kapitol, osob a platforem navazují stejnou smlouvou. Jejich serverově renderované chyby zachovávají rozepsané hodnoty a radí konkrétní čas kapitoly, příklad názvu, http/https nebo doménový tvar URL, prázdné volitelné URL pole či úpravu existující duplicitní položky; runtime audit a HTTP integrace hlídají field-level vazby pro WCAG `3.3.3`.
 
+Editor strukturovaných sekcí a položek jídelních lístků používá stejný field-level pattern pro názvy, datum a čas podávání, sekci, cenu, výživové údaje a obrázek. Trvalé smazání položky nebo celé sekce navíc ukáže rozsah odstraňovaných dat, u sekce počet položek, vyžádá serverově kontrolovaný checkbox a zachová média; bez potvrzení se data ani audit log nezmění.
+
 Stejné field-level guardraily platí i pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace v administraci. Chyba vždy zůstává u konkrétního pole přes existující `aria-describedby`, nastaví `aria-invalid` a radí praktický další krok: doplnit název, opravit interní cestu nebo URL, zvolit jiný slug, vybrat platné nadřazené album, opravit licenci či datum pořízení, případně doplnit zdroj, uživatele/hosta, datum a čas rezervace nebo vyřešit konflikt termínu.
 
 Hlavní obsahové editory navazují stejnou smlouvou. Editor článku, správa blogů, položky vývěsky, jídelní/nápojové lístky a ankety používají atomický souhrnný alert a field-level texty pro chybějící titulek nebo název, nepoužitelný slug, cílové taxonomie, související články, série, datum vyvěšení, možnosti ankety a vícevýběrové limity.

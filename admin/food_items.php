@@ -21,7 +21,20 @@ $card = hydrateFoodCardPresentation($card);
 
 $message = trim((string)($_GET['msg'] ?? ''));
 $error = '';
+$errorForm = '';
 $fieldErrors = [];
+$fieldErrorMessages = [];
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorType = trim((string)($_GET['delete_error_type'] ?? ''));
+$deleteErrorId = inputInt('get', 'delete_error_id');
+if (!in_array($deleteErrorType, ['section', 'item'], true)) {
+    $deleteErrorType = '';
+}
+$deleteErrorMessage = $deleteError === 'confirm_required' && $deleteErrorType !== '' && $deleteErrorId !== null
+    ? ($deleteErrorType === 'section'
+        ? 'Sekci lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.'
+        : 'Položku lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.')
+    : '';
 $editSectionId = inputInt('get', 'edit_section');
 $editItemId = inputInt('get', 'edit_item');
 $sectionState = [
@@ -63,6 +76,16 @@ $redirectToItems = static function (string $messageKey = '') use ($cardId): void
         $query['msg'] = $messageKey;
     }
     header('Location: ' . BASE_URL . '/admin/food_items.php?' . http_build_query($query));
+    exit;
+};
+
+$redirectToDeleteError = static function (string $deleteType, int $deleteId) use ($cardId): void {
+    header('Location: ' . BASE_URL . '/admin/food_items.php?' . http_build_query([
+        'card' => $cardId,
+        'delete_error' => 'confirm_required',
+        'delete_error_type' => $deleteType,
+        'delete_error_id' => $deleteId,
+    ]));
     exit;
 };
 
@@ -167,9 +190,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_section') {
         $deleteSectionId = inputInt('post', 'section_id');
         if ($sectionBelongsToCard($deleteSectionId)) {
-            $pdo->prepare("DELETE FROM cms_food_items WHERE section_id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
-            $pdo->prepare("DELETE FROM cms_food_sections WHERE id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
-            logAction('food_section_delete', "card={$cardId} section={$deleteSectionId}");
+            $confirmFieldName = 'confirm_food_section_delete_' . $deleteSectionId;
+            $confirmed = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
+            if (!$confirmed) {
+                $redirectToDeleteError('section', (int)$deleteSectionId);
+            }
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("DELETE FROM cms_food_items WHERE section_id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
+                $pdo->prepare("DELETE FROM cms_food_sections WHERE id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
+                logAction('food_section_delete', "card={$cardId} section={$deleteSectionId}");
+                $pdo->commit();
+            } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
         }
         $redirectToItems('deleted');
     }
@@ -177,8 +214,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete_item') {
         $deleteItemId = inputInt('post', 'item_id');
         if ($itemBelongsToCard($deleteItemId)) {
-            $pdo->prepare("DELETE FROM cms_food_items WHERE id = ? AND card_id = ?")->execute([$deleteItemId, $cardId]);
-            logAction('food_item_delete', "card={$cardId} item={$deleteItemId}");
+            $confirmFieldName = 'confirm_food_item_delete_' . $deleteItemId;
+            $confirmed = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
+            if (!$confirmed) {
+                $redirectToDeleteError('item', (int)$deleteItemId);
+            }
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("DELETE FROM cms_food_items WHERE id = ? AND card_id = ?")->execute([$deleteItemId, $cardId]);
+                logAction('food_item_delete', "card={$cardId} item={$deleteItemId}");
+                $pdo->commit();
+            } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
         }
         $redirectToItems('deleted');
     }
@@ -265,6 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_section') {
+        $errorForm = 'section';
         $sectionId = inputInt('post', 'section_id');
         $servingDateInput = trim((string)($_POST['serving_date'] ?? ''));
         $servingTimeFromInput = trim((string)($_POST['serving_time_from'] ?? ''));
@@ -285,23 +337,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editSectionId = $sectionId;
 
         if ($sectionState['title'] === '') {
-            $error = 'Název sekce je povinný.';
+            $error = 'Sekci lístku nejde uložit bez názvu. U pole Název sekce je konkrétní nápověda.';
             $fieldErrors[] = 'section_title';
+            $fieldErrorMessages['section_title'] = 'Doplňte krátký název sekce, například Polévky nebo Hlavní jídla.';
         } elseif ($servingDateInput !== '' && $servingDate === '') {
-            $error = 'Datum podávání musí být skutečné datum ve formátu RRRR-MM-DD.';
+            $error = 'Datum podávání sekce není použitelné. U pole Datum podávání je konkrétní nápověda.';
             $fieldErrors[] = 'section_serving_date';
+            $fieldErrorMessages['section_serving_date'] = 'Vyberte skutečné kalendářní datum, nebo pole nechte prázdné pro sekci bez denního omezení.';
         } elseif ($servingTimeFromInput !== '' && $servingTimeFrom === '') {
-            $error = 'Čas začátku podávání musí být ve formátu HH:MM.';
+            $error = 'Čas začátku podávání sekce není použitelný. U pole Podávání od je konkrétní nápověda.';
             $fieldErrors[] = 'section_serving_time_from';
+            $fieldErrorMessages['section_serving_time_from'] = 'Zadejte čas začátku ve formátu HH:MM pomocí pole času, nebo pole nechte prázdné.';
         } elseif ($servingTimeToInput !== '' && $servingTimeTo === '') {
-            $error = 'Čas konce podávání musí být ve formátu HH:MM.';
+            $error = 'Čas konce podávání sekce není použitelný. U pole Podávání do je konkrétní nápověda.';
             $fieldErrors[] = 'section_serving_time_to';
+            $fieldErrorMessages['section_serving_time_to'] = 'Zadejte čas konce ve formátu HH:MM pomocí pole času, nebo pole nechte prázdné.';
         } elseif ($servingTimeFrom !== '' && $servingTimeTo !== '' && $servingTimeTo < $servingTimeFrom) {
-            $error = 'Čas konce podávání nesmí být dříve než čas začátku.';
+            $error = 'Časové rozmezí podávání sekce není použitelné. U polí Podávání od a Podávání do je konkrétní nápověda.';
             $fieldErrors[] = 'section_serving_time_from';
             $fieldErrors[] = 'section_serving_time_to';
+            $fieldErrorMessages['section_serving_time_from'] = 'Nastavte konec podávání stejně nebo později než začátek, případně obě pole nechte prázdná.';
+            $fieldErrorMessages['section_serving_time_to'] = $fieldErrorMessages['section_serving_time_from'];
         } elseif ($sectionId !== null && !$sectionBelongsToCard($sectionId)) {
-            $error = 'Upravovaná sekce nepatří k tomuto lístku.';
+            $error = 'Upravovanou sekci se v tomto lístku nepodařilo najít. Vraťte se k seznamu a vyberte existující sekci.';
         } elseif ($sectionId !== null) {
             $pdo->prepare(
                 "UPDATE cms_food_sections
@@ -348,6 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_item') {
+        $errorForm = 'item';
         $itemId = inputInt('post', 'item_id');
         $sectionId = inputInt('post', 'section_id');
         $priceAmount = normalizeFoodPriceInput((string)($_POST['price_amount'] ?? ''));
@@ -387,37 +446,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $editItemId = $itemId;
 
         if ($itemState['title'] === '') {
-            $error = 'Název položky je povinný.';
+            $error = 'Položku lístku nejde uložit bez názvu. U pole Název položky je konkrétní nápověda.';
             $fieldErrors[] = 'item_title';
+            $fieldErrorMessages['item_title'] = 'Doplňte krátký název položky, například Smažený sýr s bramborem.';
         } elseif (!$sectionBelongsToCard($sectionId)) {
-            $error = 'Vyberte platnou sekci tohoto lístku.';
+            $error = 'Vybraná sekce položky není dostupná. U pole Sekce je konkrétní nápověda.';
             $fieldErrors[] = 'item_section_id';
+            $fieldErrorMessages['item_section_id'] = 'Vyberte některou z existujících sekcí tohoto lístku, nebo sekci nejdřív přidejte.';
         } elseif ($priceAmount === false) {
-            $error = 'Cena musí být číslo s nejvýše dvěma desetinnými místy.';
+            $error = 'Cena položky není použitelná. U pole Cena je konkrétní nápověda.';
             $fieldErrors[] = 'item_price_amount';
+            $fieldErrorMessages['item_price_amount'] = 'Zadejte částku jako 129 nebo 129,90, nejvýše se dvěma desetinnými místy, případně pole nechte prázdné.';
         } elseif ($energyKj === false) {
-            $error = 'Energie v kJ musí být celé nezáporné číslo.';
+            $error = 'Energie položky v kJ není použitelná. U pole Energie v kJ je konkrétní nápověda.';
             $fieldErrors[] = 'item_energy_kj';
+            $fieldErrorMessages['item_energy_kj'] = 'Zadejte celé nezáporné číslo, například 2100, nebo pole nechte prázdné.';
         } elseif ($energyKcal === false) {
-            $error = 'Energie v kcal musí být celé nezáporné číslo.';
+            $error = 'Energie položky v kcal není použitelná. U pole Energie v kcal je konkrétní nápověda.';
             $fieldErrors[] = 'item_energy_kcal';
+            $fieldErrorMessages['item_energy_kcal'] = 'Zadejte celé nezáporné číslo, například 500, nebo pole nechte prázdné.';
         } elseif ($proteinG === false) {
-            $error = 'Bílkoviny musí být číslo s nejvýše dvěma desetinnými místy.';
+            $error = 'Hodnota bílkovin není použitelná. U pole Bílkoviny v g je konkrétní nápověda.';
             $fieldErrors[] = 'item_protein_g';
+            $fieldErrorMessages['item_protein_g'] = 'Zadejte nezáporné číslo s nejvýše dvěma desetinnými místy, například 21,5, nebo pole nechte prázdné.';
         } elseif ($carbsG === false) {
-            $error = 'Sacharidy musí být číslo s nejvýše dvěma desetinnými místy.';
+            $error = 'Hodnota sacharidů není použitelná. U pole Sacharidy v g je konkrétní nápověda.';
             $fieldErrors[] = 'item_carbs_g';
+            $fieldErrorMessages['item_carbs_g'] = 'Zadejte nezáporné číslo s nejvýše dvěma desetinnými místy, například 30, nebo pole nechte prázdné.';
         } elseif ($fatG === false) {
-            $error = 'Tuky musí být číslo s nejvýše dvěma desetinnými místy.';
+            $error = 'Hodnota tuků není použitelná. U pole Tuky v g je konkrétní nápověda.';
             $fieldErrors[] = 'item_fat_g';
+            $fieldErrorMessages['item_fat_g'] = 'Zadejte nezáporné číslo s nejvýše dvěma desetinnými místy, například 18,25, nebo pole nechte prázdné.';
         } elseif ($saltG === false) {
-            $error = 'Sůl musí být číslo s nejvýše dvěma desetinnými místy.';
+            $error = 'Hodnota soli není použitelná. U pole Sůl v g je konkrétní nápověda.';
             $fieldErrors[] = 'item_salt_g';
+            $fieldErrorMessages['item_salt_g'] = 'Zadejte nezáporné číslo s nejvýše dvěma desetinnými místy, například 2, nebo pole nechte prázdné.';
         } elseif (!$mediaIsValid) {
-            $error = 'Vyberte platný veřejný obrázek z knihovny médií, nebo ponechte obrázek prázdný.';
+            $error = 'Vybraný obrázek položky není dostupný. U pole Obrázek z knihovny médií je konkrétní nápověda.';
             $fieldErrors[] = 'item_media_id';
+            $fieldErrorMessages['item_media_id'] = 'Vyberte veřejný rastrový obrázek z knihovny médií, nebo položku ponechte bez obrázku.';
         } elseif ($itemId !== null && !$itemBelongsToCard($itemId)) {
-            $error = 'Upravovaná položka nepatří k tomuto lístku.';
+            $error = 'Upravovanou položku se v tomto lístku nepodařilo najít. Vraťte se k seznamu a vyberte existující položku.';
         } elseif ($itemId !== null) {
             $pdo->prepare(
                 "UPDATE cms_food_items
@@ -562,6 +631,7 @@ $mediaOptionsStmt = $pdo->prepare(
 );
 $mediaOptionsStmt->execute([$selectedMediaId]);
 $mediaOptions = $mediaOptionsStmt->fetchAll();
+$fieldErrorFor = static fn (string $fieldName): string => (string)($fieldErrorMessages[$fieldName] ?? $error);
 
 adminHeader('Položky lístku: ' . (string)$card['title']);
 ?>
@@ -571,7 +641,8 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
 <?php if ($message === 'moved'): ?><p class="success" role="status">Pořadí bylo upraveno.</p><?php endif; ?>
 <?php if ($message === 'duplicated'): ?><p class="success" role="status">Položka byla zkopírována.</p><?php endif; ?>
 <?php if ($message === 'bulk'): ?><p class="success" role="status">Dostupnost vybraných položek byla upravena.</p><?php endif; ?>
-<?php if ($error !== ''): ?><p id="food-items-error" class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($error !== ''): ?><p id="food-items-error" class="error" role="alert" aria-atomic="true"><?= h($error) ?></p><?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="food-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
 
 <p class="button-row button-row--start">
   <a href="food.php"><span aria-hidden="true">&larr;</span> Zpět na lístky</a>
@@ -587,7 +658,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
 
 <section class="form-card" aria-labelledby="food-section-form-title">
   <h2 id="food-section-form-title"><?= (int)$sectionState['id'] > 0 ? 'Upravit sekci' : 'Přidat sekci' ?></h2>
-  <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['section_title', 'section_serving_date', 'section_serving_time_from', 'section_serving_time_to']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
+  <form id="food-section-form" method="post" novalidate<?= $error !== '' && $errorForm === 'section' ? ' aria-describedby="food-items-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="save_section">
     <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
@@ -599,7 +670,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
              value="<?= h((string)$sectionState['title']) ?>"
              <?= adminFieldAttributes('section_title', $fieldErrors, [], ['section-title-help']) ?>>
       <small id="section-title-help" class="field-help">Například Polévky, Hlavní jídla, Dezerty nebo Teplé nápoje.</small>
-      <?php adminRenderFieldError('section_title', $fieldErrors, [], $error); ?>
+      <?php adminRenderFieldError('section_title', $fieldErrors, [], $fieldErrorFor('section_title')); ?>
 
       <label for="section-description">Popis sekce</label>
       <textarea id="section-description" name="description" rows="3"><?= h((string)$sectionState['description']) ?></textarea>
@@ -613,21 +684,21 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             <input type="date" id="section-serving-date" name="serving_date"
                    value="<?= h((string)$sectionState['serving_date']) ?>"
                    <?= adminFieldAttributes('section_serving_date', $fieldErrors, [], ['section-serving-help']) ?>>
-            <?php adminRenderFieldError('section_serving_date', $fieldErrors, [], $error); ?>
+            <?php adminRenderFieldError('section_serving_date', $fieldErrors, [], $fieldErrorFor('section_serving_date')); ?>
           </div>
           <div class="form-group">
             <label for="section-serving-time-from">Podávání od</label>
             <input type="time" id="section-serving-time-from" name="serving_time_from"
                    value="<?= h((string)$sectionState['serving_time_from']) ?>"
                    <?= adminFieldAttributes('section_serving_time_from', $fieldErrors, [], ['section-serving-help']) ?>>
-            <?php adminRenderFieldError('section_serving_time_from', $fieldErrors, [], $error); ?>
+            <?php adminRenderFieldError('section_serving_time_from', $fieldErrors, [], $fieldErrorFor('section_serving_time_from')); ?>
           </div>
           <div class="form-group">
             <label for="section-serving-time-to">Podávání do</label>
             <input type="time" id="section-serving-time-to" name="serving_time_to"
                    value="<?= h((string)$sectionState['serving_time_to']) ?>"
                    <?= adminFieldAttributes('section_serving_time_to', $fieldErrors, [], ['section-serving-help']) ?>>
-            <?php adminRenderFieldError('section_serving_time_to', $fieldErrors, [], $error); ?>
+            <?php adminRenderFieldError('section_serving_time_to', $fieldErrors, [], $fieldErrorFor('section_serving_time_to')); ?>
           </div>
         </div>
         <label for="section-serving-note">Poznámka k podávání</label>
@@ -653,7 +724,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
   <?php if ($sections === []): ?>
     <p class="field-help field-help--flush">Nejprve přidejte alespoň jednu sekci lístku.</p>
   <?php else: ?>
-    <form method="post" novalidate<?= $error !== '' && array_intersect($fieldErrors, ['item_title', 'item_section_id', 'item_price_amount', 'item_energy_kj', 'item_energy_kcal', 'item_protein_g', 'item_carbs_g', 'item_fat_g', 'item_salt_g', 'item_media_id']) !== [] ? ' aria-describedby="food-items-error"' : '' ?>>
+    <form id="food-item-form" method="post" novalidate<?= $error !== '' && $errorForm === 'item' ? ' aria-describedby="food-items-error"' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
       <input type="hidden" name="action" value="save_item">
       <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
@@ -670,13 +741,13 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             </option>
           <?php endforeach; ?>
         </select>
-        <?php adminRenderFieldError('item_section_id', $fieldErrors, [], $error); ?>
+        <?php adminRenderFieldError('item_section_id', $fieldErrors, [], $fieldErrorFor('item_section_id')); ?>
 
         <label for="item-title">Název položky <span aria-hidden="true">*</span></label>
         <input type="text" id="item-title" name="title" required aria-required="true" maxlength="255"
                value="<?= h((string)$itemState['title']) ?>"
                <?= adminFieldAttributes('item_title', $fieldErrors, []) ?>>
-        <?php adminRenderFieldError('item_title', $fieldErrors, [], $error); ?>
+        <?php adminRenderFieldError('item_title', $fieldErrors, [], $fieldErrorFor('item_title')); ?>
 
         <label for="item-description">Popis položky</label>
         <textarea id="item-description" name="description" rows="3" aria-describedby="item-description-help"><?= h((string)$itemState['description']) ?></textarea>
@@ -700,7 +771,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
               </option>
             <?php endforeach; ?>
           </select>
-          <?php adminRenderFieldError('item_media_id', $fieldErrors, [], $error); ?>
+          <?php adminRenderFieldError('item_media_id', $fieldErrors, [], $fieldErrorFor('item_media_id')); ?>
 
           <label for="item-image-alt">Alternativní text obrázku pro tuto položku</label>
           <input type="text" id="item-image-alt" name="image_alt_text" maxlength="255" value="<?= h((string)$itemState['image_alt_text']) ?>" aria-describedby="item-image-alt-help">
@@ -714,7 +785,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                    value="<?= h((string)$itemState['price_amount']) ?>"
                    <?= adminFieldAttributes('item_price_amount', $fieldErrors, [], ['item-price-help']) ?>>
             <small id="item-price-help" class="field-help">Volitelné. Použijte například 129 nebo 129,90.</small>
-            <?php adminRenderFieldError('item_price_amount', $fieldErrors, [], $error); ?>
+            <?php adminRenderFieldError('item_price_amount', $fieldErrors, [], $fieldErrorFor('item_price_amount')); ?>
           </div>
           <div class="form-group">
             <label for="item-currency">Měna</label>
@@ -739,42 +810,42 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
               <input type="number" id="item-energy-kj" name="energy_kj" min="0" step="1"
                      value="<?= h((string)$itemState['energy_kj']) ?>"
                      <?= adminFieldAttributes('item_energy_kj', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_energy_kj', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_energy_kj', $fieldErrors, [], $fieldErrorFor('item_energy_kj')); ?>
             </div>
             <div class="form-group">
               <label for="item-energy-kcal">Energie v kcal</label>
               <input type="number" id="item-energy-kcal" name="energy_kcal" min="0" step="1"
                      value="<?= h((string)$itemState['energy_kcal']) ?>"
                      <?= adminFieldAttributes('item_energy_kcal', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_energy_kcal', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_energy_kcal', $fieldErrors, [], $fieldErrorFor('item_energy_kcal')); ?>
             </div>
             <div class="form-group">
               <label for="item-protein-g">Bílkoviny v g</label>
               <input type="text" id="item-protein-g" name="protein_g" inputmode="decimal"
                      value="<?= h((string)$itemState['protein_g']) ?>"
                      <?= adminFieldAttributes('item_protein_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_protein_g', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_protein_g', $fieldErrors, [], $fieldErrorFor('item_protein_g')); ?>
             </div>
             <div class="form-group">
               <label for="item-carbs-g">Sacharidy v g</label>
               <input type="text" id="item-carbs-g" name="carbs_g" inputmode="decimal"
                      value="<?= h((string)$itemState['carbs_g']) ?>"
                      <?= adminFieldAttributes('item_carbs_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_carbs_g', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_carbs_g', $fieldErrors, [], $fieldErrorFor('item_carbs_g')); ?>
             </div>
             <div class="form-group">
               <label for="item-fat-g">Tuky v g</label>
               <input type="text" id="item-fat-g" name="fat_g" inputmode="decimal"
                      value="<?= h((string)$itemState['fat_g']) ?>"
                      <?= adminFieldAttributes('item_fat_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_fat_g', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_fat_g', $fieldErrors, [], $fieldErrorFor('item_fat_g')); ?>
             </div>
             <div class="form-group">
               <label for="item-salt-g">Sůl v g</label>
               <input type="text" id="item-salt-g" name="salt_g" inputmode="decimal"
                      value="<?= h((string)$itemState['salt_g']) ?>"
                      <?= adminFieldAttributes('item_salt_g', $fieldErrors, [], ['item-nutrition-help']) ?>>
-              <?php adminRenderFieldError('item_salt_g', $fieldErrors, [], $error); ?>
+              <?php adminRenderFieldError('item_salt_g', $fieldErrors, [], $fieldErrorFor('item_salt_g')); ?>
             </div>
           </div>
         </fieldset>
@@ -825,7 +896,16 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
 <?php if ($sections === []): ?>
   <p>Zatím tu nejsou žádné strukturované sekce ani položky.</p>
 <?php else: ?>
-  <?php foreach ($sections as $section): ?>
+  <?php foreach ($sections as $section):
+      $sectionId = (int)$section['id'];
+      $sectionDeleteConfirmField = 'confirm_food_section_delete_' . $sectionId;
+      $sectionDeleteReviewId = 'food-section-delete-review-' . $sectionId;
+      $sectionDeleteFieldErrorId = 'confirm-food-section-delete-' . $sectionId . '-error';
+      $sectionDeleteHasError = $deleteErrorMessage !== '' && $deleteErrorType === 'section' && $deleteErrorId === $sectionId;
+      $sectionDeleteErrorFields = $sectionDeleteHasError ? [$sectionDeleteConfirmField] : [];
+      $sectionItemCount = (int)$section['item_count'];
+      $sectionItemCountLabel = $sectionItemCount === 1 ? 'položku' : ($sectionItemCount >= 2 && $sectionItemCount <= 4 ? 'položky' : 'položek');
+      ?>
     <section class="admin-section-card" aria-labelledby="food-section-<?= (int)$section['id'] ?>">
       <div class="section-heading">
         <div>
@@ -857,12 +937,21 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             <input type="hidden" name="direction" value="down">
             <button type="submit" class="btn">Posunout sekci dolů</button>
           </form>
-          <form method="post" class="admin-inline-form">
+          <form id="food-section-delete-form-<?= $sectionId ?>" method="post" class="admin-inline-form" novalidate<?= $sectionDeleteHasError ? ' aria-describedby="food-delete-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="action" value="delete_section">
             <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
-            <input type="hidden" name="section_id" value="<?= (int)$section['id'] ?>">
-            <button type="submit" class="btn btn-danger" data-confirm="Smazat sekci včetně všech položek?">Smazat sekci</button>
+            <input type="hidden" name="section_id" value="<?= $sectionId ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazat sekci <?= h((string)$section['title']) ?></legend>
+              <p id="<?= h($sectionDeleteReviewId) ?>" class="field-help field-help--flush">Smazání trvale odstraní sekci <?= h((string)$section['title']) ?> a <?= $sectionItemCount ?> <?= $sectionItemCountLabel ?> včetně cen, alergenů, výživových údajů a vazeb na obrázky. Soubory médií v knihovně zůstanou zachované.</p>
+              <label class="admin-checkbox-label" for="<?= h($sectionDeleteConfirmField) ?>">
+                <input type="checkbox" id="<?= h($sectionDeleteConfirmField) ?>" name="<?= h($sectionDeleteConfirmField) ?>" value="1"<?= adminFieldAttributes($sectionDeleteConfirmField, $sectionDeleteErrorFields, [], [$sectionDeleteReviewId], $sectionDeleteFieldErrorId) ?>>
+                Potvrzuji kontrolu dopadu a chci sekci včetně jejích položek trvale smazat.
+              </label>
+              <?php adminRenderFieldError($sectionDeleteConfirmField, $sectionDeleteErrorFields, [], 'Před smazáním sekce potvrďte, že jste zkontrolovali počet a obsah odstraňovaných položek.', $sectionDeleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger" data-confirm="Trvale smazat sekci včetně všech jejích položek?">Smazat sekci</button>
+            </fieldset>
           </form>
         </div>
       </div>
@@ -896,7 +985,14 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($section['items'] as $item): ?>
+            <?php foreach ($section['items'] as $item):
+                $itemId = (int)$item['id'];
+                $itemDeleteConfirmField = 'confirm_food_item_delete_' . $itemId;
+                $itemDeleteReviewId = 'food-item-delete-review-' . $itemId;
+                $itemDeleteFieldErrorId = 'confirm-food-item-delete-' . $itemId . '-error';
+                $itemDeleteHasError = $deleteErrorMessage !== '' && $deleteErrorType === 'item' && $deleteErrorId === $itemId;
+                $itemDeleteErrorFields = $itemDeleteHasError ? [$itemDeleteConfirmField] : [];
+                ?>
               <tr>
                 <td>
                   <label class="sr-only" for="food-item-select-<?= (int)$item['id'] ?>">Vybrat položku <?= h((string)$item['title']) ?></label>
@@ -958,12 +1054,21 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                     <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
                     <button type="submit" class="btn">Kopírovat</button>
                   </form>
-                  <form method="post" class="admin-inline-form">
+                  <form id="food-item-delete-form-<?= $itemId ?>" method="post" class="admin-inline-form" novalidate<?= $itemDeleteHasError ? ' aria-describedby="food-delete-error"' : '' ?>>
                     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                     <input type="hidden" name="action" value="delete_item">
                     <input type="hidden" name="card_id" value="<?= (int)$cardId ?>">
-                    <input type="hidden" name="item_id" value="<?= (int)$item['id'] ?>">
-                    <button type="submit" class="btn btn-danger" data-confirm="Smazat položku?">Smazat</button>
+                    <input type="hidden" name="item_id" value="<?= $itemId ?>">
+                    <fieldset class="admin-inline-fieldset">
+                      <legend class="sr-only">Smazat položku <?= h((string)$item['title']) ?></legend>
+                      <p id="<?= h($itemDeleteReviewId) ?>" class="field-help field-help--flush">Smazání trvale odstraní položku <?= h((string)$item['title']) ?> ze sekce <?= h((string)$section['title']) ?> včetně ceny, alergenů, výživových údajů a vazby na obrázek. Soubor média v knihovně zůstane zachovaný.</p>
+                      <label class="admin-checkbox-label" for="<?= h($itemDeleteConfirmField) ?>">
+                        <input type="checkbox" id="<?= h($itemDeleteConfirmField) ?>" name="<?= h($itemDeleteConfirmField) ?>" value="1"<?= adminFieldAttributes($itemDeleteConfirmField, $itemDeleteErrorFields, [], [$itemDeleteReviewId], $itemDeleteFieldErrorId) ?>>
+                        Potvrzuji kontrolu dopadu a chci položku trvale smazat.
+                      </label>
+                      <?php adminRenderFieldError($itemDeleteConfirmField, $itemDeleteErrorFields, [], 'Před smazáním položky potvrďte, že jste zkontrolovali odstraňovaný obsah a metadata.', $itemDeleteFieldErrorId); ?>
+                      <button type="submit" class="btn btn-danger" data-confirm="Trvale smazat tuto položku lístku?">Smazat</button>
+                    </fieldset>
                   </form>
                 </td>
               </tr>

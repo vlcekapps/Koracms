@@ -59,6 +59,8 @@ Poznámka 2026-07-09: individuální mazání odpovědi Form Builderu už není 
 
 Poznámka 2026-07-10: editory podcastových kapitol, osob a platforem už nejsou součástí otevřené základní mezery `3.3.3`. Používají serverově renderované field-level chyby s konkrétním návrhem opravy, zachovávají odeslané hodnoty a mají zdrojový i HTTP regresní důkaz v `podcast_source_guardrails` a `podcast_admin_validation_http`. Ručně zbývá ověřit oznámení alertu a návrat k dotčenému poli s NVDA/keyboard-only; obecný copy pass pokračuje nad jinými méně častými moduly.
 
+Poznámka 2026-07-10: strukturované sekce a položky jídelních lístků už nejsou součástí otevřené základní mezery `3.3.3`; názvy, datum/čas podávání, sekce, cena, výživové hodnoty a obrázek mají konkrétní field-level návrhy oprav a HTTP důkaz zachování hodnot. Jejich individuální trvalé mazání už také není otevřeným základním rizikem `3.3.4`: položka i sekce mají review dopadu, serverově vyžadovaný checkbox, odmítnutí bez změny dat/logu a potvrzený transakční cleanup se zachováním médií. Ručně zbývá NVDA/keyboard-only průchod; obecné položky obou kritérií pokračují nad jinými méně častými formuláři a destruktivními akcemi.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |

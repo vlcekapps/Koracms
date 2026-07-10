@@ -13031,6 +13031,34 @@ try {
         $foodStructuredIssues[] = 'správa strukturovaných položek lístku se nenačetla s očekávanými formuláři';
     }
 
+    $invalidFoodSectionResponse = postUrl($foodItemsAdminUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'action' => 'save_section',
+        'card_id' => (string)$foodCardId,
+        'section_id' => '0',
+        'title' => '',
+        'description' => 'HTTP zachovaný popis sekce',
+        'serving_date' => '',
+        'serving_time_from' => '',
+        'serving_time_to' => '',
+        'serving_note' => 'HTTP zachovaná poznámka k podávání',
+        'sort_order' => '25',
+    ], $adminSession['cookie'], 0);
+    $invalidFoodSectionBody = $invalidFoodSectionResponse['body'];
+    if (httpIntegrationStatusCode($invalidFoodSectionResponse) !== 200
+        || !str_contains($invalidFoodSectionBody, '<p id="food-items-error" class="error" role="alert" aria-atomic="true">Sekci lístku nejde uložit bez názvu. U pole Název sekce je konkrétní nápověda.</p>')
+        || !httpIntegrationElementHasAttributes($invalidFoodSectionBody, 'form', 'food-section-form', ['aria-describedby' => 'food-items-error'])
+        || !httpIntegrationInputHasAttributes($invalidFoodSectionBody, 'section-title', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'section-title-help section_title-error',
+        ])
+        || !str_contains($invalidFoodSectionBody, 'id="section_title-error" class="field-help field-error">Doplňte krátký název sekce, například Polévky nebo Hlavní jídla.</small>')
+        || !str_contains($invalidFoodSectionBody, '>HTTP zachovaný popis sekce</textarea>')
+        || !httpIntegrationInputHasAttributes($invalidFoodSectionBody, 'section-serving-note', ['value' => 'HTTP zachovaná poznámka k podávání'])
+        || str_contains($invalidFoodSectionBody, 'Název sekce je povinný.')) {
+        $foodStructuredIssues[] = 'prázdný název sekce nemá akční field-level chybu se zachovanými hodnotami';
+    }
+
     $sectionTitle = 'HTTP Hlavní jídla';
     $sectionResponse = postUrl($foodItemsAdminUrl, [
         'csrf_token' => $adminSession['csrf'],
@@ -13196,16 +13224,27 @@ try {
             'item_id' => '0',
             'section_id' => (string)$foodSectionId,
             'title' => 'HTTP Neplatná cena',
-            'description' => '',
+            'description' => 'HTTP zachovaný popis neplatné ceny',
             'price_amount' => 'sto korun',
             'price_currency' => 'CZK',
             'price_note' => '',
             'is_available' => '1',
             'sort_order' => '30',
         ], $adminSession['cookie'], 0);
+        $invalidItemBody = $invalidItemResponse['body'];
         if (httpIntegrationStatusCode($invalidItemResponse) !== 200
-            || !str_contains($invalidItemResponse['body'], 'Cena musí být číslo s nejvýše dvěma desetinnými místy.')) {
-            $foodStructuredIssues[] = 'neplatná cena položky lístku nevrátila field-level validační chybu';
+            || !str_contains($invalidItemBody, '<p id="food-items-error" class="error" role="alert" aria-atomic="true">Cena položky není použitelná. U pole Cena je konkrétní nápověda.</p>')
+            || !httpIntegrationElementHasAttributes($invalidItemBody, 'form', 'food-item-form', ['aria-describedby' => 'food-items-error'])
+            || !httpIntegrationInputHasAttributes($invalidItemBody, 'item-title', ['value' => 'HTTP Neplatná cena'])
+            || !httpIntegrationInputHasAttributes($invalidItemBody, 'item-price', [
+                'value' => 'sto korun',
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'item-price-help item_price_amount-error',
+            ])
+            || !str_contains($invalidItemBody, 'id="item_price_amount-error" class="field-help field-error">Zadejte částku jako 129 nebo 129,90, nejvýše se dvěma desetinnými místy, případně pole nechte prázdné.</small>')
+            || !str_contains($invalidItemBody, '>HTTP zachovaný popis neplatné ceny</textarea>')
+            || str_contains($invalidItemBody, 'Cena musí být číslo s nejvýše dvěma desetinnými místy.')) {
+            $foodStructuredIssues[] = 'neplatná cena položky lístku nemá akční field-level chybu se zachovanými hodnotami';
         }
     }
 
@@ -13450,6 +13489,160 @@ try {
         || str_contains($adminExportWithFoodResponse['body'], '"food_orders"')
         || !str_contains($adminExportWithFoodResponse['body'], 'HTTP Smažený sýr')) {
         $foodStructuredIssues[] = 'JSON export neobsahuje strukturované sekce, položky, denní/nutriční/objednávkové nastavení nebo chybně exportuje objednávky';
+    }
+
+    $pdo->prepare(
+        "INSERT INTO cms_food_items
+         (card_id, section_id, title, price_currency, media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
+         VALUES (?, ?, 'HTTP položka k samostatnému smazání', 'CZK', ?, 'HTTP alt k mazané položce', '1,7', 'vegetarian', 1, 90)"
+    )->execute([$foodCardId, $foodSectionId, $foodMediaId]);
+    $foodDeleteItemId = (int)$pdo->lastInsertId();
+    $createdFoodItemIds[] = $foodDeleteItemId;
+    $foodDeleteItemConfirmField = 'confirm_food_item_delete_' . $foodDeleteItemId;
+    $foodDeleteItemReviewId = 'food-item-delete-review-' . $foodDeleteItemId;
+    $foodDeleteItemErrorId = 'confirm-food-item-delete-' . $foodDeleteItemId . '-error';
+    $foodDeleteItemFormId = 'food-item-delete-form-' . $foodDeleteItemId;
+    $foodDeleteItemReviewPage = fetchUrl($foodItemsAdminUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($foodDeleteItemReviewPage) !== 200
+        || !str_contains($foodDeleteItemReviewPage['body'], 'Smazání trvale odstraní položku HTTP položka k samostatnému smazání')
+        || !str_contains($foodDeleteItemReviewPage['body'], 'Soubor média v knihovně zůstane zachovaný.')
+        || !httpIntegrationInputHasAttributes($foodDeleteItemReviewPage['body'], $foodDeleteItemConfirmField, [
+            'aria-describedby' => $foodDeleteItemReviewId,
+        ])) {
+        $foodStructuredIssues[] = 'mazání položky lístku nezobrazilo item-specific review a potvrzovací checkbox';
+    }
+    $foodDeleteItemLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_item_delete'")->fetchColumn();
+    $foodDeleteItemRejectedResponse = postUrl($foodItemsAdminUrl, [
+        'csrf_token' => extractHiddenInputValue($foodDeleteItemReviewPage['body'], 'csrf_token'),
+        'action' => 'delete_item',
+        'card_id' => (string)$foodCardId,
+        'item_id' => (string)$foodDeleteItemId,
+    ], $adminSession['cookie'], 0);
+    $foodDeleteItemErrorPath = BASE_URL . '/admin/food_items.php?' . http_build_query([
+        'card' => $foodCardId,
+        'delete_error' => 'confirm_required',
+        'delete_error_type' => 'item',
+        'delete_error_id' => $foodDeleteItemId,
+    ]);
+    $foodDeleteItemExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_items WHERE id = ? AND card_id = ?");
+    $foodDeleteItemExistsStmt->execute([$foodDeleteItemId, $foodCardId]);
+    if (httpIntegrationStatusCode($foodDeleteItemRejectedResponse) !== 302
+        || !responseHasLocationHeader($foodDeleteItemRejectedResponse['headers'], $foodDeleteItemErrorPath, $baseUrl)
+        || (int)$foodDeleteItemExistsStmt->fetchColumn() !== 1
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_item_delete'")->fetchColumn() !== $foodDeleteItemLogBefore) {
+        $foodStructuredIssues[] = 'nepotvrzené smazání položky změnilo data nebo audit log';
+    }
+    $foodDeleteItemErrorPage = fetchUrl($baseUrl . $foodDeleteItemErrorPath, $adminSession['cookie'], 0);
+    if (!str_contains($foodDeleteItemErrorPage['body'], '<p id="food-delete-error" class="error" role="alert" aria-atomic="true">Položku lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.</p>')
+        || !httpIntegrationElementHasAttributes($foodDeleteItemErrorPage['body'], 'form', $foodDeleteItemFormId, ['aria-describedby' => 'food-delete-error'])
+        || !httpIntegrationInputHasAttributes($foodDeleteItemErrorPage['body'], $foodDeleteItemConfirmField, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $foodDeleteItemReviewId . ' ' . $foodDeleteItemErrorId,
+        ])
+        || !str_contains($foodDeleteItemErrorPage['body'], 'id="' . $foodDeleteItemErrorId . '" class="field-help field-error">Před smazáním položky potvrďte, že jste zkontrolovali odstraňovaný obsah a metadata.</small>')) {
+        $foodStructuredIssues[] = 'nepotvrzené smazání položky nezobrazilo text-backed alert a field-level chybu';
+    }
+    $foodDeleteItemConfirmedResponse = postUrl($foodItemsAdminUrl, [
+        'csrf_token' => extractHiddenInputValue($foodDeleteItemErrorPage['body'], 'csrf_token'),
+        'action' => 'delete_item',
+        'card_id' => (string)$foodCardId,
+        'item_id' => (string)$foodDeleteItemId,
+        $foodDeleteItemConfirmField => '1',
+    ], $adminSession['cookie'], 0);
+    $foodDeleteItemExistsStmt->execute([$foodDeleteItemId, $foodCardId]);
+    $foodMediaStillExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_media WHERE id = ?");
+    $foodMediaStillExistsStmt->execute([$foodMediaId]);
+    if (httpIntegrationStatusCode($foodDeleteItemConfirmedResponse) !== 302
+        || !responseHasLocationHeader($foodDeleteItemConfirmedResponse['headers'], BASE_URL . '/admin/food_items.php?card=' . $foodCardId . '&msg=deleted', $baseUrl)
+        || (int)$foodDeleteItemExistsStmt->fetchColumn() !== 0
+        || (int)$foodMediaStillExistsStmt->fetchColumn() !== 1
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_item_delete'")->fetchColumn() !== $foodDeleteItemLogBefore + 1) {
+        $foodStructuredIssues[] = 'potvrzené smazání položky neprovedlo očekávaný cleanup, PRG nebo audit log';
+    }
+
+    $pdo->prepare("INSERT INTO cms_food_sections (card_id, title, description, sort_order) VALUES (?, 'HTTP sekce k trvalému smazání', 'Sekce se dvěma testovacími položkami.', 100)")
+        ->execute([$foodCardId]);
+    $foodDeleteSectionId = (int)$pdo->lastInsertId();
+    $createdFoodSectionIds[] = $foodDeleteSectionId;
+    foreach (['HTTP první položka mazané sekce', 'HTTP druhá položka mazané sekce'] as $foodDeleteSectionItemIndex => $foodDeleteSectionItemTitle) {
+        $pdo->prepare(
+            "INSERT INTO cms_food_items
+             (card_id, section_id, title, price_currency, media_id, image_alt_text, is_available, sort_order)
+             VALUES (?, ?, ?, 'CZK', ?, 'HTTP alt položky mazané sekce', 1, ?)"
+        )->execute([
+            $foodCardId,
+            $foodDeleteSectionId,
+            $foodDeleteSectionItemTitle,
+            $foodDeleteSectionItemIndex === 0 ? $foodMediaId : null,
+            110 + ($foodDeleteSectionItemIndex * 10),
+        ]);
+        $foodDeleteSectionItemId = (int)$pdo->lastInsertId();
+        $createdFoodItemIds[] = $foodDeleteSectionItemId;
+    }
+    $foodDeleteSectionConfirmField = 'confirm_food_section_delete_' . $foodDeleteSectionId;
+    $foodDeleteSectionReviewId = 'food-section-delete-review-' . $foodDeleteSectionId;
+    $foodDeleteSectionErrorId = 'confirm-food-section-delete-' . $foodDeleteSectionId . '-error';
+    $foodDeleteSectionFormId = 'food-section-delete-form-' . $foodDeleteSectionId;
+    $foodDeleteSectionReviewPage = fetchUrl($foodItemsAdminUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($foodDeleteSectionReviewPage) !== 200
+        || !str_contains($foodDeleteSectionReviewPage['body'], 'Smazání trvale odstraní sekci HTTP sekce k trvalému smazání a 2 položky')
+        || !str_contains($foodDeleteSectionReviewPage['body'], 'Soubory médií v knihovně zůstanou zachované.')
+        || !httpIntegrationInputHasAttributes($foodDeleteSectionReviewPage['body'], $foodDeleteSectionConfirmField, [
+            'aria-describedby' => $foodDeleteSectionReviewId,
+        ])) {
+        $foodStructuredIssues[] = 'mazání sekce lístku nezobrazilo počet položek, dopad a potvrzovací checkbox';
+    }
+    $foodDeleteSectionLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_section_delete'")->fetchColumn();
+    $foodDeleteSectionRejectedResponse = postUrl($foodItemsAdminUrl, [
+        'csrf_token' => extractHiddenInputValue($foodDeleteSectionReviewPage['body'], 'csrf_token'),
+        'action' => 'delete_section',
+        'card_id' => (string)$foodCardId,
+        'section_id' => (string)$foodDeleteSectionId,
+    ], $adminSession['cookie'], 0);
+    $foodDeleteSectionErrorPath = BASE_URL . '/admin/food_items.php?' . http_build_query([
+        'card' => $foodCardId,
+        'delete_error' => 'confirm_required',
+        'delete_error_type' => 'section',
+        'delete_error_id' => $foodDeleteSectionId,
+    ]);
+    $foodDeleteSectionExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_sections WHERE id = ? AND card_id = ?");
+    $foodDeleteSectionItemsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_items WHERE section_id = ? AND card_id = ?");
+    $foodDeleteSectionExistsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    $foodDeleteSectionItemsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    if (httpIntegrationStatusCode($foodDeleteSectionRejectedResponse) !== 302
+        || !responseHasLocationHeader($foodDeleteSectionRejectedResponse['headers'], $foodDeleteSectionErrorPath, $baseUrl)
+        || (int)$foodDeleteSectionExistsStmt->fetchColumn() !== 1
+        || (int)$foodDeleteSectionItemsStmt->fetchColumn() !== 2
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_section_delete'")->fetchColumn() !== $foodDeleteSectionLogBefore) {
+        $foodStructuredIssues[] = 'nepotvrzené smazání sekce změnilo sekci, položky nebo audit log';
+    }
+    $foodDeleteSectionErrorPage = fetchUrl($baseUrl . $foodDeleteSectionErrorPath, $adminSession['cookie'], 0);
+    if (!str_contains($foodDeleteSectionErrorPage['body'], '<p id="food-delete-error" class="error" role="alert" aria-atomic="true">Sekci lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.</p>')
+        || !httpIntegrationElementHasAttributes($foodDeleteSectionErrorPage['body'], 'form', $foodDeleteSectionFormId, ['aria-describedby' => 'food-delete-error'])
+        || !httpIntegrationInputHasAttributes($foodDeleteSectionErrorPage['body'], $foodDeleteSectionConfirmField, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $foodDeleteSectionReviewId . ' ' . $foodDeleteSectionErrorId,
+        ])
+        || !str_contains($foodDeleteSectionErrorPage['body'], 'id="' . $foodDeleteSectionErrorId . '" class="field-help field-error">Před smazáním sekce potvrďte, že jste zkontrolovali počet a obsah odstraňovaných položek.</small>')) {
+        $foodStructuredIssues[] = 'nepotvrzené smazání sekce nezobrazilo text-backed alert a field-level chybu';
+    }
+    $foodDeleteSectionConfirmedResponse = postUrl($foodItemsAdminUrl, [
+        'csrf_token' => extractHiddenInputValue($foodDeleteSectionErrorPage['body'], 'csrf_token'),
+        'action' => 'delete_section',
+        'card_id' => (string)$foodCardId,
+        'section_id' => (string)$foodDeleteSectionId,
+        $foodDeleteSectionConfirmField => '1',
+    ], $adminSession['cookie'], 0);
+    $foodDeleteSectionExistsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    $foodDeleteSectionItemsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    $foodMediaStillExistsStmt->execute([$foodMediaId]);
+    if (httpIntegrationStatusCode($foodDeleteSectionConfirmedResponse) !== 302
+        || !responseHasLocationHeader($foodDeleteSectionConfirmedResponse['headers'], BASE_URL . '/admin/food_items.php?card=' . $foodCardId . '&msg=deleted', $baseUrl)
+        || (int)$foodDeleteSectionExistsStmt->fetchColumn() !== 0
+        || (int)$foodDeleteSectionItemsStmt->fetchColumn() !== 0
+        || (int)$foodMediaStillExistsStmt->fetchColumn() !== 1
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_section_delete'")->fetchColumn() !== $foodDeleteSectionLogBefore + 1) {
+        $foodStructuredIssues[] = 'potvrzené smazání sekce neprovedlo transakční cleanup, PRG nebo audit log';
     }
 
     httpIntegrationPrintResult('food_structured_items_http', $foodStructuredIssues, $failures);

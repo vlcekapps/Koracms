@@ -32,6 +32,8 @@ Stejný field-level pattern používají i další běžná administrační work
 
 Ve správě podcastu to platí také pro kapitoly, osoby a odkazy na platformy. Po chybě zůstanou rozepsané hodnoty ve formuláři; nápověda u dotčeného pole vysvětlí přijatelný formát času, nabídne příklad názvu, popíše bezpečný http/https nebo doménový tvar adresy a u duplicitní položky doporučí jiný čas nebo úpravu existujícího záznamu.
 
+Ve správě strukturovaných jídelních lístků dostávají stejnou konkrétní nápovědu sekce, položky, datum/čas podávání, cena, výživové hodnoty a výběr obrázku. Smazání položky nebo sekce je trvalé, proto formulář před akcí popisuje dotčený obsah a metadata, u sekce počet položek, vyžaduje potvrzovací checkbox a server nepotvrzený požadavek odmítne. Potvrzené smazání zachová soubory v knihovně médií.
+
 Stejný guardrail platí pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace. Chyby mají správci poradit doplnění názvu, opravu interní cesty nebo URL, jiný slug, platné nadřazené album, platnou licenci, kalendářní datum pořízení, výběr zdroje nebo uživatele, doplnění údajů hosta, opravu času a řešení kolize rezervace.
 
 Hlavní obsahové editory používají stejnou smlouvu pro editor článku, správu blogů, položky vývěsky, jídelní/nápojové lístky a ankety. Chyba má vždy říct, které pole opravit a jak: doplnit titulek nebo název, zvolit jedinečný slug, použít obsah z cílového blogu, vybrat existující kategorii, zadat datum vyvěšení, doplnit možnosti odpovědi nebo opravit limit vícevýběru.
