@@ -692,6 +692,63 @@ function blogFeedUrl(array $blog): string
     return siteUrl('/feed.php?blog=' . rawurlencode($slug));
 }
 
+function normalizeBlogArchiveKey(string $archiveKey): string
+{
+    $archiveKey = trim($archiveKey);
+    if (preg_match('/^(\d{4})-(\d{2})$/', $archiveKey, $matches) !== 1) {
+        return '';
+    }
+
+    $year = (int)$matches[1];
+    $month = (int)$matches[2];
+    if ($year < 1000 || $year > 9999 || $month < 1 || $month > 12) {
+        return '';
+    }
+
+    return sprintf('%04d-%02d', $year, $month);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $query
+ */
+function blogArchiveRequestPath(array $blog, string $archiveKey, array $query = []): string
+{
+    $normalizedKey = normalizeBlogArchiveKey($archiveKey);
+    if ($normalizedKey === '') {
+        return appendUrlQuery('/blog/index.php', $query);
+    }
+
+    [$year, $month] = explode('-', $normalizedKey, 2);
+    $blogSlug = blogTaxonomySlug((string)($blog['slug'] ?? 'blog'));
+    if ($blogSlug === '') {
+        $blogSlug = 'blog';
+    }
+
+    return appendUrlQuery(
+        '/' . rawurlencode($blogSlug) . '/archiv/' . rawurlencode($year) . '/' . rawurlencode($month),
+        $query
+    );
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $query
+ */
+function blogArchivePath(array $blog, string $archiveKey, array $query = []): string
+{
+    return BASE_URL . blogArchiveRequestPath($blog, $archiveKey, $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $query
+ */
+function blogArchiveUrl(array $blog, string $archiveKey, array $query = []): string
+{
+    return siteUrl(blogArchiveRequestPath($blog, $archiveKey, $query));
+}
+
 /**
  * @param array<string, mixed> $blog
  * @param array<string, mixed> $series

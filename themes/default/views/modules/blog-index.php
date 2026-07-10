@@ -72,6 +72,22 @@ $tagLandingLink = static function (array $tag) use ($blog, $preservedFilterQuery
 
     return blogTagPath($blog, $tag, $query);
 };
+$archiveLandingLink = static function (string $archiveKey) use ($blog, $activeCategory, $activeTag, $activeAuthor, $searchQuery): string {
+    $query = [];
+    if ($activeCategory) {
+        $query['kat'] = (int)($activeCategory['id'] ?? 0);
+    } elseif ($activeTag) {
+        $query['tag'] = (string)($activeTag['slug'] ?? '');
+    }
+    if (!empty($activeAuthor['author_slug'])) {
+        $query['autor'] = (string)$activeAuthor['author_slug'];
+    }
+    if ($searchQuery !== '') {
+        $query['q'] = $searchQuery;
+    }
+
+    return blogArchivePath($blog, $archiveKey, $query);
+};
 $showAnyFilter = $katId !== null || $tagSlug !== '' || !empty($activeAuthor) || $searchQuery !== '' || $archiveFilter !== '';
 $searchAction = $activeCategory
     ? blogCategoryPath($blog, $activeCategory)
@@ -297,7 +313,7 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
             <li><a class="chip-link" href="<?= h($filterLink(['archiv' => null])) ?>"<?= $archiveFilter === '' ? ' aria-current="page"' : '' ?>>Všechny měsíce</a></li>
             <?php foreach ($blogArchives as $archive): ?>
               <li>
-                <a class="chip-link" href="<?= h($filterLink(['archiv' => (string)$archive['key']])) ?>"<?= $archiveFilter === $archive['key'] ? ' aria-current="page"' : '' ?>>
+                <a class="chip-link" href="<?= h($archiveLandingLink((string)$archive['key'])) ?>"<?= $archiveFilter === $archive['key'] ? ' aria-current="page"' : '' ?>>
                   <?= h((string)$archive['label']) ?> <span aria-hidden="true">(<?= (int)$archive['count'] ?>)</span>
                 </a>
               </li>

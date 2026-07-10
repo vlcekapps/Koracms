@@ -42,6 +42,7 @@ function coreModuleDefinitions(): array
                 'blog_categories' => 'Kategorie blogu',
                 'blog_tags' => 'Štítky blogu',
                 'blog_series' => 'Série článků blogu',
+                'blog_archives' => 'Měsíční archivy blogu',
             ],
             'stats_page_types' => ['article'],
             'database_tables' => [

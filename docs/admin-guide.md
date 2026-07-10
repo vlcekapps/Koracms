@@ -502,6 +502,10 @@ Feed respektuje:
 
 ---
 
+## Blog – měsíční archiv
+
+Veřejný přehled blogu vytváří pro měsíce s publikovanými články sekci `Archiv blogu`. Odkazy používají stabilní adresu `/{slug-blogu}/archiv/RRRR/MM`, například `/snd/archiv/2026/07`, mají vlastní canonical URL a neprázdné měsíce se zapisují do sitemap. Starší odkazy s parametrem `?archiv=RRRR-MM` zůstávají funkční; při změně slugu blogu se čistá archivní URL přesměruje na aktuální slug stejně jako ostatní blogové adresy.
+
 ## Blog RSS feedy
 
 Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.

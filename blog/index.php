@@ -70,10 +70,7 @@ if ($tagPathSlug !== '') {
 }
 $authorSlug = authorSlug(trim((string)($_GET['autor'] ?? '')));
 $searchQuery = trim((string)($_GET['q'] ?? ''));
-$archiveFilter = trim((string)($_GET['archiv'] ?? ''));
-if (!preg_match('/^\d{4}-\d{2}$/', $archiveFilter)) {
-    $archiveFilter = '';
-}
+$archiveFilter = normalizeBlogArchiveKey((string)($_GET['archiv'] ?? ''));
 
 $taxonomyLandingColumnsAvailable = true;
 try {
@@ -358,6 +355,9 @@ if ($activeCategory) {
     $blogIndexBase = blogCategoryPath($blog, $activeCategory);
 } elseif ($activeTag) {
     $blogIndexBase = blogTagPath($blog, $activeTag);
+} elseif ($archiveFilter !== '') {
+    $blogIndexBase = blogArchivePath($blog, $archiveFilter);
+    unset($queryBase['archiv']);
 }
 $paginBase = $blogIndexBase . (str_contains($blogIndexBase, '?') ? '&' : '?');
 if ($queryBase !== []) {
@@ -388,6 +388,9 @@ if ($activeCategory) {
         ? $tagMetaDescription
         : ($tagDescription !== '' ? normalizePlainText($tagDescription) : $metaDescription);
     $metaUrl = blogTagUrl($blog, $activeTag);
+} elseif ($archiveFilter !== '') {
+    $metaTitle = $pageHeading;
+    $metaUrl = blogArchiveUrl($blog, $archiveFilter);
 }
 
 if ($searchQuery !== '' && !$activeCategory && !$activeTag) {

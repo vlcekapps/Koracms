@@ -20,6 +20,16 @@ $pageSlug = pageSlug(trim((string)($_GET['page_slug'] ?? '')));
 $seriesSlug = blogSeriesSlug(trim((string)($_GET['series_slug'] ?? '')));
 $categorySlug = blogCategorySlug(trim((string)($_GET['category_slug'] ?? '')));
 $tagSlug = blogTagSlug(trim((string)($_GET['tag_slug'] ?? '')));
+$archiveRequested = isset($_GET['archive_year']) || isset($_GET['archive_month']);
+$archiveKey = normalizeBlogArchiveKey(
+    trim((string)($_GET['archive_year'] ?? '')) . '-' . trim((string)($_GET['archive_month'] ?? ''))
+);
+
+if ($archiveRequested && $archiveKey === '') {
+    renderPublicNotFoundPage([
+        'body_class' => 'page-not-found',
+    ]);
+}
 
 if ($blogSlug === '') {
     renderPublicNotFoundPage([
@@ -32,6 +42,10 @@ if (!$blog) {
     $legacyBlog = getBlogByLegacySlug($blogSlug);
     if ($legacyBlog) {
         $pdo = db_connect();
+        if ($archiveKey !== '') {
+            header('Location: ' . blogArchivePath($legacyBlog, $archiveKey), true, 301);
+            exit;
+        }
         if ($pageSlug !== '') {
             $pageStmt = $pdo->prepare(
                 "SELECT p.id, p.slug, p.blog_id, b.slug AS blog_slug
@@ -140,7 +154,10 @@ if (!$blog) {
 $GLOBALS['current_blog'] = $blog;
 $_GET['blog_id'] = (int)$blog['id'];
 
-if ($categorySlug !== '') {
+if ($archiveKey !== '') {
+    $_GET['archiv'] = $archiveKey;
+    require __DIR__ . '/blog/index.php';
+} elseif ($categorySlug !== '') {
     $_GET['category_slug'] = $categorySlug;
     require __DIR__ . '/blog/index.php';
 } elseif ($tagSlug !== '') {

@@ -12471,7 +12471,7 @@ if (!str_contains($blogPresentationSource, 'function blogLogoAltText')) {
 if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['q'] ?? ''))")) {
     $blogAdminIssues[] = 'public blog index is missing in-blog search';
 }
-if (!str_contains($blogIndexControllerSource, "trim((string)(\$_GET['archiv'] ?? ''))")) {
+if (!str_contains($blogIndexControllerSource, "normalizeBlogArchiveKey((string)(\$_GET['archiv'] ?? ''))")) {
     $blogAdminIssues[] = 'public blog index is missing archive filter support';
 }
 if (!str_contains($blogIndexControllerSource, 'is_featured_in_blog = 1')) {
@@ -12609,6 +12609,7 @@ if (!str_contains($blogRouterSource, "\$_GET['series_slug']")
 }
 $blogCategoryRoutePos = strpos($blogHtaccessSource, '/kategorie/([a-z0-9\\-]+)');
 $blogTagRoutePos = strpos($blogHtaccessSource, '/stitky/([a-z0-9\\-]+)');
+$blogArchiveRoutePos = strpos($blogHtaccessSource, '/archiv/([0-9]{4})/');
 $blogArticleRoutePos = strpos($blogHtaccessSource, 'blog_router.php?blog_slug=$1&slug=$2');
 if (!str_contains($blogRouterSource, "\$_GET['category_slug']")
     || !str_contains($blogRouterSource, "\$_GET['tag_slug']")
@@ -12619,6 +12620,21 @@ if (!str_contains($blogRouterSource, "\$_GET['category_slug']")
     || $blogCategoryRoutePos > $blogArticleRoutePos
     || $blogTagRoutePos > $blogArticleRoutePos) {
     $blogAdminIssues[] = 'blog router or rewrite rules are missing taxonomy landing routes before article catch-all';
+}
+if (!str_contains($blogRouterSource, "\$_GET['archive_year']")
+    || !str_contains($blogRouterSource, "\$_GET['archive_month']")
+    || !str_contains($blogRouterSource, "\$_GET['archiv'] = \$archiveKey")
+    || $blogArchiveRoutePos === false
+    || $blogArticleRoutePos === false
+    || $blogArchiveRoutePos > $blogArticleRoutePos) {
+    $blogAdminIssues[] = 'blog router or rewrite rules are missing clean archive route before article catch-all';
+}
+if (!str_contains($blogPresentationSource, 'function normalizeBlogArchiveKey(')
+    || !str_contains($blogPresentationSource, 'function blogArchivePath(')
+    || !str_contains($blogPresentationSource, 'function blogArchiveUrl(')
+    || !str_contains($blogIndexControllerSource, 'blogArchiveUrl($blog, $archiveFilter)')
+    || !str_contains($blogIndexViewSource, 'blogArchivePath($blog, $archiveKey, $query)')) {
+    $blogAdminIssues[] = 'blog archive is missing canonical helpers, metadata or clean public links';
 }
 if (!str_contains($blogPresentationSource, 'function blogCategoryPath(')
     || !str_contains($blogPresentationSource, 'function blogTagPath(')
@@ -12670,6 +12686,10 @@ if (!str_contains($blogInstallSource, 'uq_categories_blog_slug')
 if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogCategoryUrl(')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogTagUrl(')) {
     $blogAdminIssues[] = 'sitemap is missing public category or tag landing URLs';
+}
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), 'blogArchiveUrl(')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/sitemap.php'), "sitemapLogSectionError('blog_archives'")) {
+    $blogAdminIssues[] = 'sitemap is missing non-empty public blog archive URLs';
 }
 if (!str_contains($blogPresentationSource, 'function blogArticleIsPubliclyReachable(')
     || !str_contains($blogPresentationSource, 'function deleteRedirectsTargetingPath(')

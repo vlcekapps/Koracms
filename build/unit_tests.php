@@ -308,9 +308,11 @@ $sitemapSectionMap = sitemapSectionModuleMap();
 assert_equals('Blogy a články', $sitemapSections['blog']['blog'] ?? null, 'blog sitemap section label comes from manifest');
 assert_equals('Kategorie blogu', $sitemapSections['blog']['blog_categories'] ?? null, 'blog category sitemap section label comes from manifest');
 assert_equals('Štítky blogu', $sitemapSections['blog']['blog_tags'] ?? null, 'blog tag sitemap section label comes from manifest');
+assert_equals('Měsíční archivy blogu', $sitemapSections['blog']['blog_archives'] ?? null, 'blog archive sitemap section label comes from manifest');
 assert_equals('blog', $sitemapSectionMap['blog'] ?? null, 'blog sitemap section maps to blog module');
 assert_equals('blog', $sitemapSectionMap['blog_categories'] ?? null, 'blog category sitemap section maps to blog module');
 assert_equals('blog', $sitemapSectionMap['blog_tags'] ?? null, 'blog tag sitemap section maps to blog module');
+assert_equals('blog', $sitemapSectionMap['blog_archives'] ?? null, 'blog archive sitemap section maps to blog module');
 assert_equals('board', $sitemapSectionMap['board_categories'] ?? null, 'board category sitemap section maps to board module');
 assert_equals('gallery', $sitemapSectionMap['gallery_photos'] ?? null, 'gallery photos sitemap section maps to gallery module');
 assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcast episodes sitemap section maps to podcast module');
@@ -500,6 +502,19 @@ assert_equals(
     '/snd/serie/prvni-serie',
     str_replace(BASE_URL, '', blogSeriesPath(['slug' => 'snd'], ['id' => 4, 'slug' => 'prvni-serie'])),
     'series canonical path uses clean blog route'
+);
+assert_equals('2026-07', normalizeBlogArchiveKey(' 2026-07 '), 'blog archive key normalized');
+assert_equals('', normalizeBlogArchiveKey('2026-13'), 'invalid blog archive month rejected');
+assert_equals('', normalizeBlogArchiveKey('0999-12'), 'unsupported blog archive year rejected');
+assert_equals(
+    '/snd/archiv/2026/07',
+    str_replace(BASE_URL, '', blogArchivePath(['slug' => 'snd'], '2026-07')),
+    'blog archive canonical path uses clean blog route'
+);
+assert_equals(
+    '/snd/archiv/2026/07?q=test',
+    str_replace(BASE_URL, '', blogArchivePath(['slug' => 'snd'], '2026-07', ['q' => 'test'])),
+    'blog archive canonical path preserves optional filters'
 );
 assert_true(
     blogArticleIsPubliclyReachable(['slug' => 'verejny-clanek', 'status' => 'published', 'deleted_at' => null, 'publish_at' => null, 'unpublish_at' => null]),

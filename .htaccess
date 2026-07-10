@@ -121,6 +121,10 @@ Options -Indexes
     # Multi-blog catch-all (MUSÍ být poslední – dynamické blog slugy)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9\-]+)/archiv/([0-9]{4})/(0[1-9]|1[0-2])/?$ blog_router.php?blog_slug=$1&archive_year=$2&archive_month=$3 [L,QSA,NC]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^([a-z0-9\-]+)/kategorie/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&category_slug=$2 [L,QSA,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f

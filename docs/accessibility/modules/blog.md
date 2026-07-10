@@ -11,7 +11,7 @@ Veřejná část Blogu:
 - index blogu včetně doporučeného článku, vyhledávání, filtrů a stránkování,
 - detail článku včetně metadat, souvisejících článků, komentářů a kopírování odkazu,
 - dlouhý článek s automatickou osnovou `V tomto článku`,
-- landing stránky kategorií, štítků a sérií,
+- landing stránky kategorií, štítků, sérií a měsíčních archivů,
 - blogová statická stránka,
 - veřejné externí odkazy v navigaci blogu,
 - legacy redirecty a read-only chování starých URL.
@@ -40,7 +40,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 
 - `blog_article_series_http` pro série článků, cross-blog validaci a veřejný blok série,
 - `blog_related_articles_http` pro ručně související články a field-level chyby editoru článku,
-- `blog_taxonomy_landing_http` pro kategorie/štítky, čisté URL, SEO metadata a duplicitní slugy,
+- `blog_taxonomy_landing_http` pro kategorie/štítky i měsíční archivy, čisté URL, SEO metadata, sitemapu a duplicitní slugy,
 - `blog_static_pages_http` pro blogové statické stránky, kontextovou unikátnost slugu a zachování rozepsaného obsahu,
 - `blog_management_validation_http` pro správu blogů, validační chyby a review-and-confirm mazání celého blogu,
 - runtime blog guardraily v `build/runtime_audit.php` pro osnovu článku, série, taxonomie, redirecty, blogové stránky, výpisy a přístupné nadpisy,
@@ -133,7 +133,7 @@ Veřejný Blog:
 1. Projít index blogu bez myši: doporučený článek, vyhledávání, odkazy kategorií, štítků, sérií a stránkování.
 2. Otevřít dlouhý článek s osnovou, projít TOC klávesnicí a ověřit, že skok na nadpis není zakrytý.
 3. Odeslat komentář se špatnou captchou, prázdným jménem, neplatným e-mailem a prázdným textem; ověřit souhrnný alert i field-level chyby.
-4. Ověřit článek se sérií, související články, blogovou statickou stránku a landing stránky kategorie/štítku.
+4. Ověřit článek se sérií, související články, blogovou statickou stránku a landing stránky kategorie, štítku i měsíčního archivu; aktuální měsíc musí být v navigaci označený textově přes `aria-current`.
 5. Při 200-400% zoomu ověřit, že metadata, štítky, tlačítka a komentářový formulář zůstávají čitelné bez horizontálního scrollu hlavního obsahu.
 
 Administrace Blogu:

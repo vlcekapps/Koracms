@@ -242,7 +242,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, čisté měsíční archivy, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s typy, místy konání, opakovanými termíny, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi, fotografickými metadaty a bezpečným media endpointem |
@@ -870,6 +870,9 @@ server {
     location = /sitemap.xml { rewrite ^ /sitemap.php last; }
 
     # Multi-blog catch-all (musí být poslední)
+    location ~ ^/([a-z0-9\-]+)/archiv/([0-9]{4})/(0[1-9]|1[0-2])/?$ {
+        try_files $uri $uri/ /blog_router.php?blog_slug=$1&archive_year=$2&archive_month=$3&$args;
+    }
     location ~ ^/([a-z0-9\-]+)/kategorie/([a-z0-9\-]+)/?$ {
         try_files $uri $uri/ /blog_router.php?blog_slug=$1&category_slug=$2&$args;
     }

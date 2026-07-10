@@ -190,6 +190,35 @@ if (isModuleEnabled('blog')) {
     } catch (\PDOException $e) {
         sitemapLogSectionError('blog_series', $e);
     }
+
+    try {
+        $archiveList = $pdo->query(
+            "SELECT DATE_FORMAT(COALESCE(a.publish_at, a.created_at), '%Y-%m') AS archive_key,
+                    b.slug AS blog_slug,
+                    MAX(COALESCE(a.updated_at, a.created_at)) AS sitemap_lastmod
+             FROM cms_articles a
+             INNER JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.deleted_at IS NULL
+               AND a.status = 'published'
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             GROUP BY archive_key, a.blog_id, b.slug, b.sort_order
+             ORDER BY b.sort_order ASC, archive_key DESC"
+        )->fetchAll();
+        foreach ($archiveList as $archive) {
+            $archiveKey = normalizeBlogArchiveKey((string)($archive['archive_key'] ?? ''));
+            if ($archiveKey === '') {
+                continue;
+            }
+            sitemapWriteUrl(
+                blogArchiveUrl(['slug' => (string)$archive['blog_slug']], $archiveKey),
+                'monthly',
+                '0.4',
+                sitemapLastmod((string)($archive['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('blog_archives', $e);
+    }
 }
 
 if (isModuleEnabled('news')) {

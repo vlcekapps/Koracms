@@ -9274,6 +9274,28 @@ try {
         $blogTaxonomyIssues[] = 'starý filtr ?tag= nezobrazil článek štítku';
     }
 
+    $archiveKey = date('Y-m');
+    $archivePath = '/' . rawurlencode($taxonomyBlogSlug) . '/archiv/' . date('Y') . '/' . date('m');
+    $archiveLandingResponse = fetchUrl($baseUrl . BASE_URL . $archivePath, '', 0);
+    if (httpIntegrationStatusCode($archiveLandingResponse) !== 200
+        || !str_contains($archiveLandingResponse['body'], $taxonomyArticleTitle)
+        || !str_contains($archiveLandingResponse['body'], $taxonomyOtherArticleTitle)
+        || !str_contains($archiveLandingResponse['body'], 'rel="canonical"')
+        || !str_contains($archiveLandingResponse['body'], $archivePath)
+        || !str_contains($archiveLandingResponse['body'], 'aria-current="page"')) {
+        $blogTaxonomyIssues[] = 'čistá měsíční URL archivu nezobrazila články, canonical nebo aktuální navigační položku';
+    }
+    $legacyArchiveResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/blog/index.php?blog_id=' . $taxonomyBlogId . '&archiv=' . rawurlencode($archiveKey),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($legacyArchiveResponse) !== 200
+        || !str_contains($legacyArchiveResponse['body'], $taxonomyArticleTitle)
+        || !str_contains($legacyArchiveResponse['body'], $archivePath)) {
+        $blogTaxonomyIssues[] = 'starý filtr ?archiv= nezachoval obsah a canonical čistého archivu';
+    }
+
     $missingCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/' . rawurlencode($taxonomyBlogSlug) . '/kategorie/neexistujici-taxonomie', '', 0);
     if (httpIntegrationStatusCode($missingCategoryResponse) !== 404) {
         $blogTaxonomyIssues[] = 'neexistující slug kategorie nevrátil veřejnou 404';
@@ -9282,8 +9304,9 @@ try {
     $taxonomySitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
     if (httpIntegrationStatusCode($taxonomySitemapResponse) !== 200
         || !str_contains($taxonomySitemapResponse['body'], $categoryLandingPath)
-        || !str_contains($taxonomySitemapResponse['body'], $tagLandingPath)) {
-        $blogTaxonomyIssues[] = 'sitemap neobsahuje veřejné URL kategorií a štítků s publikovaným článkem';
+        || !str_contains($taxonomySitemapResponse['body'], $tagLandingPath)
+        || !str_contains($taxonomySitemapResponse['body'], $archivePath)) {
+        $blogTaxonomyIssues[] = 'sitemap neobsahuje veřejné URL kategorií, štítků a archivů s publikovaným článkem';
     }
 
     httpIntegrationPrintResult('blog_taxonomy_landing_http', $blogTaxonomyIssues, $failures);
