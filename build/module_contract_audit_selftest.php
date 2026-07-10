@@ -153,10 +153,11 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         $statsPageTypes = $moduleKey === 'blog'
             ? "['article']"
             : ($moduleKey === 'news' ? "['news']" : '[]');
+        $databaseTables = "['cms_{$moduleKey}']";
         if ($moduleKey === 'chat') {
             $publicPaths = "['/chat/index.php', '/chat/message.php']";
         }
-        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'sitemap_sections' => {$sitemapSections}, 'stats_page_types' => {$statsPageTypes}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
+        $entries[] = "        '{$moduleKey}' => ['label' => 'Label', 'settings_label' => 'Label', 'nav_label' => 'Label', 'widget_label' => 'Label', 'admin_label' => 'Label', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => {$contentReferenceTypes}, 'search_result_types' => {$searchResultTypes}, 'sitemap_sections' => {$sitemapSections}, 'stats_page_types' => {$statsPageTypes}, 'database_tables' => {$databaseTables}, 'settings_default' => '0', 'public_nav_path' => '{$publicNavPath}', 'public_paths' => {$publicPaths}, 'public_nav_order' => {$publicNavOrder}, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => {$publicNavValue}, 'admin_paths' => ['{$adminPath}']],\n";
     }
 
     return "<?php\n"
@@ -180,6 +181,8 @@ function moduleContractAuditSelfTestDefinitionsFixture(): string
         . "function sitemapSectionModuleMap(): array { return ['blog' => 'blog', 'news' => 'news']; }\n"
         . "function moduleStatsPageTypes(): array { return ['blog' => ['article'], 'news' => ['news']]; }\n"
         . "function moduleStatsPageTypeMap(): array { return ['article' => 'blog', 'news' => 'news']; }\n"
+        . "function moduleDatabaseTables(): array { return ['blog' => ['cms_blog']]; }\n"
+        . "function moduleDatabaseTableModuleMap(): array { return ['cms_blog' => 'blog']; }\n"
         . "function moduleAdminLabel(string \$moduleKey): string { return \$moduleKey; }\n"
         . "function moduleAdminCapability(string \$moduleKey): string { return 'content_manage_shared'; }\n"
         . "function siteProfileModuleKeys(): array { return coreModuleKeysByFlag('profile_managed'); }\n";
@@ -190,6 +193,16 @@ function moduleContractAuditSelfTestDbFixture(): string
     return "<?php\n"
         . "function moduleSettingKey(string \$module): string { return 'module_' . trim(\$module); }\n"
         . "function isModuleEnabled(string \$module): bool { return getSetting(moduleSettingKey(\$module), '0') === '1'; }\n";
+}
+
+function moduleContractAuditSelfTestSchemaFixture(string $settingsVariable): string
+{
+    $source = "<?php\n$" . $settingsVariable . " = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n";
+    foreach (moduleContractAuditSelfTestModuleKeys() as $moduleKey) {
+        $source .= "\$pdo->exec(\"CREATE TABLE IF NOT EXISTS cms_{$moduleKey} (id INT)\");\n";
+    }
+
+    return $source;
 }
 
 function moduleContractAuditSelfTestAuthFixture(): string
@@ -224,10 +237,10 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Testy a guardrails\n"
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
-        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, admin_paths a admin_capability.\n"
+        . "Manifest coreModuleDefinitions() drží settings_default, public_nav_path, public_paths, sitemap_sections, database_tables, admin_paths a admin_capability.\n"
         . "Nastavovací klíče modulů skládejte přes moduleSettingKey().\n"
         . "Fallback administrativní navigace používá sekci Další moduly.\n"
-        . "Sdílené lookup helpery modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath() drží mapy cest bez ručních seznamů.\n"
+        . "Sdílené lookup helpery modulePublicPathModuleMap(), moduleAdminPathModuleMap(), modulePrimaryAdminPath(), moduleDatabaseTables() a moduleDatabaseTableModuleMap() drží mapy cest a databázových tabulek bez ručních seznamů.\n"
         . "Admin routy patří do adminRouteModuleRequirements() a používají requireModuleEnabled().\n"
         . "Veřejné routy hlídá isModuleEnabled().\n"
         . "Content picker používá content_reference_types, veřejné vyhledávání search_result_types a sitemap používá sitemap_sections.\n"
@@ -247,6 +260,7 @@ function moduleContractAuditSelfTestModuleProposalTemplateFixture(): string
         . "Datový model a migrace\n"
         . "Dopad na install.php a migrate.php.\n"
         . "Schema parity guardrail.\n"
+        . "Manifestové database_tables.\n"
         . "Export/import.\n"
         . "Bezpečnost a soukromí\n"
         . "Redirecty validujte přes internalRedirectTarget().\n"
@@ -265,10 +279,10 @@ function moduleContractAuditSelfTestReadmeFixture(): string
 {
     return "Nové moduly popisuje docs/developer-modules.md.\n"
         . "Před návrhem použijte docs/module-proposal-template.md.\n"
-        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections a admin_capability.\n"
+        . "Manifest coreModuleDefinitions() doplňuje install.php i migrate.php a drží public_paths, search_result_types, sitemap_sections, database_tables a admin_capability.\n"
         . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
         . "Obsahové trendy používají stats_page_types a trackPageView().\n"
-        . "Cesty modulů mapují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
+        . "Cesty a tabulky modulů mapují modulePublicPathModuleMap(), moduleAdminPathModuleMap(), modulePrimaryAdminPath(), moduleDatabaseTables() a moduleDatabaseTableModuleMap().\n"
         . "Admin routy chrání adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace pro nové moduly používá sekci Další moduly.\n"
         . "Content picker používá content_reference_types.\n"
@@ -281,9 +295,9 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
 {
     return "Admin guide odkazuje na developer-modules.md.\n"
         . "Návrh modulu používá module-proposal-template.md.\n"
-        . "Modulová metadata jsou v coreModuleDefinitions().\n"
+        . "Modulová metadata včetně database_tables jsou v coreModuleDefinitions().\n"
         . "Nastavovací klíče modulů skládá moduleSettingKey().\n"
-        . "Sdílené lookupy cest poskytují modulePublicPathModuleMap(), moduleAdminPathModuleMap() a modulePrimaryAdminPath().\n"
+        . "Sdílené lookupy cest a tabulek poskytují modulePublicPathModuleMap(), moduleAdminPathModuleMap(), modulePrimaryAdminPath(), moduleDatabaseTables() a moduleDatabaseTableModuleMap().\n"
         . "Admin endpointy kryje adminRouteModuleRequirements() a command centrum používá admin_capability.\n"
         . "Fallback navigace nových modulů používá sekci Další moduly.\n"
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
@@ -314,8 +328,8 @@ function moduleContractAuditSelfTestValidFiles(): array
         'sitemap.php' => "<?php\nif (isModuleEnabled('blog')) { sitemapLogSectionError('blog', new Exception()); } if (isModuleEnabled('news')) { sitemapLogSectionError('news', new Exception()); }\n",
         'forms/show.php' => "<?php\ngetSetting('module_blog', '0');\n",
         'admin/settings_modules.php' => "<?php\n\$moduleKeys = moduleKeysForSettings();\n\$moduleLabels = moduleSettingsLabels(); moduleSettingKey('blog');\n",
-        'install.php' => "<?php\n\$defaults = array_merge(['site_name' => 'Demo'], moduleDefaultSettings(), ['nav_module_order' => '']);\n",
-        'migrate.php' => "<?php\n\$newSettings = array_merge(moduleDefaultSettings(), ['nav_module_order' => '']);\n",
+        'install.php' => moduleContractAuditSelfTestSchemaFixture('defaults'),
+        'migrate.php' => moduleContractAuditSelfTestSchemaFixture('newSettings'),
         'themes/default/theme.json' => '{"name":"Fixture theme","settings":{"accent":{"type":"color","requires_modules":["blog"],"default":"#000000"}}}',
         'composer.json' => '{"scripts":{"test:module-contract":"php build/module_contract_audit.php","test:module-contract-selftest":"php build/module_contract_audit_selftest.php","ci:basic":["@test:module-contract","@test:module-contract-selftest"],"analyse:strict":"' . $staticScriptTargets . '","analyse:strict:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php","format:check":"' . $staticScriptTargets . '","format:check:build-tests":"build/module_contract_audit.php build/module_contract_audit_selftest.php"}}',
         'build/runtime_audit.php' => "<?php\n'build/module_contract_audit.php'; 'build/module_contract_audit_selftest.php'; 'coreModuleDefinitions';\n",
@@ -409,7 +423,7 @@ assertModuleContractAuditPasses('Clean module contract fixture', $validFiles);
 $additionalModuleFiles = $validFiles;
 $additionalModuleFiles['lib/definitions.php'] = str_replace(
     "    ];\n}\nfunction coreModuleKeysByFlag",
-    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => [], 'search_result_types' => [], 'sitemap_sections' => [], 'stats_page_types' => [], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
+    "        'jobs' => ['label' => 'Práce', 'settings_label' => 'Práce', 'nav_label' => '', 'widget_label' => 'Práce', 'admin_label' => 'Práce', 'admin_capability' => 'content_manage_shared', 'content_reference_types' => [], 'search_result_types' => [], 'sitemap_sections' => [], 'stats_page_types' => [], 'database_tables' => ['cms_jobs'], 'settings_default' => '0', 'public_nav_path' => '', 'public_paths' => [], 'public_nav_order' => 0, 'profile_managed' => true, 'settings_configurable' => true, 'public_nav' => false, 'admin_paths' => ['/admin/jobs.php']],\n    ];\n}\nfunction coreModuleKeysByFlag",
     $additionalModuleFiles['lib/definitions.php']
 );
 $additionalModuleFiles['auth.php'] = str_replace(
@@ -419,7 +433,69 @@ $additionalModuleFiles['auth.php'] = str_replace(
 );
 $additionalModuleFiles['composer.json'] = str_replace(' admin/statistics.php blog/index.php', ' admin/statistics.php admin/jobs.php blog/index.php', $additionalModuleFiles['composer.json']);
 $additionalModuleFiles['admin/jobs.php'] = "<?php\nrequireModuleEnabled('jobs');\n";
+$additionalModuleFiles['install.php'] .= "\$pdo->exec(\"CREATE TABLE IF NOT EXISTS cms_jobs (id INT)\");\n";
+$additionalModuleFiles['migrate.php'] .= "\$pdo->exec(\"CREATE TABLE IF NOT EXISTS cms_jobs (id INT)\");\n";
 assertModuleContractAuditPasses('Additional manifest module fixture', $additionalModuleFiles);
+
+$missingDatabaseTablesFieldFiles = $validFiles;
+$missingDatabaseTablesFieldFiles['lib/definitions.php'] = str_replace(
+    "'database_tables' => ['cms_blog'], ",
+    '',
+    $missingDatabaseTablesFieldFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing database tables manifest field',
+    $missingDatabaseTablesFieldFiles,
+    'core module manifest entry blog is missing list field database_tables.'
+);
+
+$invalidDatabaseTableFiles = $validFiles;
+$invalidDatabaseTableFiles['lib/definitions.php'] = str_replace(
+    "'database_tables' => ['cms_blog']",
+    "'database_tables' => ['cms-Blog']",
+    $invalidDatabaseTableFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Invalid module database table name',
+    $invalidDatabaseTableFiles,
+    'core module manifest entry blog contains invalid database_tables name cms-Blog.'
+);
+
+$duplicateDatabaseTableFiles = $validFiles;
+$duplicateDatabaseTableFiles['lib/definitions.php'] = str_replace(
+    "'database_tables' => ['cms_news']",
+    "'database_tables' => ['cms_blog']",
+    $duplicateDatabaseTableFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Duplicate module database table owner',
+    $duplicateDatabaseTableFiles,
+    'database_tables entry cms_blog is owned by both modules blog and news.'
+);
+
+$missingInstallDatabaseTableFiles = $validFiles;
+$missingInstallDatabaseTableFiles['install.php'] = str_replace(
+    'CREATE TABLE IF NOT EXISTS cms_blog (id INT)',
+    'CREATE TABLE IF NOT EXISTS cms_blog_missing (id INT)',
+    $missingInstallDatabaseTableFiles['install.php']
+);
+assertModuleContractAuditFails(
+    'Missing module database table in install schema',
+    $missingInstallDatabaseTableFiles,
+    'database_tables entry cms_blog for module blog is missing CREATE TABLE IF NOT EXISTS in install.php.'
+);
+
+$missingMigrationDatabaseTableFiles = $validFiles;
+$missingMigrationDatabaseTableFiles['migrate.php'] = str_replace(
+    'CREATE TABLE IF NOT EXISTS cms_blog (id INT)',
+    'CREATE TABLE IF NOT EXISTS cms_blog_missing (id INT)',
+    $missingMigrationDatabaseTableFiles['migrate.php']
+);
+assertModuleContractAuditFails(
+    'Missing module database table in migration schema',
+    $missingMigrationDatabaseTableFiles,
+    'database_tables entry cms_blog for module blog is missing CREATE TABLE IF NOT EXISTS in migrate.php.'
+);
 
 $missingAdminLabelFiles = $validFiles;
 $missingAdminLabelFiles['lib/definitions.php'] = str_replace(

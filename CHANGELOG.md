@@ -11,6 +11,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **GPL-3.0-or-later licence** – repozitář nově obsahuje plný text licence v `LICENSE`, projektové oznámení v `NOTICE.md`, Composer metadata používají SPDX `GPL-3.0-or-later` a release guardraily hlídají, aby licenční soubory byly součástí instalačního ZIPu i source archivu.
 
 ### Změněno
+- **Databázový kontrakt modulů** – centrální manifest nově eviduje `database_tables` vlastněné jednotlivými moduly; helpery zpřístupňují mapu vlastnictví a module contract audit se self-testy odmítne neplatnou či duplicitní tabulku i chybějící `CREATE TABLE IF NOT EXISTS` v `install.php` nebo `migrate.php`.
 - **Timeout pro module-ready CI** – agentí a vývojářská dokumentace nově připomíná, že `composer ci:module-ready` má při spuštění přes lokální automation běžet s timeoutem alespoň 15 minut (`900000 ms`), protože kombinuje `ci:basic`, modulový audit, runtime audit a HTTP integraci.
 - **Consistent Help guardrail pro theme varianty** – portable/static šablony dědí sdílený veřejný layout a footer s navigací `Pomoc a kontakt`; unit testy, runtime audit a HTTP integrace hlídají zákaz PHP override v theme balíčku i render ne-default šablony pro WCAG `3.2.6`.
 - **Language-of-parts helper pro veřejné taxonomické popisy** – blogové kategorie/štítky/série, kategorie vývěsky, typy akcí a kategorie/série Ke stažení dostaly u veřejně renderovaných HTML popisů stejný content picker a helper `Jazyk části textu`; runtime audit hlídá coverage pro WCAG `3.1.2`.

@@ -329,6 +329,18 @@ assert_equals('food', $statsPageTypeMap['food_card'] ?? null, 'food card stats p
 assert_equals('forms', $statsPageTypeMap['form'] ?? null, 'form stats page type maps to forms module');
 assert_false(isset($statsPageTypes['statistics']), 'statistics module has no measured public content type');
 
+test_section('module database tables');
+
+$moduleDatabaseTables = moduleDatabaseTables();
+$moduleDatabaseTableMap = moduleDatabaseTableModuleMap();
+assert_true(in_array('cms_articles', $moduleDatabaseTables['blog'] ?? [], true), 'blog database tables come from manifest');
+assert_true(in_array('cms_board_publication_events', $moduleDatabaseTables['board'] ?? [], true), 'board supporting table comes from manifest');
+assert_true(in_array('cms_res_booking_events', $moduleDatabaseTables['reservations'] ?? [], true), 'reservation history table comes from manifest');
+assert_equals('blog', $moduleDatabaseTableMap['cms_blog_series'] ?? null, 'blog series table maps to blog module');
+assert_equals('food', $moduleDatabaseTableMap['cms_food_order_items'] ?? null, 'food order item table maps to food module');
+assert_equals('statistics', $moduleDatabaseTableMap['cms_stats_content_daily'] ?? null, 'content statistics table maps to statistics module');
+assert_false(isset($moduleDatabaseTableMap['cms_users']), 'shared core user table has no module owner');
+
 test_section('blog taxonomy landing links');
 
 assert_equals('linuxovy-koutek', blogCategorySlug('Linuxový koutek'), 'category slug normalizes Czech diacritics');

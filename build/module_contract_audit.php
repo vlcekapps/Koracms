@@ -440,6 +440,45 @@ function moduleContractAuditManifestStringMapField(string $block, string $module
 
 /**
  * @param list<string> $issues
+ */
+function moduleContractAuditValidateDatabaseTables(
+    string $definitionsSource,
+    string $installSource,
+    string $migrateSource,
+    array &$issues
+): void {
+    $tableModules = [];
+    foreach (moduleContractAuditExtractManifestBlocks($definitionsSource, $issues) as $moduleKey => $block) {
+        foreach (moduleContractAuditManifestStringListField($block, $moduleKey, 'database_tables', $issues) as $tableName) {
+            if (preg_match('/^cms_[a-z][a-z0-9_]*$/', $tableName) !== 1) {
+                $issues[] = 'core module manifest entry ' . $moduleKey . ' contains invalid database_tables name ' . $tableName . '.';
+                continue;
+            }
+
+            if (isset($tableModules[$tableName]) && $tableModules[$tableName] !== $moduleKey) {
+                continue;
+            }
+            $tableModules[$tableName] = $moduleKey;
+
+            $createPattern = '/\bCREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+`?'
+                . preg_quote($tableName, '/')
+                . '`?\s*\(/i';
+            moduleContractAuditRequire(
+                preg_match($createPattern, $installSource) === 1,
+                'database_tables entry ' . $tableName . ' for module ' . $moduleKey . ' is missing CREATE TABLE IF NOT EXISTS in install.php.',
+                $issues
+            );
+            moduleContractAuditRequire(
+                preg_match($createPattern, $migrateSource) === 1,
+                'database_tables entry ' . $tableName . ' for module ' . $moduleKey . ' is missing CREATE TABLE IF NOT EXISTS in migrate.php.',
+                $issues
+            );
+        }
+    }
+}
+
+/**
+ * @param list<string> $issues
  * @return array<string,string>
  */
 function moduleContractAuditExtractAdminRouteRequirementBlocks(string $authSource, array &$issues): array
@@ -1324,6 +1363,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
     $searchResultTypeModules = [];
     $sitemapSectionModules = [];
     $statsPageTypeModules = [];
+    $databaseTableModules = [];
 
     foreach ($requiredCoreModuleKeys as $moduleKey) {
         if (!isset($blocks[$moduleKey])) {
@@ -1342,6 +1382,7 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
         $searchResultTypes = moduleContractAuditManifestStringMapField($block, $moduleKey, 'search_result_types', $issues);
         $sitemapSections = moduleContractAuditManifestStringMapField($block, $moduleKey, 'sitemap_sections', $issues);
         $statsPageTypes = moduleContractAuditManifestStringListField($block, $moduleKey, 'stats_page_types', $issues);
+        $databaseTables = moduleContractAuditManifestStringListField($block, $moduleKey, 'database_tables', $issues);
         $settingsDefault = moduleContractAuditManifestStringField($block, $moduleKey, 'settings_default', $issues);
         $publicNavPath = moduleContractAuditManifestStringField($block, $moduleKey, 'public_nav_path', $issues);
         $publicPaths = moduleContractAuditManifestStringListField($block, $moduleKey, 'public_paths', $issues);
@@ -1419,6 +1460,18 @@ function moduleContractAuditValidateManifestValues(string $projectRoot, string $
                 $issues[] = 'stats_page_types key ' . $statsPageType . ' is duplicated by modules ' . $statsPageTypeModules[$statsPageType] . ' and ' . $moduleKey . '.';
             } else {
                 $statsPageTypeModules[$statsPageType] = $moduleKey;
+            }
+        }
+        foreach ($databaseTables as $databaseTable) {
+            moduleContractAuditRequire(
+                preg_match('/^cms_[a-z][a-z0-9_]*$/', $databaseTable) === 1,
+                'core module manifest entry ' . $moduleKey . ' contains invalid database_tables name ' . $databaseTable . '.',
+                $issues
+            );
+            if (isset($databaseTableModules[$databaseTable]) && $databaseTableModules[$databaseTable] !== $moduleKey) {
+                $issues[] = 'database_tables entry ' . $databaseTable . ' is owned by both modules ' . $databaseTableModules[$databaseTable] . ' and ' . $moduleKey . '.';
+            } else {
+                $databaseTableModules[$databaseTable] = $moduleKey;
             }
         }
         moduleContractAuditRequire(in_array($settingsDefault, ['0', '1'], true), 'core module manifest entry ' . $moduleKey . ' settings_default must be 0 or 1.', $issues);
@@ -1621,6 +1674,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
             'modulePrimaryAdminPath()',
+            'moduleDatabaseTables()',
+            'moduleDatabaseTableModuleMap()',
             'settings_default',
             'public_nav_path',
             'public_paths',
@@ -1635,6 +1690,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'database_tables',
             'trackPageView()',
             'requires_module',
             'requires_modules',
@@ -1663,6 +1719,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'install.php',
             'migrate.php',
             'Schema parity guardrail',
+            'database_tables',
             'Export/import',
             'Bezpečnost a soukromí',
             'internalRedirectTarget()',
@@ -1694,6 +1751,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
             'modulePrimaryAdminPath()',
+            'moduleDatabaseTables()',
+            'moduleDatabaseTableModuleMap()',
             'install.php',
             'migrate.php',
             'public_paths',
@@ -1705,6 +1764,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'database_tables',
             'trackPageView()',
             'public_module_navigation_http',
             'admin_disabled_modules_http',
@@ -1728,6 +1788,8 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'modulePublicPathModuleMap()',
             'moduleAdminPathModuleMap()',
             'modulePrimaryAdminPath()',
+            'moduleDatabaseTables()',
+            'moduleDatabaseTableModuleMap()',
             'adminRouteModuleRequirements()',
             'admin_capability',
             'moduleSettingKey()',
@@ -1736,6 +1798,7 @@ function moduleContractAuditValidateDeveloperDocumentation(
             'search_result_types',
             'sitemap_sections',
             'stats_page_types',
+            'database_tables',
             'trackPageView()',
             'composer ci:module-ready',
             'wcag-22-aa-conformance.md',
@@ -1787,6 +1850,8 @@ moduleContractAuditRequire(
     && str_contains($definitionsSource, 'function sitemapSectionModuleMap(')
     && str_contains($definitionsSource, 'function moduleStatsPageTypes(')
     && str_contains($definitionsSource, 'function moduleStatsPageTypeMap(')
+    && str_contains($definitionsSource, 'function moduleDatabaseTables(')
+    && str_contains($definitionsSource, 'function moduleDatabaseTableModuleMap(')
     && str_contains($definitionsSource, 'function moduleAdminLabel(')
     && str_contains($definitionsSource, 'function moduleAdminCapability('),
     'lib/definitions.php must keep the central module manifest helper set.',
@@ -1855,6 +1920,7 @@ foreach ([
     "'search_result_types'",
     "'sitemap_sections'",
     "'stats_page_types'",
+    "'database_tables'",
     "'admin_paths'",
 ] as $manifestFragment) {
     moduleContractAuditRequire(
@@ -1865,6 +1931,7 @@ foreach ([
 }
 
 moduleContractAuditValidateManifestValues($projectRoot, $definitionsSource, $issues);
+moduleContractAuditValidateDatabaseTables($definitionsSource, $installSource, $migrateSource, $issues);
 moduleContractAuditValidatePublicNavHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);
 moduleContractAuditValidatePublicNavEntryPointGates($projectRoot, $definitionsSource, $issues);
 moduleContractAuditValidateAdminHttpIntegration($definitionsSource, $httpIntegrationSource, $issues);

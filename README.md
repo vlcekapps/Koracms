@@ -936,6 +936,8 @@ Nový modul v Kora CMS je zatím součást jádra, ne samostatný balíček. Př
 
 Součástí návrhu nového modulu je také kontrola dokumentů [docs/accessibility/wcag-22-aa-conformance.md](docs/accessibility/wcag-22-aa-conformance.md), [docs/accessibility/a11y-remediation-backlog.md](docs/accessibility/a11y-remediation-backlog.md) a [docs/accessibility/manual-test-protocol.md](docs/accessibility/manual-test-protocol.md). Pokud modul zavádí nový typ formuláře, dialogu, uploadu, média, embedu, captcha/auth flow, tabulky, widgetu nebo autorem dodávaného obsahu, musí rovnou určit dopad na accessibility conformance report a doplnit matici, backlog nebo ruční testovací scénář.
 
+Databázové tabulky vlastněné modulem se deklarují v manifestovém `database_tables`. Sdílené tabulky jádra se modulům nepřiřazují; `moduleDatabaseTables()` a `moduleDatabaseTableModuleMap()` poskytují centrální lookup bez ručních seznamů. Modulový audit kontroluje platný název, jednoznačné vlastnictví a přítomnost každé deklarované tabulky v `install.php` i `migrate.php`, takže nový modul nemůže projít `composer ci:module-ready` s chybějící instalační nebo migrační cestou.
+
 ---
 
 ## Licence
