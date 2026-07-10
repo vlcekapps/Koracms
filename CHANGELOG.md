@@ -16,6 +16,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 - **GPL-3.0-or-later licence** – repozitář nově obsahuje plný text licence v `LICENSE`, projektové oznámení v `NOTICE.md`, Composer metadata používají SPDX `GPL-3.0-or-later` a release guardraily hlídají, aby licenční soubory byly součástí instalačního ZIPu i source archivu.
 
 ### Změněno
+- **Přístupnější změna stavu Food poptávky** – detail objednávkové poptávky zobrazuje referenční kód, aktuální stav a přesný interní dopad změny, vyžaduje serverově ověřené potvrzení a při chybějícím potvrzení nebo nepovoleném stavu vrací atomický alert s field-level chybou bez změny dat či auditního logu; runtime audit a HTTP integrace hlídají WCAG `3.3.4` kontrakt.
 - **Přístupnější správa strukturovaných jídelních lístků** – chyby sekcí a položek radí konkrétní opravu přímo u pole a zachovávají rozepsané hodnoty; trvalé smazání položky nebo celé sekce nově ukazuje rozsah dopadu, vyžaduje serverově ověřené potvrzení, běží transakčně a zachovává média.
 - **Přístupnější validace podcastových metadat** – editory kapitol, osob a platforem zachovávají chybné hodnoty, používají textový atomický alert a field-level návrhy opravy pro čas, názvy, URL a duplicity; runtime audit a HTTP integrace hlídají regresní kontrakt pro WCAG `3.3.3`.
 - **Lepší dohledání podcastů a epizod** – veřejný katalog podcastů umí hledat podle názvu, autora, popisu či kategorie a filtrovat podle veřejných kategorií; administrační seznam epizod nově nabízí filtr sezóny a oba výpisy zachovávají filtry při stránkování.

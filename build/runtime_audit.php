@@ -18746,6 +18746,23 @@ foreach ([
         }
     }
 }
+foreach ([
+    '$confirmationField = \'confirm_food_order_status_\' . $orderId;',
+    '$statusConfirmed = isset($_POST[$confirmationField])',
+    '!array_key_exists($status, $statusLabels)',
+    '\'error\' => \'status_confirm_required\'',
+    '\'status\' => $status',
+    '<form method="post" novalidate',
+    'aria-labelledby="food-order-status-error"',
+    "adminFieldAttributes('status', \$statusFieldErrors, [], ['food-order-status-review'], 'food-order-status-field-error')",
+    "adminFieldAttributes(\$statusConfirmationField, \$statusConfirmationErrors, [], ['food-order-status-review'], 'food-order-status-confirm-error')",
+    'zákazníkovi se automaticky neodešle e-mail',
+    'from={$previousStatus} to={$status}',
+] as $foodOrderStatusPreventionFragment) {
+    if (!str_contains($foodOrderAdminSource, $foodOrderStatusPreventionFragment)) {
+        $adminFieldErrorIssues[] = 'food order status change is missing error-prevention fragment: ' . $foodOrderStatusPreventionFragment;
+    }
+}
 if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, 'validní JSON import bez potvrzení nevrátil field-level chybu nebo změnil data')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing JSON import error-prevention coverage';
 }
@@ -18753,6 +18770,11 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'nepotvrzené schválení rezervace změnilo stav nebo zapsalo historii')
     || !str_contains($httpIntegrationSource, 'confirm-reservation-status-approve')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing reservation status error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, 'nepotvrzená změna stavu objednávkové poptávky změnila data nebo auditní log')
+    || !str_contains($httpIntegrationSource, 'confirm-food-order-status-')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing food order status error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('database_backup_error_prevention_http'")

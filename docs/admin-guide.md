@@ -578,7 +578,7 @@ Více dietních štítků se vyhodnocuje současně, takže položka musí splni
 
 Objednávkové poptávky jsou volitelné a slouží jako nezávazný kontakt zákazníka, ne jako platební nebo skladový systém. Pokud je u lístku zapnete a lístek je veřejně viditelný, návštěvník se dostane na formulář `food/order.php?slug=...`, vybere dostupné položky, množství a vyplní kontaktní údaje.
 
-Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Uložená poptávka drží snapshot názvu položky, ceny a měny, takže pozdější změna lístku nepřepíše historický požadavek. Notifikace se posílá na e-mail objednávek vyplněný u lístku, případně na kontaktní nebo administrační e-mail webu. V administraci je samostatný přehled `Objednávkové poptávky` s filtrem podle stavu a detail s bezpečnou změnou stavu `Nová / Potvrzená / Odmítnutá / Vyřízená / Zrušená`.
+Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Uložená poptávka drží snapshot názvu položky, ceny a měny, takže pozdější změna lístku nepřepíše historický požadavek. Notifikace se posílá na e-mail objednávek vyplněný u lístku, případně na kontaktní nebo administrační e-mail webu. V administraci je samostatný přehled `Objednávkové poptávky` s filtrem podle stavu a detail se stavy `Nová / Potvrzená / Odmítnutá / Vyřízená / Zrušená`. Před změnou detail zobrazí referenční kód, aktuální stav, interní dopad a informaci, že se zákazníkovi automaticky neodesílá e-mail; uložení vyžaduje potvrzovací checkbox. Nepovolený stav nebo chybějící potvrzení vrátí textový alert a field-level chybu bez změny poptávky či auditního logu.
 
 ### Jak funguje platnost na webu
 

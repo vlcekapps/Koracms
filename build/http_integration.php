@@ -13445,28 +13445,138 @@ try {
             $foodOrderAdminUrl = $baseUrl . BASE_URL . '/admin/food_order.php?id=' . $foodOrderId;
             $foodOrderAdminResponse = fetchUrl($foodOrderAdminUrl, $adminSession['cookie'], 0);
             $foodOrderAdminCsrf = extractHiddenInputValue($foodOrderAdminResponse['body'], 'csrf_token');
+            $foodOrderStatusConfirmationId = 'confirm-food-order-status-' . $foodOrderId;
+            $foodOrderStatusConfirmationName = 'confirm_food_order_status_' . $foodOrderId;
             if (httpIntegrationStatusCode($foodOrderAdminResponse) !== 200
                 || !str_contains($foodOrderAdminResponse['body'], 'Položky poptávky')
+                || !str_contains($foodOrderAdminResponse['body'], 'zákazníkovi se automaticky neodešle e-mail')
+                || !str_contains($foodOrderAdminResponse['body'], '<form method="post" novalidate>')
+                || !httpIntegrationInputHasAttributes(
+                    $foodOrderAdminResponse['body'],
+                    $foodOrderStatusConfirmationId,
+                    [
+                        'name' => $foodOrderStatusConfirmationName,
+                        'aria-required' => 'true',
+                        'aria-describedby' => 'food-order-status-review',
+                    ]
+                )
                 || $foodOrderAdminCsrf === '') {
                 $foodStructuredIssues[] = 'admin detail objednávkové poptávky se nenačetl';
             } else {
-                $foodOrderStatusResponse = postUrl(
+                $foodOrderStatusLogCountStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_log WHERE action = 'food_order_status' AND detail LIKE ?"
+                );
+                $foodOrderStatusLogCountStmt->execute(['id=' . $foodOrderId . ' %']);
+                $foodOrderStatusLogCountBefore = (int)$foodOrderStatusLogCountStmt->fetchColumn();
+
+                $invalidFoodOrderStatusResponse = postUrl(
                     $foodOrderAdminUrl,
                     [
                         'csrf_token' => $foodOrderAdminCsrf,
+                        'id' => (string)$foodOrderId,
+                        'status' => 'not-allowed',
+                        $foodOrderStatusConfirmationName => '1',
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $foodOrderStatusStmt = $pdo->prepare("SELECT status FROM cms_food_orders WHERE id = ?");
+                $foodOrderStatusStmt->execute([$foodOrderId]);
+                $foodOrderStatusAfterInvalid = (string)$foodOrderStatusStmt->fetchColumn();
+                $foodOrderStatusLogCountStmt->execute(['id=' . $foodOrderId . ' %']);
+                $foodOrderStatusLogCountAfterInvalid = (int)$foodOrderStatusLogCountStmt->fetchColumn();
+                if (httpIntegrationStatusCode($invalidFoodOrderStatusResponse) !== 302
+                    || !responseHasLocationHeader($invalidFoodOrderStatusResponse['headers'], BASE_URL . '/admin/food_order.php?id=' . $foodOrderId . '&error=status_invalid', $baseUrl)
+                    || $foodOrderStatusAfterInvalid !== 'new'
+                    || $foodOrderStatusLogCountAfterInvalid !== $foodOrderStatusLogCountBefore) {
+                    $foodStructuredIssues[] = 'nepovolený stav objednávkové poptávky změnil data nebo auditní log';
+                }
+
+                $invalidFoodOrderStatusPage = fetchUrl(
+                    $foodOrderAdminUrl . '&error=status_invalid',
+                    $adminSession['cookie'],
+                    0
+                );
+                $invalidFoodOrderStatusCsrf = extractHiddenInputValue($invalidFoodOrderStatusPage['body'], 'csrf_token');
+                if (httpIntegrationStatusCode($invalidFoodOrderStatusPage) !== 200
+                    || !str_contains($invalidFoodOrderStatusPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="food-order-status-error"')
+                    || !httpIntegrationElementHasAttributes(
+                        $invalidFoodOrderStatusPage['body'],
+                        'select',
+                        'food-order-status',
+                        [
+                            'aria-invalid' => 'true',
+                            'aria-describedby' => 'food-order-status-review food-order-status-field-error',
+                        ]
+                    )
+                    || !str_contains($invalidFoodOrderStatusPage['body'], 'id="food-order-status-field-error"')
+                    || $invalidFoodOrderStatusCsrf === '') {
+                    $foodStructuredIssues[] = 'nepovolený stav objednávkové poptávky nevrátil přístupný návrh opravy';
+                }
+
+                $unconfirmedFoodOrderStatusResponse = postUrl(
+                    $foodOrderAdminUrl,
+                    [
+                        'csrf_token' => $invalidFoodOrderStatusCsrf,
                         'id' => (string)$foodOrderId,
                         'status' => 'completed',
                     ],
                     $adminSession['cookie'],
                     0
                 );
-                if (httpIntegrationStatusCode($foodOrderStatusResponse) !== 302) {
-                    $foodStructuredIssues[] = 'admin změna stavu objednávkové poptávky nevrátila redirect';
-                }
-                $foodOrderStatusStmt = $pdo->prepare("SELECT status FROM cms_food_orders WHERE id = ?");
                 $foodOrderStatusStmt->execute([$foodOrderId]);
-                if ((string)$foodOrderStatusStmt->fetchColumn() !== 'completed') {
-                    $foodStructuredIssues[] = 'admin změna stavu objednávkové poptávky se neuložila';
+                $foodOrderStatusAfterMissingConfirmation = (string)$foodOrderStatusStmt->fetchColumn();
+                $foodOrderStatusLogCountStmt->execute(['id=' . $foodOrderId . ' %']);
+                $foodOrderStatusLogCountAfterMissingConfirmation = (int)$foodOrderStatusLogCountStmt->fetchColumn();
+                if (httpIntegrationStatusCode($unconfirmedFoodOrderStatusResponse) !== 302
+                    || !responseHasLocationHeader($unconfirmedFoodOrderStatusResponse['headers'], BASE_URL . '/admin/food_order.php?id=' . $foodOrderId . '&error=status_confirm_required&status=completed', $baseUrl)
+                    || $foodOrderStatusAfterMissingConfirmation !== 'new'
+                    || $foodOrderStatusLogCountAfterMissingConfirmation !== $foodOrderStatusLogCountBefore) {
+                    $foodStructuredIssues[] = 'nepotvrzená změna stavu objednávkové poptávky změnila data nebo auditní log';
+                }
+
+                $unconfirmedFoodOrderStatusPage = fetchUrl(
+                    $foodOrderAdminUrl . '&error=status_confirm_required&status=completed',
+                    $adminSession['cookie'],
+                    0
+                );
+                $confirmedFoodOrderStatusCsrf = extractHiddenInputValue($unconfirmedFoodOrderStatusPage['body'], 'csrf_token');
+                if (httpIntegrationStatusCode($unconfirmedFoodOrderStatusPage) !== 200
+                    || !str_contains($unconfirmedFoodOrderStatusPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="food-order-status-error"')
+                    || !str_contains($unconfirmedFoodOrderStatusPage['body'], '<option value="completed" selected>Vyřízená</option>')
+                    || !httpIntegrationInputHasAttributes(
+                        $unconfirmedFoodOrderStatusPage['body'],
+                        $foodOrderStatusConfirmationId,
+                        [
+                            'aria-invalid' => 'true',
+                            'aria-describedby' => 'food-order-status-review food-order-status-confirm-error',
+                        ]
+                    )
+                    || !str_contains($unconfirmedFoodOrderStatusPage['body'], 'id="food-order-status-confirm-error"')
+                    || $confirmedFoodOrderStatusCsrf === '') {
+                    $foodStructuredIssues[] = 'nepotvrzená změna stavu objednávkové poptávky nevrátila alert, zachovanou volbu nebo field-level chybu';
+                }
+
+                $confirmedFoodOrderStatusResponse = postUrl(
+                    $foodOrderAdminUrl,
+                    [
+                        'csrf_token' => $confirmedFoodOrderStatusCsrf,
+                        'id' => (string)$foodOrderId,
+                        'status' => 'completed',
+                        $foodOrderStatusConfirmationName => '1',
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $foodOrderStatusStmt->execute([$foodOrderId]);
+                $foodOrderStatusAfterConfirmation = (string)$foodOrderStatusStmt->fetchColumn();
+                $foodOrderStatusLogCountStmt->execute(['id=' . $foodOrderId . ' %']);
+                $foodOrderStatusLogCountAfterConfirmation = (int)$foodOrderStatusLogCountStmt->fetchColumn();
+                if (httpIntegrationStatusCode($confirmedFoodOrderStatusResponse) !== 302
+                    || !responseHasLocationHeader($confirmedFoodOrderStatusResponse['headers'], BASE_URL . '/admin/food_order.php?id=' . $foodOrderId . '&msg=saved', $baseUrl)
+                    || $foodOrderStatusAfterConfirmation !== 'completed'
+                    || $foodOrderStatusLogCountAfterConfirmation !== $foodOrderStatusLogCountBefore + 1) {
+                    $foodStructuredIssues[] = 'potvrzená změna stavu objednávkové poptávky neuložila stav, PRG nebo auditní log';
                 }
             }
         }

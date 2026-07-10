@@ -61,6 +61,8 @@ Poznámka 2026-07-10: editory podcastových kapitol, osob a platforem už nejsou
 
 Poznámka 2026-07-10: strukturované sekce a položky jídelních lístků už nejsou součástí otevřené základní mezery `3.3.3`; názvy, datum/čas podávání, sekce, cena, výživové hodnoty a obrázek mají konkrétní field-level návrhy oprav a HTTP důkaz zachování hodnot. Jejich individuální trvalé mazání už také není otevřeným základním rizikem `3.3.4`: položka i sekce mají review dopadu, serverově vyžadovaný checkbox, odmítnutí bez změny dat/logu a potvrzený transakční cleanup se zachováním médií. Ručně zbývá NVDA/keyboard-only průchod; obecné položky obou kritérií pokračují nad jinými méně častými formuláři a destruktivními akcemi.
 
+Poznámka 2026-07-10: změna interního stavu Food objednávkové poptávky už není součástí otevřeného základního rizika `3.3.4`. Detail má review referenčního kódu, aktuálního stavu, auditního dopadu a absence automatického e-mailu, serverové odmítnutí nepovoleného stavu i změny bez `confirm_food_order_status_<id>` a HTTP důkaz zachování stavu/auditního logu i potvrzeného PRG průchodu. Ručně zbývá NVDA/keyboard-only ověření oznámení review textu, zachované volby, checkboxu a obou chybových stavů; obecná inventura pokračuje nad jinými externě dopadajícími a destruktivními akcemi.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |
