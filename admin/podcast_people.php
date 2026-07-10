@@ -65,19 +65,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
 
     if ($name === '') {
-        $error = 'Doplňte jméno osoby.';
+        $error = 'Doplňte jméno osoby tak, jak se má zobrazit na webu a v podcastových aplikacích, například Jana Nováková.';
         $errorField = 'name';
     } elseif ($profileUrlInput !== '' && $profileUrl === '') {
-        $error = 'Profil osoby musí být platná veřejná http/https adresa.';
+        $error = 'Zadejte veřejnou adresu profilu jako http/https nebo doménu bez schématu, případně pole nechte prázdné.';
         $errorField = 'profile_url';
     } elseif ($imageUrlInput !== '' && $imageUrl === '') {
-        $error = 'Obrázek osoby musí být platná veřejná http/https adresa.';
+        $error = 'Zadejte veřejnou adresu obrázku jako http/https nebo doménu bez schématu, případně pole nechte prázdné.';
         $errorField = 'image_url';
     } elseif ($personId !== null) {
         $ownershipStmt = $pdo->prepare("SELECT id FROM cms_podcast_people WHERE id = ? AND {$scopeWhere} LIMIT 1");
         $ownershipStmt->execute(array_merge([$personId], $scopeParams));
         if (!$ownershipStmt->fetchColumn()) {
-            $error = 'Osobu se nepodařilo v tomto pořadu nebo epizodě najít.';
+            $error = 'Osobu se nepodařilo v tomto pořadu nebo epizodě najít. Vraťte se k seznamu a vyberte existující osobu.';
         } else {
             $updateSql = "UPDATE cms_podcast_people
                           SET name = ?, role_key = ?, group_key = ?, profile_url = ?, image_url = ?, sort_order = ?, updated_at = NOW()
@@ -151,7 +151,7 @@ adminHeader($heading);
 
 <section aria-labelledby="podcast-person-form-heading">
   <h2 id="podcast-person-form-heading"><?= !empty($person['id']) ? 'Upravit osobu' : 'Přidat osobu' ?></h2>
-  <form method="post"<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
+  <form id="podcast-person-form" method="post" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
     <?php if ($episodeId !== null): ?><input type="hidden" name="episode_id" value="<?= (int)$episodeId ?>"><?php endif; ?>

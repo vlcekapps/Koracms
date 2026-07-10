@@ -1697,6 +1697,101 @@ try {
             }
         }
     }
+    if ($podcastChapterCsrf === '') {
+        $podcastAdminValidationIssues[] = 'editor kapitol neposkytl CSRF token pro render validační chyby';
+    } else {
+        $podcastChapterValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_chapters.php',
+            [
+                'csrf_token' => $podcastChapterCsrf,
+                'episode_id' => (string)$podcastFeedEpisodeId,
+                'start_time' => 'začátek',
+                'title' => 'HTTP zachovaný název kapitoly',
+                'url' => 'https://example.test/kapitola',
+                'image_url' => '',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastChapterValidationBody = $podcastChapterValidationResponse['body'];
+        if (httpIntegrationStatusCode($podcastChapterValidationResponse) !== 200
+            || !str_contains($podcastChapterValidationBody, '<p class="error" role="alert" id="form-error" aria-atomic="true">Zadejte začátek kapitoly jako sekundy nebo čas ve tvaru MM:SS či H:MM:SS.</p>')
+            || !httpIntegrationElementHasAttributes($podcastChapterValidationBody, 'form', 'podcast-chapter-create-form', ['aria-describedby' => 'form-error'])
+            || !str_contains($podcastChapterValidationBody, '<form id="podcast-chapter-create-form" method="post" novalidate aria-describedby="form-error">')
+            || !httpIntegrationInputHasAttributes($podcastChapterValidationBody, 'start_time', [
+                'value' => 'začátek',
+                'aria-describedby' => 'start-time-help start-time-error',
+                'aria-invalid' => 'true',
+            ])
+            || !httpIntegrationInputHasAttributes($podcastChapterValidationBody, 'title', ['value' => 'HTTP zachovaný název kapitoly'])
+            || !str_contains($podcastChapterValidationBody, 'id="start-time-error" class="error">Zadejte začátek kapitoly jako sekundy nebo čas ve tvaru MM:SS či H:MM:SS.</small>')) {
+            $podcastAdminValidationIssues[] = 'editor kapitol nemá serverový field-level návrh opravy se zachovanými hodnotami';
+        }
+    }
+    if ($podcastShowPeopleCsrf === '') {
+        $podcastAdminValidationIssues[] = 'editor osob podcastu neposkytl CSRF token pro render validační chyby';
+    } else {
+        $podcastPeopleValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_people.php',
+            [
+                'csrf_token' => $podcastShowPeopleCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'name' => 'HTTP zachovaná moderátorka',
+                'role_key' => 'host',
+                'group_key' => 'cast',
+                'profile_url' => 'javascript:alert(1)',
+                'image_url' => '',
+                'sort_order' => '30',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastPeopleValidationBody = $podcastPeopleValidationResponse['body'];
+        if (httpIntegrationStatusCode($podcastPeopleValidationResponse) !== 200
+            || !str_contains($podcastPeopleValidationBody, '<p class="error" role="alert" id="form-error" aria-atomic="true">Zadejte veřejnou adresu profilu jako http/https nebo doménu bez schématu, případně pole nechte prázdné.</p>')
+            || !httpIntegrationElementHasAttributes($podcastPeopleValidationBody, 'form', 'podcast-person-form', ['aria-describedby' => 'form-error'])
+            || !str_contains($podcastPeopleValidationBody, '<form id="podcast-person-form" method="post" novalidate aria-describedby="form-error">')
+            || !httpIntegrationInputHasAttributes($podcastPeopleValidationBody, 'name', ['value' => 'HTTP zachovaná moderátorka'])
+            || !httpIntegrationInputHasAttributes($podcastPeopleValidationBody, 'profile_url', [
+                'value' => 'javascript:alert(1)',
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'profile-url-error',
+            ])
+            || !str_contains($podcastPeopleValidationBody, 'id="profile-url-error" class="error">Zadejte veřejnou adresu profilu jako http/https nebo doménu bez schématu, případně pole nechte prázdné.</small>')) {
+            $podcastAdminValidationIssues[] = 'editor osob podcastu nemá serverový field-level návrh opravy se zachovanými hodnotami';
+        }
+    }
+    if ($podcastPlatformCsrf === '') {
+        $podcastAdminValidationIssues[] = 'editor platforem podcastu neposkytl CSRF token pro render validační chyby';
+    } else {
+        $podcastPlatformValidationResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_platforms.php',
+            [
+                'csrf_token' => $podcastPlatformCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'platform_key' => 'other',
+                'label' => 'HTTP zachovaný audioarchiv',
+                'url' => 'javascript:alert(1)',
+                'sort_order' => '40',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastPlatformValidationBody = $podcastPlatformValidationResponse['body'];
+        if (httpIntegrationStatusCode($podcastPlatformValidationResponse) !== 200
+            || !str_contains($podcastPlatformValidationBody, '<p class="error" role="alert" id="form-error" aria-atomic="true">Zadejte veřejnou adresu pořadu na platformě jako http/https nebo doménu bez schématu.</p>')
+            || !httpIntegrationElementHasAttributes($podcastPlatformValidationBody, 'form', 'podcast-platform-form', ['aria-describedby' => 'form-error'])
+            || !str_contains($podcastPlatformValidationBody, '<form id="podcast-platform-form" method="post" novalidate aria-describedby="form-error">')
+            || !httpIntegrationInputHasAttributes($podcastPlatformValidationBody, 'label', ['value' => 'HTTP zachovaný audioarchiv'])
+            || !httpIntegrationInputHasAttributes($podcastPlatformValidationBody, 'url', [
+                'value' => 'javascript:alert(1)',
+                'aria-invalid' => 'true',
+                'aria-describedby' => 'url-error',
+            ])
+            || !str_contains($podcastPlatformValidationBody, 'id="url-error" class="error">Zadejte veřejnou adresu pořadu na platformě jako http/https nebo doménu bez schématu.</small>')) {
+            $podcastAdminValidationIssues[] = 'editor platforem podcastu nemá serverový field-level návrh opravy se zachovanými hodnotami';
+        }
+    }
     httpIntegrationPrintResult('podcast_admin_validation_http', $podcastAdminValidationIssues, $failures);
 
     $stateChangingGetEndpointIssues = [];

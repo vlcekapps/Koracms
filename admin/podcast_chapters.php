@@ -51,13 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Zadejte začátek kapitoly jako sekundy nebo čas ve tvaru MM:SS či H:MM:SS.';
         $errorField = 'start_time';
     } elseif ($postedTitle === '') {
-        $error = 'Doplňte název kapitoly.';
+        $error = 'Doplňte krátký název kapitoly, například Rozhovor s hostem.';
         $errorField = 'title';
     } elseif ($postedUrl !== '' && $url === '') {
-        $error = 'Odkaz kapitoly musí být platná veřejná http/https adresa.';
+        $error = 'Zadejte veřejnou adresu souvisejícího odkazu jako http/https nebo doménu bez schématu, případně pole nechte prázdné.';
         $errorField = 'url';
     } elseif ($postedImageUrl !== '' && $imageUrl === '') {
-        $error = 'Odkaz na obrázek musí být platná veřejná http/https adresa.';
+        $error = 'Zadejte veřejnou adresu obrázku jako http/https nebo doménu bez schématu, případně pole nechte prázdné.';
         $errorField = 'image_url';
     } else {
         try {
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (PDOException $exception) {
             if ((string)$exception->getCode() === '23000') {
-                $error = 'V této epizodě už existuje kapitola se stejným časem začátku.';
+                $error = 'V této epizodě už kapitola se stejným začátkem existuje. Zadejte jiný čas nebo upravte existující kapitolu.';
                 $errorField = 'start_time';
             } else {
                 throw $exception;
@@ -107,7 +107,7 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
 
 <section aria-labelledby="podcast-chapter-add-heading">
   <h2 id="podcast-chapter-add-heading">Přidat kapitolu</h2>
-  <form method="post"<?= $error !== '' && $editChapterId === null ? ' aria-describedby="form-error"' : '' ?>>
+  <form id="podcast-chapter-create-form" method="post" novalidate<?= $error !== '' && $editChapterId === null ? ' aria-describedby="form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="episode_id" value="<?= (int)$episodeId ?>">
     <fieldset>
@@ -145,7 +145,7 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
         $chapterId = (int)$chapter['id'];
         $isEditedChapterError = $error !== '' && $editChapterId === $chapterId;
         ?>
-      <form method="post" class="admin-fieldset-spaced"<?= $error !== '' && $editChapterId === $chapterId ? ' aria-describedby="form-error"' : '' ?>>
+      <form id="podcast-chapter-form-<?= $chapterId ?>" method="post" class="admin-fieldset-spaced" novalidate<?= $error !== '' && $editChapterId === $chapterId ? ' aria-describedby="form-error"' : '' ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
         <input type="hidden" name="episode_id" value="<?= (int)$episodeId ?>">
         <input type="hidden" name="chapter_id" value="<?= $chapterId ?>">
@@ -153,7 +153,7 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
           <legend><?= h(podcastChapterTimeLabel($chapter['start_time_seconds'])) ?> – <?= h((string)$chapter['title']) ?></legend>
           <label for="start_time_<?= $chapterId ?>">Začátek kapitoly</label>
           <input type="text" id="start_time_<?= $chapterId ?>" name="start_time" required
-                 value="<?= h($editChapterId === $chapterId ? $postedStartTime : podcastChapterTimeLabel($chapter['start_time_seconds'])) ?>"<?= $isEditedChapterError && $errorField === 'start_time' ? ' aria-invalid="true" aria-describedby="start-time-error-' . $chapterId . '"' : '' ?>>
+                 value="<?= h($editChapterId === $chapterId ? $postedStartTime : podcastChapterTimeLabel($chapter['start_time_seconds'])) ?>" aria-describedby="start-time-help<?= $isEditedChapterError && $errorField === 'start_time' ? ' start-time-error-' . $chapterId : '' ?>"<?= $isEditedChapterError && $errorField === 'start_time' ? ' aria-invalid="true"' : '' ?>>
           <?php if ($isEditedChapterError && $errorField === 'start_time'): ?><small id="start-time-error-<?= $chapterId ?>" class="error"><?= h($error) ?></small><?php endif; ?>
           <label for="title_<?= $chapterId ?>">Název kapitoly</label>
           <input type="text" id="title_<?= $chapterId ?>" name="title" maxlength="255" required value="<?= h($editChapterId === $chapterId ? $postedTitle : (string)$chapter['title']) ?>"<?= $isEditedChapterError && $errorField === 'title' ? ' aria-invalid="true" aria-describedby="title-error-' . $chapterId . '"' : '' ?>>

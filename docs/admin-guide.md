@@ -30,6 +30,8 @@ V detailu odpovědi Form Builderu stejný princip platí i pro GitHub issue brid
 
 Stejný field-level pattern používají i další běžná administrační workflow: série článků, externí odkazy blogu, základní chyby rezervačního zdroje, podcastové pořady a newsletter composer. Při chybě má souhrnný text zůstat textový a atomický, dotčené pole má mít `aria-invalid`, `aria-describedby` jen na existující nápovědu nebo chybu a lokální text má správci říct konkrétní opravu.
 
+Ve správě podcastu to platí také pro kapitoly, osoby a odkazy na platformy. Po chybě zůstanou rozepsané hodnoty ve formuláři; nápověda u dotčeného pole vysvětlí přijatelný formát času, nabídne příklad názvu, popíše bezpečný http/https nebo doménový tvar adresy a u duplicitní položky doporučí jiný čas nebo úpravu existujícího záznamu.
+
 Stejný guardrail platí pro hlavní navigační externí odkazy, přesměrování, alba galerie, fotografie galerie a ruční vytvoření rezervace. Chyby mají správci poradit doplnění názvu, opravu interní cesty nebo URL, jiný slug, platné nadřazené album, platnou licenci, kalendářní datum pořízení, výběr zdroje nebo uživatele, doplnění údajů hosta, opravu času a řešení kolize rezervace.
 
 Hlavní obsahové editory používají stejnou smlouvu pro editor článku, správu blogů, položky vývěsky, jídelní/nápojové lístky a ankety. Chyba má vždy říct, které pole opravit a jak: doplnit titulek nebo název, zvolit jedinečný slug, použít obsah z cílového blogu, vybrat existující kategorii, zadat datum vyvěšení, doplnit možnosti odpovědi nebo opravit limit vícevýběru.

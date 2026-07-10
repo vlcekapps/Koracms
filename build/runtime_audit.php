@@ -19783,6 +19783,35 @@ if (!str_contains($podcastPlatformsAdminSource, 'verifyCsrf();')
     || !str_contains($podcastPlatformsAdminSource, 'aria-describedby="form-error"')) {
     $podcastSourceIssues[] = 'podcast platform administration is missing CSRF, scope ownership or accessible errors';
 }
+if (!str_contains($podcastChaptersAdminSource, 'id="podcast-chapter-create-form" method="post" novalidate')
+    || !str_contains($podcastChaptersAdminSource, 'Doplňte krátký název kapitoly, například Rozhovor s hostem.')
+    || !str_contains($podcastChaptersAdminSource, 'Zadejte veřejnou adresu souvisejícího odkazu jako http/https nebo doménu bez schématu')
+    || !str_contains($podcastChaptersAdminSource, 'Zadejte veřejnou adresu obrázku jako http/https nebo doménu bez schématu')
+    || !str_contains($podcastChaptersAdminSource, 'Zadejte jiný čas nebo upravte existující kapitolu.')
+    || !str_contains($podcastChaptersAdminSource, 'id="start-time-error"')
+    || !str_contains($podcastChaptersAdminSource, 'id="title-error"')
+    || !str_contains($podcastChaptersAdminSource, 'id="url-error"')
+    || !str_contains($podcastChaptersAdminSource, 'id="image-url-error"')) {
+    $podcastSourceIssues[] = 'podcast chapter administration is missing actionable field-level error suggestions';
+}
+if (!str_contains($podcastPeopleAdminSource, 'id="podcast-person-form" method="post" novalidate')
+    || !str_contains($podcastPeopleAdminSource, 'Doplňte jméno osoby tak, jak se má zobrazit na webu a v podcastových aplikacích')
+    || !str_contains($podcastPeopleAdminSource, 'Zadejte veřejnou adresu profilu jako http/https nebo doménu bez schématu')
+    || !str_contains($podcastPeopleAdminSource, 'Zadejte veřejnou adresu obrázku jako http/https nebo doménu bez schématu')
+    || !str_contains($podcastPeopleAdminSource, 'id="name-error"')
+    || !str_contains($podcastPeopleAdminSource, 'id="profile-url-error"')
+    || !str_contains($podcastPeopleAdminSource, 'id="image-url-error"')) {
+    $podcastSourceIssues[] = 'podcast people administration is missing actionable field-level error suggestions';
+}
+if (!str_contains($podcastPlatformsAdminSource, 'id="podcast-platform-form" method="post" novalidate')
+    || !str_contains($podcastPlatformsAdminSource, 'Doplňte viditelný název jiné platformy, například Obecní audioarchiv.')
+    || !str_contains($podcastPlatformsAdminSource, 'Zadejte veřejnou adresu pořadu na platformě jako http/https nebo doménu bez schématu.')
+    || !str_contains($podcastPlatformsAdminSource, 'Upravte existující položku.')
+    || !str_contains($podcastPlatformsAdminSource, 'id="platform-error"')
+    || !str_contains($podcastPlatformsAdminSource, 'id="label-error"')
+    || !str_contains($podcastPlatformsAdminSource, 'id="url-error"')) {
+    $podcastSourceIssues[] = 'podcast platform administration is missing actionable field-level error suggestions';
+}
 if (!str_contains($podcastShowControllerSource, "inputInt('get', 'sezona')")
     || !str_contains($podcastShowViewSource, 'id="podcast-season-filter-title"')
     || !str_contains($podcastShowViewSource, 'aria-current="page"')) {

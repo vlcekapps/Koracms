@@ -41,10 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = normalizePodcastPlatformUrl($urlInput);
     $sortOrder = max(0, (int)($_POST['sort_order'] ?? 0));
     if ($platformKey === 'other' && $label === '') {
-        $error = 'U jiné platformy doplňte její viditelný název.';
+        $error = 'Doplňte viditelný název jiné platformy, například Obecní audioarchiv.';
         $errorField = 'label';
     } elseif ($url === '') {
-        $error = 'Doplňte platnou veřejnou http/https adresu pořadu na platformě.';
+        $error = 'Zadejte veřejnou adresu pořadu na platformě jako http/https nebo doménu bez schématu.';
         $errorField = 'url';
     } else {
         try {
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ownershipStmt = $pdo->prepare("SELECT id FROM cms_podcast_platform_links WHERE id = ? AND show_id = ? LIMIT 1");
                 $ownershipStmt->execute([$linkId, $showId]);
                 if (!$ownershipStmt->fetchColumn()) {
-                    $error = 'Odkaz se v tomto podcastu nepodařilo najít.';
+                    $error = 'Odkaz se v tomto podcastu nepodařilo najít. Vraťte se k seznamu a vyberte existující platformu.';
                 } else {
                     $pdo->prepare(
                         "UPDATE cms_podcast_platform_links
@@ -118,7 +118,7 @@ adminHeader('Platformy podcastu: ' . (string)$show['title']);
 
 <section aria-labelledby="podcast-platform-form-heading">
   <h2 id="podcast-platform-form-heading"><?= !empty($link['id']) ? 'Upravit platformu' : 'Přidat platformu' ?></h2>
-  <form method="post"<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
+  <form id="podcast-platform-form" method="post" novalidate<?= $error !== '' ? ' aria-describedby="form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
     <?php if (!empty($link['id'])): ?><input type="hidden" name="link_id" value="<?= (int)$link['id'] ?>"><?php endif; ?>
