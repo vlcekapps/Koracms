@@ -538,6 +538,8 @@ Sdílené hromadné mazání v běžných administračních přehledech použív
 
 Trvalé mazání blogových komentářů používá vlastní review-and-confirm guardrail pro jednotlivé řádky i hromadný výběr. Správce před odesláním vidí dopad na text, údaje autora a stav moderace, potvrzuje `confirm_comment_delete_<id>` nebo `confirm_comment_bulk_delete` a server bez potvrzení komentář ani audit log nezmění. Stejnou kontrolu má i historický přímý endpoint, takže aktuální formulář nejde obejít starší URL; HTTP integrace ověřuje odmítnutí i potvrzený PRG průchod.
 
+Trvalé mazání kontaktních a chatových zpráv používá stejnou serverovou ochranu v přehledu, detailu, hromadné akci i historickém přímém endpointu. Samostatné potvrzení vyžaduje také smazání chatové odpovědi. Bez checkboxu zůstávají zprávy, odpovědi, chatová historie i audit log beze změny; potvrzené smazání celé chatové zprávy odstraní související data v jedné transakci a vrátí přesný PRG stav.
+
 Mazání jednotlivého přesměrování používá stejný princip v řádkové akci. Už nejde o stav měnící GET odkaz; správce vidí review staré a nové cesty, musí potvrdit dopad na veřejnou URL a server bez `confirm_redirect_delete_<id>` záznam nesmaže ani nezapíše audit log.
 
 Změny stavu rezervace používají stejný error-prevention princip. Detail rezervace pro schválení, zamítnutí, zrušení, dokončení a no-show ukazuje review dopadu, vyžaduje potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle notifikaci.

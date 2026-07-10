@@ -27,10 +27,37 @@ if (!$reply) {
 $chatId = (int)$reply['chat_id'];
 
 if ($action === 'delete') {
-    $pdo->prepare("DELETE FROM cms_chat_replies WHERE id = ?")->execute([$replyId]);
-    chatHistoryCreate($pdo, $chatId, currentUserId(), 'reply', 'Veřejná odpověď byla smazána.');
-    logAction('chat_reply_delete', 'id=' . $replyId . ';chat_id=' . $chatId);
-    header('Location: ' . appendUrlQuery($redirect, ['ok' => 1]));
+    $confirmFieldName = 'confirm_chat_reply_delete_' . $replyId;
+    $confirmedDelete = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
+    if (!$confirmedDelete) {
+        header('Location: ' . appendUrlQuery($redirect, [
+            'error' => 'chat_reply_delete_confirm_required',
+            'delete_reply_id' => $replyId,
+        ]));
+        exit;
+    }
+
+    $deleted = false;
+    $pdo->beginTransaction();
+    try {
+        $deleteStmt = $pdo->prepare("DELETE FROM cms_chat_replies WHERE id = ?");
+        $deleteStmt->execute([$replyId]);
+        $deleted = $deleteStmt->rowCount() > 0;
+        if ($deleted) {
+            chatHistoryCreate($pdo, $chatId, currentUserId(), 'reply', 'Veřejná odpověď byla smazána.');
+        }
+        $pdo->commit();
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    if ($deleted) {
+        logAction('chat_reply_delete', 'id=' . $replyId . ';chat_id=' . $chatId);
+    }
+    header('Location: ' . appendUrlQuery($redirect, ['ok' => 'reply_deleted']));
     exit;
 }
 

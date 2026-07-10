@@ -8,7 +8,10 @@ $pdo = db_connect();
 $redirect = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), BASE_URL . '/admin/chat.php');
 $action = trim((string)($_POST['action'] ?? ''));
 $allowedActions = ['new', 'read', 'handled', 'approve', 'hide', 'delete'];
-$ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), static fn (int $id): bool => $id > 0));
+$ids = array_values(array_unique(array_filter(
+    array_map('intval', (array)($_POST['ids'] ?? [])),
+    static fn (int $id): bool => $id > 0
+)));
 
 if ($ids === [] || !in_array($action, $allowedActions, true)) {
     header('Location: ' . $redirect);
@@ -16,11 +19,41 @@ if ($ids === [] || !in_array($action, $allowedActions, true)) {
 }
 
 if ($action === 'delete') {
-    foreach ($ids as $messageId) {
-        deleteChatMessage($pdo, $messageId);
+    $confirmedBulkDelete = isset($_POST['confirm_chat_bulk_delete'])
+        && (string)$_POST['confirm_chat_bulk_delete'] === '1';
+    if (!$confirmedBulkDelete) {
+        header('Location: ' . appendUrlQuery($redirect, ['error' => 'chat_bulk_delete_confirm_required']));
+        exit;
     }
-    logAction('chat_bulk_delete', 'count=' . count($ids));
-    header('Location: ' . appendUrlQuery($redirect, ['ok' => 1]));
+
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $existingStmt = $pdo->prepare("SELECT id FROM cms_chat WHERE id IN ({$placeholders}) ORDER BY id");
+    $existingStmt->execute($ids);
+    $existingIds = array_map('intval', $existingStmt->fetchAll(PDO::FETCH_COLUMN));
+
+    $deletedCount = 0;
+    $pdo->beginTransaction();
+    try {
+        foreach ($existingIds as $messageId) {
+            if (deleteChatMessage($pdo, $messageId)) {
+                $deletedCount++;
+            }
+        }
+        $pdo->commit();
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    if ($deletedCount > 0) {
+        logAction('chat_bulk_delete', 'count=' . $deletedCount);
+    }
+    header('Location: ' . appendUrlQuery($redirect, [
+        'ok' => 'bulk_deleted',
+        'count' => $deletedCount,
+    ]));
     exit;
 }
 

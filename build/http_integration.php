@@ -2690,6 +2690,599 @@ try {
     }
     httpIntegrationPrintResult('comment_delete_error_prevention_http', $commentDeleteErrorPreventionIssues, $failures);
 
+    $messagingDeleteIssues = [];
+    saveSetting('module_contact', '1');
+    saveSetting('module_chat', '1');
+    clearSettingsCache();
+    $messagingDeleteSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Messaging Delete Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-messaging-delete-' . bin2hex(random_bytes(3)));
+
+    $contactDeleteInsertStmt = $pdo->prepare(
+        "INSERT INTO cms_contact (
+            sender_name, sender_email, topic_label, reference_code, subject, message,
+            is_read, status, reply_subject, reply_body, created_at, updated_at
+         ) VALUES (?, ?, 'HTTP accessibility', ?, ?, ?, 1, 'read', 'HTTP uložená odpověď', 'Text uložené odpovědi.', NOW(), NOW())"
+    );
+    $contactDeleteIds = [];
+    foreach (['detail', 'bulk', 'legacy'] as $contactDeleteVariant) {
+        $contactDeleteInsertStmt->execute([
+            'HTTP kontakt ' . $contactDeleteVariant,
+            'http-contact-delete-' . bin2hex(random_bytes(3)) . '@example.test',
+            'KNT-HTTP-' . strtoupper(bin2hex(random_bytes(3))),
+            'HTTP kontaktní smazání ' . $contactDeleteVariant,
+            'Kontaktní zpráva pro ' . $contactDeleteVariant . ' mazací tok.',
+        ]);
+        $contactDeleteIds[] = (int)$pdo->lastInsertId();
+    }
+    $createdContactMessageIds = array_merge($createdContactMessageIds, $contactDeleteIds);
+    [$contactDetailDeleteId, $contactBulkDeleteId, $contactLegacyDeleteId] = $contactDeleteIds;
+    $contactDeleteOverviewPath = BASE_URL . '/admin/contact.php?status=all';
+    $contactDeleteOverviewPage = fetchUrl($baseUrl . $contactDeleteOverviewPath, $messagingDeleteSession['cookie'], 0);
+    $contactDeleteOverviewCsrf = extractHiddenInputValue($contactDeleteOverviewPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($contactDeleteOverviewPage) !== 200
+        || $contactDeleteOverviewCsrf === ''
+        || !str_contains($contactDeleteOverviewPage['body'], 'Trvalé smazání odstraní text, referenci, kontaktní údaje odesílatele a uložené odpovědi vybraných zpráv.')
+        || !httpIntegrationInputHasAttributes($contactDeleteOverviewPage['body'], 'confirm-contact-bulk-delete', [
+            'name' => 'confirm_contact_bulk_delete',
+            'aria-required' => 'true',
+            'aria-describedby' => 'contact-bulk-delete-review-help',
+        ])
+        || !httpIntegrationInputHasAttributes($contactDeleteOverviewPage['body'], 'confirm-contact-delete-' . $contactDetailDeleteId, [
+            'name' => 'confirm_contact_delete_' . $contactDetailDeleteId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'contact-delete-review-' . $contactDetailDeleteId,
+        ])) {
+        $messagingDeleteIssues[] = 'přehled kontaktních zpráv nevykreslil individuální a hromadný review-and-confirm kontrakt';
+    }
+
+    $contactDetailDeletePath = BASE_URL . '/admin/contact_message.php?id=' . $contactDetailDeleteId
+        . '&redirect=' . rawurlencode($contactDeleteOverviewPath);
+    $contactDetailDeletePage = fetchUrl($baseUrl . $contactDetailDeletePath, $messagingDeleteSession['cookie'], 0);
+    $contactDetailDeleteCsrf = extractHiddenInputValue($contactDetailDeletePage['body'], 'csrf_token');
+    $contactDetailConfirmField = 'confirm_contact_delete_' . $contactDetailDeleteId;
+    $contactDetailConfirmId = 'confirm-contact-message-delete-' . $contactDetailDeleteId;
+    $contactDetailReviewId = 'contact-message-delete-review-' . $contactDetailDeleteId;
+    if (httpIntegrationStatusCode($contactDetailDeletePage) !== 200
+        || $contactDetailDeleteCsrf === ''
+        || !str_contains($contactDetailDeletePage['body'], 'Odstraní text zprávy, referenci, kontaktní údaje odesílatele a případnou uloženou odpověď.')
+        || !httpIntegrationInputHasAttributes($contactDetailDeletePage['body'], $contactDetailConfirmId, [
+            'name' => $contactDetailConfirmField,
+            'aria-required' => 'true',
+            'aria-describedby' => $contactDetailReviewId,
+        ])) {
+        $messagingDeleteIssues[] = 'detail kontaktní zprávy nevykreslil item-specific review a potvrzení trvalého smazání';
+    }
+
+    $contactDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    $contactDetailMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_action.php',
+        [
+            'csrf_token' => $contactDetailDeleteCsrf,
+            'id' => (string)$contactDetailDeleteId,
+            'action' => 'delete',
+            'redirect' => $contactDetailDeletePath,
+            'success_redirect' => $contactDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactDetailErrorPath = appendUrlQuery($contactDetailDeletePath, [
+        'error' => 'contact_delete_confirm_required',
+        'delete_id' => $contactDetailDeleteId,
+    ]);
+    $contactDetailExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_contact WHERE id = ?');
+    $contactDetailExistsStmt->execute([$contactDetailDeleteId]);
+    $contactDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($contactDetailMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($contactDetailMissingConfirmResponse['headers'], $contactDetailErrorPath, $baseUrl)
+        || (int)$contactDetailExistsStmt->fetchColumn() !== 1
+        || $contactDeleteLogAfterMissing !== $contactDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání kontaktní zprávy změnilo data nebo audit log';
+    }
+
+    $contactDetailErrorPage = fetchUrl($baseUrl . $contactDetailErrorPath, $messagingDeleteSession['cookie'], 0);
+    $contactDetailFieldErrorId = 'confirm-contact-message-delete-' . $contactDetailDeleteId . '-error';
+    if (!str_contains($contactDetailErrorPage['body'], 'id="contact-message-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($contactDetailErrorPage['body'], 'form', 'contact-message-delete-form-' . $contactDetailDeleteId, [
+            'aria-describedby' => 'contact-message-delete-error',
+        ])
+        || !str_contains($contactDetailErrorPage['body'], 'id="' . $contactDetailFieldErrorId . '"')
+        || !httpIntegrationInputHasAttributes($contactDetailErrorPage['body'], $contactDetailConfirmId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $contactDetailReviewId . ' ' . $contactDetailFieldErrorId,
+        ])) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání kontaktní zprávy nevrátilo detailový alert a field-level chybu';
+    }
+
+    $contactDetailConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_action.php',
+        [
+            'csrf_token' => extractHiddenInputValue($contactDetailErrorPage['body'], 'csrf_token'),
+            'id' => (string)$contactDetailDeleteId,
+            'action' => 'delete',
+            'redirect' => $contactDetailDeletePath,
+            'success_redirect' => $contactDeleteOverviewPath,
+            $contactDetailConfirmField => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactDetailSuccessPath = appendUrlQuery($contactDeleteOverviewPath, ['ok' => 'deleted']);
+    $contactDetailExistsStmt->execute([$contactDetailDeleteId]);
+    $contactDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    $contactDetailSuccessPage = fetchUrl($baseUrl . $contactDetailSuccessPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contactDetailConfirmedResponse) !== 302
+        || !responseHasLocationHeader($contactDetailConfirmedResponse['headers'], $contactDetailSuccessPath, $baseUrl)
+        || !str_contains($contactDetailSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Kontaktní zpráva byla trvale smazána.</p>')
+        || (int)$contactDetailExistsStmt->fetchColumn() !== 0
+        || $contactDeleteLogAfterConfirmed !== $contactDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'potvrzené smazání kontaktní zprávy neproběhlo s PRG stavem a audit logem';
+    }
+
+    $contactBulkDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_bulk_delete'")->fetchColumn();
+    $contactBulkMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($contactDetailSuccessPage['body'], 'csrf_token'),
+            'ids' => [(string)$contactBulkDeleteId],
+            'action' => 'delete',
+            'redirect' => $contactDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactBulkErrorPath = appendUrlQuery($contactDeleteOverviewPath, ['error' => 'contact_bulk_delete_confirm_required']);
+    $contactBulkExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_contact WHERE id = ?');
+    $contactBulkExistsStmt->execute([$contactBulkDeleteId]);
+    $contactBulkDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($contactBulkMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($contactBulkMissingConfirmResponse['headers'], $contactBulkErrorPath, $baseUrl)
+        || (int)$contactBulkExistsStmt->fetchColumn() !== 1
+        || $contactBulkDeleteLogAfterMissing !== $contactBulkDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'nepotvrzené hromadné smazání kontaktních zpráv změnilo data nebo audit log';
+    }
+
+    $contactBulkErrorPage = fetchUrl($baseUrl . $contactBulkErrorPath, $messagingDeleteSession['cookie'], 0);
+    if (!str_contains($contactBulkErrorPage['body'], 'id="contact-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($contactBulkErrorPage['body'], 'form', 'contact-bulk-form', [
+            'aria-describedby' => 'contact-bulk-delete-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($contactBulkErrorPage['body'], 'confirm-contact-bulk-delete', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'contact-bulk-delete-review-help confirm-contact-bulk-delete-error',
+        ])) {
+        $messagingDeleteIssues[] = 'nepotvrzené hromadné smazání kontaktních zpráv nevrátilo alert a field-level chybu';
+    }
+
+    $contactBulkConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($contactBulkErrorPage['body'], 'csrf_token'),
+            'ids' => [(string)$contactBulkDeleteId],
+            'action' => 'delete',
+            'redirect' => $contactDeleteOverviewPath,
+            'confirm_contact_bulk_delete' => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactBulkSuccessPath = appendUrlQuery($contactDeleteOverviewPath, ['ok' => 'bulk_deleted', 'count' => 1]);
+    $contactBulkExistsStmt->execute([$contactBulkDeleteId]);
+    $contactBulkDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_bulk_delete'")->fetchColumn();
+    $contactBulkSuccessPage = fetchUrl($baseUrl . $contactBulkSuccessPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($contactBulkConfirmedResponse) !== 302
+        || !responseHasLocationHeader($contactBulkConfirmedResponse['headers'], $contactBulkSuccessPath, $baseUrl)
+        || !str_contains($contactBulkSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Vybraná kontaktní zpráva byla trvale smazána.</p>')
+        || (int)$contactBulkExistsStmt->fetchColumn() !== 0
+        || $contactBulkDeleteLogAfterConfirmed !== $contactBulkDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'potvrzené hromadné smazání kontaktních zpráv neproběhlo s PRG stavem a audit logem';
+    }
+
+    $contactLegacyDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    $contactLegacyMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($contactBulkSuccessPage['body'], 'csrf_token'),
+            'id' => (string)$contactLegacyDeleteId,
+            'redirect' => $contactDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactLegacyErrorPath = appendUrlQuery($contactDeleteOverviewPath, [
+        'error' => 'contact_delete_confirm_required',
+        'delete_id' => $contactLegacyDeleteId,
+    ]);
+    $contactLegacyExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_contact WHERE id = ?');
+    $contactLegacyExistsStmt->execute([$contactLegacyDeleteId]);
+    $contactLegacyDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($contactLegacyMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($contactLegacyMissingConfirmResponse['headers'], $contactLegacyErrorPath, $baseUrl)
+        || (int)$contactLegacyExistsStmt->fetchColumn() !== 1
+        || $contactLegacyDeleteLogAfterMissing !== $contactLegacyDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'historický contact endpoint smazal zprávu bez potvrzení nebo zapsal audit log';
+    }
+    $contactLegacyErrorPage = fetchUrl($baseUrl . $contactLegacyErrorPath, $messagingDeleteSession['cookie'], 0);
+    $contactLegacyConfirmField = 'confirm_contact_delete_' . $contactLegacyDeleteId;
+    $contactLegacyConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/contact_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($contactLegacyErrorPage['body'], 'csrf_token'),
+            'id' => (string)$contactLegacyDeleteId,
+            'redirect' => $contactDeleteOverviewPath,
+            $contactLegacyConfirmField => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $contactLegacySuccessPath = appendUrlQuery($contactDeleteOverviewPath, ['ok' => 'deleted']);
+    $contactLegacyExistsStmt->execute([$contactLegacyDeleteId]);
+    $contactLegacyDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($contactLegacyConfirmedResponse) !== 302
+        || !responseHasLocationHeader($contactLegacyConfirmedResponse['headers'], $contactLegacySuccessPath, $baseUrl)
+        || (int)$contactLegacyExistsStmt->fetchColumn() !== 0
+        || $contactLegacyDeleteLogAfterConfirmed !== $contactLegacyDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'historický contact endpoint neprovedl potvrzené smazání s PRG stavem a audit logem';
+    }
+
+    $chatDeleteInsertStmt = $pdo->prepare(
+        "INSERT INTO cms_chat (
+            topic_label, conversation_type, reference_code, name, email, web, message,
+            status, public_visibility, internal_note, replied_subject, replied_body, created_at, updated_at
+         ) VALUES ('HTTP accessibility', 'public', ?, ?, ?, '', ?, 'read', 'approved', 'Interní poznámka.', 'HTTP odpověď', 'Text odpovědi.', NOW(), NOW())"
+    );
+    $chatDeleteIds = [];
+    foreach (['detail', 'bulk', 'legacy'] as $chatDeleteVariant) {
+        $chatDeleteInsertStmt->execute([
+            'CHT-HTTP-' . strtoupper(bin2hex(random_bytes(3))),
+            'HTTP chat ' . $chatDeleteVariant,
+            'http-chat-delete-' . bin2hex(random_bytes(3)) . '@example.test',
+            'Chat zpráva pro ' . $chatDeleteVariant . ' mazací tok.',
+        ]);
+        $chatDeleteIds[] = (int)$pdo->lastInsertId();
+    }
+    $createdChatMessageIds = array_merge($createdChatMessageIds, $chatDeleteIds);
+    [$chatDetailDeleteId, $chatBulkDeleteId, $chatLegacyDeleteId] = $chatDeleteIds;
+
+    $chatReplyInsertStmt = $pdo->prepare(
+        "INSERT INTO cms_chat_replies (chat_id, name, email, message, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())"
+    );
+    $chatDeleteReplyIds = [];
+    foreach ([
+        [$chatDetailDeleteId, 'detail-target'],
+        [$chatDetailDeleteId, 'detail-cascade'],
+        [$chatBulkDeleteId, 'bulk-cascade'],
+        [$chatLegacyDeleteId, 'legacy-cascade'],
+    ] as [$chatReplyParentId, $chatReplyVariant]) {
+        $chatReplyInsertStmt->execute([
+            $chatReplyParentId,
+            'HTTP odpověď ' . $chatReplyVariant,
+            'http-chat-reply-delete-' . bin2hex(random_bytes(3)) . '@example.test',
+            'Chatová odpověď pro ' . $chatReplyVariant . ' mazací tok.',
+        ]);
+        $chatDeleteReplyIds[] = (int)$pdo->lastInsertId();
+    }
+    $createdChatReplyIds = array_merge($createdChatReplyIds, $chatDeleteReplyIds);
+    [$chatReplyDeleteId] = $chatDeleteReplyIds;
+    foreach ($chatDeleteIds as $chatDeleteHistoryId) {
+        chatHistoryCreate($pdo, $chatDeleteHistoryId, $adminUserId, 'workflow', 'HTTP historie před trvalým smazáním.');
+    }
+
+    $chatDeleteOverviewPath = BASE_URL . '/admin/chat.php?status=all&visibility=all&type=all';
+    $chatDeleteOverviewPage = fetchUrl($baseUrl . $chatDeleteOverviewPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($chatDeleteOverviewPage) !== 200
+        || !str_contains($chatDeleteOverviewPage['body'], 'Trvalé smazání odstraní vybrané zprávy, kontaktní údaje, interní workflow historii a všechny veřejné odpovědi.')
+        || !httpIntegrationInputHasAttributes($chatDeleteOverviewPage['body'], 'confirm-chat-bulk-delete', [
+            'name' => 'confirm_chat_bulk_delete',
+            'aria-required' => 'true',
+            'aria-describedby' => 'chat-bulk-delete-review-help',
+        ])) {
+        $messagingDeleteIssues[] = 'přehled chat zpráv nevykreslil hromadný review-and-confirm kontrakt';
+    }
+
+    $chatDetailDeletePath = BASE_URL . '/admin/chat_message.php?id=' . $chatDetailDeleteId
+        . '&redirect=' . rawurlencode($chatDeleteOverviewPath);
+    $chatDetailDeletePage = fetchUrl($baseUrl . $chatDetailDeletePath, $messagingDeleteSession['cookie'], 0);
+    $chatDetailDeleteCsrf = extractHiddenInputValue($chatDetailDeletePage['body'], 'csrf_token');
+    $chatMessageConfirmField = 'confirm_chat_delete_' . $chatDetailDeleteId;
+    $chatMessageConfirmId = 'confirm-chat-message-delete-' . $chatDetailDeleteId;
+    $chatMessageReviewId = 'chat-message-delete-review-' . $chatDetailDeleteId;
+    $chatReplyConfirmField = 'confirm_chat_reply_delete_' . $chatReplyDeleteId;
+    $chatReplyConfirmId = 'confirm-chat-reply-delete-' . $chatReplyDeleteId;
+    $chatReplyReviewId = 'chat-reply-delete-review-' . $chatReplyDeleteId;
+    if (httpIntegrationStatusCode($chatDetailDeletePage) !== 200
+        || $chatDetailDeleteCsrf === ''
+        || !str_contains($chatDetailDeletePage['body'], 'záznamů workflow historie a 2 veřejných odpovědí. Akci nelze vrátit.')
+        || !httpIntegrationInputHasAttributes($chatDetailDeletePage['body'], $chatMessageConfirmId, [
+            'name' => $chatMessageConfirmField,
+            'aria-required' => 'true',
+            'aria-describedby' => $chatMessageReviewId,
+        ])
+        || !httpIntegrationInputHasAttributes($chatDetailDeletePage['body'], $chatReplyConfirmId, [
+            'name' => $chatReplyConfirmField,
+            'aria-required' => 'true',
+            'aria-describedby' => $chatReplyReviewId,
+        ])) {
+        $messagingDeleteIssues[] = 'detail chat zprávy nevykreslil review pro zprávu, historii a veřejné odpovědi';
+    }
+
+    $chatReplyDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply_delete'")->fetchColumn();
+    $chatReplyHistoryBeforeStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?');
+    $chatReplyHistoryBeforeStmt->execute([$chatDetailDeleteId]);
+    $chatReplyHistoryBefore = (int)$chatReplyHistoryBeforeStmt->fetchColumn();
+    $chatReplyMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_reply_action.php',
+        [
+            'csrf_token' => $chatDetailDeleteCsrf,
+            'id' => (string)$chatReplyDeleteId,
+            'action' => 'delete',
+            'redirect' => $chatDetailDeletePath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatReplyErrorPath = appendUrlQuery($chatDetailDeletePath, [
+        'error' => 'chat_reply_delete_confirm_required',
+        'delete_reply_id' => $chatReplyDeleteId,
+    ]);
+    $chatReplyExistsStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_chat_replies WHERE id = ?');
+    $chatReplyExistsStmt->execute([$chatReplyDeleteId]);
+    $chatReplyHistoryAfterMissingStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?');
+    $chatReplyHistoryAfterMissingStmt->execute([$chatDetailDeleteId]);
+    $chatReplyDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($chatReplyMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($chatReplyMissingConfirmResponse['headers'], $chatReplyErrorPath, $baseUrl)
+        || (int)$chatReplyExistsStmt->fetchColumn() !== 1
+        || (int)$chatReplyHistoryAfterMissingStmt->fetchColumn() !== $chatReplyHistoryBefore
+        || $chatReplyDeleteLogAfterMissing !== $chatReplyDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání chatové odpovědi změnilo data, historii nebo audit log';
+    }
+
+    $chatReplyErrorPage = fetchUrl($baseUrl . $chatReplyErrorPath, $messagingDeleteSession['cookie'], 0);
+    $chatReplyFieldErrorId = 'confirm-chat-reply-delete-' . $chatReplyDeleteId . '-error';
+    if (!str_contains($chatReplyErrorPage['body'], 'id="chat-reply-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($chatReplyErrorPage['body'], 'form', 'chat-reply-delete-form-' . $chatReplyDeleteId, [
+            'aria-describedby' => 'chat-reply-delete-error',
+        ])
+        || !httpIntegrationInputHasAttributes($chatReplyErrorPage['body'], $chatReplyConfirmId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $chatReplyReviewId . ' ' . $chatReplyFieldErrorId,
+        ])) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání chatové odpovědi nevrátilo alert a field-level chybu';
+    }
+
+    $chatReplyConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_reply_action.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatReplyErrorPage['body'], 'csrf_token'),
+            'id' => (string)$chatReplyDeleteId,
+            'action' => 'delete',
+            'redirect' => $chatDetailDeletePath,
+            $chatReplyConfirmField => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatReplySuccessPath = appendUrlQuery($chatDetailDeletePath, ['ok' => 'reply_deleted']);
+    $chatReplyExistsStmt->execute([$chatReplyDeleteId]);
+    $chatReplyHistoryAfterConfirmedStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?');
+    $chatReplyHistoryAfterConfirmedStmt->execute([$chatDetailDeleteId]);
+    $chatReplyDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply_delete'")->fetchColumn();
+    $chatReplySuccessPage = fetchUrl($baseUrl . $chatReplySuccessPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($chatReplyConfirmedResponse) !== 302
+        || !responseHasLocationHeader($chatReplyConfirmedResponse['headers'], $chatReplySuccessPath, $baseUrl)
+        || !str_contains($chatReplySuccessPage['body'], 'Chatová odpověď byla trvale smazána a ve workflow historii zůstal záznam o smazání.')
+        || (int)$chatReplyExistsStmt->fetchColumn() !== 0
+        || (int)$chatReplyHistoryAfterConfirmedStmt->fetchColumn() !== $chatReplyHistoryBefore + 1
+        || $chatReplyDeleteLogAfterConfirmed !== $chatReplyDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'potvrzené smazání chatové odpovědi neproběhlo transakčně s historií, PRG stavem a audit logem';
+    }
+
+    $chatDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    $chatMessageMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_action.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatReplySuccessPage['body'], 'csrf_token'),
+            'id' => (string)$chatDetailDeleteId,
+            'action' => 'delete',
+            'redirect' => $chatDetailDeletePath,
+            'success_redirect' => $chatDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatMessageErrorPath = appendUrlQuery($chatDetailDeletePath, [
+        'error' => 'chat_delete_confirm_required',
+        'delete_id' => $chatDetailDeleteId,
+    ]);
+    $chatMessageCountsStmt = $pdo->prepare(
+        'SELECT
+            (SELECT COUNT(*) FROM cms_chat WHERE id = ?) AS messages,
+            (SELECT COUNT(*) FROM cms_chat_replies WHERE chat_id = ?) AS replies,
+            (SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ?) AS history'
+    );
+    $chatMessageCountsStmt->execute([$chatDetailDeleteId, $chatDetailDeleteId, $chatDetailDeleteId]);
+    $chatCountsAfterMissing = $chatMessageCountsStmt->fetch();
+    $chatDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($chatMessageMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($chatMessageMissingConfirmResponse['headers'], $chatMessageErrorPath, $baseUrl)
+        || !is_array($chatCountsAfterMissing)
+        || (int)$chatCountsAfterMissing['messages'] !== 1
+        || (int)$chatCountsAfterMissing['replies'] !== 1
+        || (int)$chatCountsAfterMissing['history'] < 2
+        || $chatDeleteLogAfterMissing !== $chatDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání chat zprávy změnilo zprávu, odpovědi, historii nebo audit log';
+    }
+
+    $chatMessageErrorPage = fetchUrl($baseUrl . $chatMessageErrorPath, $messagingDeleteSession['cookie'], 0);
+    $chatMessageFieldErrorId = 'confirm-chat-message-delete-' . $chatDetailDeleteId . '-error';
+    if (!str_contains($chatMessageErrorPage['body'], 'id="chat-message-delete-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($chatMessageErrorPage['body'], 'form', 'chat-message-delete-form-' . $chatDetailDeleteId, [
+            'aria-describedby' => 'chat-message-delete-error',
+        ])
+        || !httpIntegrationInputHasAttributes($chatMessageErrorPage['body'], $chatMessageConfirmId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $chatMessageReviewId . ' ' . $chatMessageFieldErrorId,
+        ])) {
+        $messagingDeleteIssues[] = 'nepotvrzené smazání chat zprávy nevrátilo detailový alert a field-level chybu';
+    }
+
+    $chatMessageConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_action.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatMessageErrorPage['body'], 'csrf_token'),
+            'id' => (string)$chatDetailDeleteId,
+            'action' => 'delete',
+            'redirect' => $chatDetailDeletePath,
+            'success_redirect' => $chatDeleteOverviewPath,
+            $chatMessageConfirmField => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatMessageSuccessPath = appendUrlQuery($chatDeleteOverviewPath, ['ok' => 'deleted']);
+    $chatMessageCountsStmt->execute([$chatDetailDeleteId, $chatDetailDeleteId, $chatDetailDeleteId]);
+    $chatCountsAfterConfirmed = $chatMessageCountsStmt->fetch();
+    $chatDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    $chatMessageSuccessPage = fetchUrl($baseUrl . $chatMessageSuccessPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($chatMessageConfirmedResponse) !== 302
+        || !responseHasLocationHeader($chatMessageConfirmedResponse['headers'], $chatMessageSuccessPath, $baseUrl)
+        || !str_contains($chatMessageSuccessPage['body'], 'Chat zpráva, její historie a veřejné odpovědi byly trvale smazány.')
+        || !is_array($chatCountsAfterConfirmed)
+        || array_sum(array_map('intval', $chatCountsAfterConfirmed)) !== 0
+        || $chatDeleteLogAfterConfirmed !== $chatDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'potvrzené smazání chat zprávy neproběhlo transakčně s PRG stavem a audit logem';
+    }
+
+    $chatBulkDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_bulk_delete'")->fetchColumn();
+    $chatBulkMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatMessageSuccessPage['body'], 'csrf_token'),
+            'ids' => [(string)$chatBulkDeleteId],
+            'action' => 'delete',
+            'redirect' => $chatDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatBulkErrorPath = appendUrlQuery($chatDeleteOverviewPath, ['error' => 'chat_bulk_delete_confirm_required']);
+    $chatMessageCountsStmt->execute([$chatBulkDeleteId, $chatBulkDeleteId, $chatBulkDeleteId]);
+    $chatBulkCountsAfterMissing = $chatMessageCountsStmt->fetch();
+    $chatBulkDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($chatBulkMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($chatBulkMissingConfirmResponse['headers'], $chatBulkErrorPath, $baseUrl)
+        || !is_array($chatBulkCountsAfterMissing)
+        || (int)$chatBulkCountsAfterMissing['messages'] !== 1
+        || (int)$chatBulkCountsAfterMissing['replies'] !== 1
+        || (int)$chatBulkCountsAfterMissing['history'] !== 1
+        || $chatBulkDeleteLogAfterMissing !== $chatBulkDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'nepotvrzené hromadné smazání chat zpráv změnilo zprávy, odpovědi, historii nebo audit log';
+    }
+
+    $chatBulkErrorPage = fetchUrl($baseUrl . $chatBulkErrorPath, $messagingDeleteSession['cookie'], 0);
+    if (!str_contains($chatBulkErrorPage['body'], 'id="chat-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($chatBulkErrorPage['body'], 'form', 'chat-bulk-form', [
+            'aria-describedby' => 'chat-bulk-delete-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($chatBulkErrorPage['body'], 'confirm-chat-bulk-delete', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'chat-bulk-delete-review-help confirm-chat-bulk-delete-error',
+        ])) {
+        $messagingDeleteIssues[] = 'nepotvrzené hromadné smazání chat zpráv nevrátilo alert a field-level chybu';
+    }
+
+    $chatBulkConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatBulkErrorPage['body'], 'csrf_token'),
+            'ids' => [(string)$chatBulkDeleteId],
+            'action' => 'delete',
+            'redirect' => $chatDeleteOverviewPath,
+            'confirm_chat_bulk_delete' => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatBulkSuccessPath = appendUrlQuery($chatDeleteOverviewPath, ['ok' => 'bulk_deleted', 'count' => 1]);
+    $chatMessageCountsStmt->execute([$chatBulkDeleteId, $chatBulkDeleteId, $chatBulkDeleteId]);
+    $chatBulkCountsAfterConfirmed = $chatMessageCountsStmt->fetch();
+    $chatBulkDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_bulk_delete'")->fetchColumn();
+    $chatBulkSuccessPage = fetchUrl($baseUrl . $chatBulkSuccessPath, $messagingDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($chatBulkConfirmedResponse) !== 302
+        || !responseHasLocationHeader($chatBulkConfirmedResponse['headers'], $chatBulkSuccessPath, $baseUrl)
+        || !str_contains($chatBulkSuccessPage['body'], 'Vybraná chat zpráva, její historie a odpovědi byly trvale smazány.')
+        || !is_array($chatBulkCountsAfterConfirmed)
+        || array_sum(array_map('intval', $chatBulkCountsAfterConfirmed)) !== 0
+        || $chatBulkDeleteLogAfterConfirmed !== $chatBulkDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'potvrzené hromadné smazání chat zpráv neproběhlo transakčně s PRG stavem a audit logem';
+    }
+
+    $chatLegacyDetailPath = BASE_URL . '/admin/chat_message.php?id=' . $chatLegacyDeleteId
+        . '&redirect=' . rawurlencode($chatDeleteOverviewPath);
+    $chatLegacyDetailPage = fetchUrl($baseUrl . $chatLegacyDetailPath, $messagingDeleteSession['cookie'], 0);
+    $chatLegacyDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    $chatLegacyMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatLegacyDetailPage['body'], 'csrf_token'),
+            'id' => (string)$chatLegacyDeleteId,
+            'redirect' => $chatLegacyDetailPath,
+            'success_redirect' => $chatDeleteOverviewPath,
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatLegacyErrorPath = appendUrlQuery($chatLegacyDetailPath, [
+        'error' => 'chat_delete_confirm_required',
+        'delete_id' => $chatLegacyDeleteId,
+    ]);
+    $chatMessageCountsStmt->execute([$chatLegacyDeleteId, $chatLegacyDeleteId, $chatLegacyDeleteId]);
+    $chatLegacyCountsAfterMissing = $chatMessageCountsStmt->fetch();
+    $chatLegacyDeleteLogAfterMissing = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($chatLegacyMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($chatLegacyMissingConfirmResponse['headers'], $chatLegacyErrorPath, $baseUrl)
+        || !is_array($chatLegacyCountsAfterMissing)
+        || (int)$chatLegacyCountsAfterMissing['messages'] !== 1
+        || (int)$chatLegacyCountsAfterMissing['replies'] !== 1
+        || (int)$chatLegacyCountsAfterMissing['history'] !== 1
+        || $chatLegacyDeleteLogAfterMissing !== $chatLegacyDeleteLogBefore) {
+        $messagingDeleteIssues[] = 'historický chat endpoint smazal zprávu nebo související data bez potvrzení';
+    }
+    $chatLegacyErrorPage = fetchUrl($baseUrl . $chatLegacyErrorPath, $messagingDeleteSession['cookie'], 0);
+    $chatLegacyConfirmField = 'confirm_chat_delete_' . $chatLegacyDeleteId;
+    $chatLegacyConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/chat_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($chatLegacyErrorPage['body'], 'csrf_token'),
+            'id' => (string)$chatLegacyDeleteId,
+            'redirect' => $chatLegacyDetailPath,
+            'success_redirect' => $chatDeleteOverviewPath,
+            $chatLegacyConfirmField => '1',
+        ],
+        $messagingDeleteSession['cookie'],
+        0
+    );
+    $chatLegacySuccessPath = appendUrlQuery($chatDeleteOverviewPath, ['ok' => 'deleted']);
+    $chatMessageCountsStmt->execute([$chatLegacyDeleteId, $chatLegacyDeleteId, $chatLegacyDeleteId]);
+    $chatLegacyCountsAfterConfirmed = $chatMessageCountsStmt->fetch();
+    $chatLegacyDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($chatLegacyConfirmedResponse) !== 302
+        || !responseHasLocationHeader($chatLegacyConfirmedResponse['headers'], $chatLegacySuccessPath, $baseUrl)
+        || !is_array($chatLegacyCountsAfterConfirmed)
+        || array_sum(array_map('intval', $chatLegacyCountsAfterConfirmed)) !== 0
+        || $chatLegacyDeleteLogAfterConfirmed !== $chatLegacyDeleteLogBefore + 1) {
+        $messagingDeleteIssues[] = 'historický chat endpoint neprovedl potvrzený transakční cleanup s PRG stavem a audit logem';
+    }
+
+    httpIntegrationPrintResult('messaging_delete_error_prevention_http', $messagingDeleteIssues, $failures);
+
     $redirectsValidationIssues = [];
     $redirectsValidationSession = koraPrimeTestSession([
         'cms_logged_in' => true,

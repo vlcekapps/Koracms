@@ -51,10 +51,20 @@ $replyFieldErrorMessages = [
     'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jaké zprávě se vracíte.',
     'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
 ];
+$deleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'contact_delete_confirm_required'
+    && inputInt('get', 'delete_id') === $messageId;
+$deleteConfirmField = 'confirm_contact_delete_' . $messageId;
+$deleteConfirmId = 'confirm-contact-message-delete-' . $messageId;
+$deleteReviewId = 'contact-message-delete-review-' . $messageId;
+$deleteFieldErrorId = 'confirm-contact-message-delete-' . $messageId . '-error';
+$deleteErrorFields = $deleteConfirmError ? [$deleteConfirmField] : [];
 
 adminHeader('Kontaktní zpráva');
 ?>
 
+<?php if ($deleteConfirmError): ?>
+  <p id="contact-message-delete-error" class="error" role="alert" aria-atomic="true">Kontaktní zprávu nelze trvale smazat bez potvrzení. U pole Potvrzení trvalého smazání je konkrétní nápověda.</p>
+<?php endif; ?>
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Kontaktní zpráva byla aktualizována.</p>
 <?php endif; ?>
@@ -169,13 +179,23 @@ adminHeader('Kontaktní zpráva');
       <button type="submit" class="btn">Označit jako vyřízené</button>
     </form>
   <?php endif; ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php"
-        data-confirm="Smazat tuto kontaktní zprávu trvale?">
+  <form method="post" action="<?= BASE_URL ?>/admin/contact_action.php" id="contact-message-delete-form-<?= $messageId ?>" class="admin-inline-form" novalidate
+        data-confirm="Smazat tuto kontaktní zprávu trvale?"<?= $deleteConfirmError ? ' aria-describedby="contact-message-delete-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
     <input type="hidden" name="action" value="delete">
-    <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
-    <button type="submit" class="btn btn-danger">Smazat</button>
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <input type="hidden" name="success_redirect" value="<?= h($redirect) ?>">
+    <fieldset class="admin-inline-fieldset">
+      <legend class="sr-only">Trvalé smazání kontaktní zprávy <?= h(trim((string)($message['reference_code'] ?? '')) !== '' ? (string)$message['reference_code'] : (string)$message['subject']) ?></legend>
+      <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">Odstraní text zprávy, referenci, kontaktní údaje odesílatele a případnou uloženou odpověď. Akci nelze vrátit.</p>
+      <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+        <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+        Potvrzuji trvalé smazání této kontaktní zprávy.
+      </label>
+      <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali zprávu a nevratnost akce.', $deleteFieldErrorId); ?>
+      <button type="submit" class="btn btn-danger">Smazat</button>
+    </fieldset>
   </form>
 </div>
 

@@ -72,11 +72,28 @@ $replyFieldErrorMessages = [
     'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jaké zprávě se vracíte.',
     'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
 ];
+$messageDeleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'chat_delete_confirm_required'
+    && inputInt('get', 'delete_id') === $messageId;
+$messageDeleteConfirmField = 'confirm_chat_delete_' . $messageId;
+$messageDeleteConfirmId = 'confirm-chat-message-delete-' . $messageId;
+$messageDeleteReviewId = 'chat-message-delete-review-' . $messageId;
+$messageDeleteFieldErrorId = 'confirm-chat-message-delete-' . $messageId . '-error';
+$messageDeleteErrorFields = $messageDeleteConfirmError ? [$messageDeleteConfirmField] : [];
+$replyDeleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'chat_reply_delete_confirm_required';
+$replyDeleteErrorId = inputInt('get', 'delete_reply_id');
+$feedbackCode = trim((string)($_GET['ok'] ?? ''));
 
 adminHeader('Chat zpráva');
 ?>
 
-<?php if (isset($_GET['ok'])): ?>
+<?php if ($messageDeleteConfirmError): ?>
+  <p id="chat-message-delete-error" class="error" role="alert" aria-atomic="true">Chat zprávu nelze trvale smazat bez potvrzení. U pole Potvrzení trvalého smazání je konkrétní nápověda.</p>
+<?php elseif ($replyDeleteConfirmError): ?>
+  <p id="chat-reply-delete-error" class="error" role="alert" aria-atomic="true">Chatovou odpověď nelze trvale smazat bez potvrzení. U pole Potvrzení trvalého smazání odpovědi je konkrétní nápověda.</p>
+<?php endif; ?>
+<?php if ($feedbackCode === 'reply_deleted'): ?>
+  <p class="success" role="status" aria-atomic="true">Chatová odpověď byla trvale smazána a ve workflow historii zůstal záznam o smazání.</p>
+<?php elseif ($feedbackCode !== ''): ?>
   <p class="success" role="status">Chat zpráva byla aktualizována.</p>
 <?php endif; ?>
 <?php if (isset($_GET['reply']) && $_GET['reply'] === 'sent'): ?>
@@ -250,13 +267,23 @@ adminHeader('Chat zpráva');
       <button type="submit" class="btn">Označit jako vyřízené</button>
     </form>
   <?php endif; ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php"
-        data-confirm="Smazat tuto chat zprávu trvale?">
+  <form method="post" action="<?= BASE_URL ?>/admin/chat_action.php" id="chat-message-delete-form-<?= $messageId ?>" class="admin-inline-form" novalidate
+        data-confirm="Smazat tuto chat zprávu trvale?"<?= $messageDeleteConfirmError ? ' aria-describedby="chat-message-delete-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
     <input type="hidden" name="action" value="delete">
-    <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
-    <button type="submit" class="btn btn-danger">Smazat</button>
+    <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+    <input type="hidden" name="success_redirect" value="<?= h($redirect) ?>">
+    <fieldset class="admin-inline-fieldset">
+      <legend class="sr-only">Trvalé smazání chat zprávy od <?= h((string)$message['name']) ?></legend>
+      <p id="<?= h($messageDeleteReviewId) ?>" class="field-help field-help--flush">Odstraní zprávu, kontaktní údaje, interní poznámku, <?= count($historyEntries) ?> záznamů workflow historie a <?= count($threadReplies) ?> veřejných odpovědí. Akci nelze vrátit.</p>
+      <label for="<?= h($messageDeleteConfirmId) ?>" class="admin-checkbox-label">
+        <input type="checkbox" id="<?= h($messageDeleteConfirmId) ?>" name="<?= h($messageDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($messageDeleteConfirmField, $messageDeleteErrorFields, [], [$messageDeleteReviewId], $messageDeleteFieldErrorId) ?>>
+        Potvrzuji trvalé smazání této chat zprávy, její historie a odpovědí.
+      </label>
+      <?php adminRenderFieldError($messageDeleteConfirmField, $messageDeleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali zprávu, historii, odpovědi a nevratnost akce.', $messageDeleteFieldErrorId); ?>
+      <button type="submit" class="btn btn-danger">Smazat</button>
+    </fieldset>
   </form>
 </div>
 
@@ -338,6 +365,15 @@ adminHeader('Chat zpráva');
     </thead>
     <tbody>
       <?php foreach ($threadReplies as $reply): ?>
+        <?php
+        $replyId = (int)$reply['id'];
+          $replyDeleteConfirmField = 'confirm_chat_reply_delete_' . $replyId;
+          $replyDeleteConfirmId = 'confirm-chat-reply-delete-' . $replyId;
+          $replyDeleteReviewId = 'chat-reply-delete-review-' . $replyId;
+          $replyDeleteFieldErrorId = 'confirm-chat-reply-delete-' . $replyId . '-error';
+          $replyDeleteHasError = $replyDeleteConfirmError && $replyDeleteErrorId === $replyId;
+          $replyDeleteErrorFields = $replyDeleteHasError ? [$replyDeleteConfirmField] : [];
+          ?>
         <tr>
           <td>
             <strong><?= h((string)$reply['name']) ?></strong>
@@ -349,15 +385,32 @@ adminHeader('Chat zpráva');
           <td><strong><?= h(chatReplyStatusLabel((string)$reply['status'])) ?></strong></td>
           <td><time datetime="<?= h(str_replace(' ', 'T', (string)$reply['created_at'])) ?>"><?= formatCzechDate((string)$reply['created_at']) ?></time></td>
           <td class="actions">
-            <?php foreach (['approve' => 'Schválit', 'hide' => 'Skrýt', 'delete' => 'Smazat'] as $replyAction => $replyLabel): ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/chat_reply_action.php"<?= $replyAction === 'delete' ? ' data-confirm="Smazat tuto odpověď trvale?"' : '' ?>>
+            <?php foreach (['approve' => 'Schválit', 'hide' => 'Skrýt'] as $replyAction => $replyLabel): ?>
+              <form method="post" action="<?= BASE_URL ?>/admin/chat_reply_action.php">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                <input type="hidden" name="id" value="<?= (int)$reply['id'] ?>">
+                <input type="hidden" name="id" value="<?= $replyId ?>">
                 <input type="hidden" name="action" value="<?= h($replyAction) ?>">
                 <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
-                <button type="submit" class="btn<?= $replyAction === 'delete' ? ' btn-danger' : '' ?>"><?= h($replyLabel) ?></button>
+                <button type="submit" class="btn"><?= h($replyLabel) ?></button>
               </form>
             <?php endforeach; ?>
+            <form method="post" action="<?= BASE_URL ?>/admin/chat_reply_action.php" id="chat-reply-delete-form-<?= $replyId ?>" class="admin-inline-form" novalidate
+                  data-confirm="Smazat tuto odpověď trvale?"<?= $replyDeleteHasError ? ' aria-describedby="chat-reply-delete-error"' : '' ?>>
+              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+              <input type="hidden" name="id" value="<?= $replyId ?>">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Trvalé smazání chatové odpovědi od <?= h((string)$reply['name']) ?></legend>
+                <p id="<?= h($replyDeleteReviewId) ?>" class="field-help field-help--flush">Odstraní text odpovědi, kontaktní údaje autora a stav moderace. Ve workflow historii zůstane záznam o smazání. Akci nelze vrátit.</p>
+                <label for="<?= h($replyDeleteConfirmId) ?>" class="admin-checkbox-label">
+                  <input type="checkbox" id="<?= h($replyDeleteConfirmId) ?>" name="<?= h($replyDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($replyDeleteConfirmField, $replyDeleteErrorFields, [], [$replyDeleteReviewId], $replyDeleteFieldErrorId) ?>>
+                  Potvrzuji trvalé smazání této chatové odpovědi.
+                </label>
+                <?php adminRenderFieldError($replyDeleteConfirmField, $replyDeleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali odpověď a nevratnost akce.', $replyDeleteFieldErrorId); ?>
+                <button type="submit" class="btn btn-danger">Smazat</button>
+              </fieldset>
+            </form>
           </td>
         </tr>
       <?php endforeach; ?>

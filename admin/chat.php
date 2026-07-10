@@ -133,6 +133,11 @@ if ($pagination['page'] > 1) {
     $currentParams['strana'] = $pagination['page'];
 }
 $currentRedirect = BASE_URL . '/admin/chat.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
+$feedbackCode = trim((string)($_GET['ok'] ?? ''));
+$deleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'chat_delete_confirm_required';
+$bulkDeleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'chat_bulk_delete_confirm_required';
+$bulkDeleteErrorFields = $bulkDeleteConfirmError ? ['confirm_chat_bulk_delete'] : [];
+$bulkDeletedCount = max(0, (int)($_GET['count'] ?? 0));
 $pagerParams = $currentParams;
 unset($pagerParams['strana']);
 $pagerBaseUrl = BASE_URL . '/admin/chat.php?' . ($pagerParams !== [] ? http_build_query($pagerParams) . '&' : '');
@@ -177,7 +182,16 @@ foreach ($messages as $message) {
 adminHeader('Chat');
 ?>
 
-<?php if (isset($_GET['ok'])): ?>
+<?php if ($deleteConfirmError): ?>
+  <p id="chat-delete-form-error" class="error" role="alert" aria-atomic="true">Chat zprávu nelze trvale smazat bez potvrzení. Otevřete detail zprávy a potvrďte kontrolu nevratného dopadu.</p>
+<?php elseif ($bulkDeleteConfirmError): ?>
+  <p id="chat-bulk-delete-form-error" class="error" role="alert" aria-atomic="true">Vybrané chat zprávy nelze trvale smazat bez potvrzení. U pole Potvrzení hromadného trvalého smazání je konkrétní nápověda.</p>
+<?php endif; ?>
+<?php if ($feedbackCode === 'deleted'): ?>
+  <p class="success" role="status" aria-atomic="true">Chat zpráva, její historie a veřejné odpovědi byly trvale smazány.</p>
+<?php elseif ($feedbackCode === 'bulk_deleted'): ?>
+  <p class="success" role="status" aria-atomic="true"><?= $bulkDeletedCount === 1 ? 'Vybraná chat zpráva, její historie a odpovědi byly trvale smazány.' : 'Vybrané chat zprávy, jejich historie a odpovědi byly trvale smazány.' ?></p>
+<?php elseif ($feedbackCode !== ''): ?>
   <p class="success" role="status">Chat zprávy byly aktualizovány.</p>
 <?php endif; ?>
 
@@ -255,12 +269,18 @@ adminHeader('Chat');
 <?php if (empty($messageRows)): ?>
   <p><?= h($emptyStateText) ?></p>
 <?php else: ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/chat_bulk.php" id="chat-bulk-form">
+  <form method="post" action="<?= BASE_URL ?>/admin/chat_bulk.php" id="chat-bulk-form" novalidate<?= $bulkDeleteConfirmError ? ' aria-describedby="chat-bulk-delete-form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
     <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými zprávami</legend>
       <p data-selection-status="chat" class="field-help field-help--flush" aria-live="polite">Zatím není vybraná žádná zpráva.</p>
+      <p id="chat-bulk-delete-review-help" class="field-help field-help--flush">Trvalé smazání odstraní vybrané zprávy, kontaktní údaje, interní workflow historii a všechny veřejné odpovědi. Akci nelze vrátit.</p>
+      <label for="confirm-chat-bulk-delete" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm-chat-bulk-delete" name="confirm_chat_bulk_delete" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_chat_bulk_delete', $bulkDeleteErrorFields, [], ['chat-bulk-delete-review-help'], 'confirm-chat-bulk-delete-error') ?>>
+        Potvrzuji hromadné trvalé smazání vybraných chat zpráv a souvisejících dat.
+      </label>
+      <?php adminRenderFieldError('confirm_chat_bulk_delete', $bulkDeleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali vybrané chat zprávy, jejich odpovědi a nevratnost akce.', 'confirm-chat-bulk-delete-error'); ?>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <button type="submit" form="chat-bulk-form" name="action" value="<?= h($bulkAction) ?>"

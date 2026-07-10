@@ -735,11 +735,31 @@ function chatHistoryActorLabel(array $entry): string
     return 'Systém';
 }
 
-function deleteChatMessage(PDO $pdo, int $messageId): void
+function deleteChatMessage(PDO $pdo, int $messageId): bool
 {
-    $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$messageId]);
-    $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$messageId]);
-    $pdo->prepare("DELETE FROM cms_chat WHERE id = ?")->execute([$messageId]);
+    $startedTransaction = !$pdo->inTransaction();
+    if ($startedTransaction) {
+        $pdo->beginTransaction();
+    }
+
+    try {
+        $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$messageId]);
+        $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$messageId]);
+        $deleteStmt = $pdo->prepare("DELETE FROM cms_chat WHERE id = ?");
+        $deleteStmt->execute([$messageId]);
+        $deleted = $deleteStmt->rowCount() > 0;
+
+        if ($startedTransaction) {
+            $pdo->commit();
+        }
+
+        return $deleted;
+    } catch (\Throwable $e) {
+        if ($startedTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 /**

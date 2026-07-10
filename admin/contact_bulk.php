@@ -5,10 +5,13 @@ requireCapability('messages_manage', 'Přístup odepřen. Pro správu kontaktní
 verifyCsrf();
 
 $pdo = db_connect();
-$redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/contact.php');
-$action = trim($_POST['action'] ?? '');
+$redirect = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), BASE_URL . '/admin/contact.php');
+$action = trim((string)($_POST['action'] ?? ''));
 $allowedActions = ['new', 'read', 'handled', 'delete'];
-$ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), static fn (int $id): bool => $id > 0));
+$ids = array_values(array_unique(array_filter(
+    array_map('intval', (array)($_POST['ids'] ?? [])),
+    static fn (int $id): bool => $id > 0
+)));
 
 if ($ids === [] || !in_array($action, $allowedActions, true)) {
     header('Location: ' . $redirect);
@@ -16,10 +19,24 @@ if ($ids === [] || !in_array($action, $allowedActions, true)) {
 }
 
 if ($action === 'delete') {
+    $confirmedBulkDelete = isset($_POST['confirm_contact_bulk_delete'])
+        && (string)$_POST['confirm_contact_bulk_delete'] === '1';
+    if (!$confirmedBulkDelete) {
+        header('Location: ' . appendUrlQuery($redirect, ['error' => 'contact_bulk_delete_confirm_required']));
+        exit;
+    }
+
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
-    $pdo->prepare("DELETE FROM cms_contact WHERE id IN ({$placeholders})")->execute($ids);
-    logAction('contact_bulk_delete', 'count=' . count($ids));
-    header('Location: ' . appendUrlQuery($redirect, ['ok' => 1]));
+    $deleteStmt = $pdo->prepare("DELETE FROM cms_contact WHERE id IN ({$placeholders})");
+    $deleteStmt->execute($ids);
+    $deletedCount = $deleteStmt->rowCount();
+    if ($deletedCount > 0) {
+        logAction('contact_bulk_delete', 'count=' . $deletedCount);
+    }
+    header('Location: ' . appendUrlQuery($redirect, [
+        'ok' => 'bulk_deleted',
+        'count' => $deletedCount,
+    ]));
     exit;
 }
 

@@ -173,7 +173,15 @@ p {
 
 ### Doplňkový průchod trvalého mazání komentářů
 
-V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání bez `confirm_comment_delete_<id>`. NVDA má jednou oznámit textový alert, checkbox má mít `aria-invalid` a popis přes review i lokální chybový text; komentář ani audit log se nesmí změnit. Potom checkbox zaškrtněte, odešlete formulář a ověřte stav `Komentář byl trvale smazán.`. Stejný průchod zopakujte hromadně bez a s `confirm_comment_bulk_delete`; výběr komentářů, filtr a hledaný dotaz musí zůstat srozumitelné a potvrzená cesta má oznámit výsledný stav. Historický přímý endpoint je pokrytý automatizovaně a nemá vlastní samostatný ovládací prvek v UI. Ruční výsledek zapište k `3.3.4`; samostatně neuzavírejte mazání kontaktních nebo chatových zpráv a odpovědí, dokud jejich endpointy neprojdou stejnou inventurou.
+V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání bez `confirm_comment_delete_<id>`. NVDA má jednou oznámit textový alert, checkbox má mít `aria-invalid` a popis přes review i lokální chybový text; komentář ani audit log se nesmí změnit. Potom checkbox zaškrtněte, odešlete formulář a ověřte stav `Komentář byl trvale smazán.`. Stejný průchod zopakujte hromadně bez a s `confirm_comment_bulk_delete`; výběr komentářů, filtr a hledaný dotaz musí zůstat srozumitelné a potvrzená cesta má oznámit výsledný stav. Historický přímý endpoint je pokrytý automatizovaně a nemá vlastní samostatný ovládací prvek v UI. Ruční výsledek zapište k `3.3.4`.
+
+### Doplňkový průchod trvalého mazání kontaktních a chatových zpráv
+
+1. V přehledu a detailu kontaktní zprávy odešlete individuální smazání bez `confirm_contact_delete_<id>`. NVDA má jednou oznámit atomický alert, konkrétní dopad a lokální chybu u checkboxu; zpráva ani audit log se nesmí změnit. Po potvrzení ověřte PRG stav a odstranění pouze zvolené zprávy.
+2. V přehledu kontaktu vyberte více zpráv a odešlete hromadné smazání bez a s `confirm_contact_bulk_delete`. Bez potvrzení musí zůstat výběr i data beze změny a chyba musí být navázaná na bulk checkbox; potvrzená cesta má oznámit skutečný počet odstraněných zpráv.
+3. V detailu chatové zprávy odešlete smazání jedné odpovědi bez `confirm_chat_reply_delete_<id>`. Ověřte alert, review, field-level chybu a zachování odpovědi, historie i audit logu. Po potvrzení se odstraní jen odpověď, vznikne jediný historický záznam o odstranění a zobrazí se PRG stav.
+4. U chatové zprávy s odpověďmi a historií odešlete smazání bez `confirm_chat_delete_<id>`. Review musí výslovně popsat odstranění celé zprávy, odpovědí a historie; bez potvrzení se žádná z těchto dat ani audit log nesmí změnit. Po potvrzení ověřte transakční odstranění všech souvisejících záznamů a jediný auditní záznam.
+5. V přehledu chatu zopakujte stejný průchod hromadně bez a s `confirm_chat_bulk_delete`. Historické přímé endpointy kontaktu a chatu jsou pokryté automatizovaně a nemají samostatný UI ovládací prvek. Ruční výsledek zapište k `3.3.4`.
 
 ## Scénáře pro nové moduly
 

@@ -15573,12 +15573,19 @@ $blogSeriesAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/bl
 $blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_transfer.php');
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_message.php');
+$chatActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_action.php');
+$chatBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_bulk.php');
+$chatDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_delete.php');
+$chatReplyActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_reply_action.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $commentActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_action.php');
 $commentBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_bulk.php');
 $commentDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_delete.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
 $contactMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_message.php');
+$contactActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_action.php');
+$contactBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_bulk.php');
+$contactDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_delete.php');
 $contactTopicsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_topics.php');
 $contactReplySource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_reply.php');
 $downloadFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/download_form.php');
@@ -18555,6 +18562,55 @@ if (!str_contains($commentDeleteSource, 'internalRedirectTarget(')
     || !str_contains($commentDeleteSource, "logAction('comment_delete', \"id={\$id}\")")) {
     $adminFieldErrorIssues[] = 'legacy comment delete handler can bypass redirect or server-side confirmation guardrails';
 }
+if (!str_contains($contactOverviewSource, "\$deleteConfirmField = 'confirm_contact_delete_' . \$messageId;")
+    || !str_contains($contactOverviewSource, 'id="contact-delete-form-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($contactOverviewSource, 'name="confirm_contact_bulk_delete"')
+    || !str_contains($contactOverviewSource, "adminFieldAttributes('confirm_contact_bulk_delete', \$bulkDeleteErrorFields")
+    || !str_contains($contactMessageDetailSource, "\$deleteConfirmField = 'confirm_contact_delete_' . \$messageId;")
+    || !str_contains($contactMessageDetailSource, 'name="success_redirect"')
+    || !str_contains($contactMessageDetailSource, 'id="contact-message-delete-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($contactMessageDetailSource, 'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)')) {
+    $adminFieldErrorIssues[] = 'contact message views are missing permanent-delete review, confirmation or field-level error semantics';
+}
+if (!str_contains($contactActionSource, "\$confirmFieldName = 'confirm_contact_delete_' . \$messageId;")
+    || !str_contains($contactActionSource, "'error' => 'contact_delete_confirm_required'")
+    || !str_contains($contactActionSource, "internalRedirectTarget(trim((string)(\$_POST['success_redirect']")
+    || !str_contains($contactActionSource, "logAction('contact_delete', \"id={\$messageId}\")")
+    || !str_contains($contactBulkSource, "isset(\$_POST['confirm_contact_bulk_delete'])")
+    || !str_contains($contactBulkSource, "'error' => 'contact_bulk_delete_confirm_required'")
+    || !str_contains($contactBulkSource, "logAction('contact_bulk_delete'")
+    || !str_contains($contactDeleteSource, "\$confirmFieldName = 'confirm_contact_delete_' . \$messageId;")
+    || !str_contains($contactDeleteSource, "'error' => 'contact_delete_confirm_required'")
+    || !str_contains($contactDeleteSource, 'internalRedirectTarget(')) {
+    $adminFieldErrorIssues[] = 'contact message delete handlers are missing server-side review-and-confirm or redirect guardrails';
+}
+if (!str_contains($chatOverviewSource, 'name="confirm_chat_bulk_delete"')
+    || !str_contains($chatOverviewSource, 'id="chat-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($chatOverviewSource, "adminFieldAttributes('confirm_chat_bulk_delete', \$bulkDeleteErrorFields")
+    || !str_contains($chatMessageDetailSource, "\$messageDeleteConfirmField = 'confirm_chat_delete_' . \$messageId;")
+    || !str_contains($chatMessageDetailSource, "\$replyDeleteConfirmField = 'confirm_chat_reply_delete_' . \$replyId;")
+    || !str_contains($chatMessageDetailSource, 'name="success_redirect"')
+    || !str_contains($chatMessageDetailSource, 'id="chat-message-delete-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($chatMessageDetailSource, 'id="chat-reply-delete-error" class="error" role="alert" aria-atomic="true"')) {
+    $adminFieldErrorIssues[] = 'chat message views are missing message, bulk or reply permanent-delete semantics';
+}
+if (!str_contains($chatActionSource, "\$confirmFieldName = 'confirm_chat_delete_' . \$messageId;")
+    || !str_contains($chatActionSource, "'error' => 'chat_delete_confirm_required'")
+    || !str_contains($chatActionSource, "internalRedirectTarget(trim((string)(\$_POST['success_redirect']")
+    || !str_contains($chatBulkSource, "isset(\$_POST['confirm_chat_bulk_delete'])")
+    || !str_contains($chatBulkSource, "'error' => 'chat_bulk_delete_confirm_required'")
+    || !str_contains($chatBulkSource, '$pdo->beginTransaction();')
+    || !str_contains($chatDeleteSource, "\$confirmFieldName = 'confirm_chat_delete_' . \$messageId;")
+    || !str_contains($chatDeleteSource, "'error' => 'chat_delete_confirm_required'")
+    || !str_contains($chatReplyActionSource, "\$confirmFieldName = 'confirm_chat_reply_delete_' . \$replyId;")
+    || !str_contains($chatReplyActionSource, "'error' => 'chat_reply_delete_confirm_required'")
+    || !str_contains($chatReplyActionSource, '$pdo->beginTransaction();')
+    || !str_contains($messagesSource, 'function deleteChatMessage(PDO $pdo, int $messageId): bool')
+    || !str_contains($messagesSource, '$startedTransaction = !$pdo->inTransaction();')
+    || !str_contains($messagesSource, 'DELETE FROM cms_chat_replies WHERE chat_id = ?')
+    || !str_contains($messagesSource, 'DELETE FROM cms_chat_history WHERE chat_id = ?')) {
+    $adminFieldErrorIssues[] = 'chat delete handlers or transactional cleanup helper are missing server-side confirmation guardrails';
+}
 foreach ([
     'blog categories editor' => [
         'source' => $blogCatsSource,
@@ -18896,6 +18952,17 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'confirm_comment_bulk_delete')
     || !str_contains($httpIntegrationSource, 'confirm_comment_delete_')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing comment permanent-delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('messaging_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'nepotvrzené smazání kontaktní zprávy změnilo data nebo audit log')
+    || !str_contains($httpIntegrationSource, 'nepotvrzené hromadné smazání kontaktních zpráv změnilo data nebo audit log')
+    || !str_contains($httpIntegrationSource, 'historický contact endpoint smazal zprávu bez potvrzení nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'nepotvrzené smazání chatové odpovědi změnilo data, historii nebo audit log')
+    || !str_contains($httpIntegrationSource, 'nepotvrzené smazání chat zprávy změnilo zprávu, odpovědi, historii nebo audit log')
+    || !str_contains($httpIntegrationSource, 'nepotvrzené hromadné smazání chat zpráv změnilo zprávy, odpovědi, historii nebo audit log')
+    || !str_contains($httpIntegrationSource, 'historický chat endpoint smazal zprávu nebo související data bez potvrzení')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing contact/chat message and reply permanent-delete coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('downloads_catalog_versions_http'")
