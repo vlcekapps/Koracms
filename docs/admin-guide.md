@@ -305,6 +305,10 @@ Tyto rozměry odpovídají požadavkům Apple Podcasts a dalších katalogů.
 
 ## Podcasty – viditelnost, historie a veřejný výstup
 
+U uloženého podcastového pořadu lze přes odkaz `Spravovat platformy` přidat jeho bezpečné veřejné adresy na Spotify, Apple Podcasts, YouTube Music a dalších službách. Volba `Jiná platforma` vyžaduje vlastní viditelný název; každá adresa musí používat `http://` nebo `https://`. Odkazy se na veřejném detailu zobrazí jako pojmenovaná navigace a při exportu/importu zůstávají svázané s pořadem.
+
+Číslo sezóny u epizody je volitelné. Jakmile pořad obsahuje veřejné epizody s číslem sezóny, jeho veřejná stránka nabídne filtr `Všechny epizody` a jednotlivé sezóny. Detail epizody současně nabídne předchozí a další veřejnou epizodu podle sezóny, čísla epizody a data publikování; koncepty ani budoucí epizody se v této navigaci neobjeví.
+
 - Pořad nově může být skrytý z veřejného webu i při zachování rozpracované administrace.
 - Změna slugu pořadu i epizody ukládá redirect ze staré URL na nový canonical tvar.
 - Editor pořadu i epizody má odkaz na historii revizí.

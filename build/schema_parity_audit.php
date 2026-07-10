@@ -274,6 +274,9 @@ $criticalInstallColumns = [
     'cms_podcast_people.show_id' => ['cms_podcast_people', 'show_id'],
     'cms_podcast_people.episode_id' => ['cms_podcast_people', 'episode_id'],
     'cms_podcast_people.role_key' => ['cms_podcast_people', 'role_key'],
+    'cms_podcast_platform_links.show_id' => ['cms_podcast_platform_links', 'show_id'],
+    'cms_podcast_platform_links.platform_key' => ['cms_podcast_platform_links', 'platform_key'],
+    'cms_podcast_platform_links.url' => ['cms_podcast_platform_links', 'url'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -321,6 +324,9 @@ $criticalMigrationSnippets = [
     'cms_podcast_people',
     'idx_podcast_people_show',
     'idx_podcast_people_episode',
+    'cms_podcast_platform_links',
+    'uq_podcast_platform_show_key',
+    'idx_podcast_platform_show_order',
     'cms_gallery_photos.slug',
     'cms_gallery_albums.default_credit',
     'cms_gallery_albums.default_license_label',

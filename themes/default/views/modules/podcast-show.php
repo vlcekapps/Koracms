@@ -34,6 +34,17 @@
             <a class="button-secondary" href="<?= h((string)$show['website_url']) ?>" target="_blank" rel="noopener noreferrer">Web pořadu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
         </div>
+
+        <?php if (!empty($platformLinks)): ?>
+          <nav aria-labelledby="podcast-platforms-title">
+            <h2 id="podcast-platforms-title" class="sr-only">Poslouchejte na platformách</h2>
+            <div class="button-row button-row--start">
+              <?php foreach ($platformLinks as $platformLink): ?>
+                <a class="button-secondary" href="<?= h((string)$platformLink['url']) ?>" target="_blank" rel="noopener noreferrer"><?= h(podcastPlatformLabel($platformLink)) ?><?= newWindowLinkSrOnlySuffix() ?></a>
+              <?php endforeach; ?>
+            </div>
+          </nav>
+        <?php endif; ?>
       </div>
     </div>
   </section>
@@ -67,12 +78,24 @@
         </div>
       </div>
 
+      <?php if (!empty($seasons)): ?>
+        <nav aria-labelledby="podcast-season-filter-title">
+          <h3 id="podcast-season-filter-title" class="sr-only">Filtrovat epizody podle sezóny</h3>
+          <div class="button-row button-row--start">
+            <a class="button-secondary" href="<?= h((string)$show['public_path']) ?>"<?= $seasonFilter === null ? ' aria-current="page"' : '' ?>>Všechny epizody</a>
+            <?php foreach ($seasons as $season): ?>
+              <a class="button-secondary" href="<?= h((string)$show['public_path'] . '?sezona=' . (int)$season) ?>"<?= $seasonFilter === (int)$season ? ' aria-current="page"' : '' ?>>Sezóna <?= (int)$season ?></a>
+            <?php endforeach; ?>
+          </div>
+        </nav>
+      <?php endif; ?>
+
       <?php if (!empty($resultCount)): ?>
         <p class="meta-row meta-row--tight"><?= (int)$resultCount ?> epizod</p>
       <?php endif; ?>
 
     <?php if (empty($episodes)): ?>
-      <p class="empty-state">Zatím tu nejsou žádné zveřejněné epizody.</p>
+      <p class="empty-state"><?= $seasonFilter !== null ? 'V této sezóně zatím nejsou žádné zveřejněné epizody.' : 'Zatím tu nejsou žádné zveřejněné epizody.' ?></p>
     <?php else: ?>
       <div class="episode-list">
         <?php foreach ($episodes as $episode): ?>

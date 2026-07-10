@@ -1856,6 +1856,26 @@ assert_equals(null, validateDateTimeLocal('2024-13-01T10:00'), 'invalid month re
 assert_equals(null, validateDateTimeLocal('2024-06-15 14:30'), 'space instead of T returns null');
 assert_equals('2024-01-01 00:00:00', validateDateTimeLocal('2024-01-01T00:00'), 'midnight');
 
+test_section('Podcast platformy a navigace epizod');
+
+assert_equals('spotify', normalizePodcastPlatformKey('SPOTIFY'), 'known podcast platform normalized');
+assert_equals('other', normalizePodcastPlatformKey('unknown-service'), 'unknown podcast platform uses other');
+assert_equals('Spotify', podcastPlatformLabel(['platform_key' => 'spotify', 'label' => '']), 'podcast platform default label');
+assert_equals('Moje aplikace', podcastPlatformLabel(['platform_key' => 'other', 'label' => 'Moje aplikace']), 'podcast platform custom label');
+assert_equals('https://example.test/show', normalizePodcastPlatformUrl('https://example.test/show'), 'safe podcast platform URL accepted');
+assert_equals('', normalizePodcastPlatformUrl('javascript:alert(1)'), 'unsafe podcast platform URL rejected');
+$podcastNeighborEpisodes = [
+    ['id' => 10, 'title' => 'První'],
+    ['id' => 20, 'title' => 'Druhá'],
+    ['id' => 30, 'title' => 'Třetí'],
+];
+$podcastMiddleNeighbors = podcastEpisodeNeighbors($podcastNeighborEpisodes, 20);
+assert_equals(10, (int)$podcastMiddleNeighbors['previous']['id'], 'podcast previous episode resolved');
+assert_equals(30, (int)$podcastMiddleNeighbors['next']['id'], 'podcast next episode resolved');
+assert_equals(null, podcastEpisodeNeighbors($podcastNeighborEpisodes, 10)['previous'], 'first podcast episode has no previous');
+assert_equals(null, podcastEpisodeNeighbors($podcastNeighborEpisodes, 30)['next'], 'last podcast episode has no next');
+assert_equals(['previous' => null, 'next' => null], podcastEpisodeNeighbors($podcastNeighborEpisodes, 99), 'missing podcast episode has no neighbors');
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SOUHRN
 // ═══════════════════════════════════════════════════════════════════════════

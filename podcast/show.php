@@ -50,10 +50,32 @@ if (str_contains($requestPath, '/podcast/show.php')) {
     exit;
 }
 
+$seasonsStmt = $pdo->prepare(
+    "SELECT DISTINCT p.season_num
+     FROM cms_podcasts p
+     WHERE p.show_id = ?
+       AND p.season_num IS NOT NULL
+       AND p.season_num > 0
+       AND " . podcastEpisodePublicVisibilitySql('p') . "
+     ORDER BY p.season_num DESC"
+);
+$seasonsStmt->execute([(int)$show['id']]);
+$seasons = array_map('intval', $seasonsStmt->fetchAll(PDO::FETCH_COLUMN));
+$requestedSeason = inputInt('get', 'sezona');
+$seasonFilter = $requestedSeason !== null && in_array($requestedSeason, $seasons, true)
+    ? $requestedSeason
+    : null;
+$episodeWhere = "p.show_id = ? AND " . podcastEpisodePublicVisibilitySql('p');
+$episodeParams = [(int)$show['id']];
+if ($seasonFilter !== null) {
+    $episodeWhere .= " AND p.season_num = ?";
+    $episodeParams[] = $seasonFilter;
+}
+
 $pagination = paginate(
     $pdo,
-    "SELECT COUNT(*) FROM cms_podcasts p WHERE p.show_id = ? AND " . podcastEpisodePublicVisibilitySql('p'),
-    [(int)$show['id']],
+    "SELECT COUNT(*) FROM cms_podcasts p WHERE {$episodeWhere}",
+    $episodeParams,
     $perPage
 );
 ['totalPages' => $pages, 'page' => $page, 'offset' => $offset, 'total' => $totalEpisodes] = $pagination;
@@ -62,12 +84,11 @@ $episodesStmt = $pdo->prepare(
     "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
-     WHERE p.show_id = ?
-       AND " . podcastEpisodePublicVisibilitySql('p') . "
+     WHERE {$episodeWhere}
      ORDER BY COALESCE(p.publish_at, p.created_at) DESC, COALESCE(p.episode_num, 0) DESC, p.id DESC
      LIMIT ? OFFSET ?"
 );
-$episodesStmt->execute([(int)$show['id'], $perPage, $offset]);
+$episodesStmt->execute([...$episodeParams, $perPage, $offset]);
 $episodes = array_map(
     static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
@@ -79,6 +100,14 @@ $peopleStmt = $pdo->prepare(
 );
 $peopleStmt->execute([(int)$show['id']]);
 $people = $peopleStmt->fetchAll();
+$platformStmt = $pdo->prepare(
+    "SELECT platform_key, label, url
+     FROM cms_podcast_platform_links
+     WHERE show_id = ?
+     ORDER BY sort_order ASC, id ASC"
+);
+$platformStmt->execute([(int)$show['id']]);
+$platformLinks = $platformStmt->fetchAll();
 
 if (!isset($_SESSION['cms_user_id'])) {
     trackPageView('podcast_show', (int)$show['id']);
@@ -88,7 +117,8 @@ $feedUrl = siteUrl('/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'
 $metaDescription = $show['description_plain'] !== ''
     ? mb_strimwidth((string)$show['description_plain'], 0, 180, '…', 'UTF-8')
     : 'Přehled epizod podcastu ' . (string)$show['title'];
-$pagerHtml = renderPager($page, $pages, '?', 'Stránkování epizod podcastu');
+$pagerBase = $seasonFilter !== null ? '?sezona=' . $seasonFilter . '&' : '?';
+$pagerHtml = renderPager($page, $pages, $pagerBase, 'Stránkování epizod podcastu');
 
 renderPublicPage([
     'title' => $show['title'] . ' – ' . $siteName,
@@ -109,6 +139,9 @@ renderPublicPage([
         'pagerHtml' => $pagerHtml,
         'resultCount' => $totalEpisodes,
         'people' => $people,
+        'platformLinks' => $platformLinks,
+        'seasons' => $seasons,
+        'seasonFilter' => $seasonFilter,
     ],
     'current_nav' => 'podcast',
     'body_class' => 'page-podcast-show',

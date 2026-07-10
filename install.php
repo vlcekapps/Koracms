@@ -590,6 +590,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             KEY idx_podcast_people_episode (episode_id, sort_order, id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_podcast_platform_links (
+            id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            show_id      INT          NOT NULL,
+            platform_key VARCHAR(50)  NOT NULL,
+            label        VARCHAR(100) NOT NULL DEFAULT '',
+            url          VARCHAR(500) NOT NULL,
+            sort_order   INT          NOT NULL DEFAULT 0,
+            created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_podcast_platform_show_key (show_id, platform_key),
+            KEY idx_podcast_platform_show_order (show_id, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_download_series (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title       VARCHAR(255) NOT NULL,

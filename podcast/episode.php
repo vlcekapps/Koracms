@@ -85,6 +85,23 @@ $peopleStmt = $pdo->prepare(
 );
 $peopleStmt->execute([(int)$episode['show_id'], (int)$episode['id']]);
 $people = $peopleStmt->fetchAll();
+$neighborsStmt = $pdo->prepare(
+    "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
+     FROM cms_podcasts p
+     INNER JOIN cms_podcast_shows s ON s.id = p.show_id
+     WHERE p.show_id = ?
+       AND " . podcastEpisodePublicVisibilitySql('p', 's') . "
+     ORDER BY COALESCE(p.season_num, 0) ASC,
+              COALESCE(p.episode_num, 0) ASC,
+              COALESCE(p.publish_at, p.created_at) ASC,
+              p.id ASC"
+);
+$neighborsStmt->execute([(int)$episode['show_id']]);
+$orderedEpisodes = array_map(
+    static fn (array $item): array => hydratePodcastEpisodePresentation($item),
+    $neighborsStmt->fetchAll()
+);
+$episodeNeighbors = podcastEpisodeNeighbors($orderedEpisodes, (int)$episode['id']);
 $show = hydratePodcastShowPresentation([
     'id' => $episode['show_id'],
     'title' => $episode['show_title'],
@@ -139,6 +156,8 @@ renderPublicPage([
         'feedUrl' => $feedUrl,
         'chapters' => $chapters,
         'people' => $people,
+        'previousEpisode' => $episodeNeighbors['previous'],
+        'nextEpisode' => $episodeNeighbors['next'],
     ],
     'current_nav' => 'podcast',
     'body_class' => 'page-podcast-episode',

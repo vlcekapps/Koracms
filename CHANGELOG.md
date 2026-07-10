@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Podcastové platformy, sezóny a návazný poslech** – pořad může spravovat odkazy na Spotify, Apple Podcasts, YouTube Music a další bezpečné platformy; veřejný detail nabízí přístupný filtr sezón a detail epizody odkazy na předchozí a další veřejný díl.
 - **Hosté a tvůrčí tým podcastů** – pořady i jednotlivé epizody mohou evidovat moderátory, hosty a další tvůrce včetně role, skupiny, profilu a obrázku; osoby se zobrazují v přístupných veřejných sekcích a RSS je poskytuje standardní značkou `podcast:person`.
 - **Podcastové kapitoly a RSS přepisy** – epizody mohou mít strukturované kapitoly s časem, názvem, souvisejícím odkazem a obrázkem; CMS je zveřejňuje jako Podcasting 2.0 JSON, zobrazuje na detailu epizody a RSS feed nově odkazuje také na veřejný HTML přepis.
 - **Kontrola podcastového RSS feedu** – každý pořad má v administraci diagnostiku chybějícího artworku, metadat, audia a enclosure údajů; nové pořady i epizody dostávají neměnný RSS GUID a externí audio může evidovat MIME typ i přesnou velikost v bajtech.

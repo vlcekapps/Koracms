@@ -1520,6 +1520,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Hosté a tvůrci podcastů importováni.';
                 }
 
+                if (!empty($data['podcast_platform_links']) && is_array($data['podcast_platform_links'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_podcast_platform_links
+                         (id, show_id, platform_key, label, url, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['podcast_platform_links'] as $row) {
+                        $showId = (int)($row['show_id'] ?? 0);
+                        $platformKey = normalizePodcastPlatformKey((string)($row['platform_key'] ?? 'other'));
+                        $label = mb_substr(trim((string)($row['label'] ?? '')), 0, 100);
+                        $url = normalizePodcastPlatformUrl((string)($row['url'] ?? ''));
+                        if ($showId < 1 || $url === '' || ($platformKey === 'other' && $label === '')) {
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0), $showId, $platformKey, $label, $url,
+                            max(0, (int)($row['sort_order'] ?? 0)), $createdAt, $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Odkazy podcastů na platformy importovány.';
+                }
+
                 // Ankety (nejdřív ankety, pak možnosti)
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(

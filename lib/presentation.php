@@ -2323,6 +2323,69 @@ function podcastPersonFeedTag(array $person, string $indent = ''): string
         . htmlspecialchars($name, ENT_XML1, 'UTF-8') . '</podcast:person>';
 }
 
+/**
+ * @return array<string, string>
+ */
+function podcastPlatformOptions(): array
+{
+    return [
+        'apple' => 'Apple Podcasts',
+        'spotify' => 'Spotify',
+        'youtube' => 'YouTube',
+        'youtube-music' => 'YouTube Music',
+        'pocket-casts' => 'Pocket Casts',
+        'overcast' => 'Overcast',
+        'amazon-music' => 'Amazon Music',
+        'deezer' => 'Deezer',
+        'castbox' => 'Castbox',
+        'other' => 'Jiná platforma',
+    ];
+}
+
+function normalizePodcastPlatformKey(string $value): string
+{
+    $value = strtolower(trim($value));
+    return array_key_exists($value, podcastPlatformOptions()) ? $value : 'other';
+}
+
+/**
+ * @param array<string, mixed> $link
+ */
+function podcastPlatformLabel(array $link): string
+{
+    $customLabel = trim((string)($link['label'] ?? ''));
+    if ($customLabel !== '') {
+        return $customLabel;
+    }
+
+    return podcastPlatformOptions()[normalizePodcastPlatformKey((string)($link['platform_key'] ?? 'other'))];
+}
+
+function normalizePodcastPlatformUrl(string $value): string
+{
+    return normalizeHttpExternalUrl($value);
+}
+
+/**
+ * @param list<array<string, mixed>> $episodes Ascending chronological order.
+ * @return array{previous:?array<string, mixed>,next:?array<string, mixed>}
+ */
+function podcastEpisodeNeighbors(array $episodes, int $currentEpisodeId): array
+{
+    foreach ($episodes as $index => $episode) {
+        if ((int)($episode['id'] ?? 0) !== $currentEpisodeId) {
+            continue;
+        }
+
+        return [
+            'previous' => $index > 0 ? $episodes[$index - 1] : null,
+            'next' => isset($episodes[$index + 1]) ? $episodes[$index + 1] : null,
+        ];
+    }
+
+    return ['previous' => null, 'next' => null];
+}
+
 function normalizePodcastOwnerEmail(string $value): string
 {
     $value = trim($value);

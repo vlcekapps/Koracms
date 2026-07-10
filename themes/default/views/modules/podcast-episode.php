@@ -126,4 +126,20 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
       <div class="prose episode-detail__content"><?= renderContent((string)$episode['transcript']) ?></div>
     </section>
   <?php endif; ?>
+
+  <?php if (!empty($previousEpisode) || !empty($nextEpisode)): ?>
+    <nav class="surface" aria-labelledby="podcast-episode-navigation-title">
+      <div class="section-heading">
+        <div><h2 id="podcast-episode-navigation-title" class="section-title">Další poslech</h2></div>
+      </div>
+      <div class="button-row button-row--start">
+        <?php if (!empty($previousEpisode)): ?>
+          <a class="button-secondary" href="<?= h((string)$previousEpisode['public_path']) ?>"><span aria-hidden="true">&larr;</span> Předchozí: <?= h((string)$previousEpisode['title']) ?></a>
+        <?php endif; ?>
+        <?php if (!empty($nextEpisode)): ?>
+          <a class="button-secondary" href="<?= h((string)$nextEpisode['public_path']) ?>">Další: <?= h((string)$nextEpisode['title']) ?> <span aria-hidden="true">&rarr;</span></a>
+        <?php endif; ?>
+      </div>
+    </nav>
+  <?php endif; ?>
 </div>

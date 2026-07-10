@@ -1320,12 +1320,19 @@ try {
     $podcastFeedGuid = 'urn:uuid:http-episode-' . bin2hex(random_bytes(8));
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, transcript, audio_url, audio_mime_type, audio_file_size, feed_guid, status, publish_at, created_at, updated_at)
+         (show_id, title, slug, description, transcript, audio_url, audio_mime_type, audio_file_size, feed_guid, episode_num, season_num, status, publish_at, created_at, updated_at)
          VALUES (?, 'HTTP externí epizoda', 'http-externi-epizoda', '<p>Test RSS enclosure.</p>', '<p>Veřejný HTTP přepis epizody.</p>',
-                 'https://cdn.example.test/http-episode.mp3', 'audio/mpeg', 123456, ?, 'published', NOW(), NOW(), NOW())"
+                 'https://cdn.example.test/http-episode.mp3', 'audio/mpeg', 123456, ?, 1, 1, 'published', NOW(), NOW(), NOW())"
     )->execute([$podcastEpisodeValidationShowId, $podcastFeedGuid]);
     $podcastFeedEpisodeId = (int)$pdo->lastInsertId();
     $createdPodcastEpisodeIds[] = $podcastFeedEpisodeId;
+    $pdo->prepare(
+        "INSERT INTO cms_podcasts
+         (show_id, title, slug, description, feed_guid, episode_num, season_num, status, publish_at, created_at, updated_at)
+         VALUES (?, 'HTTP epizoda druhé sezóny', 'http-druha-sezona', '<p>Druhá sezóna.</p>', ?, 1, 2, 'published', NOW(), NOW(), NOW())"
+    )->execute([$podcastEpisodeValidationShowId, 'urn:uuid:http-episode-' . bin2hex(random_bytes(8))]);
+    $podcastSecondSeasonEpisodeId = (int)$pdo->lastInsertId();
+    $createdPodcastEpisodeIds[] = $podcastSecondSeasonEpisodeId;
     $pdo->prepare(
         "INSERT INTO cms_podcast_chapters (episode_id, start_time_seconds, title, url, image_url)
          VALUES (?, 0, 'Úvod testovací epizody', 'https://example.test/uvod', '')"
@@ -1400,6 +1407,27 @@ try {
             0
         );
     }
+    $podcastPlatformPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast_platforms.php?show_id=' . $podcastEpisodeValidationShowId,
+        $adminSession['cookie'],
+        0
+    );
+    $podcastPlatformCsrf = extractHiddenInputValue($podcastPlatformPage['body'], 'csrf_token');
+    if ($podcastPlatformCsrf !== '') {
+        postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_platforms.php',
+            [
+                'csrf_token' => $podcastPlatformCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'platform_key' => 'spotify',
+                'label' => '',
+                'url' => 'https://open.spotify.com/show/http-test',
+                'sort_order' => '10',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+    }
 
     $podcastFeedIntegrityIssues = [];
     $podcastChapterCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_chapters WHERE episode_id = ?");
@@ -1411,6 +1439,11 @@ try {
     $podcastPeopleCountStmt->execute([$podcastEpisodeValidationShowId]);
     if ($podcastShowPeopleCsrf === '' || $podcastEpisodePeopleCsrf === '' || (int)$podcastPeopleCountStmt->fetchColumn() !== 2) {
         $podcastFeedIntegrityIssues[] = 'administrace podcastu nevytvořila osoby pořadu a epizody';
+    }
+    $podcastPlatformCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_platform_links WHERE show_id = ?");
+    $podcastPlatformCountStmt->execute([$podcastEpisodeValidationShowId]);
+    if ($podcastPlatformCsrf === '' || (int)$podcastPlatformCountStmt->fetchColumn() !== 1) {
+        $podcastFeedIntegrityIssues[] = 'administrace podcastu nevytvořila bezpečný odkaz na platformu';
     }
     $podcastFeedIntegrityResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($podcastEpisodeValidationShowSlug),
@@ -1475,8 +1508,23 @@ try {
         0
     );
     if (!str_contains($podcastShowPeopleResponse['body'], 'id="podcast-show-people-title"')
-        || !str_contains($podcastShowPeopleResponse['body'], 'HTTP moderátorka pořadu')) {
+        || !str_contains($podcastShowPeopleResponse['body'], 'HTTP moderátorka pořadu')
+        || !str_contains($podcastShowPeopleResponse['body'], 'id="podcast-platforms-title"')
+        || !str_contains($podcastShowPeopleResponse['body'], 'Sezóna 1')
+        || !str_contains($podcastShowPeopleResponse['body'], 'Sezóna 2')) {
         $podcastFeedIntegrityIssues[] = 'veřejný detail podcastu nezobrazil pojmenovanou sekci tvůrců';
+    }
+    $podcastSeasonOneResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=1', '', 0
+    );
+    $podcastSeasonTwoResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=2', '', 0
+    );
+    if (!str_contains($podcastSeasonOneResponse['body'], 'HTTP externí epizoda')
+        || str_contains($podcastSeasonOneResponse['body'], 'HTTP epizoda druhé sezóny')
+        || !str_contains($podcastSeasonTwoResponse['body'], 'HTTP epizoda druhé sezóny')
+        || str_contains($podcastSeasonTwoResponse['body'], 'HTTP externí epizoda')) {
+        $podcastFeedIntegrityIssues[] = 'veřejné filtrování podcastu podle sezóny neoddělilo epizody';
     }
     $podcastEpisodePeopleResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '/http-externi-epizoda',
@@ -1484,7 +1532,8 @@ try {
         0
     );
     if (!str_contains($podcastEpisodePeopleResponse['body'], 'id="podcast-episode-people"')
-        || !str_contains($podcastEpisodePeopleResponse['body'], 'HTTP host epizody')) {
+        || !str_contains($podcastEpisodePeopleResponse['body'], 'HTTP host epizody')
+        || !str_contains($podcastEpisodePeopleResponse['body'], 'HTTP epizoda druhé sezóny')) {
         $podcastFeedIntegrityIssues[] = 'veřejný detail epizody nezobrazil pojmenovanou sekci hostů';
     }
     $podcastFeedHealthResponse = fetchUrl(
@@ -15822,6 +15871,7 @@ try {
     }
     foreach ($createdPodcastShowIds as $podcastShowIdToDelete) {
         $pdo->prepare("DELETE FROM cms_podcast_people WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_podcast_platform_links WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcast_shows WHERE id = ?")->execute([$podcastShowIdToDelete]);

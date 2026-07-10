@@ -166,7 +166,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
                value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
       </div>
       <div class="admin-form-grid__cell">
-        <label for="season_num">Číslo série</label>
+        <label for="season_num">Číslo sezóny</label>
         <input type="number" id="season_num" name="season_num" min="1"
                value="<?= !empty($episode['season_num']) ? (int)$episode['season_num'] : '' ?>">
       </div>

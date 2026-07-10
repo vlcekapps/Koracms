@@ -14701,6 +14701,7 @@ $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $podcastFeedHealthSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_feed_health.php');
 $podcastChaptersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_chapters.php');
 $podcastPeopleAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_people.php');
+$podcastPlatformsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_platforms.php');
 $podcastAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
@@ -19677,6 +19678,11 @@ if (!str_contains($adminExportSource, "'podcast_people'")
     || !str_contains($importAdminSource, 'INSERT IGNORE INTO cms_podcast_people')) {
     $podcastSourceIssues[] = 'podcast people import/export coverage is missing';
 }
+if (!str_contains($adminExportSource, "'podcast_platform_links'")
+    || !str_contains($importAdminSource, "['podcast_platform_links']")
+    || !str_contains($importAdminSource, 'INSERT IGNORE INTO cms_podcast_platform_links')) {
+    $podcastSourceIssues[] = 'podcast platform link import/export coverage is missing';
+}
 if (str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-label=')) {
     $podcastSourceIssues[] = 'podcast episode audio player still uses aria-label instead of hidden DOM label';
 }
@@ -19738,6 +19744,22 @@ if (!str_contains($podcastPeopleAdminSource, 'verifyCsrf();')
 if (!str_contains($podcastShowViewSource, 'aria-labelledby="podcast-show-people-title"')
     || !str_contains($podcastEpisodeViewSource, 'aria-labelledby="podcast-episode-people"')) {
     $podcastSourceIssues[] = 'public podcast people sections are missing heading-backed semantics';
+}
+if (!str_contains($podcastPlatformsAdminSource, 'verifyCsrf();')
+    || !str_contains($podcastPlatformsAdminSource, 'WHERE id = ? AND show_id = ?')
+    || !str_contains($podcastPlatformsAdminSource, '<fieldset>')
+    || !str_contains($podcastPlatformsAdminSource, 'aria-describedby="form-error"')) {
+    $podcastSourceIssues[] = 'podcast platform administration is missing CSRF, scope ownership or accessible errors';
+}
+if (!str_contains($podcastShowControllerSource, "inputInt('get', 'sezona')")
+    || !str_contains($podcastShowViewSource, 'id="podcast-season-filter-title"')
+    || !str_contains($podcastShowViewSource, 'aria-current="page"')) {
+    $podcastSourceIssues[] = 'podcast show is missing accessible season filtering';
+}
+if (!str_contains($podcastShowViewSource, 'id="podcast-platforms-title"')
+    || !str_contains($podcastEpisodeControllerSource, 'podcastEpisodeNeighbors(')
+    || !str_contains($podcastEpisodeViewSource, 'aria-labelledby="podcast-episode-navigation-title"')) {
+    $podcastSourceIssues[] = 'public podcast platform or episode navigation semantics are missing';
 }
 if (!str_contains($podcastEpisodeSaveSource, 'newPodcastFeedGuid()')
     || !str_contains($podcastShowSaveSource, 'newPodcastFeedGuid()')) {
