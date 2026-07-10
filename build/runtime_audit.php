@@ -19646,6 +19646,18 @@ if (!str_contains($podcastIndexControllerSource, 'paginate(')) {
 if (!str_contains($podcastIndexControllerSource, "podcastShowPublicVisibilitySql('s')")) {
     $podcastSourceIssues[] = 'podcast index is missing show visibility guard';
 }
+if (!str_contains($podcastIndexControllerSource, 'normalizePodcastDiscoveryQuery(')
+    || !str_contains($podcastIndexControllerSource, 'normalizePodcastCategoryFilter(')
+    || !str_contains($podcastIndexViewSource, 'role="search" aria-labelledby="podcast-filter-title"')
+    || !str_contains($podcastIndexViewSource, '<fieldset>')
+    || !str_contains($podcastIndexViewSource, '<legend id="podcast-filter-title">')) {
+    $podcastSourceIssues[] = 'podcast index is missing accessible search and category discovery controls';
+}
+if (!str_contains($podcastAdminListSource, "inputInt('get', 'sezona')")
+    || !str_contains($podcastAdminListSource, 'name="sezona"')
+    || !str_contains($podcastAdminListSource, "\$pagerQuery['sezona']")) {
+    $podcastSourceIssues[] = 'podcast administration is missing season filtering or pager preservation';
+}
 if (!str_contains($podcastShowControllerSource, 'renderPager(')) {
     $podcastSourceIssues[] = 'podcast show controller is missing pager support';
 }

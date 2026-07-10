@@ -1858,6 +1858,8 @@ assert_equals('2024-01-01 00:00:00', validateDateTimeLocal('2024-01-01T00:00'), 
 
 test_section('Podcast platformy a navigace epizod');
 
+assert_equals('český rozhovor', normalizePodcastDiscoveryQuery("  český\nrozhovor  "), 'podcast discovery query normalized');
+assert_equals('Technologie', normalizePodcastCategoryFilter('  Technologie  '), 'podcast category filter normalized');
 assert_equals('spotify', normalizePodcastPlatformKey('SPOTIFY'), 'known podcast platform normalized');
 assert_equals('other', normalizePodcastPlatformKey('unknown-service'), 'unknown podcast platform uses other');
 assert_equals('Spotify', podcastPlatformLabel(['platform_key' => 'spotify', 'label' => '']), 'podcast platform default label');

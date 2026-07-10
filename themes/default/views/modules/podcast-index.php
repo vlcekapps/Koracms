@@ -7,8 +7,37 @@
       </div>
     </div>
 
+    <form method="get" action="<?= BASE_URL ?>/podcast/index.php" role="search" aria-labelledby="podcast-filter-title">
+      <fieldset>
+        <legend id="podcast-filter-title">Najít podcast</legend>
+        <div class="filter-grid">
+          <div>
+            <label for="podcast-query">Název, autor nebo téma</label>
+            <input type="search" id="podcast-query" name="q" maxlength="100" value="<?= h((string)$query) ?>">
+          </div>
+          <?php if (!empty($categories)): ?>
+            <div>
+              <label for="podcast-category">Kategorie</label>
+              <select id="podcast-category" name="kategorie">
+                <option value="">Všechny kategorie</option>
+                <?php foreach ($categories as $category): ?>
+                  <option value="<?= h((string)$category) ?>"<?= $categoryFilter === (string)$category ? ' selected' : '' ?>><?= h((string)$category) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
+        </div>
+        <div class="button-row button-row--start">
+          <button type="submit">Použít filtr</button>
+          <?php if ($query !== '' || $categoryFilter !== ''): ?>
+            <a class="button-secondary" href="<?= BASE_URL ?>/podcast/index.php">Zrušit filtr</a>
+          <?php endif; ?>
+        </div>
+      </fieldset>
+    </form>
+
     <?php if (empty($shows)): ?>
-      <p class="empty-state">Zatím nejsou zveřejněné žádné podcasty.</p>
+      <p class="empty-state"><?= $query !== '' || $categoryFilter !== '' ? 'Zadanému filtru neodpovídá žádný zveřejněný podcast.' : 'Zatím nejsou zveřejněné žádné podcasty.' ?></p>
     <?php else: ?>
       <?php if (!empty($resultCount)): ?>
         <p class="meta-row meta-row--tight"><?= (int)$resultCount ?> pořadů</p>

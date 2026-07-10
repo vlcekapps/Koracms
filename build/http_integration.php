@@ -1306,8 +1306,8 @@ try {
     $podcastAdminValidationIssues = [];
     $podcastEpisodeValidationShowSlug = 'http-podcast-episode-validation-' . bin2hex(random_bytes(4));
     $pdo->prepare(
-        "INSERT INTO cms_podcast_shows (title, slug, description, language, feed_guid, status, is_published, created_at, updated_at)
-         VALUES (?, ?, ?, 'cs', ?, 'published', 1, NOW(), NOW())"
+        "INSERT INTO cms_podcast_shows (title, slug, description, language, category, feed_guid, status, is_published, created_at, updated_at)
+         VALUES (?, ?, ?, 'cs', 'HTTP technologie', ?, 'published', 1, NOW(), NOW())"
     )->execute([
         'HTTP podcast pro validaci epizod',
         $podcastEpisodeValidationShowSlug,
@@ -1514,6 +1514,18 @@ try {
         || !str_contains($podcastShowPeopleResponse['body'], 'Sezóna 2')) {
         $podcastFeedIntegrityIssues[] = 'veřejný detail podcastu nezobrazil pojmenovanou sekci tvůrců';
     }
+    $podcastDiscoveryResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/index.php?q=HTTP+podcast&kategorie=' . rawurlencode('HTTP technologie'),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($podcastDiscoveryResponse) !== 200
+        || !str_contains($podcastDiscoveryResponse['body'], 'id="podcast-filter-title"')
+        || !str_contains($podcastDiscoveryResponse['body'], 'role="search"')
+        || !str_contains($podcastDiscoveryResponse['body'], 'HTTP podcast pro validaci epizod')
+        || !str_contains($podcastDiscoveryResponse['body'], 'value="HTTP technologie" selected')) {
+        $podcastFeedIntegrityIssues[] = 'veřejný katalog podcastů neumožnil přístupné hledání podle textu a kategorie';
+    }
     $podcastSeasonOneResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=1', '', 0
     );
@@ -1525,6 +1537,18 @@ try {
         || !str_contains($podcastSeasonTwoResponse['body'], 'HTTP epizoda druhé sezóny')
         || str_contains($podcastSeasonTwoResponse['body'], 'HTTP externí epizoda')) {
         $podcastFeedIntegrityIssues[] = 'veřejné filtrování podcastu podle sezóny neoddělilo epizody';
+    }
+    $podcastAdminSeasonResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast.php?show_id=' . $podcastEpisodeValidationShowId . '&sezona=2',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($podcastAdminSeasonResponse) !== 200
+        || !str_contains($podcastAdminSeasonResponse['body'], 'name="sezona"')
+        || !str_contains($podcastAdminSeasonResponse['body'], 'value="2" selected')
+        || !str_contains($podcastAdminSeasonResponse['body'], 'HTTP epizoda druhé sezóny')
+        || str_contains($podcastAdminSeasonResponse['body'], 'HTTP externí epizoda')) {
+        $podcastFeedIntegrityIssues[] = 'administrace podcastu neodfiltrovala epizody podle sezóny';
     }
     $podcastEpisodePeopleResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '/http-externi-epizoda',

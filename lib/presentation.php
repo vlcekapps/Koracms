@@ -2386,6 +2386,16 @@ function podcastEpisodeNeighbors(array $episodes, int $currentEpisodeId): array
     return ['previous' => null, 'next' => null];
 }
 
+function normalizePodcastDiscoveryQuery(string $query): string
+{
+    return mb_substr(trim(normalizePlainText($query)), 0, 100);
+}
+
+function normalizePodcastCategoryFilter(string $category): string
+{
+    return mb_substr(trim(normalizePlainText($category)), 0, 100);
+}
+
 function normalizePodcastOwnerEmail(string $value): string
 {
     $value = trim($value);

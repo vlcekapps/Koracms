@@ -309,6 +309,8 @@ U uloženého podcastového pořadu lze přes odkaz `Spravovat platformy` přida
 
 Číslo sezóny u epizody je volitelné. Jakmile pořad obsahuje veřejné epizody s číslem sezóny, jeho veřejná stránka nabídne filtr `Všechny epizody` a jednotlivé sezóny. Detail epizody současně nabídne předchozí a další veřejnou epizodu podle sezóny, čísla epizody a data publikování; koncepty ani budoucí epizody se v této navigaci neobjeví.
 
+Veřejný katalog podcastů nabízí hledání v názvu, autorovi, popisu a kategorii a samostatný filtr kategorií, které používá alespoň jeden veřejný pořad. Zvolené hodnoty zůstávají zachované při stránkování. Také administrační přehled epizod umožňuje vedle textu a publikačního stavu omezit výpis na konkrétní sezónu; sezóny bez epizod se ve výběru nenabízejí.
+
 - Pořad nově může být skrytý z veřejného webu i při zachování rozpracované administrace.
 - Změna slugu pořadu i epizody ukládá redirect ze staré URL na nový canonical tvar.
 - Editor pořadu i epizody má odkaz na historii revizí.

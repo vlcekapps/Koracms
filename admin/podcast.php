@@ -25,6 +25,15 @@ $allowedStatusFilters = ['all', 'published', 'draft', 'pending', 'scheduled'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
+$seasonRowsStmt = $pdo->prepare(
+    "SELECT DISTINCT season_num FROM cms_podcasts
+     WHERE show_id = ? AND deleted_at IS NULL AND season_num IS NOT NULL AND season_num > 0
+     ORDER BY season_num DESC"
+);
+$seasonRowsStmt->execute([$showId]);
+$seasons = array_map('intval', $seasonRowsStmt->fetchAll(PDO::FETCH_COLUMN));
+$requestedSeason = inputInt('get', 'sezona');
+$seasonFilter = $requestedSeason !== null && in_array($requestedSeason, $seasons, true) ? $requestedSeason : null;
 
 $whereParts = ['p.deleted_at IS NULL', 'p.show_id = ?'];
 $params = [$showId];
@@ -44,6 +53,10 @@ if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(p.status,'published') = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())";
 } elseif ($statusFilter === 'scheduled') {
     $whereParts[] = "COALESCE(p.status,'published') = 'published' AND p.publish_at IS NOT NULL AND p.publish_at > NOW()";
+}
+if ($seasonFilter !== null) {
+    $whereParts[] = 'p.season_num = ?';
+    $params[] = $seasonFilter;
 }
 
 $whereSql = 'WHERE ' . implode(' AND ', $whereParts);
@@ -81,6 +94,9 @@ if ($q !== '') {
 if ($statusFilter !== 'all') {
     $currentQuery['status'] = $statusFilter;
 }
+if ($seasonFilter !== null) {
+    $currentQuery['sezona'] = $seasonFilter;
+}
 if ($page > 1) {
     $currentQuery['strana'] = $page;
 }
@@ -91,6 +107,9 @@ if ($q !== '') {
 }
 if ($statusFilter !== 'all') {
     $pagerQuery['status'] = $statusFilter;
+}
+if ($seasonFilter !== null) {
+    $pagerQuery['sezona'] = $seasonFilter;
 }
 $pagerHtml = renderPager($page, $pages, BASE_URL . '/admin/podcast.php?' . http_build_query($pagerQuery) . '&', 'Stránkování epizod podcastu v administraci');
 
@@ -127,15 +146,26 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
       <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
     </select>
   </div>
+  <?php if ($seasons !== []): ?>
+    <div>
+      <label for="sezona">Sezóna</label>
+      <select id="sezona" name="sezona">
+        <option value="">Všechny sezóny</option>
+        <?php foreach ($seasons as $season): ?>
+          <option value="<?= (int)$season ?>"<?= $seasonFilter === (int)$season ? ' selected' : '' ?>>Sezóna <?= (int)$season ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  <?php endif; ?>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $seasonFilter !== null): ?>
     <a href="podcast.php?show_id=<?= (int)$showId ?>" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
 
 <?php if (empty($episodes)): ?>
   <p>
-    <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+    <?php if ($q !== '' || $statusFilter !== 'all' || $seasonFilter !== null): ?>
       Pro zvolený filtr tu teď nejsou žádné epizody.
     <?php else: ?>
       Zatím tu v tomto podcastu nejsou žádné epizody.
