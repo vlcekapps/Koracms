@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **Podcastové kapitoly a RSS přepisy** – epizody mohou mít strukturované kapitoly s časem, názvem, souvisejícím odkazem a obrázkem; CMS je zveřejňuje jako Podcasting 2.0 JSON, zobrazuje na detailu epizody a RSS feed nově odkazuje také na veřejný HTML přepis.
 - **Kontrola podcastového RSS feedu** – každý pořad má v administraci diagnostiku chybějícího artworku, metadat, audia a enclosure údajů; nové pořady i epizody dostávají neměnný RSS GUID a externí audio může evidovat MIME typ i přesnou velikost v bajtech.
 - **Veřejný changelog CMS** – návštěvníci mohou otevřít `/changelog`, kde se celý `CHANGELOG.md` včetně `Unreleased` vykreslí v běžné veřejné šabloně místo surového Markdown souboru; runtime audit a HTTP integrace hlídají route před blogovým catch-all a bezpečné pevné načítání changelogu.
 - **GPL-3.0-or-later licence** – repozitář nově obsahuje plný text licence v `LICENSE`, projektové oznámení v `NOTICE.md`, Composer metadata používají SPDX `GPL-3.0-or-later` a release guardraily hlídají, aby licenční soubory byly součástí instalačního ZIPu i source archivu.

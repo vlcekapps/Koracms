@@ -2157,6 +2157,96 @@ function normalizePodcastAudioFileSize(mixed $value): int
     return max(0, (int)$value);
 }
 
+function podcastChapterStartSeconds(mixed $value): ?float
+{
+    $value = trim((string)$value);
+    if ($value === '') {
+        return null;
+    }
+    if (preg_match('/^\d+(?:\.\d{1,3})?$/', $value) === 1) {
+        return round((float)$value, 3);
+    }
+    if (preg_match('/^(?:(\d+):)?([0-5]?\d):([0-5]\d)(?:\.(\d{1,3}))?$/', $value, $matches) !== 1) {
+        return null;
+    }
+
+    $hours = (int)$matches[1];
+    $minutes = (int)$matches[2];
+    $seconds = (int)$matches[3];
+    $milliseconds = isset($matches[4])
+        ? (float)('0.' . str_pad($matches[4], 3, '0'))
+        : 0.0;
+
+    return round(($hours * 3600) + ($minutes * 60) + $seconds + $milliseconds, 3);
+}
+
+function podcastChapterTimeLabel(mixed $seconds): string
+{
+    $totalMilliseconds = (int)round(max(0.0, (float)$seconds) * 1000);
+    $wholeSeconds = intdiv($totalMilliseconds, 1000);
+    $milliseconds = $totalMilliseconds % 1000;
+    $hours = intdiv($wholeSeconds, 3600);
+    $minutes = intdiv($wholeSeconds % 3600, 60);
+    $remainingSeconds = $wholeSeconds % 60;
+    $label = $hours > 0
+        ? sprintf('%d:%02d:%02d', $hours, $minutes, $remainingSeconds)
+        : sprintf('%d:%02d', $minutes, $remainingSeconds);
+
+    return $milliseconds > 0 ? $label . '.' . rtrim(str_pad((string)$milliseconds, 3, '0', STR_PAD_LEFT), '0') : $label;
+}
+
+function normalizePodcastChapterUrl(string $value): string
+{
+    return normalizeHttpExternalUrl($value);
+}
+
+/**
+ * @param list<array<string, mixed>> $chapters
+ * @return array{version:string,chapters:list<array<string, mixed>>}
+ */
+function podcastChaptersPayload(array $chapters): array
+{
+    $items = [];
+    foreach ($chapters as $chapter) {
+        $title = trim((string)($chapter['title'] ?? ''));
+        $startTime = podcastChapterStartSeconds($chapter['start_time_seconds'] ?? '');
+        if ($title === '' || $startTime === null) {
+            continue;
+        }
+        $item = ['startTime' => $startTime, 'title' => $title];
+        $url = normalizePodcastChapterUrl((string)($chapter['url'] ?? ''));
+        $imageUrl = normalizePodcastChapterUrl((string)($chapter['image_url'] ?? ''));
+        if ($url !== '') {
+            $item['url'] = $url;
+        }
+        if ($imageUrl !== '') {
+            $item['img'] = $imageUrl;
+        }
+        $items[] = $item;
+    }
+
+    usort($items, static fn (array $left, array $right): int => $left['startTime'] <=> $right['startTime']);
+    return ['version' => '1.2.0', 'chapters' => $items];
+}
+
+/**
+ * @param array<string, mixed> $episode
+ */
+function podcastTranscriptPublicUrl(array $episode): string
+{
+    $episodeId = (int)($episode['id'] ?? 0);
+    return $episodeId > 0 ? siteUrl('/podcast/transcript.php?id=' . $episodeId) : '';
+}
+
+/**
+ * @param array<string, mixed> $episode
+ */
+function podcastChaptersPublicUrl(array $episode): string
+{
+    $episodeId = (int)($episode['id'] ?? 0);
+    return $episodeId > 0 ? siteUrl('/podcast/chapters.php?id=' . $episodeId) : '';
+}
+
 function normalizePodcastOwnerEmail(string $value): string
 {
     $value = trim($value);
@@ -2315,6 +2405,9 @@ function podcastFeedHealthIssues(array $show, array $episodes): array
             if (normalizePodcastAudioFileSize($episode['audio_file_size'] ?? 0) < 1) {
                 $add('error', $title . ': externí audio nemá velikost souboru v bajtech.', $episodeId);
             }
+        }
+        if (trim((string)($episode['transcript'] ?? '')) === '') {
+            $add('warning', $title . ': chybí přepis epizody jako textová alternativa audia.', $episodeId);
         }
     }
 

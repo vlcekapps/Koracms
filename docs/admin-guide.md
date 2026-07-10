@@ -256,6 +256,10 @@ Pořad i epizoda mají interní neměnný RSS GUID. GUID se nemění při úprav
 
 Přehledy pořadů a epizod rozlišují stavy `Koncept`, `Čeká na schválení`, `Naplánováno`, `Publikováno` a podle typu záznamu také `Skrytý`; koncepty lze samostatně filtrovat.
 
+U uložené epizody je dostupná akce `Spravovat kapitoly`. Začátek kapitoly lze zadat jako počet sekund, `MM:SS` nebo `H:MM:SS`; název je povinný a související odkaz i obrázek jsou volitelné veřejné `http://`/`https://` adresy. Kapitoly se automaticky řadí podle času, zobrazují se na veřejném detailu epizody a podcastovým aplikacím se poskytují přes Podcasting 2.0 JSON endpoint.
+
+Vyplněný přepis epizody zůstává viditelný na detailu a RSS feed na něj navíc odkazuje značkou `podcast:transcript`. Samostatný HTML přepis i JSON kapitol podporují jen `GET`/`HEAD`, kontrolují veřejnost epizody a pořadu a používají cache validátory; koncept ani skrytý obsah přes ně nelze načíst.
+
 ### Nastavení pořadu
 
 - Počet epizod ve feedu (nastavitelný per pořad)

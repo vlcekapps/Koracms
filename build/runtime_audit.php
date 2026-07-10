@@ -14699,6 +14699,7 @@ $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form
 $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastFeedHealthSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_feed_health.php');
+$podcastChaptersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_chapters.php');
 $podcastAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
@@ -19608,6 +19609,8 @@ $podcastShowViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/d
 $podcastEpisodeViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/podcast-episode.php');
 $podcastFeedSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/feed.php');
 $podcastAudioSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/audio.php');
+$podcastTranscriptSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/transcript.php');
+$podcastChaptersSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/chapters.php');
 $podcastCoverSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/cover.php');
 $podcastImageSource = (string)file_get_contents(dirname(__DIR__) . '/podcast/image.php');
 $podcastSearchSource = (string)file_get_contents(dirname(__DIR__) . '/search.php');
@@ -19651,7 +19654,7 @@ if (!str_contains($podcastShowViewSource, 'pagerHtml')) {
     $podcastSourceIssues[] = 'podcast show view is missing pager output';
 }
 if (!str_contains($podcastEpisodeViewSource, 'id="podcast-episode-player-label" class="sr-only"')
-    || !str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-labelledby="podcast-episode-player-label">')) {
+    || !str_contains($podcastEpisodeViewSource, 'aria-labelledby="podcast-episode-player-label"')) {
     $podcastSourceIssues[] = 'podcast episode audio player is missing heading-backed accessible label';
 }
 if (!str_contains($podcastEpisodeViewSource, 'id="podcast-episode-transcript"')
@@ -19662,6 +19665,11 @@ if (!str_contains($adminExportSource, 'description, transcript, audio_file')
     || !str_contains($importAdminSource, '(id, show_id, title, slug, description, transcript, audio_file')
     || !str_contains($importAdminSource, "\$row['transcript'] ?? ''")) {
     $podcastSourceIssues[] = 'podcast import/export is missing episode transcript metadata';
+}
+if (!str_contains($adminExportSource, "'podcast_chapters'")
+    || !str_contains($importAdminSource, "['podcast_chapters']")
+    || !str_contains($importAdminSource, 'INSERT IGNORE INTO cms_podcast_chapters')) {
+    $podcastSourceIssues[] = 'podcast chapter import/export coverage is missing';
 }
 if (str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-label=')) {
     $podcastSourceIssues[] = 'podcast episode audio player still uses aria-label instead of hidden DOM label';
@@ -19687,6 +19695,28 @@ if (!str_contains($podcastFeedSource, 'podcastEpisodeEnclosureMimeType(')
     || !str_contains($podcastFeedSource, "header('ETag: '")
     || !str_contains($podcastFeedSource, "header('Last-Modified: '")) {
     $podcastSourceIssues[] = 'podcast feed is missing enclosure metadata or cache validators';
+}
+if (!str_contains($podcastFeedSource, '<podcast:transcript')
+    || !str_contains($podcastFeedSource, '<podcast:chapters')
+    || !str_contains($podcastFeedSource, 'application/json+chapters')) {
+    $podcastSourceIssues[] = 'podcast feed is missing transcript or chapters discovery tags';
+}
+if (!str_contains($podcastTranscriptSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($podcastTranscriptSource, 'podcastEpisodeIsPublic(')
+    || !str_contains($podcastTranscriptSource, "sendReadOnlyContentHeaders('text/html; charset=UTF-8'")) {
+    $podcastSourceIssues[] = 'podcast transcript endpoint is missing read-only or public visibility guards';
+}
+if (!str_contains($podcastChaptersSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($podcastChaptersSource, 'podcastEpisodeIsPublic(')
+    || !str_contains($podcastChaptersSource, 'podcastChaptersPayload(')
+    || !str_contains($podcastChaptersSource, "sendReadOnlyContentHeaders('application/json+chapters; charset=UTF-8'")) {
+    $podcastSourceIssues[] = 'podcast chapters endpoint is missing schema, read-only or visibility guards';
+}
+if (!str_contains($podcastChaptersAdminSource, 'verifyCsrf();')
+    || !str_contains($podcastChaptersAdminSource, '<fieldset>')
+    || !str_contains($podcastChaptersAdminSource, '<legend>')
+    || !str_contains($podcastChaptersAdminSource, 'WHERE id = ? AND episode_id = ?')) {
+    $podcastSourceIssues[] = 'podcast chapter administration is missing CSRF, form semantics or ownership guards';
 }
 if (!str_contains($podcastEpisodeSaveSource, 'newPodcastFeedGuid()')
     || !str_contains($podcastShowSaveSource, 'newPodcastFeedGuid()')) {

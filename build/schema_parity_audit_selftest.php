@@ -146,6 +146,14 @@ CREATE TABLE IF NOT EXISTS cms_podcasts (
   audio_file_size BIGINT,
   UNIQUE KEY uq_podcasts_feed_guid (feed_guid)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_podcast_chapters (
+  id INT,
+  episode_id INT,
+  start_time_seconds DECIMAL(12,3),
+  title VARCHAR(255),
+  UNIQUE KEY uq_podcast_chapter_start (episode_id, start_time_seconds),
+  KEY idx_podcast_chapters_episode (episode_id, start_time_seconds, id)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_albums (
   id INT,
   default_credit VARCHAR(255),
@@ -451,6 +459,9 @@ PHP,
 // cms_podcasts.audio_file_size
 // uq_podcast_shows_feed_guid
 // uq_podcasts_feed_guid
+// cms_podcast_chapters
+// uq_podcast_chapter_start
+// idx_podcast_chapters_episode
 // cms_gallery_photos.slug
 // cms_gallery_albums.default_credit
 // cms_gallery_albums.default_license_label

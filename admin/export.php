@@ -174,6 +174,8 @@ $tables = [
                                audio_mime_type, audio_file_size, feed_guid, subtitle,
                                duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
+    'podcast_chapters' => "SELECT id, episode_id, start_time_seconds, title, url, image_url, created_at, updated_at
+                           FROM cms_podcast_chapters",
     'polls'         => "SELECT id, question, slug, description, vote_mode, max_choices, results_visibility,
                                meta_title, meta_description, start_date, end_date, status, created_at, updated_at
                         FROM cms_polls",

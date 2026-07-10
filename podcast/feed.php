@@ -27,7 +27,8 @@ if (empty($show['is_public']) && !currentUserHasCapability('content_manage_share
 $feedEpisodeLimit = (int)$show['feed_episode_limit'];
 
 $episodesStmt = $pdo->prepare(
-    "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image
+    "SELECT p.*, s.slug AS show_slug, s.title AS show_title, s.cover_image AS show_cover_image,
+            (SELECT COUNT(*) FROM cms_podcast_chapters c WHERE c.episode_id = p.id) AS chapter_count
      FROM cms_podcasts p
      INNER JOIN cms_podcast_shows s ON s.id = p.show_id
      WHERE p.show_id = ?
@@ -171,6 +172,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
       <enclosure url="<?= htmlspecialchars($audioSrc, ENT_XML1, 'UTF-8') ?>"
                  type="<?= htmlspecialchars($audioType, ENT_XML1, 'UTF-8') ?>"
                  length="<?= $enclosureLength > 0 ? $enclosureLength : 0 ?>"/>
+<?php endif; ?>
+<?php if (trim((string)($episode['transcript'] ?? '')) !== ''): ?>
+      <podcast:transcript url="<?= htmlspecialchars(podcastTranscriptPublicUrl($episode), ENT_XML1, 'UTF-8') ?>" type="text/html"/>
+<?php endif; ?>
+<?php if ((int)($episode['chapter_count'] ?? 0) > 0): ?>
+      <podcast:chapters url="<?= htmlspecialchars(podcastChaptersPublicUrl($episode), ENT_XML1, 'UTF-8') ?>" type="application/json+chapters"/>
 <?php endif; ?>
 <?php if ($episodeImageUrl !== ''): ?>
       <itunes:image href="<?= htmlspecialchars($episodeImageUrl, ENT_XML1, 'UTF-8') ?>"/>

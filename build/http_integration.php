@@ -1320,14 +1320,45 @@ try {
     $podcastFeedGuid = 'urn:uuid:http-episode-' . bin2hex(random_bytes(8));
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, audio_url, audio_mime_type, audio_file_size, feed_guid, status, publish_at, created_at, updated_at)
-         VALUES (?, 'HTTP externí epizoda', 'http-externi-epizoda', '<p>Test RSS enclosure.</p>',
+         (show_id, title, slug, description, transcript, audio_url, audio_mime_type, audio_file_size, feed_guid, status, publish_at, created_at, updated_at)
+         VALUES (?, 'HTTP externí epizoda', 'http-externi-epizoda', '<p>Test RSS enclosure.</p>', '<p>Veřejný HTTP přepis epizody.</p>',
                  'https://cdn.example.test/http-episode.mp3', 'audio/mpeg', 123456, ?, 'published', NOW(), NOW(), NOW())"
     )->execute([$podcastEpisodeValidationShowId, $podcastFeedGuid]);
     $podcastFeedEpisodeId = (int)$pdo->lastInsertId();
     $createdPodcastEpisodeIds[] = $podcastFeedEpisodeId;
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_chapters (episode_id, start_time_seconds, title, url, image_url)
+         VALUES (?, 0, 'Úvod testovací epizody', 'https://example.test/uvod', '')"
+    )->execute([$podcastFeedEpisodeId]);
+
+    $podcastChapterAdminPage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast_chapters.php?episode_id=' . $podcastFeedEpisodeId,
+        $adminSession['cookie'],
+        0
+    );
+    $podcastChapterCsrf = extractHiddenInputValue($podcastChapterAdminPage['body'], 'csrf_token');
+    if ($podcastChapterCsrf !== '') {
+        postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_chapters.php',
+            [
+                'csrf_token' => $podcastChapterCsrf,
+                'episode_id' => (string)$podcastFeedEpisodeId,
+                'start_time' => '1:30',
+                'title' => 'Druhá testovací kapitola',
+                'url' => '',
+                'image_url' => '',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+    }
 
     $podcastFeedIntegrityIssues = [];
+    $podcastChapterCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_chapters WHERE episode_id = ?");
+    $podcastChapterCountStmt->execute([$podcastFeedEpisodeId]);
+    if ($podcastChapterCsrf === '' || (int)$podcastChapterCountStmt->fetchColumn() !== 2) {
+        $podcastFeedIntegrityIssues[] = 'administrace kapitol nevytvořila kapitolu chráněným formulářem';
+    }
     $podcastFeedIntegrityResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($podcastEpisodeValidationShowSlug),
         '',
@@ -1337,9 +1368,51 @@ try {
         || !str_contains($podcastFeedIntegrityResponse['body'], '<guid isPermaLink="false">' . $podcastFeedGuid . '</guid>')
         || !str_contains($podcastFeedIntegrityResponse['body'], 'type="audio/mpeg"')
         || !str_contains($podcastFeedIntegrityResponse['body'], 'length="123456"')
+        || !str_contains($podcastFeedIntegrityResponse['body'], '<podcast:transcript url=')
+        || !str_contains($podcastFeedIntegrityResponse['body'], '<podcast:chapters url=')
         || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'ETag', '"')
         || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'Last-Modified', 'GMT')) {
         $podcastFeedIntegrityIssues[] = 'podcast RSS feed nevrátil stabilní GUID, enclosure metadata nebo cache validátory';
+    }
+    $podcastTranscriptResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/transcript.php?id=' . $podcastFeedEpisodeId,
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($podcastTranscriptResponse) !== 200
+        || !httpIntegrationHeaderContains($podcastTranscriptResponse, 'Content-Type', 'text/html; charset=UTF-8')
+        || !str_contains($podcastTranscriptResponse['body'], 'Veřejný HTTP přepis epizody.')) {
+        $podcastFeedIntegrityIssues[] = 'veřejný endpoint přepisu nevrátil HTML přepis veřejné epizody';
+    }
+    if (!httpIntegrationReadOnlyMethodGuardOk(postRawUrl(
+        $baseUrl . BASE_URL . '/podcast/transcript.php?id=' . $podcastFeedEpisodeId,
+        '',
+        'text/plain',
+        '',
+        0
+    ))) {
+        $podcastFeedIntegrityIssues[] = 'veřejný endpoint přepisu neodmítl nepodporovanou metodu';
+    }
+    $podcastChaptersResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/chapters.php?id=' . $podcastFeedEpisodeId,
+        '',
+        0
+    );
+    $podcastChaptersPayload = json_decode($podcastChaptersResponse['body'], true);
+    if (httpIntegrationStatusCode($podcastChaptersResponse) !== 200
+        || !httpIntegrationHeaderContains($podcastChaptersResponse, 'Content-Type', 'application/json+chapters')
+        || !is_array($podcastChaptersPayload)
+        || ($podcastChaptersPayload['chapters'][0]['title'] ?? '') !== 'Úvod testovací epizody') {
+        $podcastFeedIntegrityIssues[] = 'veřejný endpoint kapitol nevrátil standardní JSON kapitoly';
+    }
+    if (!httpIntegrationReadOnlyMethodGuardOk(postRawUrl(
+        $baseUrl . BASE_URL . '/podcast/chapters.php?id=' . $podcastFeedEpisodeId,
+        '',
+        'application/json',
+        '',
+        0
+    ))) {
+        $podcastFeedIntegrityIssues[] = 'veřejný endpoint kapitol neodmítl nepodporovanou metodu';
     }
     $podcastFeedHealthResponse = fetchUrl(
         $baseUrl . BASE_URL . '/admin/podcast_feed_health.php?show_id=' . $podcastEpisodeValidationShowId,
@@ -15669,6 +15742,7 @@ try {
         $pdo->prepare("DELETE FROM cms_subscribers WHERE email = ?")->execute([$subscriberEmailToDelete]);
     }
     foreach ($createdPodcastEpisodeIds as $podcastEpisodeIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$podcastEpisodeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcasts WHERE id = ?")->execute([$podcastEpisodeIdToDelete]);
     }

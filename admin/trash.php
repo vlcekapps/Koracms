@@ -116,8 +116,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'podcasts') {
+                    $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'podcast_shows') {
+                    $episodeIdsStmt = $pdo->prepare("SELECT id FROM cms_podcasts WHERE show_id = ?");
+                    $episodeIdsStmt->execute([$itemId]);
+                    $podcastEpisodeIds = array_map('intval', array_column($episodeIdsStmt->fetchAll(), 'id'));
+                    if ($podcastEpisodeIds !== []) {
+                        $chapterPlaceholders = implode(',', array_fill(0, count($podcastEpisodeIds), '?'));
+                        $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id IN ({$chapterPlaceholders})")->execute($podcastEpisodeIds);
+                        foreach ($podcastEpisodeIds as $podcastEpisodeId) {
+                            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeId]);
+                        }
+                    }
+                    $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'gallery_albums') {
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);

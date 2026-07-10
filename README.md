@@ -246,7 +246,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s typy, místy konání, opakovanými termíny, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi, fotografickými metadaty a bezpečným media endpointem |
-| **Podcasty** | Více pořadů, epizody, artwork, přepisy, chráněné assety, stabilní RSS GUID, enclosure metadata, kontrola feedu, redirecty a revize |
+| **Podcasty** | Více pořadů, epizody, artwork, přepisy, kapitoly Podcasting 2.0, stabilní RSS GUID, kontrola feedu, redirecty a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s kategoriemi, landing stránkami, sériemi verzí, kompatibilitou, historií změn a veřejnými filtry |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, denními nabídkami, strukturovanými položkami, cenami, alergeny, nutričními údaji, obrázky, veřejnými filtry, objednávkovými poptávkami, archivem, hledáním a revizemi |

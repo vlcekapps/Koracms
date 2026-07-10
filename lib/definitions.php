@@ -257,6 +257,7 @@ function coreModuleDefinitions(): array
             'database_tables' => [
                 'cms_podcast_shows',
                 'cms_podcasts',
+                'cms_podcast_chapters',
             ],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
@@ -268,6 +269,8 @@ function coreModuleDefinitions(): array
                 '/podcast/image.php',
                 '/podcast/cover.php',
                 '/podcast/audio.php',
+                '/podcast/transcript.php',
+                '/podcast/chapters.php',
             ],
             'public_nav_order' => 40,
             'profile_managed' => true,
@@ -276,6 +279,7 @@ function coreModuleDefinitions(): array
             'admin_paths' => [
                 '/admin/podcast_shows.php',
                 '/admin/podcast_feed_health.php',
+                '/admin/podcast_chapters.php',
             ],
         ],
         'places' => [

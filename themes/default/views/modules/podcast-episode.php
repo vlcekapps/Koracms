@@ -41,7 +41,7 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
 
         <?php if ((string)$episode['audio_src'] !== ''): ?>
           <p id="podcast-episode-player-label" class="sr-only">Přehrávač epizody <?= h((string)$episode['title']) ?></p>
-          <audio controls class="audio-player" aria-labelledby="podcast-episode-player-label">
+          <audio id="podcast-episode-player" controls class="audio-player" aria-labelledby="podcast-episode-player-label">
             <source src="<?= h((string)$episode['audio_src']) ?>">
             Váš prohlížeč nepodporuje přehrávání audia.
             <a href="<?= h((string)$episode['audio_src']) ?>">Stáhnout nebo otevřít audio</a>
@@ -72,6 +72,26 @@ $episodeHeroAlt = (string)($episode['image_url'] ?? '') !== ''
       <p class="empty-state">Tato epizoda zatím nemá doplněný podrobný popis.</p>
     <?php endif; ?>
   </section>
+
+  <?php if (!empty($chapters)): ?>
+    <section class="surface" aria-labelledby="podcast-episode-chapters">
+      <div class="section-heading">
+        <div>
+          <h2 id="podcast-episode-chapters" class="section-title">Kapitoly epizody</h2>
+        </div>
+      </div>
+      <ol class="listing-list">
+        <?php foreach ($chapters as $chapter): ?>
+          <li>
+            <strong><?= h(podcastChapterTimeLabel($chapter['start_time_seconds'])) ?> – <?= h((string)$chapter['title']) ?></strong>
+            <?php if (trim((string)($chapter['url'] ?? '')) !== ''): ?>
+              <a href="<?= h((string)$chapter['url']) ?>" target="_blank" rel="noopener noreferrer">Související odkaz<?= newWindowLinkSrOnlySuffix() ?></a>
+            <?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ol>
+    </section>
+  <?php endif; ?>
 
   <?php if ((string)($episode['transcript'] ?? '') !== ''): ?>
     <section class="surface" aria-labelledby="podcast-episode-transcript">

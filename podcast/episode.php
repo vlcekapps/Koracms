@@ -73,6 +73,11 @@ if (!$episode) {
 }
 
 $episode = hydratePodcastEpisodePresentation($episode);
+$chaptersStmt = $pdo->prepare(
+    "SELECT * FROM cms_podcast_chapters WHERE episode_id = ? ORDER BY start_time_seconds ASC, id ASC"
+);
+$chaptersStmt->execute([(int)$episode['id']]);
+$chapters = $chaptersStmt->fetchAll();
 $show = hydratePodcastShowPresentation([
     'id' => $episode['show_id'],
     'title' => $episode['show_title'],
@@ -125,6 +130,7 @@ renderPublicPage([
         'show' => $show,
         'episode' => $episode,
         'feedUrl' => $feedUrl,
+        'chapters' => $chapters,
     ],
     'current_nav' => 'podcast',
     'body_class' => 'page-podcast-episode',

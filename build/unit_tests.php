@@ -775,6 +775,18 @@ assert_equals('audio/mpeg', normalizePodcastAudioMimeType(' Audio/MPEG '), 'podc
 assert_equals('', normalizePodcastAudioMimeType('text/html'), 'podcast audio MIME normalizer rejects non-audio types');
 assert_equals(123456, normalizePodcastAudioFileSize('123456'), 'podcast enclosure size accepts whole bytes');
 assert_equals(0, normalizePodcastAudioFileSize('-1'), 'podcast enclosure size rejects negative values');
+assert_equals(0.0, podcastChapterStartSeconds('0:00'), 'podcast chapter parser accepts zero timestamp');
+assert_equals(3723.5, podcastChapterStartSeconds('1:02:03.500'), 'podcast chapter parser accepts hours and milliseconds');
+assert_equals(90.0, podcastChapterStartSeconds('90'), 'podcast chapter parser accepts seconds');
+assert_equals(null, podcastChapterStartSeconds('1:99'), 'podcast chapter parser rejects invalid time');
+assert_equals('1:02:03.5', podcastChapterTimeLabel(3723.5), 'podcast chapter formatter keeps useful milliseconds');
+$podcastChapterPayload = podcastChaptersPayload([
+    ['start_time_seconds' => '60', 'title' => 'Druhá část', 'url' => 'example.test/topic'],
+    ['start_time_seconds' => '0', 'title' => 'Úvod', 'image_url' => 'https://cdn.example.test/chapter.jpg'],
+]);
+assert_equals('1.2.0', $podcastChapterPayload['version'], 'podcast chapters use current JSON schema version');
+assert_equals('Úvod', $podcastChapterPayload['chapters'][0]['title'], 'podcast chapters are ordered by start time');
+assert_equals('https://example.test/topic', $podcastChapterPayload['chapters'][1]['url'], 'podcast chapter links use external URL normalizer');
 assert_equals('https://downloads.example/item', normalizeDownloadExternalUrl('downloads.example/item'), 'download external URL uses shared external helper');
 assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download external URL rejects internal path');
 assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');
@@ -842,6 +854,7 @@ $podcastHealthIssues = podcastFeedHealthIssues(
         'audio_url' => 'https://cdn.example.test/episode.mp3',
         'audio_mime_type' => '',
         'audio_file_size' => 0,
+        'transcript' => 'Textový přepis.',
     ]]
 );
 assert_equals(2, count($podcastHealthIssues), 'podcast feed health reports missing external enclosure metadata');

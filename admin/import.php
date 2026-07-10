@@ -1459,6 +1459,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Epizody podcastů importovány.';
                 }
 
+                if (!empty($data['podcast_chapters']) && is_array($data['podcast_chapters'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_podcast_chapters
+                         (id, episode_id, start_time_seconds, title, url, image_url, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['podcast_chapters'] as $row) {
+                        $episodeId = (int)($row['episode_id'] ?? 0);
+                        $title = trim((string)($row['title'] ?? ''));
+                        $startSeconds = podcastChapterStartSeconds($row['start_time_seconds'] ?? '');
+                        if ($episodeId < 1 || $title === '' || $startSeconds === null) {
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $episodeId,
+                            $startSeconds,
+                            $title,
+                            normalizePodcastChapterUrl((string)($row['url'] ?? '')),
+                            normalizePodcastChapterUrl((string)($row['image_url'] ?? '')),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Kapitoly podcastů importovány.';
+                }
+
                 // Ankety (nejdřív ankety, pak možnosti)
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(

@@ -561,6 +561,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_cms_dl_categories_slug (slug)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_podcast_chapters (
+            id                 INT            NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            episode_id         INT            NOT NULL,
+            start_time_seconds DECIMAL(12,3)  NOT NULL DEFAULT 0,
+            title              VARCHAR(255)   NOT NULL,
+            url                VARCHAR(500)   NOT NULL DEFAULT '',
+            image_url          VARCHAR(500)   NOT NULL DEFAULT '',
+            created_at         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_podcast_chapter_start (episode_id, start_time_seconds),
+            KEY idx_podcast_chapters_episode (episode_id, start_time_seconds, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_download_series (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             title       VARCHAR(255) NOT NULL,
