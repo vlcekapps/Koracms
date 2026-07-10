@@ -250,6 +250,12 @@ Prakticky to znamená, že stejného výsledku jako dřívější pole v nastave
 
 Každý podcastový pořad má vlastní nastavení feedu pro podcastové aplikace a katalogy.
 
+V přehledu pořadů i epizod je dostupná akce `Kontrola RSS`. Diagnostika upozorní na chybějící metadata pořadu, artwork, audio soubor a neúplné enclosure údaje veřejných epizod. Chyby je vhodné opravit před odesláním feedu do podcastového katalogu.
+
+Pořad i epizoda mají interní neměnný RSS GUID. GUID se nemění při úpravě názvu nebo slugu a je součástí exportu/importu. U externě hostovaného audia vyplňte vedle přímé URL také MIME typ, například `audio/mpeg`, a přesnou velikost souboru v bajtech. U lokálně nahraného audia CMS tyto údaje zjistí automaticky.
+
+Přehledy pořadů a epizod rozlišují stavy `Koncept`, `Čeká na schválení`, `Naplánováno`, `Publikováno` a podle typu záznamu také `Skrytý`; koncepty lze samostatně filtrovat.
+
 ### Nastavení pořadu
 
 - Počet epizod ve feedu (nastavitelný per pořad)

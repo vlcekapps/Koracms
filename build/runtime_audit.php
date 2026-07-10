@@ -14698,6 +14698,9 @@ $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
+$podcastFeedHealthSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_feed_health.php');
+$podcastAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
+$podcastShowsAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
 $pollFormValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_form.php');
 $boardSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/board_save.php');
@@ -19674,6 +19677,34 @@ if (!str_contains($podcastFeedSource, 'podcastFeedManagingEditor(')) {
 }
 if (!str_contains($podcastFeedSource, 'podcastEpisodeEnclosureLength(')) {
     $podcastSourceIssues[] = 'podcast feed is missing enclosure length helper';
+}
+if (!str_contains($podcastFeedSource, '<guid isPermaLink="false">')
+    || !str_contains($podcastFeedSource, "episode['feed_guid']")
+    || str_contains($podcastFeedSource, '<guid isPermaLink="true">')) {
+    $podcastSourceIssues[] = 'podcast feed does not use immutable non-permalink episode GUIDs';
+}
+if (!str_contains($podcastFeedSource, 'podcastEpisodeEnclosureMimeType(')
+    || !str_contains($podcastFeedSource, "header('ETag: '")
+    || !str_contains($podcastFeedSource, "header('Last-Modified: '")) {
+    $podcastSourceIssues[] = 'podcast feed is missing enclosure metadata or cache validators';
+}
+if (!str_contains($podcastEpisodeSaveSource, 'newPodcastFeedGuid()')
+    || !str_contains($podcastShowSaveSource, 'newPodcastFeedGuid()')) {
+    $podcastSourceIssues[] = 'new podcast records do not receive persistent feed GUIDs';
+}
+if (!str_contains($podcastEpisodeFormSource, 'name="audio_mime_type"')
+    || !str_contains($podcastEpisodeFormSource, 'name="audio_file_size"')) {
+    $podcastSourceIssues[] = 'podcast episode form is missing external enclosure metadata fields';
+}
+if (!str_contains($podcastFeedHealthSource, 'podcastFeedHealthIssues(')
+    || !str_contains($podcastFeedHealthSource, 'aria-labelledby="podcast-feed-health-heading"')) {
+    $podcastSourceIssues[] = 'podcast feed health screen is missing diagnostics or heading semantics';
+}
+if (!str_contains($podcastAdminListSource, "value=\"draft\"")
+    || !str_contains($podcastShowsAdminListSource, "value=\"draft\"")
+    || !str_contains($podcastAdminListSource, 'Koncept')
+    || !str_contains($podcastShowsAdminListSource, 'Koncept')) {
+    $podcastSourceIssues[] = 'podcast admin lists do not expose draft state correctly';
 }
 if (!str_contains($podcastAudioSource, "currentUserHasCapability('content_manage_shared')")) {
     $podcastSourceIssues[] = 'podcast audio endpoint is missing private visibility guard';

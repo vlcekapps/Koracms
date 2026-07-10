@@ -769,6 +769,12 @@ assert_equals('', normalizeHttpExternalUrl("https://example.com\npath"), 'extern
 assert_equals('', normalizeHttpExternalUrl('example.com/path', false), 'external URL helper can require explicit scheme');
 assert_equals('https://podcast.example/show', normalizePodcastWebsiteUrl('podcast.example/show'), 'podcast website URL uses shared external helper');
 assert_equals('', normalizePodcastWebsiteUrl('https://user:pass@example.com/show'), 'podcast website URL rejects credentials');
+assert_true(str_starts_with(newPodcastFeedGuid(), 'urn:uuid:'), 'podcast feed GUID generator uses immutable UUID URN');
+assert_equals('legacy-guid-42', normalizePodcastFeedGuid(" legacy-guid-42\n"), 'podcast feed GUID normalizer preserves imported identifiers');
+assert_equals('audio/mpeg', normalizePodcastAudioMimeType(' Audio/MPEG '), 'podcast audio MIME normalizer accepts audio types');
+assert_equals('', normalizePodcastAudioMimeType('text/html'), 'podcast audio MIME normalizer rejects non-audio types');
+assert_equals(123456, normalizePodcastAudioFileSize('123456'), 'podcast enclosure size accepts whole bytes');
+assert_equals(0, normalizePodcastAudioFileSize('-1'), 'podcast enclosure size rejects negative values');
 assert_equals('https://downloads.example/item', normalizeDownloadExternalUrl('downloads.example/item'), 'download external URL uses shared external helper');
 assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download external URL rejects internal path');
 assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');
@@ -826,6 +832,20 @@ assert_equals(
     podcastEpisodeRevisionSnapshot($podcastEpisodeWithTranscriptOnly)['transcript'],
     'podcast episode revision snapshot keeps transcript content'
 );
+$podcastHealthIssues = podcastFeedHealthIssues(
+    ['feed_guid' => 'show-guid', 'title' => 'Pořad', 'description' => 'Popis', 'author' => 'Autor', 'category' => 'Technology', 'cover_image' => 'cover.webp'],
+    [[
+        'id' => 42,
+        'title' => 'Externí epizoda',
+        'feed_guid' => 'episode-guid',
+        'audio_file' => '',
+        'audio_url' => 'https://cdn.example.test/episode.mp3',
+        'audio_mime_type' => '',
+        'audio_file_size' => 0,
+    ]]
+);
+assert_equals(2, count($podcastHealthIssues), 'podcast feed health reports missing external enclosure metadata');
+assert_contains('MIME typ', $podcastHealthIssues[0]['message'], 'podcast feed health explains missing external MIME type');
 
 test_section('form field autocomplete purpose');
 

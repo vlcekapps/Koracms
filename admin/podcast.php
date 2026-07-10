@@ -21,7 +21,7 @@ $perPage = 20;
 
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
-$allowedStatusFilters = ['all', 'published', 'pending', 'scheduled'];
+$allowedStatusFilters = ['all', 'published', 'draft', 'pending', 'scheduled'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
@@ -38,6 +38,8 @@ if ($q !== '') {
 
 if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(p.status,'published') = 'pending'";
+} elseif ($statusFilter === 'draft') {
+    $whereParts[] = "COALESCE(p.status, 'published') = 'draft'";
 } elseif ($statusFilter === 'published') {
     $whereParts[] = "COALESCE(p.status,'published') = 'published' AND (p.publish_at IS NULL OR p.publish_at <= NOW())";
 } elseif ($statusFilter === 'scheduled') {
@@ -102,6 +104,8 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
   <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
   &nbsp;|&nbsp;
   <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed<?= newWindowLinkSrOnlySuffix() ?></a>
+  &nbsp;|&nbsp;
+  <a href="podcast_feed_health.php?show_id=<?= (int)$show['id'] ?>">Kontrola RSS feedu</a>
 </p>
 
 <p><a href="podcast_form.php?show_id=<?= (int)$showId ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">+ Přidat epizodu</a></p>
@@ -118,6 +122,7 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
     <select id="status" name="status">
       <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
       <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Publikované</option>
+      <option value="draft"<?= $statusFilter === 'draft' ? ' selected' : '' ?>>Koncepty</option>
       <option value="scheduled"<?= $statusFilter === 'scheduled' ? ' selected' : '' ?>>Naplánované</option>
       <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
     </select>
@@ -176,6 +181,8 @@ adminHeader('Epizody podcastu: ' . (string)$show['title']);
         <td>
           <?php if ((string)$episode['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
+          <?php elseif ((string)$episode['status'] === 'draft'): ?>
+            <strong>Koncept</strong>
           <?php elseif (!empty($episode['is_scheduled'])): ?>
             <strong>Naplánováno</strong>
           <?php else: ?>

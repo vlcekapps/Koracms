@@ -173,8 +173,9 @@ if ($id !== null) {
     $pdo->prepare(
         "INSERT INTO cms_podcast_shows
          (title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
+          feed_guid,
           explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, is_published, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $title,
         $uniqueSlug,
@@ -186,6 +187,7 @@ if ($id !== null) {
         $category,
         $ownerName,
         $ownerEmail,
+        newPodcastFeedGuid(),
         $explicitMode,
         $showType,
         $feedComplete,

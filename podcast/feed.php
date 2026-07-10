@@ -49,8 +49,26 @@ $coverUrl = (string)($show['cover_url'] !== ''
     : '');
 $showSubtitle = (string)($show['feed_subtitle'] ?? '');
 $showSummary = (string)($show['feed_summary'] ?? '');
-$buildDateSource = $episodes[0]['display_date'] ?? ($show['updated_at'] ?? $show['created_at'] ?? 'now');
-$buildDate = date(DATE_RSS, strtotime((string)$buildDateSource));
+$buildTimestamp = strtotime((string)($show['updated_at'] ?? $show['created_at'] ?? 'now')) ?: time();
+foreach ($episodes as $episode) {
+    $episodeUpdatedTimestamp = strtotime((string)($episode['updated_at'] ?? $episode['created_at'] ?? '')) ?: 0;
+    $buildTimestamp = max($buildTimestamp, $episodeUpdatedTimestamp);
+}
+$buildDate = date(DATE_RSS, $buildTimestamp);
+$feedValidatorSource = (string)($show['feed_guid'] ?? '') . '|' . (string)($show['updated_at'] ?? '') . '|';
+foreach ($episodes as $episode) {
+    $feedValidatorSource .= (string)($episode['feed_guid'] ?? '') . ':' . (string)($episode['updated_at'] ?? '') . '|';
+}
+$feedEtag = '"' . hash('sha256', $feedValidatorSource) . '"';
+header('Cache-Control: public, max-age=300');
+header('ETag: ' . $feedEtag);
+header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $buildTimestamp) . ' GMT');
+$ifNoneMatch = trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
+$ifModifiedSince = strtotime((string)($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? ''));
+if ($ifNoneMatch === $feedEtag || ($ifNoneMatch === '' && $ifModifiedSince !== false && $ifModifiedSince >= $buildTimestamp)) {
+    http_response_code(304);
+    exit;
+}
 
 sendReadOnlyContentHeaders('application/rss+xml; charset=utf-8', $isHeadRequest);
 
@@ -58,6 +76,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 ?>
 <rss version="2.0"
      xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:podcast="https://podcastindex.org/namespace/1.0"
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
      xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -73,6 +92,9 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     <language><?= htmlspecialchars((string)($show['language'] ?: 'cs'), ENT_XML1, 'UTF-8') ?></language>
     <lastBuildDate><?= $buildDate ?></lastBuildDate>
     <atom:link href="<?= htmlspecialchars($selfUrl, ENT_XML1, 'UTF-8') ?>" rel="self" type="application/rss+xml"/>
+<?php if (!empty($show['feed_guid'])): ?>
+    <podcast:guid><?= htmlspecialchars((string)$show['feed_guid'], ENT_XML1, 'UTF-8') ?></podcast:guid>
+<?php endif; ?>
 <?php if (!empty($show['author'])): ?>
     <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>
 <?php endif; ?>
@@ -107,14 +129,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php endif; ?>
 <?php foreach ($episodes as $episode):
     $audioSrc = '';
-    $audioType = 'audio/mpeg';
+    $audioType = podcastEpisodeEnclosureMimeType($episode);
     $enclosureLength = 0;
     if ((string)$episode['audio_file'] !== '') {
         $audioSrc = siteUrl(str_starts_with((string)$episode['audio_src'], BASE_URL) ? substr((string)$episode['audio_src'], strlen(BASE_URL)) : (string)$episode['audio_src']);
-        $audioType = podcastAudioMimeType((string)$episode['audio_file']);
         $enclosureLength = podcastEpisodeEnclosureLength($episode);
     } elseif ((string)$episode['audio_url'] !== '') {
         $audioSrc = (string)$episode['audio_url'];
+        $enclosureLength = podcastEpisodeEnclosureLength($episode);
     }
 
     $pubDateSource = (string)($episode['display_date'] ?? $episode['created_at'] ?? 'now');
@@ -133,7 +155,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     <item>
       <title><?= htmlspecialchars((string)$episode['title'], ENT_XML1, 'UTF-8') ?></title>
       <link><?= htmlspecialchars($itemLink, ENT_XML1, 'UTF-8') ?></link>
-      <guid isPermaLink="true"><?= htmlspecialchars($itemLink, ENT_XML1, 'UTF-8') ?></guid>
+      <guid isPermaLink="false"><?= htmlspecialchars((string)$episode['feed_guid'], ENT_XML1, 'UTF-8') ?></guid>
       <pubDate><?= $pubDate ?></pubDate>
       <description><?= htmlspecialchars($description, ENT_XML1, 'UTF-8') ?></description>
 <?php if (!empty($episode['description'])): ?>

@@ -6,7 +6,7 @@ requireModuleEnabled('podcast');
 $pdo = db_connect();
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim((string)($_GET['status'] ?? 'all'));
-$allowedStatusFilters = ['all', 'published', 'hidden', 'pending'];
+$allowedStatusFilters = ['all', 'published', 'hidden', 'draft', 'pending'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
     $statusFilter = 'all';
 }
@@ -22,6 +22,8 @@ if ($q !== '') {
 
 if ($statusFilter === 'pending') {
     $whereParts[] = "COALESCE(s.status, 'published') = 'pending'";
+} elseif ($statusFilter === 'draft') {
+    $whereParts[] = "COALESCE(s.status, 'published') = 'draft'";
 } elseif ($statusFilter === 'published') {
     $whereParts[] = "COALESCE(s.status, 'published') = 'published' AND COALESCE(s.is_published, 1) = 1";
 } elseif ($statusFilter === 'hidden') {
@@ -97,6 +99,7 @@ adminHeader('Podcasty');
       <option value="all"<?= $statusFilter === 'all' ? ' selected' : '' ?>>Vše</option>
       <option value="published"<?= $statusFilter === 'published' ? ' selected' : '' ?>>Veřejné</option>
       <option value="hidden"<?= $statusFilter === 'hidden' ? ' selected' : '' ?>>Skryté</option>
+      <option value="draft"<?= $statusFilter === 'draft' ? ' selected' : '' ?>>Koncepty</option>
       <option value="pending"<?= $statusFilter === 'pending' ? ' selected' : '' ?>>Čekající</option>
     </select>
   </div>
@@ -155,6 +158,8 @@ adminHeader('Podcasty');
         <td>
           <?php if ((string)$show['status'] === 'pending'): ?>
             <strong class="status-badge status-badge--pending">Čeká na schválení</strong>
+          <?php elseif ((string)$show['status'] === 'draft'): ?>
+            <strong>Koncept</strong>
           <?php elseif (!empty($show['is_public'])): ?>
             <strong>Veřejný</strong>
           <?php else: ?>
@@ -164,6 +169,7 @@ adminHeader('Podcasty');
         <td class="actions">
           <a href="podcast_show_form.php?id=<?= (int)$show['id'] ?>&amp;redirect=<?= rawurlencode($currentListUrl) ?>" class="btn">Upravit</a>
           <a href="podcast.php?show_id=<?= (int)$show['id'] ?>" class="btn">Spravovat epizody</a>
+          <a href="podcast_feed_health.php?show_id=<?= (int)$show['id'] ?>" class="btn">Kontrola RSS</a>
           <?php if (!empty($show['is_public'])): ?>
             <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>

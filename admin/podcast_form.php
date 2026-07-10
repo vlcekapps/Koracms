@@ -18,6 +18,8 @@ $episode = [
     'audio_file' => '',
     'image_file' => '',
     'audio_url' => '',
+    'audio_mime_type' => '',
+    'audio_file_size' => 0,
     'subtitle' => '',
     'duration' => '',
     'episode_num' => null,
@@ -75,6 +77,8 @@ $err = trim((string)($_GET['err'] ?? ''));
 $podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
 $podcastEpisodePublishAtErrorMessage = 'Plánované zveřejnění musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro zveřejnění po uložení či schválení.';
 $podcastEpisodeAudioUploadErrorMessage = 'Audio soubor se nepodařilo nahrát. Nahrajte MP3, OGG, WAV, M4A nebo AAC; pokud používáte externí audio odkaz, nechte pole souboru prázdné.';
+$podcastEpisodeAudioMimeErrorMessage = 'MIME typ externího audia musí mít tvar audio/mpeg, audio/mp4 nebo jiný platný audio typ.';
+$podcastEpisodeAudioSizeErrorMessage = 'Velikost externího audia musí být celé nezáporné číslo v bajtech.';
 $podcastEpisodeImageErrorMessage = 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px. Nahrajte vhodný čtvercový obrázek, nebo pole nechte prázdné a použijte cover pořadu.';
 $formError = match ($err) {
     'required' => 'Epizodu podcastu nejde uložit bez názvu. U pole Název epizody je konkrétní nápověda.',
@@ -82,6 +86,8 @@ $formError = match ($err) {
     'slug_taken' => 'Slug epizody už v rámci pořadu používá jiná epizoda. U pole Slug veřejné stránky je konkrétní nápověda.',
     'url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio' => $podcastEpisodeAudioUploadErrorMessage,
+    'audio_mime' => $podcastEpisodeAudioMimeErrorMessage,
+    'audio_size' => $podcastEpisodeAudioSizeErrorMessage,
     'image' => $podcastEpisodeImageErrorMessage,
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
     default => '',
@@ -92,6 +98,8 @@ $fieldErrorMap = [
     'slug_taken' => ['slug'],
     'url' => ['audio_url'],
     'audio' => ['audio_file'],
+    'audio_mime' => ['audio_mime_type'],
+    'audio_size' => ['audio_file_size'],
     'image' => ['image_file'],
     'publish_at' => ['publish_at'],
 ];
@@ -100,6 +108,8 @@ $fieldErrorMessages = [
     'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček v rámci aktuálního pořadu.',
     'audio_url' => $podcastEpisodeAudioUrlErrorMessage,
     'audio_file' => $podcastEpisodeAudioUploadErrorMessage,
+    'audio_mime_type' => $podcastEpisodeAudioMimeErrorMessage,
+    'audio_file_size' => $podcastEpisodeAudioSizeErrorMessage,
     'image_file' => $podcastEpisodeImageErrorMessage,
     'publish_at' => $podcastEpisodePublishAtErrorMessage,
 ];
@@ -233,6 +243,25 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
            value="<?= h((string)$episode['audio_url']) ?>">
     <small id="podcast-episode-audio-url-help" class="field-help">Volitelné. Hodí se pro externí hosting nebo přímý odkaz na audio soubor; zadejte http/https adresu nebo doménu bez schématu.</small>
     <?php adminRenderFieldError('audio_url', $err, $fieldErrorMap, $fieldErrorMessages['audio_url']); ?>
+
+    <div class="admin-form-grid admin-form-grid--end">
+      <div class="admin-form-grid__cell">
+        <label for="audio_mime_type">MIME typ externího audia</label>
+        <input type="text" id="audio_mime_type" name="audio_mime_type" maxlength="100"
+               <?= adminFieldAttributes('audio_mime_type', $err, $fieldErrorMap, ['podcast-episode-audio-mime-help']) ?>
+               placeholder="audio/mpeg" value="<?= h((string)$episode['audio_mime_type']) ?>">
+        <small id="podcast-episode-audio-mime-help" class="field-help">Pro externí audio zjistěte typ u poskytovatele. RSS katalogy jej používají k rozpoznání formátu.</small>
+        <?php adminRenderFieldError('audio_mime_type', $err, $fieldErrorMap, $fieldErrorMessages['audio_mime_type']); ?>
+      </div>
+      <div class="admin-form-grid__cell">
+        <label for="audio_file_size">Velikost externího audia v bajtech</label>
+        <input type="number" id="audio_file_size" name="audio_file_size" min="0" step="1"
+               <?= adminFieldAttributes('audio_file_size', $err, $fieldErrorMap, ['podcast-episode-audio-size-help']) ?>
+               value="<?= (int)$episode['audio_file_size'] > 0 ? (int)$episode['audio_file_size'] : '' ?>">
+        <small id="podcast-episode-audio-size-help" class="field-help">Pro externí audio uveďte přesnou velikost souboru. U nahraného souboru ji CMS zjistí automaticky.</small>
+        <?php adminRenderFieldError('audio_file_size', $err, $fieldErrorMap, $fieldErrorMessages['audio_file_size']); ?>
+      </div>
+    </div>
 
     <label for="image_file">Obrázek epizody</label>
     <?php if ((string)$episode['image_url'] !== ''): ?>

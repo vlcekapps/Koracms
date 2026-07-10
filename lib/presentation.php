@@ -1638,6 +1638,8 @@ function podcastEpisodeRevisionSnapshot(array $episode): array
         'description' => (string)($episode['description'] ?? ''),
         'transcript' => (string)($episode['transcript'] ?? ''),
         'audio_url' => normalizePodcastEpisodeAudioUrl((string)($episode['audio_url'] ?? '')),
+        'audio_mime_type' => normalizePodcastAudioMimeType((string)($episode['audio_mime_type'] ?? '')),
+        'audio_file_size' => (string)normalizePodcastAudioFileSize($episode['audio_file_size'] ?? 0),
         'subtitle' => trim((string)($episode['subtitle'] ?? '')),
         'duration' => trim((string)($episode['duration'] ?? '')),
         'episode_num' => (string)($episode['episode_num'] ?? ''),
@@ -2095,6 +2097,66 @@ function normalizePodcastEpisodeAudioUrl(string $value): string
     return normalizePodcastWebsiteUrl($value);
 }
 
+function newPodcastFeedGuid(): string
+{
+    $bytes = random_bytes(16);
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+    $hex = bin2hex($bytes);
+
+    return 'urn:uuid:'
+        . substr($hex, 0, 8) . '-'
+        . substr($hex, 8, 4) . '-'
+        . substr($hex, 12, 4) . '-'
+        . substr($hex, 16, 4) . '-'
+        . substr($hex, 20, 12);
+}
+
+function normalizePodcastFeedGuid(string $value): string
+{
+    $value = trim((string)preg_replace('/[\x00-\x1F\x7F]/u', '', $value));
+    return mb_substr($value, 0, 255);
+}
+
+function uniquePodcastFeedGuid(PDO $pdo, string $tableName, string $candidate = ''): string
+{
+    if (!in_array($tableName, ['cms_podcast_shows', 'cms_podcasts'], true)) {
+        throw new InvalidArgumentException('Nepovolená podcastová tabulka pro RSS GUID.');
+    }
+
+    $guid = normalizePodcastFeedGuid($candidate);
+    $stmt = $pdo->prepare("SELECT id FROM {$tableName} WHERE feed_guid = ? LIMIT 1");
+    if ($guid !== '') {
+        $stmt->execute([$guid]);
+        if (!$stmt->fetchColumn()) {
+            return $guid;
+        }
+    }
+
+    do {
+        $guid = newPodcastFeedGuid();
+        $stmt->execute([$guid]);
+    } while ($stmt->fetchColumn());
+
+    return $guid;
+}
+
+function normalizePodcastAudioMimeType(string $value): string
+{
+    $value = strtolower(trim($value));
+    return preg_match('~^audio/[a-z0-9][a-z0-9.+-]{0,79}$~', $value) === 1 ? $value : '';
+}
+
+function normalizePodcastAudioFileSize(mixed $value): int
+{
+    $value = trim((string)$value);
+    if ($value === '' || preg_match('/^\d+$/', $value) !== 1) {
+        return 0;
+    }
+
+    return max(0, (int)$value);
+}
+
 function normalizePodcastOwnerEmail(string $value): string
 {
     $value = trim($value);
@@ -2180,7 +2242,7 @@ function podcastEpisodeEnclosureLength(array $episode): int
 {
     $filename = trim((string)($episode['audio_file'] ?? ''));
     if ($filename === '') {
-        return 0;
+        return normalizePodcastAudioFileSize($episode['audio_file_size'] ?? 0);
     }
 
     $path = podcastAudioFilePath($filename);
@@ -2190,6 +2252,73 @@ function podcastEpisodeEnclosureLength(array $episode): int
 
     $size = filesize($path);
     return $size === false ? 0 : (int)$size;
+}
+
+/**
+ * @param array<string, mixed> $episode
+ */
+function podcastEpisodeEnclosureMimeType(array $episode): string
+{
+    $filename = trim((string)($episode['audio_file'] ?? ''));
+    if ($filename !== '') {
+        return podcastAudioMimeType($filename);
+    }
+
+    $mimeType = normalizePodcastAudioMimeType((string)($episode['audio_mime_type'] ?? ''));
+    return $mimeType !== '' ? $mimeType : 'audio/mpeg';
+}
+
+/**
+ * @param array<string, mixed> $show
+ * @param list<array<string, mixed>> $episodes
+ * @return list<array{severity:string,message:string,episode_id:int}>
+ */
+function podcastFeedHealthIssues(array $show, array $episodes): array
+{
+    $issues = [];
+    $add = static function (string $severity, string $message, int $episodeId = 0) use (&$issues): void {
+        $issues[] = ['severity' => $severity, 'message' => $message, 'episode_id' => $episodeId];
+    };
+
+    if (normalizePodcastFeedGuid((string)($show['feed_guid'] ?? '')) === '') {
+        $add('error', 'Podcast nemá trvalý RSS identifikátor. Spusťte migraci databáze.');
+    }
+    foreach (['title' => 'název', 'description' => 'popis', 'author' => 'autora', 'category' => 'kategorii'] as $field => $label) {
+        if (trim((string)($show[$field] ?? '')) === '') {
+            $add('warning', 'Podcast nemá vyplněný ' . $label . '.');
+        }
+    }
+    if (trim((string)($show['cover_image'] ?? '')) === '') {
+        $add('warning', 'Podcast nemá cover obrázek.');
+    }
+    if ($episodes === []) {
+        $add('warning', 'RSS feed zatím neobsahuje žádnou veřejnou epizodu.');
+    }
+
+    foreach ($episodes as $episode) {
+        $episodeId = (int)($episode['id'] ?? 0);
+        $title = trim((string)($episode['title'] ?? '')) ?: 'Epizoda #' . $episodeId;
+        if (normalizePodcastFeedGuid((string)($episode['feed_guid'] ?? '')) === '') {
+            $add('error', $title . ': chybí trvalý RSS identifikátor.', $episodeId);
+        }
+        if (podcastEpisodeAudioUrl($episode) === '') {
+            $add('error', $title . ': chybí audio soubor nebo externí audio odkaz.', $episodeId);
+            continue;
+        }
+        if (trim((string)($episode['audio_file'] ?? '')) !== '' && !is_file(podcastAudioFilePath((string)$episode['audio_file']))) {
+            $add('error', $title . ': lokální audio soubor na disku neexistuje.', $episodeId);
+        }
+        if (trim((string)($episode['audio_url'] ?? '')) !== '') {
+            if (normalizePodcastAudioMimeType((string)($episode['audio_mime_type'] ?? '')) === '') {
+                $add('error', $title . ': externí audio nemá platný MIME typ.', $episodeId);
+            }
+            if (normalizePodcastAudioFileSize($episode['audio_file_size'] ?? 0) < 1) {
+                $add('error', $title . ': externí audio nemá velikost souboru v bajtech.', $episodeId);
+            }
+        }
+    }
+
+    return $issues;
 }
 
 /**

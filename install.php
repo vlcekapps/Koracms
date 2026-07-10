@@ -483,12 +483,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             show_type   ENUM('episodic','serial') NOT NULL DEFAULT 'episodic',
             feed_complete TINYINT(1) NOT NULL DEFAULT 0,
             feed_episode_limit INT NOT NULL DEFAULT 100,
+            feed_guid   VARCHAR(255) NULL DEFAULT NULL,
             website_url VARCHAR(500) NOT NULL DEFAULT '',
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
             deleted_at   DATETIME     NULL DEFAULT NULL,
             created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_podcast_shows_feed_guid (feed_guid)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_podcasts (
@@ -501,6 +503,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audio_file   VARCHAR(255) NOT NULL DEFAULT '',
             image_file   VARCHAR(255) NOT NULL DEFAULT '',
             audio_url    VARCHAR(500) NOT NULL DEFAULT '',
+            audio_mime_type VARCHAR(100) NOT NULL DEFAULT '',
+            audio_file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            feed_guid    VARCHAR(255) NULL DEFAULT NULL,
             subtitle     VARCHAR(255) NOT NULL DEFAULT '',
             duration     VARCHAR(20)  NOT NULL DEFAULT '',
             episode_num  INT          NULL DEFAULT NULL,
@@ -513,7 +518,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             status       ENUM('draft','pending','published') NOT NULL DEFAULT 'published',
             deleted_at   DATETIME     NULL DEFAULT NULL,
-            UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
+            UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug),
+            UNIQUE KEY uq_podcasts_feed_guid (feed_guid)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_users (

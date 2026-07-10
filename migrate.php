@@ -487,12 +487,14 @@ $tables = [
         show_type   ENUM('episodic','serial') NOT NULL DEFAULT 'episodic',
         feed_complete TINYINT(1) NOT NULL DEFAULT 0,
         feed_episode_limit INT NOT NULL DEFAULT 100,
+        feed_guid   VARCHAR(255) NULL DEFAULT NULL,
         website_url VARCHAR(500) NOT NULL DEFAULT '',
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
         deleted_at   DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_podcast_shows_feed_guid (feed_guid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_podcasts' => "CREATE TABLE IF NOT EXISTS cms_podcasts (
@@ -505,6 +507,9 @@ $tables = [
         audio_file  VARCHAR(255) NOT NULL DEFAULT '',
         image_file  VARCHAR(255) NOT NULL DEFAULT '',
         audio_url   VARCHAR(500) NOT NULL DEFAULT '',
+        audio_mime_type VARCHAR(100) NOT NULL DEFAULT '',
+        audio_file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        feed_guid   VARCHAR(255) NULL DEFAULT NULL,
         subtitle    VARCHAR(255) NOT NULL DEFAULT '',
         duration    VARCHAR(20)  NOT NULL DEFAULT '',
         episode_num INT          NULL DEFAULT NULL,
@@ -517,7 +522,8 @@ $tables = [
         deleted_at  DATETIME     NULL DEFAULT NULL,
         created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug)
+        UNIQUE KEY uq_cms_podcasts_show_slug (show_id, slug),
+        UNIQUE KEY uq_podcasts_feed_guid (feed_guid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_places' => "CREATE TABLE IF NOT EXISTS cms_places (
@@ -1377,6 +1383,7 @@ $addColumns = [
     'cms_podcast_shows.show_type'         => "ALTER TABLE cms_podcast_shows ADD COLUMN show_type ENUM('episodic','serial') NOT NULL DEFAULT 'episodic'",
     'cms_podcast_shows.feed_complete'     => "ALTER TABLE cms_podcast_shows ADD COLUMN feed_complete TINYINT(1) NOT NULL DEFAULT 0",
     'cms_podcast_shows.feed_episode_limit'=> "ALTER TABLE cms_podcast_shows ADD COLUMN feed_episode_limit INT NOT NULL DEFAULT 100",
+    'cms_podcast_shows.feed_guid'         => "ALTER TABLE cms_podcast_shows ADD COLUMN feed_guid VARCHAR(255) NULL DEFAULT NULL",
     'cms_podcast_shows.is_published'      => "ALTER TABLE cms_podcast_shows ADD COLUMN is_published TINYINT(1) NOT NULL DEFAULT 1",
     'cms_podcast_shows.status'            => "ALTER TABLE cms_podcast_shows ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
     // cms_podcasts
@@ -1389,6 +1396,9 @@ $addColumns = [
     'cms_podcasts.episode_type'      => "ALTER TABLE cms_podcasts ADD COLUMN episode_type ENUM('full','trailer','bonus') NOT NULL DEFAULT 'full'",
     'cms_podcasts.explicit_mode'     => "ALTER TABLE cms_podcasts ADD COLUMN explicit_mode ENUM('inherit','no','clean','yes') NOT NULL DEFAULT 'inherit'",
     'cms_podcasts.block_from_feed'   => "ALTER TABLE cms_podcasts ADD COLUMN block_from_feed TINYINT(1) NOT NULL DEFAULT 0",
+    'cms_podcasts.audio_mime_type'   => "ALTER TABLE cms_podcasts ADD COLUMN audio_mime_type VARCHAR(100) NOT NULL DEFAULT ''",
+    'cms_podcasts.audio_file_size'   => "ALTER TABLE cms_podcasts ADD COLUMN audio_file_size BIGINT UNSIGNED NOT NULL DEFAULT 0",
+    'cms_podcasts.feed_guid'         => "ALTER TABLE cms_podcasts ADD COLUMN feed_guid VARCHAR(255) NULL DEFAULT NULL",
     // cms_events
     'cms_events.slug'                => "ALTER TABLE cms_events ADD COLUMN slug VARCHAR(255) NULL DEFAULT NULL",
     'cms_events.status'              => "ALTER TABLE cms_events ADD COLUMN status ENUM('pending','published') NOT NULL DEFAULT 'published'",
@@ -1674,6 +1684,32 @@ foreach ($addColumns as $tableCol => $sql) {
         }
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
+    }
+}
+
+// Podcastové GUID jsou trvalé identifikátory RSS. Nesmí se měnit se slugem ani veřejnou URL.
+foreach (['cms_podcast_shows' => 'uq_podcast_shows_feed_guid', 'cms_podcasts' => 'uq_podcasts_feed_guid'] as $podcastTable => $indexName) {
+    try {
+        if ($columnExists($podcastTable, 'feed_guid')) {
+            $pdo->exec(
+                "UPDATE {$podcastTable}
+                 SET feed_guid = CONCAT('urn:uuid:', UUID())
+                 WHERE feed_guid IS NULL OR TRIM(feed_guid) = ''"
+            );
+            $indexStmt = $pdo->prepare(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?"
+            );
+            $indexStmt->execute([$podcastTable, $indexName]);
+            if ((int)$indexStmt->fetchColumn() === 0) {
+                $pdo->exec("ALTER TABLE {$podcastTable} ADD UNIQUE KEY {$indexName} (feed_guid)");
+                $log[] = "✓ Index <code>{$indexName}</code> přidán – OK";
+            } else {
+                $log[] = "· Index <code>{$indexName}</code> již existuje – přeskočeno";
+            }
+        }
+    } catch (\PDOException $e) {
+        $log[] = "✗ RSS GUID pro <code>{$podcastTable}</code> – CHYBA: " . h($e->getMessage());
     }
 }
 

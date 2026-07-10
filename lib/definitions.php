@@ -275,6 +275,7 @@ function coreModuleDefinitions(): array
             'public_nav' => true,
             'admin_paths' => [
                 '/admin/podcast_shows.php',
+                '/admin/podcast_feed_health.php',
             ],
         ],
         'places' => [

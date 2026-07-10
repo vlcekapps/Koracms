@@ -1306,15 +1306,52 @@ try {
     $podcastAdminValidationIssues = [];
     $podcastEpisodeValidationShowSlug = 'http-podcast-episode-validation-' . bin2hex(random_bytes(4));
     $pdo->prepare(
-        "INSERT INTO cms_podcast_shows (title, slug, description, language, status, is_published, created_at, updated_at)
-         VALUES (?, ?, ?, 'cs', 'published', 1, NOW(), NOW())"
+        "INSERT INTO cms_podcast_shows (title, slug, description, language, feed_guid, status, is_published, created_at, updated_at)
+         VALUES (?, ?, ?, 'cs', ?, 'published', 1, NOW(), NOW())"
     )->execute([
         'HTTP podcast pro validaci epizod',
         $podcastEpisodeValidationShowSlug,
         '<p>Pořad pro HTTP render validačních chyb epizody.</p>',
+        'urn:uuid:http-show-' . bin2hex(random_bytes(8)),
     ]);
     $podcastEpisodeValidationShowId = (int)$pdo->lastInsertId();
     $createdPodcastShowIds[] = $podcastEpisodeValidationShowId;
+
+    $podcastFeedGuid = 'urn:uuid:http-episode-' . bin2hex(random_bytes(8));
+    $pdo->prepare(
+        "INSERT INTO cms_podcasts
+         (show_id, title, slug, description, audio_url, audio_mime_type, audio_file_size, feed_guid, status, publish_at, created_at, updated_at)
+         VALUES (?, 'HTTP externí epizoda', 'http-externi-epizoda', '<p>Test RSS enclosure.</p>',
+                 'https://cdn.example.test/http-episode.mp3', 'audio/mpeg', 123456, ?, 'published', NOW(), NOW(), NOW())"
+    )->execute([$podcastEpisodeValidationShowId, $podcastFeedGuid]);
+    $podcastFeedEpisodeId = (int)$pdo->lastInsertId();
+    $createdPodcastEpisodeIds[] = $podcastFeedEpisodeId;
+
+    $podcastFeedIntegrityIssues = [];
+    $podcastFeedIntegrityResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($podcastEpisodeValidationShowSlug),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($podcastFeedIntegrityResponse) !== 200
+        || !str_contains($podcastFeedIntegrityResponse['body'], '<guid isPermaLink="false">' . $podcastFeedGuid . '</guid>')
+        || !str_contains($podcastFeedIntegrityResponse['body'], 'type="audio/mpeg"')
+        || !str_contains($podcastFeedIntegrityResponse['body'], 'length="123456"')
+        || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'ETag', '"')
+        || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'Last-Modified', 'GMT')) {
+        $podcastFeedIntegrityIssues[] = 'podcast RSS feed nevrátil stabilní GUID, enclosure metadata nebo cache validátory';
+    }
+    $podcastFeedHealthResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast_feed_health.php?show_id=' . $podcastEpisodeValidationShowId,
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($podcastFeedHealthResponse) !== 200
+        || !str_contains($podcastFeedHealthResponse['body'], 'id="podcast-feed-health-heading"')
+        || !str_contains($podcastFeedHealthResponse['body'], 'Nálezy kontroly RSS feedu')) {
+        $podcastFeedIntegrityIssues[] = 'admin kontrola podcastového RSS feedu není dostupná nebo přístupně pojmenovaná';
+    }
+    httpIntegrationPrintResult('podcast_feed_integrity_http', $podcastFeedIntegrityIssues, $failures);
 
     foreach ([
         'required' => [

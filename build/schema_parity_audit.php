@@ -264,6 +264,10 @@ $criticalInstallColumns = [
     'cms_res_booking_events.event_type' => ['cms_res_booking_events', 'event_type'],
     'cms_res_booking_events.description' => ['cms_res_booking_events', 'description'],
     'cms_podcasts.transcript' => ['cms_podcasts', 'transcript'],
+    'cms_podcast_shows.feed_guid' => ['cms_podcast_shows', 'feed_guid'],
+    'cms_podcasts.feed_guid' => ['cms_podcasts', 'feed_guid'],
+    'cms_podcasts.audio_mime_type' => ['cms_podcasts', 'audio_mime_type'],
+    'cms_podcasts.audio_file_size' => ['cms_podcasts', 'audio_file_size'],
 ];
 
 foreach ($criticalInstallColumns as $label => [$tableName, $columnName]) {
@@ -299,6 +303,12 @@ $criticalMigrationSnippets = [
     'idx_media_visibility',
     'idx_media_collection',
     'cms_podcasts.transcript',
+    'cms_podcast_shows.feed_guid',
+    'cms_podcasts.feed_guid',
+    'cms_podcasts.audio_mime_type',
+    'cms_podcasts.audio_file_size',
+    'uq_podcast_shows_feed_guid',
+    'uq_podcasts_feed_guid',
     'cms_gallery_photos.slug',
     'cms_gallery_albums.default_credit',
     'cms_gallery_albums.default_license_label',

@@ -13,6 +13,8 @@ $slugInput = trim((string)($_POST['slug'] ?? ''));
 $description = (string)($_POST['description'] ?? '');
 $transcript = (string)($_POST['transcript'] ?? '');
 $audioUrlInput = trim((string)($_POST['audio_url'] ?? ''));
+$audioMimeTypeInput = trim((string)($_POST['audio_mime_type'] ?? ''));
+$audioFileSizeInput = trim((string)($_POST['audio_file_size'] ?? ''));
 $subtitle = trim((string)($_POST['subtitle'] ?? ''));
 $duration = trim((string)($_POST['duration'] ?? ''));
 $episodeNum = !empty($_POST['episode_num']) ? max(1, (int)$_POST['episode_num']) : null;
@@ -94,6 +96,14 @@ $audioUrl = normalizePodcastEpisodeAudioUrl($audioUrlInput);
 if ($audioUrlInput !== '' && $audioUrl === '') {
     $redirectWithError('url');
 }
+$audioMimeType = normalizePodcastAudioMimeType($audioMimeTypeInput);
+if ($audioMimeTypeInput !== '' && $audioMimeType === '') {
+    $redirectWithError('audio_mime');
+}
+$audioFileSize = normalizePodcastAudioFileSize($audioFileSizeInput);
+if ($audioFileSizeInput !== '' && (preg_match('/^\d+$/', $audioFileSizeInput) !== 1 || $audioFileSize < 0)) {
+    $redirectWithError('audio_size');
+}
 
 $audioFilename = (string)$existing['audio_file'];
 $audioUpload = uploadPodcastAudioFile($_FILES['audio_file'] ?? [], $audioFilename);
@@ -121,6 +131,14 @@ if ($deleteImageFile && empty($_FILES['image_file']['name']) && $imageFilename !
 
 if (!empty($_FILES['audio_file']['name'])) {
     $audioUrl = '';
+}
+
+if ($audioFilename !== '') {
+    $audioMimeType = podcastAudioMimeType($audioFilename);
+    $audioFileSize = podcastEpisodeEnclosureLength(['audio_file' => $audioFilename]);
+} elseif ($audioUrl === '') {
+    $audioMimeType = '';
+    $audioFileSize = 0;
 }
 
 $publishAt = null;
@@ -152,6 +170,8 @@ if ($id !== null) {
             'description' => $description,
             'transcript' => $transcript,
             'audio_url' => $audioUrl,
+            'audio_mime_type' => $audioMimeType,
+            'audio_file_size' => $audioFileSize,
             'subtitle' => $subtitle,
             'duration' => $duration,
             'episode_num' => $episodeNum,
@@ -175,6 +195,7 @@ if ($id !== null) {
     $pdo->prepare(
         "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, transcript = ?, audio_file = ?, image_file = ?, audio_url = ?,
+             audio_mime_type = ?, audio_file_size = ?,
              subtitle = ?, duration = ?, episode_num = ?, season_num = ?, episode_type = ?, explicit_mode = ?,
              block_from_feed = ?, publish_at = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
@@ -187,6 +208,8 @@ if ($id !== null) {
         $audioFilename,
         $imageFilename,
         $audioUrl,
+        $audioMimeType,
+        $audioFileSize,
         $subtitle,
         $duration,
         $episodeNum,
@@ -214,9 +237,9 @@ if ($id !== null) {
     $status = $requestedStatus;
     $pdo->prepare(
         "INSERT INTO cms_podcasts
-         (show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle, duration, episode_num, season_num,
+         (show_id, title, slug, description, transcript, audio_file, image_file, audio_url, audio_mime_type, audio_file_size, feed_guid, subtitle, duration, episode_num, season_num,
           episode_type, explicit_mode, block_from_feed, publish_at, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $showId,
         $title,
@@ -226,6 +249,9 @@ if ($id !== null) {
         $audioFilename,
         $imageFilename,
         $audioUrl,
+        $audioMimeType,
+        $audioFileSize,
+        newPodcastFeedGuid(),
         $subtitle,
         $duration,
         $episodeNum,

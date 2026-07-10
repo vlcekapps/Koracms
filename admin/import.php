@@ -1376,8 +1376,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcast_shows
                          (id, title, slug, description, author, subtitle, cover_image, language, category, owner_name, owner_email,
-                          explicit_mode, show_type, feed_complete, feed_episode_limit, website_url, is_published, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          explicit_mode, show_type, feed_complete, feed_episode_limit, feed_guid, website_url, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcast_shows'] as $row) {
                         $title = trim((string)($row['title'] ?? ''));
@@ -1402,9 +1402,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             in_array((string)($row['show_type'] ?? ''), ['episodic', 'serial'], true) ? (string)$row['show_type'] : 'episodic',
                             !empty($row['feed_complete']) ? 1 : 0,
                             max(1, min(1000, (int)($row['feed_episode_limit'] ?? 100))),
+                            uniquePodcastFeedGuid($pdo, 'cms_podcast_shows', (string)($row['feed_guid'] ?? '')),
                             normalizePodcastWebsiteUrl((string)($row['website_url'] ?? '')),
                             (int)($row['is_published'] ?? 1),
-                            in_array((string)($row['status'] ?? 'published'), ['pending', 'published'], true) ? (string)$row['status'] : 'published',
+                            in_array((string)($row['status'] ?? 'published'), ['draft', 'pending', 'published'], true) ? (string)$row['status'] : 'published',
                             $createdAt, $updatedAt,
                         ]);
                     }
@@ -1415,10 +1416,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['podcasts']) && is_array($data['podcasts'])) {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_podcasts
-                          (id, show_id, title, slug, description, transcript, audio_file, image_file, audio_url, subtitle,
+                          (id, show_id, title, slug, description, transcript, audio_file, image_file, audio_url,
+                           audio_mime_type, audio_file_size, feed_guid, subtitle,
                            duration, episode_num, season_num, episode_type, explicit_mode, block_from_feed,
                            publish_at, status, created_at, updated_at)
-                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['podcasts'] as $row) {
                         $showId = max(1, (int)($row['show_id'] ?? 1));
@@ -1439,13 +1441,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $title, $slug, $row['description'] ?? '',
                             $row['transcript'] ?? '',
                             $row['audio_file'] ?? '', $row['image_file'] ?? '',
-                            normalizePodcastEpisodeAudioUrl((string)($row['audio_url'] ?? '')), $row['subtitle'] ?? '',
+                            normalizePodcastEpisodeAudioUrl((string)($row['audio_url'] ?? '')),
+                            normalizePodcastAudioMimeType((string)($row['audio_mime_type'] ?? '')),
+                            normalizePodcastAudioFileSize($row['audio_file_size'] ?? 0),
+                            uniquePodcastFeedGuid($pdo, 'cms_podcasts', (string)($row['feed_guid'] ?? '')),
+                            $row['subtitle'] ?? '',
                             $row['duration'] ?? '', !empty($row['episode_num']) ? (int)$row['episode_num'] : null,
                             !empty($row['season_num']) ? (int)$row['season_num'] : null,
                             in_array((string)($row['episode_type'] ?? ''), ['full', 'trailer', 'bonus'], true) ? (string)$row['episode_type'] : 'full',
                             in_array((string)($row['explicit_mode'] ?? ''), ['inherit', 'no', 'clean', 'yes'], true) ? (string)$row['explicit_mode'] : 'inherit',
                             !empty($row['block_from_feed']) ? 1 : 0,
-                            $row['publish_at'] ?: null, $row['status'] ?? 'published', $createdAt, $updatedAt,
+                            $row['publish_at'] ?: null,
+                            in_array((string)($row['status'] ?? 'published'), ['draft', 'pending', 'published'], true) ? (string)$row['status'] : 'published',
+                            $createdAt, $updatedAt,
                         ]);
                     }
                     $summary[] = 'Epizody podcastů importovány.';

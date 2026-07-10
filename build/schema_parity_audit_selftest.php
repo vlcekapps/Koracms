@@ -133,9 +133,18 @@ CREATE TABLE IF NOT EXISTS cms_media (
   visibility VARCHAR(20),
   updated_at DATETIME
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_podcast_shows (
+  id INT,
+  feed_guid VARCHAR(255),
+  UNIQUE KEY uq_podcast_shows_feed_guid (feed_guid)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_podcasts (
   id INT,
-  transcript TEXT
+  transcript TEXT,
+  feed_guid VARCHAR(255),
+  audio_mime_type VARCHAR(100),
+  audio_file_size BIGINT,
+  UNIQUE KEY uq_podcasts_feed_guid (feed_guid)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_albums (
   id INT,
@@ -436,6 +445,12 @@ PHP,
 // idx_media_visibility
 // idx_media_collection
 // cms_podcasts.transcript
+// cms_podcast_shows.feed_guid
+// cms_podcasts.feed_guid
+// cms_podcasts.audio_mime_type
+// cms_podcasts.audio_file_size
+// uq_podcast_shows_feed_guid
+// uq_podcasts_feed_guid
 // cms_gallery_photos.slug
 // cms_gallery_albums.default_credit
 // cms_gallery_albums.default_license_label
