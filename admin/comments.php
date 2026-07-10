@@ -96,6 +96,12 @@ if ($q !== '') {
     $currentParams['q'] = $q;
 }
 $currentRedirect = BASE_URL . '/admin/comments.php' . ($currentParams !== [] ? '?' . http_build_query($currentParams) : '');
+$feedbackCode = trim((string)($_GET['ok'] ?? ''));
+$deleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'delete_confirm_required';
+$deleteErrorCommentId = inputInt('get', 'delete_id');
+$bulkDeleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'bulk_delete_confirm_required';
+$bulkDeleteErrorFields = $bulkDeleteConfirmError ? ['confirm_comment_bulk_delete'] : [];
+$bulkDeletedCount = max(0, (int)($_GET['count'] ?? 0));
 
 $commentRows = [];
 foreach ($comments as $comment) {
@@ -123,6 +129,17 @@ foreach ($comments as $comment) {
 
 adminHeader('Komentáře');
 ?>
+
+<?php if ($deleteConfirmError): ?>
+  <p id="comments-delete-form-error" class="error" role="alert" aria-atomic="true">Komentář nelze trvale smazat bez potvrzení. U pole Potvrzení trvalého smazání je konkrétní nápověda.</p>
+<?php elseif ($bulkDeleteConfirmError): ?>
+  <p id="comments-bulk-delete-form-error" class="error" role="alert" aria-atomic="true">Vybrané komentáře nelze trvale smazat bez potvrzení. U pole Potvrzení hromadného trvalého smazání je konkrétní nápověda.</p>
+<?php endif; ?>
+<?php if ($feedbackCode === 'deleted'): ?>
+  <p class="success" role="status" aria-atomic="true">Komentář byl trvale smazán.</p>
+<?php elseif ($feedbackCode === 'bulk_deleted'): ?>
+  <p class="success" role="status" aria-atomic="true"><?= $bulkDeletedCount === 1 ? 'Vybraný komentář byl trvale smazán.' : 'Vybrané komentáře byly trvale smazány.' ?></p>
+<?php endif; ?>
 
 <nav aria-labelledby="comments-filter-heading" class="button-row admin-stack-sm">
   <h2 id="comments-filter-heading" class="sr-only">Filtr komentářů</h2>
@@ -157,12 +174,18 @@ adminHeader('Komentáře');
 <?php if (empty($commentRows)): ?>
   <p><?= $q !== '' || $filter !== 'all' ? 'Pro zvolený filtr tu teď nejsou žádné komentáře.' : 'Zatím tu nejsou žádné komentáře.' ?></p>
 <?php else: ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/comment_bulk.php" id="bulk-form">
+  <form method="post" action="<?= BASE_URL ?>/admin/comment_bulk.php" id="bulk-form" novalidate<?= $bulkDeleteConfirmError ? ' aria-describedby="comments-bulk-delete-form-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
     <fieldset class="admin-fieldset-card">
       <legend>Hromadné akce s vybranými komentáři</legend>
       <p data-selection-status="comments" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný komentář.</p>
+      <p id="comments-bulk-delete-review-help" class="field-help field-help--flush">Trvalé smazání odstraní text, údaje autora a stav moderace vybraných komentářů. Články zůstanou zachované a akci nelze vrátit.</p>
+      <label for="confirm-comment-bulk-delete" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm-comment-bulk-delete" name="confirm_comment_bulk_delete" value="1" required aria-required="true"<?= adminFieldAttributes('confirm_comment_bulk_delete', $bulkDeleteErrorFields, [], ['comments-bulk-delete-review-help'], 'confirm-comment-bulk-delete-error') ?>>
+        Potvrzuji hromadné trvalé smazání vybraných komentářů.
+      </label>
+      <?php adminRenderFieldError('confirm_comment_bulk_delete', $bulkDeleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali vybrané komentáře a nevratnost akce.', 'confirm-comment-bulk-delete-error'); ?>
       <div class="button-row">
         <?php foreach ($bulkOptions as $bulkAction => $bulkLabel): ?>
           <?php if (($bulkAction === 'approve' && $filter === 'approved')
@@ -198,6 +221,15 @@ adminHeader('Komentáře');
       </thead>
       <tbody>
         <?php foreach ($commentRows as $comment): ?>
+          <?php
+          $commentId = (int)$comment['id'];
+            $deleteConfirmField = 'confirm_comment_delete_' . $commentId;
+            $deleteConfirmId = 'confirm-comment-delete-' . $commentId;
+            $deleteReviewId = 'comment-delete-review-' . $commentId;
+            $deleteFieldErrorId = 'confirm-comment-delete-' . $commentId . '-error';
+            $deleteHasError = $deleteConfirmError && $deleteErrorCommentId === $commentId;
+            $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+            ?>
           <tr>
             <td>
               <label for="comment-select-<?= (int)$comment['id'] ?>" class="sr-only">Vybrat komentář od <?= h($comment['author_name']) ?></label>
@@ -231,19 +263,30 @@ adminHeader('Komentáře');
               <?php foreach ($comment['row_actions'] as $actionKey => $actionLabel): ?>
                 <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php">
                   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                  <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
+                  <input type="hidden" name="id" value="<?= $commentId ?>">
                   <input type="hidden" name="filter" value="<?= h($filter) ?>">
+                  <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
                   <input type="hidden" name="action" value="<?= h($actionKey) ?>">
                   <button type="submit" class="btn"><?= h($actionLabel) ?></button>
                 </form>
               <?php endforeach; ?>
-              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php"
-                    data-confirm="Smazat tento komentář trvale?">
+              <form method="post" action="<?= BASE_URL ?>/admin/comment_action.php" id="comment-delete-form-<?= $commentId ?>" class="admin-inline-form" novalidate
+                    data-confirm="Smazat tento komentář trvale?"<?= $deleteHasError ? ' aria-describedby="comments-delete-form-error"' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-                <input type="hidden" name="id" value="<?= (int)$comment['id'] ?>">
+                <input type="hidden" name="id" value="<?= $commentId ?>">
                 <input type="hidden" name="filter" value="<?= h($filter) ?>">
+                <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
                 <input type="hidden" name="action" value="delete">
-                <button type="submit" class="btn btn-danger">Smazat trvale</button>
+                <fieldset class="admin-inline-fieldset">
+                  <legend class="sr-only">Trvalé smazání komentáře od <?= h((string)$comment['author_name']) ?></legend>
+                  <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">Odstraní text, údaje autora a stav moderace; článek zůstane zachovaný. Akci nelze vrátit.</p>
+                  <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                    <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                    Potvrzuji trvalé smazání tohoto komentáře.
+                  </label>
+                  <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před trvalým smazáním potvrďte, že jste zkontrolovali komentář a nevratnost akce.', $deleteFieldErrorId); ?>
+                  <button type="submit" class="btn btn-danger">Smazat trvale</button>
+                </fieldset>
               </form>
             </td>
           </tr>

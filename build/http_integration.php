@@ -28,6 +28,7 @@ $createdBlogs = [];
 $createdCategories = [];
 $createdTags = [];
 $createdArticles = [];
+$createdCommentIds = [];
 $createdBlogSeriesIds = [];
 $createdNewsIds = [];
 $createdFormIds = [];
@@ -2450,6 +2451,244 @@ try {
         $trashErrorPreventionIssues[] = 'admin koš neprovedl potvrzené trvalé smazání s PRG stavem a audit logem';
     }
     httpIntegrationPrintResult('trash_error_prevention_http', $trashErrorPreventionIssues, $failures);
+
+    $commentDeleteErrorPreventionIssues = [];
+    $commentDeleteBlogSlug = 'http-comment-delete-' . bin2hex(random_bytes(4));
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP komentáře pro error prevention', $commentDeleteBlogSlug, $adminUserId]);
+    $commentDeleteBlogId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $commentDeleteBlogId;
+
+    $commentDeleteArticleTitle = 'HTTP článek pro mazání komentářů ' . bin2hex(random_bytes(3));
+    $pdo->prepare(
+        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, author_id, status, created_at)
+         VALUES (?, ?, ?, '', '<p>Test serverového potvrzení mazání komentářů.</p>', 1, ?, 'published', NOW())"
+    )->execute([
+        $commentDeleteArticleTitle,
+        'http-comment-delete-' . bin2hex(random_bytes(4)),
+        $commentDeleteBlogId,
+        $adminUserId,
+    ]);
+    $commentDeleteArticleId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $commentDeleteArticleId;
+
+    $commentInsertStmt = $pdo->prepare(
+        "INSERT INTO cms_comments (article_id, author_name, author_email, content, status, is_approved, created_at)
+         VALUES (?, ?, ?, ?, 'pending', 0, NOW())"
+    );
+    $commentDeleteIds = [];
+    foreach (['individuální', 'hromadný', 'historický'] as $commentDeleteVariant) {
+        $commentInsertStmt->execute([
+            $commentDeleteArticleId,
+            'HTTP autor ' . $commentDeleteVariant,
+            'http-comment-' . bin2hex(random_bytes(3)) . '@example.test',
+            'HTTP komentář pro ' . $commentDeleteVariant . ' mazací tok.',
+        ]);
+        $commentDeleteIds[] = (int)$pdo->lastInsertId();
+    }
+    $createdCommentIds = array_merge($createdCommentIds, $commentDeleteIds);
+    [$commentActionDeleteId, $commentBulkDeleteId, $commentLegacyDeleteId] = $commentDeleteIds;
+
+    $commentDeleteSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => true,
+        'cms_user_id' => $adminUserId,
+        'cms_user_name' => 'HTTP Comment Delete Admin',
+        'cms_user_role' => 'admin',
+    ], 'kora-http-comment-delete-' . bin2hex(random_bytes(3)));
+    $commentDeleteRedirect = BASE_URL . '/admin/comments.php?filter=all';
+    $commentDeletePage = fetchUrl($baseUrl . $commentDeleteRedirect, $commentDeleteSession['cookie'], 0);
+    $commentDeleteCsrf = extractHiddenInputValue($commentDeletePage['body'], 'csrf_token');
+    $commentActionConfirmField = 'confirm_comment_delete_' . $commentActionDeleteId;
+    $commentActionConfirmId = 'confirm-comment-delete-' . $commentActionDeleteId;
+    $commentActionReviewId = 'comment-delete-review-' . $commentActionDeleteId;
+    if (httpIntegrationStatusCode($commentDeletePage) !== 200
+        || $commentDeleteCsrf === ''
+        || !str_contains($commentDeletePage['body'], 'Trvalé smazání odstraní text, údaje autora a stav moderace vybraných komentářů.')
+        || !str_contains($commentDeletePage['body'], 'Odstraní text, údaje autora a stav moderace; článek zůstane zachovaný. Akci nelze vrátit.')
+        || !httpIntegrationInputHasAttributes($commentDeletePage['body'], 'confirm-comment-bulk-delete', [
+            'name' => 'confirm_comment_bulk_delete',
+            'aria-required' => 'true',
+            'aria-describedby' => 'comments-bulk-delete-review-help',
+        ])
+        || !httpIntegrationInputHasAttributes($commentDeletePage['body'], $commentActionConfirmId, [
+            'name' => $commentActionConfirmField,
+            'aria-required' => 'true',
+            'aria-describedby' => $commentActionReviewId,
+        ])) {
+        $commentDeleteErrorPreventionIssues[] = 'přehled komentářů nevykreslil individuální a hromadný review krok s potvrzovacími poli';
+    }
+
+    $commentDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    $commentActionMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_action.php',
+        [
+            'csrf_token' => $commentDeleteCsrf,
+            'id' => (string)$commentActionDeleteId,
+            'filter' => 'all',
+            'redirect' => $commentDeleteRedirect,
+            'action' => 'delete',
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentActionMissingConfirmLocation = $commentDeleteRedirect . '&error=delete_confirm_required&delete_id=' . $commentActionDeleteId;
+    $commentActionCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_comments WHERE id = ?');
+    $commentActionCountStmt->execute([$commentActionDeleteId]);
+    $commentDeleteLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($commentActionMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($commentActionMissingConfirmResponse['headers'], $commentActionMissingConfirmLocation, $baseUrl)
+        || (int)$commentActionCountStmt->fetchColumn() !== 1
+        || $commentDeleteLogAfterMissingConfirm !== $commentDeleteLogBefore) {
+        $commentDeleteErrorPreventionIssues[] = 'smazání komentáře bez potvrzení změnilo data nebo zapsalo audit log';
+    }
+
+    $commentActionErrorPage = fetchUrl($baseUrl . $commentActionMissingConfirmLocation, $commentDeleteSession['cookie'], 0);
+    $commentActionFieldErrorId = 'confirm-comment-delete-' . $commentActionDeleteId . '-error';
+    if (!str_contains($commentActionErrorPage['body'], 'id="comments-delete-form-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($commentActionErrorPage['body'], 'form', 'comment-delete-form-' . $commentActionDeleteId, [
+            'aria-describedby' => 'comments-delete-form-error',
+        ])
+        || !str_contains($commentActionErrorPage['body'], 'id="' . $commentActionFieldErrorId . '"')
+        || !httpIntegrationInputHasAttributes($commentActionErrorPage['body'], $commentActionConfirmId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => $commentActionReviewId . ' ' . $commentActionFieldErrorId,
+        ])) {
+        $commentDeleteErrorPreventionIssues[] = 'nepotvrzené smazání komentáře nevrátilo textový alert a field-level chybu';
+    }
+
+    $commentActionConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_action.php',
+        [
+            'csrf_token' => extractHiddenInputValue($commentActionErrorPage['body'], 'csrf_token'),
+            'id' => (string)$commentActionDeleteId,
+            'filter' => 'all',
+            'redirect' => $commentDeleteRedirect,
+            'action' => 'delete',
+            $commentActionConfirmField => '1',
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentActionSuccessLocation = $commentDeleteRedirect . '&ok=deleted';
+    $commentActionCountStmt->execute([$commentActionDeleteId]);
+    $commentDeleteLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    $commentActionSuccessPage = fetchUrl($baseUrl . $commentActionSuccessLocation, $commentDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($commentActionConfirmedResponse) !== 302
+        || !responseHasLocationHeader($commentActionConfirmedResponse['headers'], $commentActionSuccessLocation, $baseUrl)
+        || !str_contains($commentActionSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Komentář byl trvale smazán.</p>')
+        || (int)$commentActionCountStmt->fetchColumn() !== 0
+        || $commentDeleteLogAfterConfirmed !== $commentDeleteLogBefore + 1) {
+        $commentDeleteErrorPreventionIssues[] = 'potvrzené smazání komentáře neproběhlo s očekávaným PRG stavem nebo audit logem';
+    }
+
+    $commentBulkLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_bulk_delete'")->fetchColumn();
+    $commentBulkMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($commentActionSuccessPage['body'], 'csrf_token'),
+            'ids' => [(string)$commentBulkDeleteId],
+            'redirect' => $commentDeleteRedirect,
+            'action' => 'delete',
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentBulkMissingConfirmLocation = $commentDeleteRedirect . '&error=bulk_delete_confirm_required';
+    $commentBulkCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_comments WHERE id = ?');
+    $commentBulkCountStmt->execute([$commentBulkDeleteId]);
+    $commentBulkLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_bulk_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($commentBulkMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($commentBulkMissingConfirmResponse['headers'], $commentBulkMissingConfirmLocation, $baseUrl)
+        || (int)$commentBulkCountStmt->fetchColumn() !== 1
+        || $commentBulkLogAfterMissingConfirm !== $commentBulkLogBefore) {
+        $commentDeleteErrorPreventionIssues[] = 'hromadné smazání komentářů bez potvrzení změnilo data nebo zapsalo audit log';
+    }
+
+    $commentBulkErrorPage = fetchUrl($baseUrl . $commentBulkMissingConfirmLocation, $commentDeleteSession['cookie'], 0);
+    if (!str_contains($commentBulkErrorPage['body'], 'id="comments-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+        || !httpIntegrationElementHasAttributes($commentBulkErrorPage['body'], 'form', 'bulk-form', [
+            'aria-describedby' => 'comments-bulk-delete-form-error',
+        ])
+        || !str_contains($commentBulkErrorPage['body'], 'id="confirm-comment-bulk-delete-error"')
+        || !httpIntegrationInputHasAttributes($commentBulkErrorPage['body'], 'confirm-comment-bulk-delete', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'comments-bulk-delete-review-help confirm-comment-bulk-delete-error',
+        ])) {
+        $commentDeleteErrorPreventionIssues[] = 'nepotvrzené hromadné smazání komentářů nevrátilo textový alert a field-level chybu';
+    }
+
+    $commentBulkConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_bulk.php',
+        [
+            'csrf_token' => extractHiddenInputValue($commentBulkErrorPage['body'], 'csrf_token'),
+            'ids' => [(string)$commentBulkDeleteId],
+            'redirect' => $commentDeleteRedirect,
+            'action' => 'delete',
+            'confirm_comment_bulk_delete' => '1',
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentBulkSuccessLocation = $commentDeleteRedirect . '&ok=bulk_deleted&count=1';
+    $commentBulkCountStmt->execute([$commentBulkDeleteId]);
+    $commentBulkLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_bulk_delete'")->fetchColumn();
+    $commentBulkSuccessPage = fetchUrl($baseUrl . $commentBulkSuccessLocation, $commentDeleteSession['cookie'], 0);
+    if (httpIntegrationStatusCode($commentBulkConfirmedResponse) !== 302
+        || !responseHasLocationHeader($commentBulkConfirmedResponse['headers'], $commentBulkSuccessLocation, $baseUrl)
+        || !str_contains($commentBulkSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Vybraný komentář byl trvale smazán.</p>')
+        || (int)$commentBulkCountStmt->fetchColumn() !== 0
+        || $commentBulkLogAfterConfirmed !== $commentBulkLogBefore + 1) {
+        $commentDeleteErrorPreventionIssues[] = 'potvrzené hromadné smazání komentářů neproběhlo s očekávaným PRG stavem nebo audit logem';
+    }
+
+    $commentLegacyLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    $commentLegacyMissingConfirmResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($commentBulkSuccessPage['body'], 'csrf_token'),
+            'id' => (string)$commentLegacyDeleteId,
+            'filter' => 'all',
+            'redirect' => $commentDeleteRedirect,
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentLegacyMissingConfirmLocation = $commentDeleteRedirect . '&error=delete_confirm_required&delete_id=' . $commentLegacyDeleteId;
+    $commentLegacyCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_comments WHERE id = ?');
+    $commentLegacyCountStmt->execute([$commentLegacyDeleteId]);
+    $commentLegacyLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($commentLegacyMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($commentLegacyMissingConfirmResponse['headers'], $commentLegacyMissingConfirmLocation, $baseUrl)
+        || (int)$commentLegacyCountStmt->fetchColumn() !== 1
+        || $commentLegacyLogAfterMissingConfirm !== $commentLegacyLogBefore) {
+        $commentDeleteErrorPreventionIssues[] = 'historický endpoint smazal komentář bez potvrzení nebo zapsal audit log';
+    }
+
+    $commentLegacyErrorPage = fetchUrl($baseUrl . $commentLegacyMissingConfirmLocation, $commentDeleteSession['cookie'], 0);
+    $commentLegacyConfirmField = 'confirm_comment_delete_' . $commentLegacyDeleteId;
+    $commentLegacyConfirmedResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/comment_delete.php',
+        [
+            'csrf_token' => extractHiddenInputValue($commentLegacyErrorPage['body'], 'csrf_token'),
+            'id' => (string)$commentLegacyDeleteId,
+            'filter' => 'all',
+            'redirect' => $commentDeleteRedirect,
+            $commentLegacyConfirmField => '1',
+        ],
+        $commentDeleteSession['cookie'],
+        0
+    );
+    $commentLegacySuccessLocation = $commentDeleteRedirect . '&ok=deleted';
+    $commentLegacyCountStmt->execute([$commentLegacyDeleteId]);
+    $commentLegacyLogAfterConfirmed = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'comment_delete'")->fetchColumn();
+    if (httpIntegrationStatusCode($commentLegacyConfirmedResponse) !== 302
+        || !responseHasLocationHeader($commentLegacyConfirmedResponse['headers'], $commentLegacySuccessLocation, $baseUrl)
+        || (int)$commentLegacyCountStmt->fetchColumn() !== 0
+        || $commentLegacyLogAfterConfirmed !== $commentLegacyLogBefore + 1) {
+        $commentDeleteErrorPreventionIssues[] = 'historický endpoint neprovedl potvrzené smazání s PRG stavem a audit logem';
+    }
+    httpIntegrationPrintResult('comment_delete_error_prevention_http', $commentDeleteErrorPreventionIssues, $failures);
 
     $redirectsValidationIssues = [];
     $redirectsValidationSession = koraPrimeTestSession([
@@ -16717,6 +16956,9 @@ try {
     foreach ($createdGalleryAlbumIds as $galleryAlbumIdToDelete) {
         $pdo->prepare("DELETE FROM cms_gallery_photos WHERE album_id = ?")->execute([$galleryAlbumIdToDelete]);
         $pdo->prepare("DELETE FROM cms_gallery_albums WHERE id = ?")->execute([$galleryAlbumIdToDelete]);
+    }
+    foreach ($createdCommentIds as $commentIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_comments WHERE id = ?")->execute([$commentIdToDelete]);
     }
     foreach ($createdArticles as $articleIdToDelete) {
         $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$articleIdToDelete]);

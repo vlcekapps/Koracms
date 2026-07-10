@@ -171,6 +171,10 @@ p {
 24. Pro `1.4.13 Content on Hover or Focus` projít tooltipy, rozbalovací nápovědu, picker/dialog doplňky a další překryvný obsah myší i klávesnicí. Obsah musí jít zavřít bez přesunu fokusu, zůstat dostupný při přesunu ukazatele nad něj a nezmizet dřív, než jej uživatel zavře, přesune focus nebo přestane platit jeho obsah; nesmí zakrýt ovládání bez dostupné cesty ven.
 25. Pro `2.5.3 Label in Name` použít Windows Voice Access, případně porovnat viditelný text s accessibility tree. U reprezentativních tlačítek a odkazů v navigaci, dialozích, formulářích, tabulkách a řádkových akcích musí hlasový příkaz podle celého viditelného textu prvek aktivovat; hidden suffix pro nové okno smí viditelný název pouze rozšířit, ne nahradit.
 
+### Doplňkový průchod trvalého mazání komentářů
+
+V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání bez `confirm_comment_delete_<id>`. NVDA má jednou oznámit textový alert, checkbox má mít `aria-invalid` a popis přes review i lokální chybový text; komentář ani audit log se nesmí změnit. Potom checkbox zaškrtněte, odešlete formulář a ověřte stav `Komentář byl trvale smazán.`. Stejný průchod zopakujte hromadně bez a s `confirm_comment_bulk_delete`; výběr komentářů, filtr a hledaný dotaz musí zůstat srozumitelné a potvrzená cesta má oznámit výsledný stav. Historický přímý endpoint je pokrytý automatizovaně a nemá vlastní samostatný ovládací prvek v UI. Ruční výsledek zapište k `3.3.4`; samostatně neuzavírejte mazání kontaktních nebo chatových zpráv a odpovědí, dokud jejich endpointy neprojdou stejnou inventurou.
+
 ## Scénáře pro nové moduly
 
 Před větší implementací modulu zapsat, zda přidává nebo mění:

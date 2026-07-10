@@ -20,9 +20,29 @@ if ($id === null) {
 $pdo = db_connect();
 
 if ($action === 'delete') {
-    $pdo->prepare("DELETE FROM cms_comments WHERE id = ?")->execute([$id]);
-    logAction('comment_delete', "id={$id}");
-    header('Location: ' . $redirect);
+    $commentStmt = $pdo->prepare("SELECT id FROM cms_comments WHERE id = ?");
+    $commentStmt->execute([$id]);
+    if (!$commentStmt->fetchColumn()) {
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    $confirmFieldName = 'confirm_comment_delete_' . $id;
+    $confirmedDelete = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
+    if (!$confirmedDelete) {
+        header('Location: ' . appendUrlQuery($redirect, [
+            'error' => 'delete_confirm_required',
+            'delete_id' => $id,
+        ]));
+        exit;
+    }
+
+    $deleteStmt = $pdo->prepare("DELETE FROM cms_comments WHERE id = ?");
+    $deleteStmt->execute([$id]);
+    if ($deleteStmt->rowCount() > 0) {
+        logAction('comment_delete', "id={$id}");
+    }
+    header('Location: ' . appendUrlQuery($redirect, ['ok' => 'deleted']));
     exit;
 }
 

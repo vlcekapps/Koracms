@@ -15574,6 +15574,9 @@ $blogTransferAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/
 $chatOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat.php');
 $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_message.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
+$commentActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_action.php');
+$commentBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_bulk.php');
+$commentDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_delete.php');
 $contactOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact.php');
 $contactMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_message.php');
 $contactTopicsSource = (string)file_get_contents(dirname(__DIR__) . '/admin/contact_topics.php');
@@ -18524,6 +18527,34 @@ if (!str_contains($blogSeriesAdminSource, "\$confirmFieldName = 'confirm_blog_se
     || !str_contains($blogSeriesAdminSource, "logAction('blog_series_delete'")) {
     $adminFieldErrorIssues[] = 'blog series delete action is missing server-side review-and-confirm guardrails';
 }
+if (!str_contains($commentsOverviewSource, "\$deleteConfirmField = 'confirm_comment_delete_' . \$commentId;")
+    || !str_contains($commentsOverviewSource, 'id="comments-delete-form-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($commentsOverviewSource, 'adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId)')
+    || !str_contains($commentsOverviewSource, "adminRenderFieldError(\$deleteConfirmField, \$deleteErrorFields")
+    || !str_contains($commentsOverviewSource, 'name="confirm_comment_bulk_delete"')
+    || !str_contains($commentsOverviewSource, 'id="comments-bulk-delete-form-error" class="error" role="alert" aria-atomic="true"')
+    || !str_contains($commentsOverviewSource, "adminFieldAttributes('confirm_comment_bulk_delete', \$bulkDeleteErrorFields")
+    || !str_contains($commentsOverviewSource, "adminRenderFieldError('confirm_comment_bulk_delete', \$bulkDeleteErrorFields")) {
+    $adminFieldErrorIssues[] = 'comments overview is missing individual or bulk permanent-delete review-and-confirm semantics';
+}
+if (!str_contains($commentActionSource, "\$confirmFieldName = 'confirm_comment_delete_' . \$id;")
+    || !str_contains($commentActionSource, "'error' => 'delete_confirm_required'")
+    || !str_contains($commentActionSource, "logAction('comment_delete', \"id={\$id}\")")
+    || !str_contains($commentActionSource, "appendUrlQuery(\$redirect, ['ok' => 'deleted'])")) {
+    $adminFieldErrorIssues[] = 'comment action delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($commentBulkSource, "isset(\$_POST['confirm_comment_bulk_delete'])")
+    || !str_contains($commentBulkSource, "'error' => 'bulk_delete_confirm_required'")
+    || !str_contains($commentBulkSource, "logAction('comment_bulk_delete'")
+    || !str_contains($commentBulkSource, "'ok' => 'bulk_deleted'")) {
+    $adminFieldErrorIssues[] = 'comment bulk delete handler is missing server-side review-and-confirm guardrails';
+}
+if (!str_contains($commentDeleteSource, 'internalRedirectTarget(')
+    || !str_contains($commentDeleteSource, "\$confirmFieldName = 'confirm_comment_delete_' . \$id;")
+    || !str_contains($commentDeleteSource, "'error' => 'delete_confirm_required'")
+    || !str_contains($commentDeleteSource, "logAction('comment_delete', \"id={\$id}\")")) {
+    $adminFieldErrorIssues[] = 'legacy comment delete handler can bypass redirect or server-side confirmation guardrails';
+}
 foreach ([
     'blog categories editor' => [
         'source' => $blogCatsSource,
@@ -18856,6 +18887,15 @@ if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, 'smazání přesměrování bez potvrzení nevrátilo field-level chybu, smazalo záznam nebo zapsalo audit log')
     || !str_contains($httpIntegrationSource, 'confirm_redirect_delete_')) {
     $adminFieldErrorIssues[] = 'HTTP integration is missing redirect delete error-prevention coverage';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('comment_delete_error_prevention_http'")
+    || !str_contains($httpIntegrationSource, 'smazání komentáře bez potvrzení změnilo data nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'hromadné smazání komentářů bez potvrzení změnilo data nebo zapsalo audit log')
+    || !str_contains($httpIntegrationSource, 'historický endpoint smazal komentář bez potvrzení nebo zapsal audit log')
+    || !str_contains($httpIntegrationSource, 'confirm_comment_bulk_delete')
+    || !str_contains($httpIntegrationSource, 'confirm_comment_delete_')) {
+    $adminFieldErrorIssues[] = 'HTTP integration is missing comment permanent-delete error-prevention coverage';
 }
 if ($httpIntegrationSource === ''
     || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('downloads_catalog_versions_http'")
