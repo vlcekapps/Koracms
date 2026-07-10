@@ -14700,6 +14700,7 @@ $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin
 $podcastEpisodeFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_form.php');
 $podcastFeedHealthSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_feed_health.php');
 $podcastChaptersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_chapters.php');
+$podcastPeopleAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_people.php');
 $podcastAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast.php');
 $podcastShowsAdminListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_shows.php');
 $pollSaveValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/polls_save.php');
@@ -19671,6 +19672,11 @@ if (!str_contains($adminExportSource, "'podcast_chapters'")
     || !str_contains($importAdminSource, 'INSERT IGNORE INTO cms_podcast_chapters')) {
     $podcastSourceIssues[] = 'podcast chapter import/export coverage is missing';
 }
+if (!str_contains($adminExportSource, "'podcast_people'")
+    || !str_contains($importAdminSource, "['podcast_people']")
+    || !str_contains($importAdminSource, 'INSERT IGNORE INTO cms_podcast_people')) {
+    $podcastSourceIssues[] = 'podcast people import/export coverage is missing';
+}
 if (str_contains($podcastEpisodeViewSource, '<audio controls class="audio-player" aria-label=')) {
     $podcastSourceIssues[] = 'podcast episode audio player still uses aria-label instead of hidden DOM label';
 }
@@ -19717,6 +19723,21 @@ if (!str_contains($podcastChaptersAdminSource, 'verifyCsrf();')
     || !str_contains($podcastChaptersAdminSource, '<legend>')
     || !str_contains($podcastChaptersAdminSource, 'WHERE id = ? AND episode_id = ?')) {
     $podcastSourceIssues[] = 'podcast chapter administration is missing CSRF, form semantics or ownership guards';
+}
+if (!str_contains($podcastFeedSource, 'podcastPersonFeedTag(')
+    || !str_contains($podcastFeedSource, '$showPeople')
+    || !str_contains($podcastFeedSource, '$episodePeople')) {
+    $podcastSourceIssues[] = 'podcast feed is missing show or episode person metadata';
+}
+if (!str_contains($podcastPeopleAdminSource, 'verifyCsrf();')
+    || !str_contains($podcastPeopleAdminSource, 'episode_id = ?')
+    || !str_contains($podcastPeopleAdminSource, '<fieldset>')
+    || !str_contains($podcastPeopleAdminSource, 'aria-describedby="form-error"')) {
+    $podcastSourceIssues[] = 'podcast people administration is missing CSRF, scope ownership or accessible errors';
+}
+if (!str_contains($podcastShowViewSource, 'aria-labelledby="podcast-show-people-title"')
+    || !str_contains($podcastEpisodeViewSource, 'aria-labelledby="podcast-episode-people"')) {
+    $podcastSourceIssues[] = 'public podcast people sections are missing heading-backed semantics';
 }
 if (!str_contains($podcastEpisodeSaveSource, 'newPodcastFeedGuid()')
     || !str_contains($podcastShowSaveSource, 'newPodcastFeedGuid()')) {

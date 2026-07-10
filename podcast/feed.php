@@ -42,6 +42,21 @@ $episodes = array_map(
     static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
+$peopleStmt = $pdo->prepare(
+    "SELECT * FROM cms_podcast_people
+     WHERE show_id = ?
+     ORDER BY episode_id IS NOT NULL, episode_id ASC, sort_order ASC, name ASC, id ASC"
+);
+$peopleStmt->execute([(int)$show['id']]);
+$showPeople = [];
+$episodePeople = [];
+foreach ($peopleStmt->fetchAll() as $person) {
+    if ($person['episode_id'] === null) {
+        $showPeople[] = $person;
+    } else {
+        $episodePeople[(int)$person['episode_id']][] = $person;
+    }
+}
 
 $showUrl = $show['website_url'] !== '' ? (string)$show['website_url'] : $show['public_url'];
 $selfUrl = siteUrl('/podcast/feed.php?slug=' . rawurlencode((string)$show['slug']));
@@ -55,10 +70,17 @@ foreach ($episodes as $episode) {
     $episodeUpdatedTimestamp = strtotime((string)($episode['updated_at'] ?? $episode['created_at'] ?? '')) ?: 0;
     $buildTimestamp = max($buildTimestamp, $episodeUpdatedTimestamp);
 }
+foreach (array_merge($showPeople, ...array_values($episodePeople)) as $person) {
+    $personUpdatedTimestamp = strtotime((string)($person['updated_at'] ?? $person['created_at'] ?? '')) ?: 0;
+    $buildTimestamp = max($buildTimestamp, $personUpdatedTimestamp);
+}
 $buildDate = date(DATE_RSS, $buildTimestamp);
 $feedValidatorSource = (string)($show['feed_guid'] ?? '') . '|' . (string)($show['updated_at'] ?? '') . '|';
 foreach ($episodes as $episode) {
     $feedValidatorSource .= (string)($episode['feed_guid'] ?? '') . ':' . (string)($episode['updated_at'] ?? '') . '|';
+}
+foreach (array_merge($showPeople, ...array_values($episodePeople)) as $person) {
+    $feedValidatorSource .= 'person:' . (int)$person['id'] . ':' . (string)($person['updated_at'] ?? '') . '|';
 }
 $feedEtag = '"' . hash('sha256', $feedValidatorSource) . '"';
 header('Cache-Control: public, max-age=300');
@@ -96,6 +118,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php if (!empty($show['feed_guid'])): ?>
     <podcast:guid><?= htmlspecialchars((string)$show['feed_guid'], ENT_XML1, 'UTF-8') ?></podcast:guid>
 <?php endif; ?>
+<?php foreach ($showPeople as $person): ?>
+<?= podcastPersonFeedTag($person, '    ') . "\n" ?><?php endforeach; ?>
 <?php if (!empty($show['author'])): ?>
     <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>
 <?php endif; ?>
@@ -198,6 +222,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php if (!empty($show['author'])): ?>
       <itunes:author><?= htmlspecialchars((string)$show['author'], ENT_XML1, 'UTF-8') ?></itunes:author>
 <?php endif; ?>
+<?php foreach ($episodePeople[(int)$episode['id']] ?? [] as $person): ?>
+<?= podcastPersonFeedTag($person, '      ') . "\n" ?><?php endforeach; ?>
     </item>
 <?php endforeach; ?>
   </channel>

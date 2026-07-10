@@ -154,6 +154,14 @@ CREATE TABLE IF NOT EXISTS cms_podcast_chapters (
   UNIQUE KEY uq_podcast_chapter_start (episode_id, start_time_seconds),
   KEY idx_podcast_chapters_episode (episode_id, start_time_seconds, id)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_podcast_people (
+  id INT,
+  show_id INT,
+  episode_id INT,
+  role_key VARCHAR(50),
+  KEY idx_podcast_people_show (show_id, episode_id, sort_order, id),
+  KEY idx_podcast_people_episode (episode_id, sort_order, id)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_gallery_albums (
   id INT,
   default_credit VARCHAR(255),
@@ -462,6 +470,9 @@ PHP,
 // cms_podcast_chapters
 // uq_podcast_chapter_start
 // idx_podcast_chapters_episode
+// cms_podcast_people
+// idx_podcast_people_show
+// idx_podcast_people_episode
 // cms_gallery_photos.slug
 // cms_gallery_albums.default_credit
 // cms_gallery_albums.default_license_label

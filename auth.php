@@ -827,7 +827,7 @@ function adminRouteModuleRequirements(): array
             'message' => adminRouteModuleDisabledMessage('podcast'),
             'files' => [
                 'podcast_shows.php', 'podcast_show_form.php', 'podcast_show_save.php', 'podcast_show_delete.php',
-                'podcast.php', 'podcast_form.php', 'podcast_save.php', 'podcast_delete.php', 'podcast_feed_health.php', 'podcast_chapters.php',
+                'podcast.php', 'podcast_form.php', 'podcast_save.php', 'podcast_delete.php', 'podcast_feed_health.php', 'podcast_chapters.php', 'podcast_people.php',
             ],
         ],
         'places' => [

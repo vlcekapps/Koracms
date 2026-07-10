@@ -1353,11 +1353,64 @@ try {
         );
     }
 
+    $podcastShowPeoplePage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast_people.php?show_id=' . $podcastEpisodeValidationShowId,
+        $adminSession['cookie'],
+        0
+    );
+    $podcastShowPeopleCsrf = extractHiddenInputValue($podcastShowPeoplePage['body'], 'csrf_token');
+    if ($podcastShowPeopleCsrf !== '') {
+        postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_people.php',
+            [
+                'csrf_token' => $podcastShowPeopleCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'name' => 'HTTP moderátorka pořadu',
+                'role_key' => 'host',
+                'group_key' => 'cast',
+                'profile_url' => 'https://example.test/moderatorka',
+                'image_url' => '',
+                'sort_order' => '10',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+    }
+    $podcastEpisodePeoplePage = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/podcast_people.php?show_id=' . $podcastEpisodeValidationShowId . '&episode_id=' . $podcastFeedEpisodeId,
+        $adminSession['cookie'],
+        0
+    );
+    $podcastEpisodePeopleCsrf = extractHiddenInputValue($podcastEpisodePeoplePage['body'], 'csrf_token');
+    if ($podcastEpisodePeopleCsrf !== '') {
+        postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_people.php',
+            [
+                'csrf_token' => $podcastEpisodePeopleCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'episode_id' => (string)$podcastFeedEpisodeId,
+                'name' => 'HTTP host epizody',
+                'role_key' => 'guest',
+                'group_key' => 'cast',
+                'profile_url' => '',
+                'image_url' => '',
+                'sort_order' => '20',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+    }
+
     $podcastFeedIntegrityIssues = [];
     $podcastChapterCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_chapters WHERE episode_id = ?");
     $podcastChapterCountStmt->execute([$podcastFeedEpisodeId]);
     if ($podcastChapterCsrf === '' || (int)$podcastChapterCountStmt->fetchColumn() !== 2) {
         $podcastFeedIntegrityIssues[] = 'administrace kapitol nevytvořila kapitolu chráněným formulářem';
+    }
+    $podcastPeopleCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_people WHERE show_id = ?");
+    $podcastPeopleCountStmt->execute([$podcastEpisodeValidationShowId]);
+    if ($podcastShowPeopleCsrf === '' || $podcastEpisodePeopleCsrf === '' || (int)$podcastPeopleCountStmt->fetchColumn() !== 2) {
+        $podcastFeedIntegrityIssues[] = 'administrace podcastu nevytvořila osoby pořadu a epizody';
     }
     $podcastFeedIntegrityResponse = fetchUrl(
         $baseUrl . BASE_URL . '/podcast/feed.php?slug=' . rawurlencode($podcastEpisodeValidationShowSlug),
@@ -1370,6 +1423,8 @@ try {
         || !str_contains($podcastFeedIntegrityResponse['body'], 'length="123456"')
         || !str_contains($podcastFeedIntegrityResponse['body'], '<podcast:transcript url=')
         || !str_contains($podcastFeedIntegrityResponse['body'], '<podcast:chapters url=')
+        || !str_contains($podcastFeedIntegrityResponse['body'], '>HTTP moderátorka pořadu</podcast:person>')
+        || !str_contains($podcastFeedIntegrityResponse['body'], '>HTTP host epizody</podcast:person>')
         || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'ETag', '"')
         || !httpIntegrationHeaderContains($podcastFeedIntegrityResponse, 'Last-Modified', 'GMT')) {
         $podcastFeedIntegrityIssues[] = 'podcast RSS feed nevrátil stabilní GUID, enclosure metadata nebo cache validátory';
@@ -1413,6 +1468,24 @@ try {
         0
     ))) {
         $podcastFeedIntegrityIssues[] = 'veřejný endpoint kapitol neodmítl nepodporovanou metodu';
+    }
+    $podcastShowPeopleResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug),
+        '',
+        0
+    );
+    if (!str_contains($podcastShowPeopleResponse['body'], 'id="podcast-show-people-title"')
+        || !str_contains($podcastShowPeopleResponse['body'], 'HTTP moderátorka pořadu')) {
+        $podcastFeedIntegrityIssues[] = 'veřejný detail podcastu nezobrazil pojmenovanou sekci tvůrců';
+    }
+    $podcastEpisodePeopleResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '/http-externi-epizoda',
+        '',
+        0
+    );
+    if (!str_contains($podcastEpisodePeopleResponse['body'], 'id="podcast-episode-people"')
+        || !str_contains($podcastEpisodePeopleResponse['body'], 'HTTP host epizody')) {
+        $podcastFeedIntegrityIssues[] = 'veřejný detail epizody nezobrazil pojmenovanou sekci hostů';
     }
     $podcastFeedHealthResponse = fetchUrl(
         $baseUrl . BASE_URL . '/admin/podcast_feed_health.php?show_id=' . $podcastEpisodeValidationShowId,
@@ -15743,10 +15816,12 @@ try {
     }
     foreach ($createdPodcastEpisodeIds as $podcastEpisodeIdToDelete) {
         $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$podcastEpisodeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_podcast_people WHERE episode_id = ?")->execute([$podcastEpisodeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcasts WHERE id = ?")->execute([$podcastEpisodeIdToDelete]);
     }
     foreach ($createdPodcastShowIds as $podcastShowIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_podcast_people WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$podcastShowIdToDelete]);
         $pdo->prepare("DELETE FROM cms_podcast_shows WHERE id = ?")->execute([$podcastShowIdToDelete]);

@@ -258,6 +258,7 @@ function coreModuleDefinitions(): array
                 'cms_podcast_shows',
                 'cms_podcasts',
                 'cms_podcast_chapters',
+                'cms_podcast_people',
             ],
             'settings_default' => '1',
             'public_nav_path' => '/podcast/index.php',
@@ -280,6 +281,7 @@ function coreModuleDefinitions(): array
                 '/admin/podcast_shows.php',
                 '/admin/podcast_feed_health.php',
                 '/admin/podcast_chapters.php',
+                '/admin/podcast_people.php',
             ],
         ],
         'places' => [

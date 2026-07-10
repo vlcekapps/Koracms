@@ -320,6 +320,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php endif; ?>
     <?php if ($id !== null): ?>
       <a href="<?= h(BASE_URL . '/admin/podcast_chapters.php?episode_id=' . (int)$episode['id']) ?>">Spravovat kapitoly</a>
+      <a href="<?= h(BASE_URL . '/admin/podcast_people.php?show_id=' . (int)$show['id'] . '&episode_id=' . (int)$episode['id']) ?>">Spravovat hosty a tvůrce</a>
       <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_episode&id=' . (int)$episode['id']) ?>">Historie změn</a>
     <?php endif; ?>
   </div>

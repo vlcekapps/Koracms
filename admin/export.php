@@ -176,6 +176,8 @@ $tables = [
                                publish_at, status, created_at, updated_at FROM cms_podcasts",
     'podcast_chapters' => "SELECT id, episode_id, start_time_seconds, title, url, image_url, created_at, updated_at
                            FROM cms_podcast_chapters",
+    'podcast_people' => "SELECT id, show_id, episode_id, name, role_key, group_key, profile_url, image_url,
+                                sort_order, created_at, updated_at FROM cms_podcast_people",
     'polls'         => "SELECT id, question, slug, description, vote_mode, max_choices, results_visibility,
                                meta_title, meta_description, start_date, end_date, status, created_at, updated_at
                         FROM cms_polls",

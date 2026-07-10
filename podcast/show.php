@@ -72,6 +72,13 @@ $episodes = array_map(
     static fn (array $episode): array => hydratePodcastEpisodePresentation($episode),
     $episodesStmt->fetchAll()
 );
+$peopleStmt = $pdo->prepare(
+    "SELECT * FROM cms_podcast_people
+     WHERE show_id = ? AND episode_id IS NULL
+     ORDER BY sort_order ASC, name ASC, id ASC"
+);
+$peopleStmt->execute([(int)$show['id']]);
+$people = $peopleStmt->fetchAll();
 
 if (!isset($_SESSION['cms_user_id'])) {
     trackPageView('podcast_show', (int)$show['id']);
@@ -101,6 +108,7 @@ renderPublicPage([
         'feedUrl' => $feedUrl,
         'pagerHtml' => $pagerHtml,
         'resultCount' => $totalEpisodes,
+        'people' => $people,
     ],
     'current_nav' => 'podcast',
     'body_class' => 'page-podcast-show',

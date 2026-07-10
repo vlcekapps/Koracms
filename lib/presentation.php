@@ -2247,6 +2247,82 @@ function podcastChaptersPublicUrl(array $episode): string
     return $episodeId > 0 ? siteUrl('/podcast/chapters.php?id=' . $episodeId) : '';
 }
 
+/**
+ * @return array<string, string>
+ */
+function podcastPersonRoleOptions(): array
+{
+    return [
+        'host' => 'Moderátor',
+        'co-host' => 'Spolumoderátor',
+        'guest' => 'Host',
+        'narrator' => 'Vypravěč',
+        'producer' => 'Producent',
+        'editor' => 'Editor',
+        'reporter' => 'Reportér',
+        'composer' => 'Skladatel',
+        'musician' => 'Hudebník',
+    ];
+}
+
+function normalizePodcastPersonRole(string $value): string
+{
+    $value = strtolower(trim($value));
+    return array_key_exists($value, podcastPersonRoleOptions()) ? $value : 'guest';
+}
+
+function podcastPersonRoleLabel(string $value): string
+{
+    $role = normalizePodcastPersonRole($value);
+    return podcastPersonRoleOptions()[$role];
+}
+
+function normalizePodcastPersonGroup(string $value): string
+{
+    $value = strtolower(trim($value));
+    return in_array($value, ['cast', 'crew'], true) ? $value : 'cast';
+}
+
+function podcastPersonGroupLabel(string $value): string
+{
+    return normalizePodcastPersonGroup($value) === 'crew' ? 'Tvůrčí tým' : 'Účinkující';
+}
+
+function normalizePodcastPersonUrl(string $value): string
+{
+    return normalizeHttpExternalUrl($value);
+}
+
+/**
+ * @param array<string, mixed> $person
+ */
+function podcastPersonFeedTag(array $person, string $indent = ''): string
+{
+    $name = trim((string)($person['name'] ?? ''));
+    if ($name === '') {
+        return '';
+    }
+    $attributes = [
+        'role' => normalizePodcastPersonRole((string)($person['role_key'] ?? 'guest')),
+        'group' => normalizePodcastPersonGroup((string)($person['group_key'] ?? 'cast')),
+    ];
+    $imageUrl = normalizePodcastPersonUrl((string)($person['image_url'] ?? ''));
+    $profileUrl = normalizePodcastPersonUrl((string)($person['profile_url'] ?? ''));
+    if ($imageUrl !== '') {
+        $attributes['img'] = $imageUrl;
+    }
+    if ($profileUrl !== '') {
+        $attributes['href'] = $profileUrl;
+    }
+    $attributeHtml = '';
+    foreach ($attributes as $attribute => $value) {
+        $attributeHtml .= ' ' . $attribute . '="' . htmlspecialchars($value, ENT_XML1, 'UTF-8') . '"';
+    }
+
+    return $indent . '<podcast:person' . $attributeHtml . '>'
+        . htmlspecialchars($name, ENT_XML1, 'UTF-8') . '</podcast:person>';
+}
+
 function normalizePodcastOwnerEmail(string $value): string
 {
     $value = trim($value);

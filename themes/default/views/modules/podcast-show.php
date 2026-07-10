@@ -38,6 +38,28 @@
     </div>
   </section>
 
+  <?php if (!empty($people)): ?>
+    <section class="surface" aria-labelledby="podcast-show-people-title">
+      <div class="section-heading">
+        <div><h2 id="podcast-show-people-title" class="section-title">Tvůrci podcastu</h2></div>
+      </div>
+      <ul class="listing-list">
+        <?php foreach ($people as $person): ?>
+          <li>
+            <?php if (trim((string)($person['image_url'] ?? '')) !== ''): ?>
+              <img src="<?= h((string)$person['image_url']) ?>" alt="<?= h((string)$person['name']) ?>" loading="lazy" class="avatar avatar--small">
+            <?php endif; ?>
+            <strong><?= h((string)$person['name']) ?></strong>
+            <span><?= h(podcastPersonRoleLabel((string)$person['role_key'])) ?></span>
+            <?php if (trim((string)($person['profile_url'] ?? '')) !== ''): ?>
+              <a href="<?= h((string)$person['profile_url']) ?>" target="_blank" rel="noopener noreferrer">Veřejný profil<?= newWindowLinkSrOnlySuffix() ?></a>
+            <?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
+  <?php endif; ?>
+
   <section class="surface" aria-labelledby="podcast-episodes-title">
       <div class="section-heading">
         <div>

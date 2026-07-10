@@ -787,6 +787,18 @@ $podcastChapterPayload = podcastChaptersPayload([
 assert_equals('1.2.0', $podcastChapterPayload['version'], 'podcast chapters use current JSON schema version');
 assert_equals('Úvod', $podcastChapterPayload['chapters'][0]['title'], 'podcast chapters are ordered by start time');
 assert_equals('https://example.test/topic', $podcastChapterPayload['chapters'][1]['url'], 'podcast chapter links use external URL normalizer');
+assert_equals('host', normalizePodcastPersonRole('HOST'), 'podcast person role normalizer accepts supported role');
+assert_equals('guest', normalizePodcastPersonRole('inventor'), 'podcast person role normalizer falls back safely');
+assert_equals('Tvůrčí tým', podcastPersonGroupLabel('crew'), 'podcast person group exposes Czech label');
+assert_equals('', normalizePodcastPersonUrl('javascript:alert(1)'), 'podcast person URL rejects unsafe scheme');
+$podcastPersonTag = podcastPersonFeedTag([
+    'name' => 'Jana Nováková',
+    'role_key' => 'guest',
+    'group_key' => 'cast',
+    'profile_url' => 'https://example.test/jana',
+]);
+assert_contains('<podcast:person role="guest" group="cast" href="https://example.test/jana">', $podcastPersonTag, 'podcast person feed tag exposes normalized attributes');
+assert_contains('Jana Nováková</podcast:person>', $podcastPersonTag, 'podcast person feed tag keeps UTF-8 name');
 assert_equals('https://downloads.example/item', normalizeDownloadExternalUrl('downloads.example/item'), 'download external URL uses shared external helper');
 assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download external URL rejects internal path');
 assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');

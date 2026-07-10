@@ -270,6 +270,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
         <a href="<?= h((string)$show['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
       <?php endif; ?>
       <a href="<?= h(BASE_URL . '/podcast/feed.php?slug=' . rawurlencode((string)$show['slug'])) ?>" target="_blank" rel="noopener noreferrer">RSS feed<?= newWindowLinkSrOnlySuffix() ?></a>
+      <a href="<?= h(BASE_URL . '/admin/podcast_people.php?show_id=' . (int)$show['id']) ?>">Spravovat tvůrce pořadu</a>
       <a href="<?= h(BASE_URL . '/admin/revisions.php?type=podcast_show&id=' . (int)$show['id']) ?>">Historie změn</a>
     <?php endif; ?>
   </div>

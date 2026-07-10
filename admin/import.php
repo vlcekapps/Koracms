@@ -1488,6 +1488,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Kapitoly podcastů importovány.';
                 }
 
+                if (!empty($data['podcast_people']) && is_array($data['podcast_people'])) {
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_podcast_people
+                         (id, show_id, episode_id, name, role_key, group_key, profile_url, image_url, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['podcast_people'] as $row) {
+                        $showId = (int)($row['show_id'] ?? 0);
+                        $episodeId = !empty($row['episode_id']) ? (int)$row['episode_id'] : null;
+                        $name = trim((string)($row['name'] ?? ''));
+                        if ($showId < 1 || $name === '') {
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            $showId,
+                            $episodeId,
+                            $name,
+                            normalizePodcastPersonRole((string)($row['role_key'] ?? 'guest')),
+                            normalizePodcastPersonGroup((string)($row['group_key'] ?? 'cast')),
+                            normalizePodcastPersonUrl((string)($row['profile_url'] ?? '')),
+                            normalizePodcastPersonUrl((string)($row['image_url'] ?? '')),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Hosté a tvůrci podcastů importováni.';
+                }
+
                 // Ankety (nejdřív ankety, pak možnosti)
                 if (!empty($data['polls']) && is_array($data['polls'])) {
                     $ins = $pdo->prepare(

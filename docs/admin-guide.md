@@ -260,6 +260,10 @@ U uložené epizody je dostupná akce `Spravovat kapitoly`. Začátek kapitoly l
 
 Vyplněný přepis epizody zůstává viditelný na detailu a RSS feed na něj navíc odkazuje značkou `podcast:transcript`. Samostatný HTML přepis i JSON kapitol podporují jen `GET`/`HEAD`, kontrolují veřejnost epizody a pořadu a používají cache validátory; koncept ani skrytý obsah přes ně nelze načíst.
 
+U pořadu lze přes `Spravovat tvůrce pořadu` evidovat moderátory, producenty a další stálé členy týmu. U epizody slouží `Spravovat hosty a tvůrce` pro hosty i osoby, které se podílely jen na daném dílu. Každá osoba má jméno, normalizovanou roli, skupinu `Účinkující` nebo `Tvůrčí tým`, volitelný veřejný profil, obrázek a pořadí.
+
+Osoby pořadu a epizody se zobrazují v samostatných sekcích s viditelnými nadpisy. RSS feed je publikuje pomocí Podcasting 2.0 `podcast:person`; změna osoby zároveň změní cache validátory feedu. Export/import zachovává osoby a při trvalém odstranění epizody nebo pořadu CMS jejich vazby uklidí.
+
 ### Nastavení pořadu
 
 - Počet epizod ve feedu (nastavitelný per pořad)

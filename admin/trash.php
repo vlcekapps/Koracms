@@ -117,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'podcasts') {
                     $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$itemId]);
+                    $pdo->prepare("DELETE FROM cms_podcast_people WHERE episode_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'podcast_shows') {
                     $episodeIdsStmt = $pdo->prepare("SELECT id FROM cms_podcasts WHERE show_id = ?");
@@ -129,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeId]);
                         }
                     }
+                    $pdo->prepare("DELETE FROM cms_podcast_people WHERE show_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
                 } elseif ($module === 'gallery_albums') {
