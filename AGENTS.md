@@ -8,6 +8,7 @@ Tento projekt cílí na stabilní provoz, bezpečnost a přístupnost. Při kaž
 - U formulářů používejte `label`, `fieldset` a `legend`; `aria-describedby` a `aria-labelledby` smí odkazovat jen na reálně existující elementy.
 - U textu a stavových indikací držte kontrast alespoň na úrovni WCAG 2.2 AA; nepřenášejte význam pouze barvou.
 - Na veřejných i admin stránkách zachovejte skip link a viditelný focus stav.
+- Každá změna formuláře, dialogu, ovládacího prvku, CSS, média, autentizace, exportu, mazání nebo jiné datově dopadající akce musí ve stejném commitu aktualizovat příslušný accessibility conformance dokument, nebo přidat výslovné rozhodnutí do `docs/accessibility/a11y-impact-decisions.md`, a zároveň doplnit automatizovaný důkaz. Guardrail `build/accessibility_conformance_audit.php` je součástí `composer ci:module-ready`.
 - Preferujte správný dlouhodobý návrh před krátkodobým obcházením problému. Pokud je pro funkci nebo opravu vhodná změna databáze, migrace, instalace, auditů nebo architektury, proveďte ji end-to-end; nízké riziko nesmí znamenat vyhýbání se potřebnému datovému modelu.
 - Před odevzdáním změn spusťte PHP lint, unit testy a runtime audit: `php build/unit_tests.php && php build/runtime_audit.php`.
 - Pokud spouštíte `composer ci:module-ready` přes lokální nástroj nebo agenta, nastavte timeout alespoň na 15 minut (`900000 ms`). Balík sekvenčně zahrnuje `ci:basic`, modulový audit, runtime audit i HTTP integraci; kratší timeout kolem 5 minut typicky plýtvá během, protože se může ukončit těsně před dokončením.

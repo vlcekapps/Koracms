@@ -150,6 +150,9 @@ $whitespaceAuditSource = is_file(__DIR__ . '/whitespace_audit.php') ? (string) f
 $whitespaceAuditSelftestSource = is_file(__DIR__ . '/whitespace_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/whitespace_audit_selftest.php') : '';
 $moduleContractAuditSource = is_file(__DIR__ . '/module_contract_audit.php') ? (string) file_get_contents(__DIR__ . '/module_contract_audit.php') : '';
 $moduleContractAuditSelftestSource = is_file(__DIR__ . '/module_contract_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/module_contract_audit_selftest.php') : '';
+$accessibilityConformanceAuditSource = is_file(__DIR__ . '/accessibility_conformance_audit.php') ? (string) file_get_contents(__DIR__ . '/accessibility_conformance_audit.php') : '';
+$accessibilityConformanceAuditSelftestSource = is_file(__DIR__ . '/accessibility_conformance_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/accessibility_conformance_audit_selftest.php') : '';
+$accessibilityImpactDecisionsSource = is_file(__DIR__ . '/../docs/accessibility/a11y-impact-decisions.md') ? (string) file_get_contents(__DIR__ . '/../docs/accessibility/a11y-impact-decisions.md') : '';
 $releaseScriptSource = is_file(__DIR__ . '/release.ps1') ? (string) file_get_contents(__DIR__ . '/release.ps1') : '';
 $releasePackageAuditSource = is_file(__DIR__ . '/release_package_audit.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit.php') : '';
 $releasePackageAuditSelftestSource = is_file(__DIR__ . '/release_package_audit_selftest.php') ? (string) file_get_contents(__DIR__ . '/release_package_audit_selftest.php') : '';
@@ -8107,9 +8110,12 @@ $foundationChecks = [
         && str_contains($developerModulesDocSource, 'lib/uploads.php')
         && str_contains($developerModulesDocSource, 'aria-labelledby')
         && str_contains($developerModulesDocSource, 'build/module_contract_audit.php')
+        && str_contains($developerModulesDocSource, 'build/accessibility_conformance_audit.php')
+        && str_contains($developerModulesDocSource, 'a11y-impact-decisions.md')
         && str_contains($moduleProposalTemplateSource, '# Šablona návrhu nového modulu')
         && str_contains($moduleProposalTemplateSource, 'Datový model a migrace')
         && str_contains($moduleProposalTemplateSource, 'Accessibility conformance dopad')
+        && str_contains($moduleProposalTemplateSource, 'a11y-impact-decisions.md')
         && str_contains($moduleProposalTemplateSource, 'composer ci:module-ready')
         && str_contains($readmeSource, 'docs/module-proposal-template.md')
         && str_contains($readmeSource, 'docs/developer-modules.md')
@@ -8121,14 +8127,32 @@ $foundationChecks = [
         && str_contains($readmeSource, 'search_result_types')
         && str_contains($readmeSource, 'sitemap_sections')
         && str_contains($readmeSource, 'stats_page_types')
+        && str_contains($readmeSource, 'a11y-impact-decisions.md')
         && str_contains($adminGuideSource, 'composer ci:module-ready')
         && str_contains($adminGuideSource, 'public_paths')
         && str_contains($adminGuideSource, 'content_reference_types')
         && str_contains($adminGuideSource, 'search_result_types')
         && str_contains($adminGuideSource, 'sitemap_sections')
         && str_contains($adminGuideSource, 'stats_page_types')
+        && str_contains($adminGuideSource, 'a11y-impact-decisions.md')
         && str_contains($adminGuideSource, 'module-proposal-template.md')
         && str_contains($adminGuideSource, 'developer-modules.md'),
+    'accessibility conformance audit is wired into basic CI' => str_contains($composerSource, '"test:accessibility-conformance"')
+        && str_contains($composerSource, '"test:accessibility-conformance-selftest"')
+        && str_contains($composerSource, '@test:accessibility-conformance')
+        && str_contains($composerSource, '@test:accessibility-conformance-selftest')
+        && str_contains($composerSource, 'build/accessibility_conformance_audit.php')
+        && str_contains($composerSource, 'build/accessibility_conformance_audit_selftest.php')
+        && str_contains($accessibilityConformanceAuditSource, 'function accessibilityConformanceExpectedCriteria()')
+        && str_contains($accessibilityConformanceAuditSource, 'must contain exactly 55 WCAG 2.2 A/AA criteria')
+        && str_contains($accessibilityConformanceAuditSource, 'accessibility-sensitive change is missing conformance impact review')
+        && str_contains($accessibilityConformanceAuditSource, 'accessibility-sensitive change is missing updated automated evidence')
+        && str_contains($accessibilityConformanceAuditSource, "['git', 'show', '--format='")
+        && str_contains($accessibilityConformanceAuditSelftestSource, 'Historical podcast documentation-drift guard')
+        && str_contains($accessibilityConformanceAuditSelftestSource, 'Removed accessibility markup guard')
+        && str_contains($accessibilityConformanceAuditSelftestSource, 'Stylesheet impact guard')
+        && str_contains($accessibilityImpactDecisionsSource, '# Accessibility Impact Decisions')
+        && str_contains($accessibilityImpactDecisionsSource, 'retrospektiva rozšíření Podcastů'),
     'module contract audit is wired into module-ready CI' => str_contains($composerSource, '"test:module-contract"')
         && str_contains($composerSource, '"test:module-contract-selftest"')
         && str_contains($composerSource, '@test:module-contract')
@@ -8798,11 +8822,11 @@ $foundationChecks = [
     'php cs fixer build test smoke check exists' => str_contains($composerSource, '"format:check:build-tests"')
         && str_contains($composerSource, '"format:fix:build-tests"')
         && str_contains($composerSource, '@format:check:build-tests')
-        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, 'build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/accessibility_conformance_audit.php build/accessibility_conformance_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'phpstan build test smoke check exists' => str_contains($composerSource, '"analyse:strict:build-tests"')
         && str_contains($composerSource, '@analyse:strict:build-tests')
-        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
+        && str_contains($composerSource, '--level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/accessibility_conformance_audit.php build/accessibility_conformance_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php')
         && str_contains($composerSource, 'build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php'),
     'database-backed audits use shared run lock' => is_file(__DIR__ . '/test_run_lock.php')
         && is_file(__DIR__ . '/test_run_lock_selftest.php')
@@ -19871,6 +19895,60 @@ if (!str_contains($podcastPlatformsAdminSource, 'id="podcast-platform-form" meth
     || !str_contains($podcastPlatformsAdminSource, 'id="label-error"')
     || !str_contains($podcastPlatformsAdminSource, 'id="url-error"')) {
     $podcastSourceIssues[] = 'podcast platform administration is missing actionable field-level error suggestions';
+}
+foreach ([
+    'podcast chapter delete error prevention' => [
+        'source' => $podcastChaptersAdminSource,
+        'required' => [
+            "'confirm_podcast_chapter_delete_' . \$editChapterId",
+            "'error' => 'delete_confirm_required'",
+            'aria-labelledby="podcast-chapter-delete-error"',
+            'podcast-chapter-delete-review-',
+            'Podcasting 2.0 JSON',
+            'adminFieldAttributes($chapterDeleteConfirmField, $chapterDeleteErrors',
+            'adminRenderFieldError($chapterDeleteConfirmField, $chapterDeleteErrors',
+        ],
+    ],
+    'podcast person delete error prevention' => [
+        'source' => $podcastPeopleAdminSource,
+        'required' => [
+            "'confirm_podcast_person_delete_' . \$personId",
+            "'error' => 'delete_confirm_required'",
+            'aria-labelledby="podcast-person-delete-error"',
+            'podcast-person-delete-review-',
+            'veřejného detailu pořadu a RSS metadat',
+            'adminFieldAttributes($personDeleteConfirmField, $personDeleteErrors',
+            'adminRenderFieldError($personDeleteConfirmField, $personDeleteErrors',
+        ],
+    ],
+    'podcast platform delete error prevention' => [
+        'source' => $podcastPlatformsAdminSource,
+        'required' => [
+            "'confirm_podcast_platform_delete_' . \$linkId",
+            "'error' => 'delete_confirm_required'",
+            'aria-labelledby="podcast-platform-delete-error"',
+            'podcast-platform-delete-review-',
+            'Účet ani obsah na externí platformě se nezmění.',
+            'adminFieldAttributes($platformDeleteConfirmField, $platformDeleteErrors',
+            'adminRenderFieldError($platformDeleteConfirmField, $platformDeleteErrors',
+        ],
+    ],
+] as $podcastDeleteGuardLabel => $podcastDeleteGuardSpec) {
+    foreach ($podcastDeleteGuardSpec['required'] as $podcastDeleteGuardFragment) {
+        if (!str_contains((string)$podcastDeleteGuardSpec['source'], $podcastDeleteGuardFragment)) {
+            $podcastSourceIssues[] = $podcastDeleteGuardLabel . ' is missing fragment: ' . $podcastDeleteGuardFragment;
+        }
+    }
+}
+foreach ([
+    "httpIntegrationPrintResult('podcast_metadata_delete_error_prevention_http'",
+    'nepotvrzené smazání podcastové kapitoly změnilo data nebo auditní log',
+    'nepotvrzené odebrání podcastové osoby změnilo data nebo auditní log',
+    'nepotvrzené odebrání podcastové platformy změnilo data nebo auditní log',
+] as $podcastDeleteHttpFragment) {
+    if ($httpIntegrationSource === '' || !str_contains($httpIntegrationSource, $podcastDeleteHttpFragment)) {
+        $podcastSourceIssues[] = 'HTTP integration is missing podcast metadata delete error-prevention evidence: ' . $podcastDeleteHttpFragment;
+    }
 }
 if (!str_contains($podcastShowControllerSource, "inputInt('get', 'sezona')")
     || !str_contains($podcastShowViewSource, 'id="podcast-season-filter-title"')

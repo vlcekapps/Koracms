@@ -233,7 +233,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Bezpečnostní pravidla\n"
         . "WCAG 2.2 checklist\n"
         . "Před implementací vyplňte docs/module-proposal-template.md.\n"
-        . "Nový modul porovnejte s wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n"
+        . "Nový modul porovnejte s wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md, a11y-impact-decisions.md a author-content-checklist.md.\n"
         . "Testy a guardrails\n"
         . "Definition of done\n"
         . "Použijte install.php, migrate.php a schema parity guardrail.\n"
@@ -248,7 +248,7 @@ function moduleContractAuditSelfTestDeveloperModulesDocFixture(): string
         . "Widgety a šablony hlídají requires_module i requires_modules.\n"
         . "Redirecty validujte přes internalRedirectTarget() a uploady přes lib/uploads.php.\n"
         . "WCAG vazby používejte přes aria-labelledby a veřejné šablony kontroluje build/theme_view_audit.php.\n"
-        . "Modulový kontrakt hlídá build/module_contract_audit.php a větší změny composer ci:module-ready.\n"
+        . "Modulový kontrakt hlídá build/module_contract_audit.php, přístupnost build/accessibility_conformance_audit.php a větší změny composer ci:module-ready.\n"
         . "Dokumentujte README.md, docs/admin-guide.md a CHANGELOG.md.\n";
 }
 
@@ -269,7 +269,7 @@ function moduleContractAuditSelfTestModuleProposalTemplateFixture(): string
         . "Použijte aria-describedby a aria-labelledby.\n"
         . "Odpovědnost CMS.\n"
         . "Odpovědnost autora obsahu.\n"
-        . "Dokumenty wcag-22-aa-conformance.md, a11y-remediation-backlog.md a manual-test-protocol.md.\n"
+        . "Dokumenty wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a a11y-impact-decisions.md.\n"
         . "Testy a guardrails\n"
         . "Spusťte composer ci:module-ready.\n"
         . "Dokumentujte CHANGELOG.md, README.md a docs/admin-guide.md.\n";
@@ -288,7 +288,7 @@ function moduleContractAuditSelfTestReadmeFixture(): string
         . "Content picker používá content_reference_types.\n"
         . "HTTP scénáře: public_module_navigation_http, admin_disabled_modules_http a content_reference_disabled_modules_http.\n"
         . "Spusťte composer ci:module-ready.\n"
-        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n";
+        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md, a11y-impact-decisions.md a author-content-checklist.md.\n";
 }
 
 function moduleContractAuditSelfTestAdminGuideFixture(): string
@@ -303,7 +303,7 @@ function moduleContractAuditSelfTestAdminGuideFixture(): string
         . "Content picker typy definuje content_reference_types, vyhledávání search_result_types a sitemap sitemap_sections.\n"
         . "Obsahové trendy definuje stats_page_types a trackPageView().\n"
         . "Pro větší změny spusťte composer ci:module-ready.\n"
-        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md a author-content-checklist.md.\n";
+        . "Accessibility report: wcag-22-aa-conformance.md, a11y-remediation-backlog.md, manual-test-protocol.md, a11y-impact-decisions.md a author-content-checklist.md.\n";
 }
 
 /**

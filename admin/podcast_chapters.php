@@ -30,17 +30,36 @@ $postedStartTime = trim((string)($_POST['start_time'] ?? ''));
 $postedTitle = trim((string)($_POST['title'] ?? ''));
 $postedUrl = trim((string)($_POST['url'] ?? ''));
 $postedImageUrl = trim((string)($_POST['image_url'] ?? ''));
+$baseUrl = BASE_URL . '/admin/podcast_chapters.php?episode_id=' . $episodeId;
+$deleteErrorId = inputInt('get', 'delete_id');
+$deleteError = trim((string)($_GET['error'] ?? '')) === 'delete_confirm_required' && $deleteErrorId !== null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = trim((string)($_POST['action'] ?? 'save'));
     if ($action === 'delete') {
         if ($editChapterId !== null) {
-            $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE id = ? AND episode_id = ?")
-                ->execute([$editChapterId, $episodeId]);
-            logAction('podcast_chapter_delete', "id={$editChapterId} episode_id={$episodeId}");
+            $deleteChapterStmt = $pdo->prepare(
+                "SELECT id FROM cms_podcast_chapters WHERE id = ? AND episode_id = ? LIMIT 1"
+            );
+            $deleteChapterStmt->execute([$editChapterId, $episodeId]);
+            if ($deleteChapterStmt->fetchColumn()) {
+                $confirmationField = 'confirm_podcast_chapter_delete_' . $editChapterId;
+                $confirmed = isset($_POST[$confirmationField]) && (string)$_POST[$confirmationField] === '1';
+                if (!$confirmed) {
+                    header('Location: ' . appendUrlQuery($baseUrl, [
+                        'error' => 'delete_confirm_required',
+                        'delete_id' => $editChapterId,
+                    ]));
+                    exit;
+                }
+
+                $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE id = ? AND episode_id = ?")
+                    ->execute([$editChapterId, $episodeId]);
+                logAction('podcast_chapter_delete', "id={$editChapterId} episode_id={$episodeId}");
+            }
         }
-        header('Location: ' . BASE_URL . '/admin/podcast_chapters.php?episode_id=' . $episodeId . '&ok=deleted');
+        header('Location: ' . appendUrlQuery($baseUrl, ['ok' => 'deleted']));
         exit;
     }
 
@@ -99,10 +118,14 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
 ?>
 <p><a href="<?= h($episodeEditUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na epizodu</a></p>
 
-<?php if ($error !== ''): ?>
+<?php if ($deleteError): ?>
+  <div class="error" role="alert" aria-atomic="true" aria-labelledby="podcast-chapter-delete-error">
+    <p id="podcast-chapter-delete-error">Kapitolu nelze smazat bez potvrzení kontroly jejího názvu, času a dopadu na veřejný přehled kapitol.</p>
+  </div>
+<?php elseif ($error !== ''): ?>
   <p class="error" role="alert" id="form-error" aria-atomic="true"><?= h($error) ?></p>
 <?php elseif (isset($_GET['ok'])): ?>
-  <p class="success" role="status">Kapitoly byly aktualizovány.</p>
+  <p class="success" role="status" aria-atomic="true">Kapitoly byly aktualizovány.</p>
 <?php endif; ?>
 
 <section aria-labelledby="podcast-chapter-add-heading">
@@ -144,6 +167,11 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
     <?php foreach ($chapters as $chapter):
         $chapterId = (int)$chapter['id'];
         $isEditedChapterError = $error !== '' && $editChapterId === $chapterId;
+        $chapterDeleteConfirmField = 'confirm_podcast_chapter_delete_' . $chapterId;
+        $chapterDeleteReviewId = 'podcast-chapter-delete-review-' . $chapterId;
+        $chapterDeleteFieldErrorId = 'confirm-podcast-chapter-delete-' . $chapterId . '-error';
+        $chapterDeleteHasError = $deleteError && $deleteErrorId === $chapterId;
+        $chapterDeleteErrors = $chapterDeleteHasError ? [$chapterDeleteConfirmField] : [];
         ?>
       <form id="podcast-chapter-form-<?= $chapterId ?>" method="post" class="admin-fieldset-spaced" novalidate<?= $error !== '' && $editChapterId === $chapterId ? ' aria-describedby="form-error"' : '' ?>>
         <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
@@ -167,8 +195,27 @@ adminHeader('Kapitoly epizody: ' . (string)$episode['title']);
         </fieldset>
         <div class="button-row">
           <button type="submit" name="action" value="save" class="btn">Uložit kapitolu</button>
-          <button type="submit" name="action" value="delete" class="btn btn-danger" data-confirm="Smazat kapitolu?">Smazat kapitolu</button>
         </div>
+      </form>
+      <form id="podcast-chapter-delete-form-<?= $chapterId ?>" method="post" class="admin-fieldset-spaced" novalidate<?= $chapterDeleteHasError ? ' aria-describedby="podcast-chapter-delete-error"' : '' ?>>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="episode_id" value="<?= (int)$episodeId ?>">
+        <input type="hidden" name="chapter_id" value="<?= $chapterId ?>">
+        <input type="hidden" name="action" value="delete">
+        <fieldset>
+          <legend>Smazání kapitoly <?= h((string)$chapter['title']) ?></legend>
+          <p id="<?= h($chapterDeleteReviewId) ?>" class="field-help field-help--flush">
+            Smazání trvale odebere kapitolu „<?= h((string)$chapter['title']) ?>“ v čase <?= h(podcastChapterTimeLabel($chapter['start_time_seconds'])) ?> z veřejného přehledu a Podcasting 2.0 JSON. Epizoda, audio a ostatní kapitoly zůstanou zachované.
+          </p>
+          <label for="confirm-podcast-chapter-delete-<?= $chapterId ?>" class="admin-checkbox-label">
+            <input type="checkbox" id="confirm-podcast-chapter-delete-<?= $chapterId ?>" name="<?= h($chapterDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($chapterDeleteConfirmField, $chapterDeleteErrors, [], [$chapterDeleteReviewId], $chapterDeleteFieldErrorId) ?>>
+            Potvrzuji trvalé smazání této kapitoly.
+          </label>
+          <?php adminRenderFieldError($chapterDeleteConfirmField, $chapterDeleteErrors, [], 'Před smazáním potvrďte kontrolu kapitoly a jejího veřejného dopadu.', $chapterDeleteFieldErrorId); ?>
+          <div class="button-row">
+            <button type="submit" class="btn btn-danger" data-confirm="Smazat kapitolu?">Smazat kapitolu</button>
+          </div>
+        </fieldset>
       </form>
     <?php endforeach; ?>
   <?php endif; ?>

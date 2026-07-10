@@ -21,17 +21,35 @@ $baseUrl = BASE_URL . '/admin/podcast_platforms.php?show_id=' . $showId;
 $linkId = inputInt('post', 'link_id');
 $error = '';
 $errorField = '';
+$deleteErrorId = inputInt('get', 'delete_id');
+$deleteError = trim((string)($_GET['error'] ?? '')) === 'delete_confirm_required' && $deleteErrorId !== null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = trim((string)($_POST['action'] ?? 'save'));
     if ($action === 'delete') {
         if ($linkId !== null) {
-            $pdo->prepare("DELETE FROM cms_podcast_platform_links WHERE id = ? AND show_id = ?")
-                ->execute([$linkId, $showId]);
-            logAction('podcast_platform_delete', "id={$linkId} show_id={$showId}");
+            $deleteLinkStmt = $pdo->prepare(
+                "SELECT id FROM cms_podcast_platform_links WHERE id = ? AND show_id = ? LIMIT 1"
+            );
+            $deleteLinkStmt->execute([$linkId, $showId]);
+            if ($deleteLinkStmt->fetchColumn()) {
+                $confirmationField = 'confirm_podcast_platform_delete_' . $linkId;
+                $confirmed = isset($_POST[$confirmationField]) && (string)$_POST[$confirmationField] === '1';
+                if (!$confirmed) {
+                    header('Location: ' . appendUrlQuery($baseUrl, [
+                        'error' => 'delete_confirm_required',
+                        'delete_id' => $linkId,
+                    ]));
+                    exit;
+                }
+
+                $pdo->prepare("DELETE FROM cms_podcast_platform_links WHERE id = ? AND show_id = ?")
+                    ->execute([$linkId, $showId]);
+                logAction('podcast_platform_delete', "id={$linkId} show_id={$showId}");
+            }
         }
-        header('Location: ' . $baseUrl . '&ok=deleted');
+        header('Location: ' . appendUrlQuery($baseUrl, ['ok' => 'deleted']));
         exit;
     }
 
@@ -110,10 +128,14 @@ $links = $linksStmt->fetchAll();
 adminHeader('Platformy podcastu: ' . (string)$show['title']);
 ?>
 <p><a href="podcast_show_form.php?id=<?= (int)$showId ?>"><span aria-hidden="true">&larr;</span> Zpět na podcast</a></p>
-<?php if ($error !== ''): ?>
+<?php if ($deleteError): ?>
+  <div class="error" role="alert" aria-atomic="true" aria-labelledby="podcast-platform-delete-error">
+    <p id="podcast-platform-delete-error">Odkaz na platformu nelze odebrat bez potvrzení kontroly platformy, adresy a dopadu na veřejné možnosti poslechu.</p>
+  </div>
+<?php elseif ($error !== ''): ?>
   <p class="error" role="alert" id="form-error" aria-atomic="true"><?= h($error) ?></p>
 <?php elseif (isset($_GET['ok'])): ?>
-  <p class="success" role="status">Odkazy na platformy byly aktualizovány.</p>
+  <p class="success" role="status" aria-atomic="true">Odkazy na platformy byly aktualizovány.</p>
 <?php endif; ?>
 
 <section aria-labelledby="podcast-platform-form-heading">
@@ -161,17 +183,36 @@ adminHeader('Platformy podcastu: ' . (string)$show['title']);
         <caption>Platformy podcastu <?= h((string)$show['title']) ?></caption>
         <thead><tr><th scope="col">Platforma</th><th scope="col">Odkaz</th><th scope="col">Akce</th></tr></thead>
         <tbody>
-        <?php foreach ($links as $listedLink): ?>
+        <?php foreach ($links as $listedLink):
+            $listedLinkId = (int)$listedLink['id'];
+            $platformDeleteConfirmField = 'confirm_podcast_platform_delete_' . $listedLinkId;
+            $platformDeleteReviewId = 'podcast-platform-delete-review-' . $listedLinkId;
+            $platformDeleteFieldErrorId = 'confirm-podcast-platform-delete-' . $listedLinkId . '-error';
+            $platformDeleteHasError = $deleteError && $deleteErrorId === $listedLinkId;
+            $platformDeleteErrors = $platformDeleteHasError ? [$platformDeleteConfirmField] : [];
+            ?>
           <tr>
             <td><?= h(podcastPlatformLabel($listedLink)) ?></td>
             <td><a href="<?= h((string)$listedLink['url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít<?= newWindowLinkSrOnlySuffix() ?></a></td>
             <td class="actions">
-              <a href="<?= h($baseUrl . '&edit=' . (int)$listedLink['id']) ?>" class="btn">Upravit</a>
-              <form method="post">
+              <a href="<?= h($baseUrl . '&edit=' . $listedLinkId) ?>" class="btn">Upravit</a>
+              <form id="podcast-platform-delete-form-<?= $listedLinkId ?>" method="post" novalidate<?= $platformDeleteHasError ? ' aria-describedby="podcast-platform-delete-error"' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
-                <input type="hidden" name="link_id" value="<?= (int)$listedLink['id'] ?>">
-                <button type="submit" name="action" value="delete" class="btn btn-danger" data-confirm="Odebrat platformu?">Odebrat</button>
+                <input type="hidden" name="link_id" value="<?= $listedLinkId ?>">
+                <input type="hidden" name="action" value="delete">
+                <fieldset class="admin-inline-fieldset">
+                  <legend>Odebrání platformy <?= h(podcastPlatformLabel($listedLink)) ?></legend>
+                  <p id="<?= h($platformDeleteReviewId) ?>" class="field-help field-help--flush">
+                    Odebrání trvale odstraní veřejný odkaz „<?= h(podcastPlatformLabel($listedLink)) ?>“ z detailu podcastu. Účet ani obsah na externí platformě se nezmění.
+                  </p>
+                  <label for="confirm-podcast-platform-delete-<?= $listedLinkId ?>" class="admin-checkbox-label">
+                    <input type="checkbox" id="confirm-podcast-platform-delete-<?= $listedLinkId ?>" name="<?= h($platformDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($platformDeleteConfirmField, $platformDeleteErrors, [], [$platformDeleteReviewId], $platformDeleteFieldErrorId) ?>>
+                    Potvrzuji odebrání tohoto odkazu.
+                  </label>
+                  <?php adminRenderFieldError($platformDeleteConfirmField, $platformDeleteErrors, [], 'Před odebráním potvrďte kontrolu platformy a jejího veřejného dopadu.', $platformDeleteFieldErrorId); ?>
+                  <button type="submit" class="btn btn-danger" data-confirm="Odebrat platformu?">Odebrat</button>
+                </fieldset>
               </form>
             </td>
           </tr>

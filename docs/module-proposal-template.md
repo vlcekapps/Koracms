@@ -60,12 +60,14 @@ Pokud návrh potřebuje nové perzistentní chování, preferujte správný dato
 - Dopad na `docs/accessibility/wcag-22-aa-conformance.md`:
 - Dopad na `docs/accessibility/a11y-remediation-backlog.md`:
 - Dopad na `docs/accessibility/manual-test-protocol.md`:
+- Dopad na `docs/accessibility/a11y-impact-decisions.md`, pokud se stav ani backlog nemění:
 
 ## 6. Testy a guardrails
 
 - Unit testy:
 - HTTP integrace:
 - Runtime audit:
+- Accessibility conformance audit: `build/accessibility_conformance_audit.php`
 - Module contract audit:
 - Theme view audit:
 - Schema parity audit:

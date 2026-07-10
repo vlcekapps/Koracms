@@ -1429,6 +1429,296 @@ try {
         );
     }
 
+    $podcastMetadataDeleteIssues = [];
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_chapters (episode_id, start_time_seconds, title, url, image_url)
+         VALUES (?, 270, 'HTTP kapitola ke smazání', '', '')"
+    )->execute([$podcastFeedEpisodeId]);
+    $podcastDeleteChapterId = (int)$pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_people
+         (show_id, episode_id, name, role_key, group_key, profile_url, image_url, sort_order)
+         VALUES (?, NULL, 'HTTP osoba ke smazání', 'guest', 'cast', '', '', 90)"
+    )->execute([$podcastEpisodeValidationShowId]);
+    $podcastDeletePersonId = (int)$pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO cms_podcast_platform_links (show_id, platform_key, label, url, sort_order)
+         VALUES (?, 'other', 'HTTP platforma ke smazání', 'https://example.test/podcast-delete', 90)"
+    )->execute([$podcastEpisodeValidationShowId]);
+    $podcastDeletePlatformId = (int)$pdo->lastInsertId();
+
+    $podcastDeleteLogCount = static function (PDO $pdo, string $action, int $id): int {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM cms_log WHERE action = ? AND detail LIKE ?");
+        $stmt->execute([$action, 'id=' . $id . ' %']);
+        return (int)$stmt->fetchColumn();
+    };
+
+    $podcastDeleteChapterPath = BASE_URL . '/admin/podcast_chapters.php?episode_id=' . $podcastFeedEpisodeId;
+    $podcastDeleteChapterPage = fetchUrl($baseUrl . $podcastDeleteChapterPath, $adminSession['cookie'], 0);
+    $podcastDeleteChapterCsrf = extractHiddenInputValue($podcastDeleteChapterPage['body'], 'csrf_token');
+    $podcastDeleteChapterCheckboxId = 'confirm-podcast-chapter-delete-' . $podcastDeleteChapterId;
+    $podcastDeleteChapterCheckboxName = 'confirm_podcast_chapter_delete_' . $podcastDeleteChapterId;
+    if (httpIntegrationStatusCode($podcastDeleteChapterPage) !== 200
+        || !str_contains($podcastDeleteChapterPage['body'], 'HTTP kapitola ke smazání')
+        || !str_contains($podcastDeleteChapterPage['body'], 'Podcasting 2.0 JSON')
+        || !httpIntegrationInputHasAttributes(
+            $podcastDeleteChapterPage['body'],
+            $podcastDeleteChapterCheckboxId,
+            [
+                'name' => $podcastDeleteChapterCheckboxName,
+                'aria-required' => 'true',
+                'aria-describedby' => 'podcast-chapter-delete-review-' . $podcastDeleteChapterId,
+            ]
+        )
+        || $podcastDeleteChapterCsrf === '') {
+        $podcastMetadataDeleteIssues[] = 'mazání podcastové kapitoly nevykreslilo item-specific review a potvrzení';
+    } else {
+        $podcastDeleteChapterLogBefore = $podcastDeleteLogCount($pdo, 'podcast_chapter_delete', $podcastDeleteChapterId);
+        $podcastDeleteChapterRejected = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_chapters.php',
+            [
+                'csrf_token' => $podcastDeleteChapterCsrf,
+                'episode_id' => (string)$podcastFeedEpisodeId,
+                'chapter_id' => (string)$podcastDeleteChapterId,
+                'action' => 'delete',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeleteChapterExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_chapters WHERE id = ?");
+        $podcastDeleteChapterExistsStmt->execute([$podcastDeleteChapterId]);
+        $podcastDeleteChapterErrorPath = $podcastDeleteChapterPath
+            . '&error=delete_confirm_required&delete_id=' . $podcastDeleteChapterId;
+        if (httpIntegrationStatusCode($podcastDeleteChapterRejected) !== 302
+            || !responseHasLocationHeader($podcastDeleteChapterRejected['headers'], $podcastDeleteChapterErrorPath, $baseUrl)
+            || (int)$podcastDeleteChapterExistsStmt->fetchColumn() !== 1
+            || $podcastDeleteLogCount($pdo, 'podcast_chapter_delete', $podcastDeleteChapterId) !== $podcastDeleteChapterLogBefore) {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené smazání podcastové kapitoly změnilo data nebo auditní log';
+        }
+
+        $podcastDeleteChapterErrorPage = fetchUrl(
+            $baseUrl . $podcastDeleteChapterErrorPath,
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeleteChapterConfirmedCsrf = extractHiddenInputValue($podcastDeleteChapterErrorPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($podcastDeleteChapterErrorPage) !== 200
+            || !str_contains($podcastDeleteChapterErrorPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="podcast-chapter-delete-error"')
+            || !httpIntegrationElementHasAttributes(
+                $podcastDeleteChapterErrorPage['body'],
+                'form',
+                'podcast-chapter-delete-form-' . $podcastDeleteChapterId,
+                ['aria-describedby' => 'podcast-chapter-delete-error']
+            )
+            || !httpIntegrationInputHasAttributes(
+                $podcastDeleteChapterErrorPage['body'],
+                $podcastDeleteChapterCheckboxId,
+                [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'podcast-chapter-delete-review-' . $podcastDeleteChapterId
+                        . ' confirm-podcast-chapter-delete-' . $podcastDeleteChapterId . '-error',
+                ]
+            )
+            || $podcastDeleteChapterConfirmedCsrf === '') {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené smazání podcastové kapitoly nevrátilo alert a field-level chybu';
+        }
+
+        $podcastDeleteChapterConfirmed = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_chapters.php',
+            [
+                'csrf_token' => $podcastDeleteChapterConfirmedCsrf,
+                'episode_id' => (string)$podcastFeedEpisodeId,
+                'chapter_id' => (string)$podcastDeleteChapterId,
+                'action' => 'delete',
+                $podcastDeleteChapterCheckboxName => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeleteChapterExistsStmt->execute([$podcastDeleteChapterId]);
+        if (httpIntegrationStatusCode($podcastDeleteChapterConfirmed) !== 302
+            || !responseHasLocationHeader($podcastDeleteChapterConfirmed['headers'], $podcastDeleteChapterPath . '&ok=deleted', $baseUrl)
+            || (int)$podcastDeleteChapterExistsStmt->fetchColumn() !== 0
+            || $podcastDeleteLogCount($pdo, 'podcast_chapter_delete', $podcastDeleteChapterId) !== $podcastDeleteChapterLogBefore + 1) {
+            $podcastMetadataDeleteIssues[] = 'potvrzené smazání podcastové kapitoly neprovedlo PRG, cleanup nebo audit log';
+        }
+    }
+
+    $podcastDeletePersonPath = BASE_URL . '/admin/podcast_people.php?show_id=' . $podcastEpisodeValidationShowId;
+    $podcastDeletePersonPage = fetchUrl($baseUrl . $podcastDeletePersonPath, $adminSession['cookie'], 0);
+    $podcastDeletePersonCsrf = extractHiddenInputValue($podcastDeletePersonPage['body'], 'csrf_token');
+    $podcastDeletePersonCheckboxId = 'confirm-podcast-person-delete-' . $podcastDeletePersonId;
+    $podcastDeletePersonCheckboxName = 'confirm_podcast_person_delete_' . $podcastDeletePersonId;
+    if (httpIntegrationStatusCode($podcastDeletePersonPage) !== 200
+        || !str_contains($podcastDeletePersonPage['body'], 'HTTP osoba ke smazání')
+        || !str_contains($podcastDeletePersonPage['body'], 'veřejného detailu pořadu a RSS metadat')
+        || !httpIntegrationInputHasAttributes(
+            $podcastDeletePersonPage['body'],
+            $podcastDeletePersonCheckboxId,
+            [
+                'name' => $podcastDeletePersonCheckboxName,
+                'aria-required' => 'true',
+                'aria-describedby' => 'podcast-person-delete-review-' . $podcastDeletePersonId,
+            ]
+        )
+        || $podcastDeletePersonCsrf === '') {
+        $podcastMetadataDeleteIssues[] = 'odebrání podcastové osoby nevykreslilo item-specific review a potvrzení';
+    } else {
+        $podcastDeletePersonLogBefore = $podcastDeleteLogCount($pdo, 'podcast_person_delete', $podcastDeletePersonId);
+        $podcastDeletePersonRejected = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_people.php',
+            [
+                'csrf_token' => $podcastDeletePersonCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'person_id' => (string)$podcastDeletePersonId,
+                'action' => 'delete',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeletePersonExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_people WHERE id = ?");
+        $podcastDeletePersonExistsStmt->execute([$podcastDeletePersonId]);
+        $podcastDeletePersonErrorPath = $podcastDeletePersonPath
+            . '&error=delete_confirm_required&delete_id=' . $podcastDeletePersonId;
+        if (httpIntegrationStatusCode($podcastDeletePersonRejected) !== 302
+            || !responseHasLocationHeader($podcastDeletePersonRejected['headers'], $podcastDeletePersonErrorPath, $baseUrl)
+            || (int)$podcastDeletePersonExistsStmt->fetchColumn() !== 1
+            || $podcastDeleteLogCount($pdo, 'podcast_person_delete', $podcastDeletePersonId) !== $podcastDeletePersonLogBefore) {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené odebrání podcastové osoby změnilo data nebo auditní log';
+        }
+
+        $podcastDeletePersonErrorPage = fetchUrl($baseUrl . $podcastDeletePersonErrorPath, $adminSession['cookie'], 0);
+        $podcastDeletePersonConfirmedCsrf = extractHiddenInputValue($podcastDeletePersonErrorPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($podcastDeletePersonErrorPage) !== 200
+            || !str_contains($podcastDeletePersonErrorPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="podcast-person-delete-error"')
+            || !httpIntegrationElementHasAttributes(
+                $podcastDeletePersonErrorPage['body'],
+                'form',
+                'podcast-person-delete-form-' . $podcastDeletePersonId,
+                ['aria-describedby' => 'podcast-person-delete-error']
+            )
+            || !httpIntegrationInputHasAttributes(
+                $podcastDeletePersonErrorPage['body'],
+                $podcastDeletePersonCheckboxId,
+                [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'podcast-person-delete-review-' . $podcastDeletePersonId
+                        . ' confirm-podcast-person-delete-' . $podcastDeletePersonId . '-error',
+                ]
+            )
+            || $podcastDeletePersonConfirmedCsrf === '') {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené odebrání podcastové osoby nevrátilo alert a field-level chybu';
+        }
+
+        $podcastDeletePersonConfirmed = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_people.php',
+            [
+                'csrf_token' => $podcastDeletePersonConfirmedCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'person_id' => (string)$podcastDeletePersonId,
+                'action' => 'delete',
+                $podcastDeletePersonCheckboxName => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeletePersonExistsStmt->execute([$podcastDeletePersonId]);
+        if (httpIntegrationStatusCode($podcastDeletePersonConfirmed) !== 302
+            || !responseHasLocationHeader($podcastDeletePersonConfirmed['headers'], $podcastDeletePersonPath . '&ok=deleted', $baseUrl)
+            || (int)$podcastDeletePersonExistsStmt->fetchColumn() !== 0
+            || $podcastDeleteLogCount($pdo, 'podcast_person_delete', $podcastDeletePersonId) !== $podcastDeletePersonLogBefore + 1) {
+            $podcastMetadataDeleteIssues[] = 'potvrzené odebrání podcastové osoby neprovedlo PRG, cleanup nebo audit log';
+        }
+    }
+
+    $podcastDeletePlatformPath = BASE_URL . '/admin/podcast_platforms.php?show_id=' . $podcastEpisodeValidationShowId;
+    $podcastDeletePlatformPage = fetchUrl($baseUrl . $podcastDeletePlatformPath, $adminSession['cookie'], 0);
+    $podcastDeletePlatformCsrf = extractHiddenInputValue($podcastDeletePlatformPage['body'], 'csrf_token');
+    $podcastDeletePlatformCheckboxId = 'confirm-podcast-platform-delete-' . $podcastDeletePlatformId;
+    $podcastDeletePlatformCheckboxName = 'confirm_podcast_platform_delete_' . $podcastDeletePlatformId;
+    if (httpIntegrationStatusCode($podcastDeletePlatformPage) !== 200
+        || !str_contains($podcastDeletePlatformPage['body'], 'HTTP platforma ke smazání')
+        || !str_contains($podcastDeletePlatformPage['body'], 'Účet ani obsah na externí platformě se nezmění.')
+        || !httpIntegrationInputHasAttributes(
+            $podcastDeletePlatformPage['body'],
+            $podcastDeletePlatformCheckboxId,
+            [
+                'name' => $podcastDeletePlatformCheckboxName,
+                'aria-required' => 'true',
+                'aria-describedby' => 'podcast-platform-delete-review-' . $podcastDeletePlatformId,
+            ]
+        )
+        || $podcastDeletePlatformCsrf === '') {
+        $podcastMetadataDeleteIssues[] = 'odebrání podcastové platformy nevykreslilo item-specific review a potvrzení';
+    } else {
+        $podcastDeletePlatformLogBefore = $podcastDeleteLogCount($pdo, 'podcast_platform_delete', $podcastDeletePlatformId);
+        $podcastDeletePlatformRejected = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_platforms.php',
+            [
+                'csrf_token' => $podcastDeletePlatformCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'link_id' => (string)$podcastDeletePlatformId,
+                'action' => 'delete',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeletePlatformExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_platform_links WHERE id = ?");
+        $podcastDeletePlatformExistsStmt->execute([$podcastDeletePlatformId]);
+        $podcastDeletePlatformErrorPath = $podcastDeletePlatformPath
+            . '&error=delete_confirm_required&delete_id=' . $podcastDeletePlatformId;
+        if (httpIntegrationStatusCode($podcastDeletePlatformRejected) !== 302
+            || !responseHasLocationHeader($podcastDeletePlatformRejected['headers'], $podcastDeletePlatformErrorPath, $baseUrl)
+            || (int)$podcastDeletePlatformExistsStmt->fetchColumn() !== 1
+            || $podcastDeleteLogCount($pdo, 'podcast_platform_delete', $podcastDeletePlatformId) !== $podcastDeletePlatformLogBefore) {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené odebrání podcastové platformy změnilo data nebo auditní log';
+        }
+
+        $podcastDeletePlatformErrorPage = fetchUrl($baseUrl . $podcastDeletePlatformErrorPath, $adminSession['cookie'], 0);
+        $podcastDeletePlatformConfirmedCsrf = extractHiddenInputValue($podcastDeletePlatformErrorPage['body'], 'csrf_token');
+        if (httpIntegrationStatusCode($podcastDeletePlatformErrorPage) !== 200
+            || !str_contains($podcastDeletePlatformErrorPage['body'], 'role="alert" aria-atomic="true" aria-labelledby="podcast-platform-delete-error"')
+            || !httpIntegrationElementHasAttributes(
+                $podcastDeletePlatformErrorPage['body'],
+                'form',
+                'podcast-platform-delete-form-' . $podcastDeletePlatformId,
+                ['aria-describedby' => 'podcast-platform-delete-error']
+            )
+            || !httpIntegrationInputHasAttributes(
+                $podcastDeletePlatformErrorPage['body'],
+                $podcastDeletePlatformCheckboxId,
+                [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'podcast-platform-delete-review-' . $podcastDeletePlatformId
+                        . ' confirm-podcast-platform-delete-' . $podcastDeletePlatformId . '-error',
+                ]
+            )
+            || $podcastDeletePlatformConfirmedCsrf === '') {
+            $podcastMetadataDeleteIssues[] = 'nepotvrzené odebrání podcastové platformy nevrátilo alert a field-level chybu';
+        }
+
+        $podcastDeletePlatformConfirmed = postUrl(
+            $baseUrl . BASE_URL . '/admin/podcast_platforms.php',
+            [
+                'csrf_token' => $podcastDeletePlatformConfirmedCsrf,
+                'show_id' => (string)$podcastEpisodeValidationShowId,
+                'link_id' => (string)$podcastDeletePlatformId,
+                'action' => 'delete',
+                $podcastDeletePlatformCheckboxName => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $podcastDeletePlatformExistsStmt->execute([$podcastDeletePlatformId]);
+        if (httpIntegrationStatusCode($podcastDeletePlatformConfirmed) !== 302
+            || !responseHasLocationHeader($podcastDeletePlatformConfirmed['headers'], $podcastDeletePlatformPath . '&ok=deleted', $baseUrl)
+            || (int)$podcastDeletePlatformExistsStmt->fetchColumn() !== 0
+            || $podcastDeleteLogCount($pdo, 'podcast_platform_delete', $podcastDeletePlatformId) !== $podcastDeletePlatformLogBefore + 1) {
+            $podcastMetadataDeleteIssues[] = 'potvrzené odebrání podcastové platformy neprovedlo PRG, cleanup nebo audit log';
+        }
+    }
+    httpIntegrationPrintResult('podcast_metadata_delete_error_prevention_http', $podcastMetadataDeleteIssues, $failures);
+
     $podcastFeedIntegrityIssues = [];
     $podcastChapterCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_podcast_chapters WHERE episode_id = ?");
     $podcastChapterCountStmt->execute([$podcastFeedEpisodeId]);
@@ -1527,10 +1817,14 @@ try {
         $podcastFeedIntegrityIssues[] = 'veřejný katalog podcastů neumožnil přístupné hledání podle textu a kategorie';
     }
     $podcastSeasonOneResponse = fetchUrl(
-        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=1', '', 0
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=1',
+        '',
+        0
     );
     $podcastSeasonTwoResponse = fetchUrl(
-        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=2', '', 0
+        $baseUrl . BASE_URL . '/podcast/' . rawurlencode($podcastEpisodeValidationShowSlug) . '?sezona=2',
+        '',
+        0
     );
     if (!str_contains($podcastSeasonOneResponse['body'], 'HTTP externí epizoda')
         || str_contains($podcastSeasonOneResponse['body'], 'HTTP epizoda druhé sezóny')

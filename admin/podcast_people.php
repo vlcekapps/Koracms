@@ -41,17 +41,33 @@ $baseUrl = BASE_URL . '/admin/podcast_people.php?' . http_build_query($baseQuery
 $personId = inputInt('post', 'person_id');
 $error = '';
 $errorField = '';
+$deleteErrorId = inputInt('get', 'delete_id');
+$deleteError = trim((string)($_GET['error'] ?? '')) === 'delete_confirm_required' && $deleteErrorId !== null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
     $action = trim((string)($_POST['action'] ?? 'save'));
     if ($action === 'delete') {
         if ($personId !== null) {
-            $deleteSql = "DELETE FROM cms_podcast_people WHERE id = ? AND {$scopeWhere}";
-            $pdo->prepare($deleteSql)->execute(array_merge([$personId], $scopeParams));
-            logAction('podcast_person_delete', "id={$personId} show_id={$showId}");
+            $deletePersonStmt = $pdo->prepare("SELECT id FROM cms_podcast_people WHERE id = ? AND {$scopeWhere} LIMIT 1");
+            $deletePersonStmt->execute(array_merge([$personId], $scopeParams));
+            if ($deletePersonStmt->fetchColumn()) {
+                $confirmationField = 'confirm_podcast_person_delete_' . $personId;
+                $confirmed = isset($_POST[$confirmationField]) && (string)$_POST[$confirmationField] === '1';
+                if (!$confirmed) {
+                    header('Location: ' . appendUrlQuery($baseUrl, [
+                        'error' => 'delete_confirm_required',
+                        'delete_id' => $personId,
+                    ]));
+                    exit;
+                }
+
+                $deleteSql = "DELETE FROM cms_podcast_people WHERE id = ? AND {$scopeWhere}";
+                $pdo->prepare($deleteSql)->execute(array_merge([$personId], $scopeParams));
+                logAction('podcast_person_delete', "id={$personId} show_id={$showId}");
+            }
         }
-        header('Location: ' . $baseUrl . '&ok=deleted');
+        header('Location: ' . appendUrlQuery($baseUrl, ['ok' => 'deleted']));
         exit;
     }
 
@@ -143,10 +159,14 @@ adminHeader($heading);
 ?>
 <p><a href="<?= h($backUrl) ?>"><span aria-hidden="true">&larr;</span> Zpět na <?= $episodeId === null ? 'podcast' : 'epizodu' ?></a></p>
 
-<?php if ($error !== ''): ?>
+<?php if ($deleteError): ?>
+  <div class="error" role="alert" aria-atomic="true" aria-labelledby="podcast-person-delete-error">
+    <p id="podcast-person-delete-error">Osobu nelze odebrat bez potvrzení kontroly jejího jména, role a dopadu na veřejný podcast.</p>
+  </div>
+<?php elseif ($error !== ''): ?>
   <p class="error" role="alert" id="form-error" aria-atomic="true"><?= h($error) ?></p>
 <?php elseif (isset($_GET['ok'])): ?>
-  <p class="success" role="status">Seznam osob byl aktualizován.</p>
+  <p class="success" role="status" aria-atomic="true">Seznam osob byl aktualizován.</p>
 <?php endif; ?>
 
 <section aria-labelledby="podcast-person-form-heading">
@@ -209,19 +229,38 @@ adminHeader($heading);
         <caption><?= h($heading) ?></caption>
         <thead><tr><th scope="col">Jméno</th><th scope="col">Role</th><th scope="col">Skupina</th><th scope="col">Akce</th></tr></thead>
         <tbody>
-        <?php foreach ($people as $listedPerson): ?>
+        <?php foreach ($people as $listedPerson):
+            $listedPersonId = (int)$listedPerson['id'];
+            $personDeleteConfirmField = 'confirm_podcast_person_delete_' . $listedPersonId;
+            $personDeleteReviewId = 'podcast-person-delete-review-' . $listedPersonId;
+            $personDeleteFieldErrorId = 'confirm-podcast-person-delete-' . $listedPersonId . '-error';
+            $personDeleteHasError = $deleteError && $deleteErrorId === $listedPersonId;
+            $personDeleteErrors = $personDeleteHasError ? [$personDeleteConfirmField] : [];
+            ?>
           <tr>
             <td><?= h((string)$listedPerson['name']) ?></td>
             <td><?= h(podcastPersonRoleLabel((string)$listedPerson['role_key'])) ?></td>
             <td><?= h(podcastPersonGroupLabel((string)$listedPerson['group_key'])) ?></td>
             <td class="actions">
-              <a href="<?= h($baseUrl . '&edit=' . (int)$listedPerson['id']) ?>" class="btn">Upravit</a>
-              <form method="post">
+              <a href="<?= h($baseUrl . '&edit=' . $listedPersonId) ?>" class="btn">Upravit</a>
+              <form id="podcast-person-delete-form-<?= $listedPersonId ?>" method="post" novalidate<?= $personDeleteHasError ? ' aria-describedby="podcast-person-delete-error"' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="show_id" value="<?= (int)$showId ?>">
                 <?php if ($episodeId !== null): ?><input type="hidden" name="episode_id" value="<?= (int)$episodeId ?>"><?php endif; ?>
-                <input type="hidden" name="person_id" value="<?= (int)$listedPerson['id'] ?>">
-                <button type="submit" name="action" value="delete" class="btn btn-danger" data-confirm="Odebrat osobu?">Odebrat</button>
+                <input type="hidden" name="person_id" value="<?= $listedPersonId ?>">
+                <input type="hidden" name="action" value="delete">
+                <fieldset class="admin-inline-fieldset">
+                  <legend>Odebrání osoby <?= h((string)$listedPerson['name']) ?></legend>
+                  <p id="<?= h($personDeleteReviewId) ?>" class="field-help field-help--flush">
+                    Odebrání trvale odstraní osobu „<?= h((string)$listedPerson['name']) ?>“ z <?= $episodeId === null ? 'veřejného detailu pořadu a RSS metadat' : 'veřejného detailu epizody a jejích RSS metadat' ?>. Podcast, epizoda i externí profil nebo obrázek zůstanou zachované.
+                  </p>
+                  <label for="confirm-podcast-person-delete-<?= $listedPersonId ?>" class="admin-checkbox-label">
+                    <input type="checkbox" id="confirm-podcast-person-delete-<?= $listedPersonId ?>" name="<?= h($personDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($personDeleteConfirmField, $personDeleteErrors, [], [$personDeleteReviewId], $personDeleteFieldErrorId) ?>>
+                    Potvrzuji odebrání této osoby.
+                  </label>
+                  <?php adminRenderFieldError($personDeleteConfirmField, $personDeleteErrors, [], 'Před odebráním potvrďte kontrolu osoby a jejího veřejného dopadu.', $personDeleteFieldErrorId); ?>
+                  <button type="submit" class="btn btn-danger" data-confirm="Odebrat osobu?">Odebrat</button>
+                </fieldset>
               </form>
             </td>
           </tr>
