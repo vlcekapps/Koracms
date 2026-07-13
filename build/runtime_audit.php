@@ -9560,8 +9560,6 @@ $foundationChecks = [
         && str_contains($adminBulkSource, "koraLog('warning', 'admin bulk operation failed'")
         && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_photos'")
         && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_albums'")
-        && str_contains($blogBulkSource, 'function adminBlogBulkDeleteFile')
-        && str_contains($blogBulkSource, "koraLog('warning', 'admin blog bulk operation failed'")
         && str_contains($mediaLibrarySource, 'function mediaRunFilesystemOperation')
         && str_contains($mediaLibrarySource, 'path_hash')
         && str_contains($themeSource, 'path_hash')
@@ -12090,8 +12088,7 @@ if (!str_contains($blogSaveSource, 'normalizeRelatedArticleIds') || !str_contain
 if (!str_contains($blogPresentationSource, 'manualRelatedArticles') || !str_contains($blogPresentationSource, 'cms_article_related') || !str_contains($blogPresentationSource, 'zbytek se doplní automaticky')) {
     $blogAdminIssues[] = 'public related article helper is missing manual-first related article fallback';
 }
-if (!str_contains($blogBulkSource, 'DELETE FROM cms_article_related')
-    || !str_contains($blogDeleteSource, 'DELETE FROM cms_article_related')
+if (!str_contains($blogDeleteSource, 'DELETE FROM cms_article_related')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_article_related')) {
     $blogAdminIssues[] = 'manual related article links are missing cleanup on destructive article workflows';
 }
@@ -12134,8 +12131,7 @@ if (!str_contains($blogPresentationSource, 'function blogSeriesSlug')
     || !str_contains($blogPresentationSource, 'function articleSeriesNavigation')) {
     $blogAdminIssues[] = 'blog helpers are missing shared article series public/admin helpers';
 }
-if (!str_contains($blogBulkSource, 'DELETE FROM cms_blog_series_items')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'DELETE FROM cms_blog_series_items')
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'DELETE FROM cms_blog_series_items')
     || !str_contains($blogDeleteSource, 'DELETE FROM cms_blog_series')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_blog_series_items')) {
     $blogAdminIssues[] = 'article series links are missing cleanup on destructive article or blog workflows';
@@ -12737,7 +12733,6 @@ if (!str_contains($blogCatsSource, 'upsertPathRedirect(')
     $blogAdminIssues[] = 'blog category, tag or series admin no longer creates canonical redirects after slug changes';
 }
 if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
-    || !str_contains($blogBulkSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($article))')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
     || !str_contains($blogDeleteSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleRow))')) {
     $blogAdminIssues[] = 'destructive article workflows no longer clean redirects pointing to removed article URLs';
@@ -21161,6 +21156,99 @@ if ($navigationLinkDeleteGuardrailIssues === []) {
     $failures++;
     foreach ($navigationLinkDeleteGuardrailIssues as $navigationLinkDeleteGuardrailIssue) {
         echo '- ' . $navigationLinkDeleteGuardrailIssue . "\n";
+    }
+}
+
+echo "=== article_bulk_delete_error_prevention_guardrails ===\n";
+$articleBulkDeleteGuardrailIssues = [];
+$articleBulkDeleteListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$articleBulkDeleteHandlerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_bulk.php');
+$articleBulkDeleteHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    "requireModuleEnabled('blog')",
+    'verifyCsrf()',
+    'internalRedirectTarget(',
+    'function adminBlogBulkDeletableArticles',
+    'confirm_article_bulk_delete',
+    'article_bulk_delete_confirm_required',
+    'article_bulk_delete_selection_invalid',
+    "'selected_ids' => \$ids",
+    'deleted_at IS NULL',
+    'FOR UPDATE',
+    'canManageOwnBlogOnly()',
+    'canCurrentUserWriteToBlog',
+    '$pdo->beginTransaction()',
+    '$pdo->rollBack()',
+    '$pdo->commit()',
+    'UPDATE cms_articles SET deleted_at = NOW()',
+    '$updateStmt->rowCount() !== count($ids)',
+    "logAction('article_bulk_delete', 'ids=' . implode(',', \$ids) . ' soft=true')",
+] as $articleBulkDeleteHandlerFragment) {
+    if (!str_contains($articleBulkDeleteHandlerSource, $articleBulkDeleteHandlerFragment)) {
+        $articleBulkDeleteGuardrailIssues[] = 'bulk article deletion is missing server/reversibility guardrail: ' . $articleBulkDeleteHandlerFragment;
+    }
+}
+foreach ([
+    "\$bulkDeleteFormErrorId = 'article-bulk-delete-form-error'",
+    'aria-atomic="true"',
+    "\$bulkDeleteReviewId = 'article-bulk-delete-review'",
+    'name="confirm_article_bulk_delete"',
+    'required aria-required="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'Přesunout vybrané do Koše',
+    'form="bulk-form"',
+    'input[form="bulk-form"][name="ids[]"]',
+    'formnovalidate',
+] as $articleBulkDeleteListFragment) {
+    if (!str_contains($articleBulkDeleteListSource, $articleBulkDeleteListFragment)) {
+        $articleBulkDeleteGuardrailIssues[] = 'bulk article deletion is missing accessible review/form fragment: ' . $articleBulkDeleteListFragment;
+    }
+}
+$articleBulkFormStart = strpos($articleBulkDeleteListSource, 'id="bulk-form"');
+$articleBulkFormEnd = $articleBulkFormStart === false ? false : strpos($articleBulkDeleteListSource, '</form>', $articleBulkFormStart);
+$articleBulkTableStart = strpos($articleBulkDeleteListSource, '<table>', $articleBulkFormStart === false ? 0 : $articleBulkFormStart);
+if ($articleBulkFormStart === false
+    || $articleBulkFormEnd === false
+    || $articleBulkTableStart === false
+    || $articleBulkFormEnd > $articleBulkTableStart) {
+    $articleBulkDeleteGuardrailIssues[] = 'bulk article form again wraps row-level forms instead of using explicit form-associated checkboxes';
+}
+foreach ([
+    'data-confirm="Smazat vybrané články?"',
+    'function adminBlogBulkDeleteFile',
+    'unlink(',
+    'DELETE FROM cms_articles',
+    'DELETE FROM cms_article_tags',
+    'DELETE FROM cms_article_related',
+    'DELETE FROM cms_blog_series_items',
+    'deleteRedirectsTargetingPath',
+] as $articleBulkDeleteDestructiveFragment) {
+    if (str_contains($articleBulkDeleteHandlerSource, $articleBulkDeleteDestructiveFragment)
+        || ($articleBulkDeleteDestructiveFragment === 'data-confirm="Smazat vybrané články?"'
+            && str_contains($articleBulkDeleteListSource, $articleBulkDeleteDestructiveFragment))) {
+        $articleBulkDeleteGuardrailIssues[] = 'bulk article deletion again contains legacy/destructive behavior: ' . $articleBulkDeleteDestructiveFragment;
+    }
+}
+foreach ([
+    "httpIntegrationPrintResult('article_bulk_delete_error_prevention_http'",
+    'hromadné mazání článků bez potvrzení změnilo článek, vazby, soubory, redirect nebo audit log',
+    'chybový stav hromadného přesunu článků nezachoval výběr nebo přístupné vazby',
+    'potvrzený hromadný přesun článku nezachoval obnovitelný záznam, vazby, soubory, redirect nebo audit log',
+    'podvržený cizí článek způsobil částečný přesun nebo audit log autora',
+    'platný autorský hromadný přesun neomezil změnu na vlastní článek',
+] as $articleBulkDeleteHttpFragment) {
+    if (!str_contains($articleBulkDeleteHttpSource, $articleBulkDeleteHttpFragment)) {
+        $articleBulkDeleteGuardrailIssues[] = 'HTTP integration is missing bulk article deletion proof: ' . $articleBulkDeleteHttpFragment;
+    }
+}
+if ($articleBulkDeleteGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($articleBulkDeleteGuardrailIssues as $articleBulkDeleteGuardrailIssue) {
+        echo '- ' . $articleBulkDeleteGuardrailIssue . "\n";
     }
 }
 

@@ -2,103 +2,154 @@
 
 require_once __DIR__ . '/../db.php';
 requireLogin(BASE_URL . '/admin/login.php');
+requireModuleEnabled('blog');
 verifyCsrf();
 
-$ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
-$action = $_POST['action'] ?? '';
+$ids = [];
+$hasInvalidId = false;
+foreach ((array)($_POST['ids'] ?? []) as $rawId) {
+    $rawId = trim((string)$rawId);
+    if ($rawId === '' || !ctype_digit($rawId) || (int)$rawId <= 0) {
+        $hasInvalidId = true;
+        continue;
+    }
+    $ids[] = (int)$rawId;
+}
+$ids = array_values(array_unique($ids));
+$action = trim((string)($_POST['action'] ?? ''));
 $redirect = internalRedirectTarget(trim($_POST['redirect'] ?? ''), BASE_URL . '/admin/blog.php');
-
-$setFlash = static function (string $type, string $message): void {
-    $_SESSION['blog_transfer_flash'] = [
-        'type' => $type,
-        'message' => $message,
-    ];
-};
 
 /**
  * @param array<string,mixed> $context
  */
-function adminBlogBulkLogFailure(string $operation, array $context = []): void
-{
-    koraLog('warning', 'admin blog bulk operation failed', array_merge([
-        'operation' => $operation,
-    ], $context));
-}
+$setFlash = static function (string $type, string $message, array $context = []): void {
+    $_SESSION['blog_transfer_flash'] = array_merge([
+        'type' => $type,
+        'message' => $message,
+    ], $context);
+};
 
-function adminBlogBulkDeleteFile(string $filePath, int $articleId, string $fileRole): void
+/**
+ * @param list<int> $ids
+ * @return list<array{id:int,blog_id:int}>
+ */
+function adminBlogBulkDeletableArticles(PDO $pdo, array $ids): array
 {
-    if (!is_file($filePath)) {
-        return;
+    if ($ids === []) {
+        return [];
     }
 
-    if (!unlink($filePath)) {
-        adminBlogBulkLogFailure('file_delete', [
-            'article_id' => $articleId,
-            'file_role' => $fileRole,
-            'file_extension' => strtolower((string)pathinfo($filePath, PATHINFO_EXTENSION)),
-        ]);
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $params = $ids;
+    $ownershipSql = '';
+    if (canManageOwnBlogOnly()) {
+        $ownershipSql = ' AND author_id = ?';
+        $params[] = currentUserId();
     }
-}
-
-if ($action === 'delete' && $ids !== []) {
-    $pdo = db_connect();
-    $dir = __DIR__ . '/../uploads/articles/';
+    $stmt = $pdo->prepare(
+        "SELECT id, blog_id FROM cms_articles
+         WHERE id IN ({$placeholders}) AND deleted_at IS NULL{$ownershipSql}
+         FOR UPDATE"
+    );
+    $stmt->execute($params);
+    $articles = $stmt->fetchAll();
 
     if (canManageOwnBlogOnly()) {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $params = array_merge($ids, [currentUserId()]);
-        $stmt = $pdo->prepare(
-            "SELECT id, slug, image_file, blog_id FROM cms_articles
-             WHERE id IN ({$placeholders}) AND author_id = ?"
-        );
-        $stmt->execute($params);
         $articles = array_values(array_filter(
-            $stmt->fetchAll(),
-            static fn (array $article): bool => canCurrentUserWriteToBlog((int)($article['blog_id'] ?? 0))
+            $articles,
+            static fn (array $article): bool => canCurrentUserWriteToBlog((int)$article['blog_id'])
         ));
-    } else {
-        $articles = [];
-        foreach ($ids as $id) {
-            $stmt = $pdo->prepare("SELECT id, slug, image_file, blog_id FROM cms_articles WHERE id = ?");
-            $stmt->execute([$id]);
-            $article = $stmt->fetch();
-            if ($article) {
-                $articles[] = $article;
-            }
-        }
     }
 
-    $deleteIds = [];
-    foreach ($articles as $article) {
-        $imageFile = trim((string)($article['image_file'] ?? ''));
-        $articleId = (int)$article['id'];
-        if ($imageFile !== '') {
-            adminBlogBulkDeleteFile($dir . $imageFile, $articleId, 'image_file');
-            adminBlogBulkDeleteFile($dir . 'thumbs/' . $imageFile, $articleId, 'thumb');
-        }
-        $deleteIds[] = $articleId;
+    return array_map(
+        static fn (array $article): array => [
+            'id' => (int)$article['id'],
+            'blog_id' => (int)$article['blog_id'],
+        ],
+        $articles
+    );
+}
+
+if ($action === 'delete') {
+    $deleteFlashContext = ['selected_ids' => $ids];
+    if ($ids === [] || $hasInvalidId) {
+        $setFlash(
+            'error',
+            'Vyberte znovu články, které chcete přesunout do Koše.',
+            array_merge($deleteFlashContext, ['code' => 'article_bulk_delete_selection_required'])
+        );
+        header('Location: ' . $redirect);
+        exit;
+    }
+    if (($_POST['confirm_article_bulk_delete'] ?? '') !== '1') {
+        $setFlash(
+            'error',
+            'Hromadný přesun článků do Koše nejde provést bez potvrzení kontroly dopadu.',
+            array_merge($deleteFlashContext, ['code' => 'article_bulk_delete_confirm_required'])
+        );
+        header('Location: ' . $redirect);
+        exit;
     }
 
-    foreach ($deleteIds as $deleteId) {
-        foreach ($articles as $article) {
-            if ((int)$article['id'] === $deleteId) {
-                deleteRedirectsTargetingPath($pdo, articlePublicPath($article));
-                break;
-            }
+    $pdo = db_connect();
+    try {
+        $pdo->beginTransaction();
+        $articles = adminBlogBulkDeletableArticles($pdo, $ids);
+        $allowedIds = array_map(static fn (array $article): int => $article['id'], $articles);
+        sort($allowedIds);
+        $requestedIds = $ids;
+        sort($requestedIds);
+        if ($allowedIds !== $requestedIds) {
+            $pdo->rollBack();
+            $setFlash(
+                'error',
+                'Vybraný seznam článků se změnil nebo obsahuje položky, které nemůžete přesunout do Koše. Zkontrolujte výběr a potvrďte akci znovu.',
+                array_merge($deleteFlashContext, ['code' => 'article_bulk_delete_selection_invalid'])
+            );
+            header('Location: ' . $redirect);
+            exit;
         }
-        $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$deleteId]);
-        $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$deleteId, $deleteId]);
-        $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$deleteId]);
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $updateParams = $ids;
+        $ownershipSql = '';
         if (canManageOwnBlogOnly()) {
-            $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND author_id = ?")->execute([$deleteId, currentUserId()]);
-        } else {
-            $pdo->prepare("DELETE FROM cms_articles WHERE id = ?")->execute([$deleteId]);
+            $ownershipSql = ' AND author_id = ?';
+            $updateParams[] = currentUserId();
         }
+        $updateStmt = $pdo->prepare(
+            "UPDATE cms_articles SET deleted_at = NOW()
+             WHERE id IN ({$placeholders}) AND deleted_at IS NULL{$ownershipSql}"
+        );
+        $updateStmt->execute($updateParams);
+        if ($updateStmt->rowCount() !== count($ids)) {
+            throw new RuntimeException('Počet přesunutých článků neodpovídá potvrzenému výběru.');
+        }
+
+        logAction('article_bulk_delete', 'ids=' . implode(',', $ids) . ' soft=true');
+        $pdo->commit();
+        $message = count($ids) === 1
+            ? 'Vybraný článek byl přesunut do Koše. Lze jej obnovit ve správě Koše.'
+            : 'Vybrané články (' . count($ids) . ') byly přesunuty do Koše. Lze je obnovit ve správě Koše.';
+        $setFlash('success', $message, ['code' => 'article_bulk_delete_success']);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        koraLog('warning', 'admin blog bulk soft delete failed', [
+            'operation' => 'article_bulk_soft_delete',
+            'article_count' => count($ids),
+            'exception' => $e,
+        ]);
+        $setFlash(
+            'error',
+            'Články se nepodařilo přesunout do Koše. Data zůstala beze změny; zkontrolujte výběr a zkuste akci znovu.',
+            array_merge($deleteFlashContext, ['code' => 'article_bulk_delete_failed'])
+        );
     }
 
-    if ($deleteIds !== []) {
-        logAction('article_bulk_delete', 'ids=' . implode(',', $deleteIds));
-    }
+    header('Location: ' . $redirect);
+    exit;
 } elseif ($action === 'move' && $ids !== []) {
     $pdo = db_connect();
     $writableBlogs = getWritableBlogsForUser();

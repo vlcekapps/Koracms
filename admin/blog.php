@@ -97,6 +97,30 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute($params);
 $articles = $stmt->fetchAll();
+$bulkDeleteErrorCode = is_array($transferFlash) ? trim((string)($transferFlash['code'] ?? '')) : '';
+$bulkDeleteHasError = is_array($transferFlash)
+    && ($transferFlash['type'] ?? '') === 'error'
+    && in_array($bulkDeleteErrorCode, [
+        'article_bulk_delete_selection_required',
+        'article_bulk_delete_confirm_required',
+        'article_bulk_delete_selection_invalid',
+        'article_bulk_delete_failed',
+    ], true);
+$bulkDeleteConfirmError = $bulkDeleteErrorCode === 'article_bulk_delete_confirm_required';
+$bulkDeleteErrorFields = $bulkDeleteConfirmError ? ['confirm_article_bulk_delete'] : [];
+$bulkDeleteSelectedIds = [];
+foreach ((array)(is_array($transferFlash) ? ($transferFlash['selected_ids'] ?? []) : []) as $selectedId) {
+    $selectedId = (int)$selectedId;
+    if ($selectedId > 0) {
+        $bulkDeleteSelectedIds[] = $selectedId;
+    }
+}
+$visibleArticleIds = array_map(static fn (array $article): int => (int)$article['id'], $articles);
+$bulkDeleteSelectedIds = array_values(array_intersect(array_unique($bulkDeleteSelectedIds), $visibleArticleIds));
+$bulkDeleteSelectedLookup = array_fill_keys($bulkDeleteSelectedIds, true);
+$bulkDeleteFormErrorId = 'article-bulk-delete-form-error';
+$bulkDeleteReviewId = 'article-bulk-delete-review';
+$bulkDeleteFieldErrorId = 'confirm-article-bulk-delete-error';
 
 $canManageTaxonomies = $activeBlog
     ? canCurrentUserManageBlogTaxonomies((int)$activeBlog['id'])
@@ -150,7 +174,9 @@ adminHeader($blogCaptionTitle);
 <?php endif; ?>
 
 <?php if (is_array($transferFlash) && ($transferFlash['message'] ?? '') !== ''): ?>
-  <p class="<?= ($transferFlash['type'] ?? '') === 'error' ? 'error' : 'success' ?>" role="<?= ($transferFlash['type'] ?? '') === 'error' ? 'alert' : 'status' ?>">
+  <p<?= $bulkDeleteHasError ? ' id="' . h($bulkDeleteFormErrorId) . '"' : '' ?>
+     class="<?= ($transferFlash['type'] ?? '') === 'error' ? 'error' : 'success' ?>"
+     role="<?= ($transferFlash['type'] ?? '') === 'error' ? 'alert' : 'status' ?>" aria-atomic="true">
     <?= h((string)$transferFlash['message']) ?>
   </p>
 <?php endif; ?>
@@ -220,26 +246,41 @@ adminHeader($blogCaptionTitle);
     <?php endif; ?>
   </p>
 <?php elseif ($hasBlogs): ?>
-<form method="post" action="blog_bulk.php" id="bulk-form">
+<form method="post" action="blog_bulk.php" id="bulk-form"<?= $bulkDeleteHasError ? ' aria-describedby="' . h($bulkDeleteFormErrorId) . '"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
   <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
   <fieldset class="admin-fieldset-card">
     <legend>Hromadné akce s vybranými články</legend>
     <p data-selection-status="blog" class="field-help field-help--flush" aria-live="polite">Zatím není vybraný žádný článek.</p>
+    <p id="<?= h($bulkDeleteReviewId) ?>" class="field-help field-help--flush">
+      Přesun do Koše skryje vybrané články z webu, ale zachová jejich obrázky, komentáře, štítky, série, související články, revize i redirecty. Články lze v Koši obnovit; trvale se odstraní až samostatně potvrzeným vysypáním.
+    </p>
+    <label for="confirm-article-bulk-delete" class="admin-checkbox-label">
+      <input type="checkbox" id="confirm-article-bulk-delete" name="confirm_article_bulk_delete" value="1"
+             required aria-required="true"<?= adminFieldAttributes('confirm_article_bulk_delete', $bulkDeleteErrorFields, [], [$bulkDeleteReviewId], $bulkDeleteFieldErrorId) ?>>
+      Zkontroloval(a) jsem vybrané články a chci je přesunout do Koše.
+    </label>
+    <?php adminRenderFieldError(
+        'confirm_article_bulk_delete',
+        $bulkDeleteErrorFields,
+        [],
+        'Před přesunem článků do Koše potvrďte, že jste zkontrolovali výběr a zachování souvisejících dat.',
+        $bulkDeleteFieldErrorId
+    ); ?>
     <div class="button-row">
       <?php if ($multiBlog): ?>
-        <button type="submit" name="action" value="move" class="btn bulk-action-btn" disabled>Přesunout do jiného blogu</button>
+        <button type="submit" name="action" value="move" class="btn bulk-action-btn" disabled formnovalidate>Přesunout do jiného blogu</button>
       <?php endif; ?>
-      <button type="submit" name="action" value="set_draft" class="btn bulk-action-btn" disabled>Nastavit jako koncept</button>
-      <button type="submit" name="action" value="set_pending" class="btn bulk-action-btn" disabled>Nastavit čeká na schválení</button>
+      <button type="submit" name="action" value="set_draft" class="btn bulk-action-btn" disabled formnovalidate>Nastavit jako koncept</button>
+      <button type="submit" name="action" value="set_pending" class="btn bulk-action-btn" disabled formnovalidate>Nastavit čeká na schválení</button>
       <?php if (currentUserHasCapability('blog_approve')): ?>
-        <button type="submit" name="action" value="set_published" class="btn bulk-action-btn" disabled>Nastavit jako publikováno</button>
+        <button type="submit" name="action" value="set_published" class="btn bulk-action-btn" disabled formnovalidate>Nastavit jako publikováno</button>
       <?php endif; ?>
-      <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn"
-              disabled data-confirm="Smazat vybrané články?">Smazat vybrané</button>
+      <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled>Přesunout vybrané do Koše</button>
     </div>
   </fieldset>
-  <table>
+</form>
+<table>
     <caption>Přehled článků blogu</caption>
     <thead>
       <tr>
@@ -256,7 +297,7 @@ adminHeader($blogCaptionTitle);
     <tbody>
     <?php foreach ($articles as $article): ?>
       <tr>
-        <td><label for="article-select-<?= (int)$article['id'] ?>" class="sr-only">Vybrat článek <?= h($article['title']) ?></label><input type="checkbox" id="article-select-<?= (int)$article['id'] ?>" name="ids[]" value="<?= (int)$article['id'] ?>"></td>
+        <td><label for="article-select-<?= (int)$article['id'] ?>" class="sr-only">Vybrat článek <?= h($article['title']) ?></label><input type="checkbox" id="article-select-<?= (int)$article['id'] ?>" name="ids[]" value="<?= (int)$article['id'] ?>" form="bulk-form"<?= isset($bulkDeleteSelectedLookup[(int)$article['id']]) ? ' checked' : '' ?>></td>
         <td><?= h($article['title']) ?></td>
         <?php if ($multiBlog): ?><td><?= h($article['blog_name'] ?? '–') ?></td><?php endif; ?>
         <td><?= $article['author_name'] ? h($article['author_name']) : '<em>–</em>' ?></td>
@@ -321,14 +362,13 @@ adminHeader($blogCaptionTitle);
   <div class="table-note" aria-hidden="true">
     Po výběru článků můžete nahoře použít hromadnou akci<?= $multiBlog ? ' včetně přesunu do jiného blogu' : '' ?>.
   </div>
-</form>
 <?php endif; ?>
 
 <?php if ($hasBlogs): ?>
 <script nonce="<?= cspNonce() ?>">
 (() => {
     const checkAll = document.getElementById('check-all');
-    const checkboxes = Array.from(document.querySelectorAll('#bulk-form input[name="ids[]"]'));
+    const checkboxes = Array.from(document.querySelectorAll('input[form="bulk-form"][name="ids[]"]'));
     const actionButtons = Array.from(document.querySelectorAll('#bulk-form .bulk-action-btn'));
     const status = document.querySelector('[data-selection-status="blog"]');
 

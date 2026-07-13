@@ -15411,6 +15411,243 @@ try {
 
     httpIntegrationPrintResult('blog_transfer_http', $blogTransferIssues, $failures);
 
+    $articleBulkDeleteIssues = [];
+    $articleBulkDeleteToken = bin2hex(random_bytes(4));
+    $articleBulkDeleteImageFile = 'http-bulk-delete-' . $articleBulkDeleteToken . '.png';
+    $articleBulkDeleteImagePath = dirname(__DIR__) . '/uploads/articles/' . $articleBulkDeleteImageFile;
+    $articleBulkDeleteThumbPath = dirname(__DIR__) . '/uploads/articles/thumbs/' . $articleBulkDeleteImageFile;
+    foreach ([$articleBulkDeleteImagePath, $articleBulkDeleteThumbPath] as $articleBulkDeleteStoredFile) {
+        if (file_put_contents($articleBulkDeleteStoredFile, 'HTTP bulk article delete fixture') === false) {
+            $articleBulkDeleteIssues[] = 'nepodařilo se vytvořit souborový fixture hromadného přesunu článku do Koše';
+        }
+        $createdTempFiles[] = $articleBulkDeleteStoredFile;
+    }
+
+    $articleBulkDeleteFixtureRows = [
+        [
+            'title' => 'HTTP hromadný přesun správce',
+            'slug' => 'http-bulk-delete-admin-' . $articleBulkDeleteToken,
+            'author_id' => $adminUserId,
+            'image_file' => $articleBulkDeleteImageFile,
+        ],
+        [
+            'title' => 'HTTP hromadný přesun autora',
+            'slug' => 'http-bulk-delete-author-' . $articleBulkDeleteToken,
+            'author_id' => $authorId,
+            'image_file' => '',
+        ],
+        [
+            'title' => 'HTTP cizí článek pro hromadný přesun',
+            'slug' => 'http-bulk-delete-foreign-' . $articleBulkDeleteToken,
+            'author_id' => $authorNoTaxId,
+            'image_file' => '',
+        ],
+    ];
+    foreach ($articleBulkDeleteFixtureRows as $articleBulkDeleteFixtureRow) {
+        $pdo->prepare(
+            "INSERT INTO cms_articles
+                (title, slug, blog_id, perex, content, comments_enabled, category_id, author_id, image_file, status)
+             VALUES (?, ?, ?, '', '<p>HTTP integration test hromadného přesunu do Koše.</p>', 1, ?, ?, ?, 'draft')"
+        )->execute([
+            $articleBulkDeleteFixtureRow['title'],
+            $articleBulkDeleteFixtureRow['slug'],
+            $sourceBlogId,
+            $sourceCategoryId,
+            $articleBulkDeleteFixtureRow['author_id'],
+            $articleBulkDeleteFixtureRow['image_file'],
+        ]);
+        $createdArticles[] = (int)$pdo->lastInsertId();
+    }
+    [$articleBulkDeleteAdminId, $articleBulkDeleteAuthorId, $articleBulkDeleteForeignId] = array_slice($createdArticles, -3);
+
+    $pdo->prepare('INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)')
+        ->execute([$articleBulkDeleteAdminId, $sourceTagOneId]);
+    $pdo->prepare('INSERT INTO cms_article_related (article_id, related_article_id, sort_order) VALUES (?, ?, 1)')
+        ->execute([$articleBulkDeleteAdminId, $articleForeignAttemptId]);
+    $pdo->prepare(
+        'INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order) VALUES (?, ?, ?, ?, 1, 1)'
+    )->execute([
+        $sourceBlogId,
+        'HTTP série hromadného přesunu',
+        'http-bulk-delete-series-' . $articleBulkDeleteToken,
+        'Fixture pro zachování série při přesunu do Koše.',
+    ]);
+    $articleBulkDeleteSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $articleBulkDeleteSeriesId;
+    $pdo->prepare('INSERT INTO cms_blog_series_items (series_id, article_id, sort_order) VALUES (?, ?, 1)')
+        ->execute([$articleBulkDeleteSeriesId, $articleBulkDeleteAdminId]);
+    $pdo->prepare(
+        "INSERT INTO cms_comments (article_id, author_name, author_email, content, status, is_approved)
+         VALUES (?, 'HTTP čtenář', 'reader@example.test', 'Komentář musí zůstat obnovitelný.', 'approved', 1)"
+    )->execute([$articleBulkDeleteAdminId]);
+    $articleBulkDeleteCommentId = (int)$pdo->lastInsertId();
+    $createdCommentIds[] = $articleBulkDeleteCommentId;
+    $pdo->prepare(
+        "INSERT INTO cms_revisions (entity_type, entity_id, field_name, old_value, new_value, user_id, created_at)
+         VALUES ('article', ?, 'content', '<p>Původní obsah.</p>', '<p>Nový obsah.</p>', ?, NOW())"
+    )->execute([$articleBulkDeleteAdminId, $adminUserId]);
+    $articleBulkDeleteOldPath = '/http-bulk-delete-legacy-' . $articleBulkDeleteToken;
+    $articleBulkDeletePublicPath = articlePublicPath([
+        'id' => $articleBulkDeleteAdminId,
+        'slug' => $articleBulkDeleteFixtureRows[0]['slug'],
+        'blog_slug' => $sourceBlogSlug,
+    ]);
+    $pdo->prepare('INSERT INTO cms_redirects (old_path, new_path, status_code) VALUES (?, ?, 301)')
+        ->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    $createdRedirectPaths[] = $articleBulkDeleteOldPath;
+
+    $articleBulkDeleteStateStmt = $pdo->prepare(
+        "SELECT a.deleted_at,
+                (SELECT COUNT(*) FROM cms_article_tags atg WHERE atg.article_id = a.id) AS tag_count,
+                (SELECT COUNT(*) FROM cms_article_related ar WHERE ar.article_id = a.id OR ar.related_article_id = a.id) AS related_count,
+                (SELECT COUNT(*) FROM cms_blog_series_items si WHERE si.article_id = a.id) AS series_count,
+                (SELECT COUNT(*) FROM cms_comments c WHERE c.article_id = a.id) AS comment_count,
+                (SELECT COUNT(*) FROM cms_revisions r WHERE r.entity_type = 'article' AND r.entity_id = a.id) AS revision_count
+         FROM cms_articles a WHERE a.id = ?"
+    );
+    $articleBulkDeleteRedirectStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_redirects WHERE old_path = ? AND new_path = ?');
+    $articleBulkDeletePath = BASE_URL . '/admin/blog.php?blog=' . $sourceBlogId;
+    $articleBulkDeleteEndpoint = $baseUrl . BASE_URL . '/admin/blog_bulk.php';
+    $articleBulkDeletePage = fetchUrl($baseUrl . $articleBulkDeletePath, $adminSession['cookie'], 0);
+    $articleBulkDeleteCsrf = extractHiddenInputValue($articleBulkDeletePage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($articleBulkDeletePage) !== 200
+        || $articleBulkDeleteCsrf === ''
+        || !str_contains($articleBulkDeletePage['body'], 'Přesunout vybrané do Koše')
+        || !str_contains($articleBulkDeletePage['body'], 'zachová jejich obrázky, komentáře, štítky, série, související články, revize i redirecty')
+        || !httpIntegrationInputHasAttributes($articleBulkDeletePage['body'], 'confirm-article-bulk-delete', [
+            'aria-required' => 'true',
+            'aria-describedby' => 'article-bulk-delete-review',
+        ])
+        || !httpIntegrationInputHasAttributes($articleBulkDeletePage['body'], 'article-select-' . $articleBulkDeleteAdminId, [
+            'form' => 'bulk-form',
+        ])
+        || str_contains($articleBulkDeletePage['body'], 'data-confirm="Smazat vybrané články?"')) {
+        $articleBulkDeleteIssues[] = 'přehled článků nevykreslil vratný review-and-confirm formulář s platnou form vazbou';
+    }
+
+    $articleBulkDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn();
+    $articleBulkDeleteRejectedResponse = postUrl($articleBulkDeleteEndpoint, [
+        'csrf_token' => $articleBulkDeleteCsrf,
+        'redirect' => $articleBulkDeletePath,
+        'action' => 'delete',
+        'ids' => [(string)$articleBulkDeleteAdminId],
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAdminId]);
+    $articleBulkDeleteRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    if (httpIntegrationStatusCode($articleBulkDeleteRejectedResponse) !== 302
+        || !responseHasLocationHeader($articleBulkDeleteRejectedResponse['headers'], $articleBulkDeletePath, $baseUrl)
+        || ($articleBulkDeleteRejectedState['deleted_at'] ?? null) !== null
+        || (int)($articleBulkDeleteRejectedState['tag_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteRejectedState['related_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteRejectedState['series_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteRejectedState['comment_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteRejectedState['revision_count'] ?? 0) !== 1
+        || (int)$articleBulkDeleteRedirectStmt->fetchColumn() !== 1
+        || !is_file($articleBulkDeleteImagePath)
+        || !is_file($articleBulkDeleteThumbPath)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn() !== $articleBulkDeleteLogBefore) {
+        $articleBulkDeleteIssues[] = 'hromadné mazání článků bez potvrzení změnilo článek, vazby, soubory, redirect nebo audit log';
+    }
+
+    $articleBulkDeleteErrorPage = fetchUrl($baseUrl . $articleBulkDeletePath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleBulkDeleteErrorPage) !== 200
+        || !httpIntegrationElementHasAttributes($articleBulkDeleteErrorPage['body'], 'p', 'article-bulk-delete-form-error', [
+            'role' => 'alert',
+            'aria-atomic' => 'true',
+        ])
+        || !httpIntegrationElementHasAttributes($articleBulkDeleteErrorPage['body'], 'form', 'bulk-form', [
+            'aria-describedby' => 'article-bulk-delete-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($articleBulkDeleteErrorPage['body'], 'confirm-article-bulk-delete', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'article-bulk-delete-review confirm-article-bulk-delete-error',
+        ])
+        || !httpIntegrationCheckboxIsChecked($articleBulkDeleteErrorPage['body'], 'article-select-' . $articleBulkDeleteAdminId)
+        || !str_contains($articleBulkDeleteErrorPage['body'], 'Před přesunem článků do Koše potvrďte, že jste zkontrolovali výběr')) {
+        $articleBulkDeleteIssues[] = 'chybový stav hromadného přesunu článků nezachoval výběr nebo přístupné vazby';
+    }
+
+    $articleBulkDeleteConfirmedResponse = postUrl($articleBulkDeleteEndpoint, [
+        'csrf_token' => extractHiddenInputValue($articleBulkDeleteErrorPage['body'], 'csrf_token'),
+        'redirect' => $articleBulkDeletePath,
+        'action' => 'delete',
+        'ids' => [(string)$articleBulkDeleteAdminId],
+        'confirm_article_bulk_delete' => '1',
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAdminId]);
+    $articleBulkDeleteConfirmedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    if (httpIntegrationStatusCode($articleBulkDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($articleBulkDeleteConfirmedResponse['headers'], $articleBulkDeletePath, $baseUrl)
+        || trim((string)($articleBulkDeleteConfirmedState['deleted_at'] ?? '')) === ''
+        || (int)($articleBulkDeleteConfirmedState['tag_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteConfirmedState['related_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteConfirmedState['series_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteConfirmedState['comment_count'] ?? 0) !== 1
+        || (int)($articleBulkDeleteConfirmedState['revision_count'] ?? 0) !== 1
+        || (int)$articleBulkDeleteRedirectStmt->fetchColumn() !== 1
+        || !is_file($articleBulkDeleteImagePath)
+        || !is_file($articleBulkDeleteThumbPath)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn() !== $articleBulkDeleteLogBefore + 1) {
+        $articleBulkDeleteIssues[] = 'potvrzený hromadný přesun článku nezachoval obnovitelný záznam, vazby, soubory, redirect nebo audit log';
+    }
+    $articleBulkDeleteSuccessPage = fetchUrl($baseUrl . $articleBulkDeletePath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleBulkDeleteSuccessPage) !== 200
+        || !str_contains($articleBulkDeleteSuccessPage['body'], 'Vybraný článek byl přesunut do Koše. Lze jej obnovit ve správě Koše.')
+        || !str_contains($articleBulkDeleteSuccessPage['body'], 'role="status" aria-atomic="true"')) {
+        $articleBulkDeleteIssues[] = 'potvrzený hromadný přesun článku nevrátil textový PRG stav';
+    }
+
+    $articleBulkDeleteAuthorLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn();
+    $articleBulkDeleteAuthorRejectedResponse = postUrl($articleBulkDeleteEndpoint, [
+        'csrf_token' => $authorSession['csrf'],
+        'redirect' => $articleBulkDeletePath,
+        'action' => 'delete',
+        'ids' => [(string)$articleBulkDeleteAuthorId, (string)$articleBulkDeleteForeignId],
+        'confirm_article_bulk_delete' => '1',
+    ], $authorSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAuthorId]);
+    $articleBulkDeleteAuthorRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteForeignId]);
+    $articleBulkDeleteForeignRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($articleBulkDeleteAuthorRejectedResponse) !== 302
+        || !responseHasLocationHeader($articleBulkDeleteAuthorRejectedResponse['headers'], $articleBulkDeletePath, $baseUrl)
+        || ($articleBulkDeleteAuthorRejectedState['deleted_at'] ?? null) !== null
+        || ($articleBulkDeleteForeignRejectedState['deleted_at'] ?? null) !== null
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn() !== $articleBulkDeleteAuthorLogBefore) {
+        $articleBulkDeleteIssues[] = 'podvržený cizí článek způsobil částečný přesun nebo audit log autora';
+    }
+    $articleBulkDeleteAuthorErrorPage = fetchUrl($baseUrl . $articleBulkDeletePath, $authorSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleBulkDeleteAuthorErrorPage) !== 200
+        || !httpIntegrationElementHasAttributes($articleBulkDeleteAuthorErrorPage['body'], 'form', 'bulk-form', [
+            'aria-describedby' => 'article-bulk-delete-form-error',
+        ])
+        || !httpIntegrationCheckboxIsChecked($articleBulkDeleteAuthorErrorPage['body'], 'article-select-' . $articleBulkDeleteAuthorId)
+        || str_contains($articleBulkDeleteAuthorErrorPage['body'], 'id="article-select-' . $articleBulkDeleteForeignId . '"')) {
+        $articleBulkDeleteIssues[] = 'autorský chybový stav nezachoval pouze viditelnou část odmítnutého výběru';
+    }
+    $articleBulkDeleteAuthorConfirmedResponse = postUrl($articleBulkDeleteEndpoint, [
+        'csrf_token' => extractHiddenInputValue($articleBulkDeleteAuthorErrorPage['body'], 'csrf_token'),
+        'redirect' => $articleBulkDeletePath,
+        'action' => 'delete',
+        'ids' => [(string)$articleBulkDeleteAuthorId],
+        'confirm_article_bulk_delete' => '1',
+    ], $authorSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAuthorId]);
+    $articleBulkDeleteAuthorConfirmedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteForeignId]);
+    $articleBulkDeleteForeignFinalState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($articleBulkDeleteAuthorConfirmedResponse) !== 302
+        || !responseHasLocationHeader($articleBulkDeleteAuthorConfirmedResponse['headers'], $articleBulkDeletePath, $baseUrl)
+        || trim((string)($articleBulkDeleteAuthorConfirmedState['deleted_at'] ?? '')) === ''
+        || ($articleBulkDeleteForeignFinalState['deleted_at'] ?? null) !== null
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_bulk_delete'")->fetchColumn() !== $articleBulkDeleteAuthorLogBefore + 1) {
+        $articleBulkDeleteIssues[] = 'platný autorský hromadný přesun neomezil změnu na vlastní článek';
+    }
+
+    httpIntegrationPrintResult('article_bulk_delete_error_prevention_http', $articleBulkDeleteIssues, $failures);
+
     $blogStaticPagesIssues = [];
     $blogStaticMainSlug = 'http-blog-pages-main-' . bin2hex(random_bytes(4));
     $blogStaticOtherSlug = 'http-blog-pages-other-' . bin2hex(random_bytes(4));
