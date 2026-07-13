@@ -391,13 +391,16 @@ Editor článku respektuje vybraný blog:
 - článek lze zařadit do jedné nebo více sérií článků stejného blogu
 - u článku lze ručně vybrat související články ze stejného blogu; na veřejném detailu se ruční výběr zobrazí před automaticky doplněnými články
 - náhledový obrázek používá sdílenou upload validaci a při výměně nebo odebrání uklízí i staré miniatury, WebP a responsive varianty
-- hromadné odebrání článků je vratný přesun do Koše, nikoli fyzické smazání
+- individuální i hromadné odebrání článku je vratný přesun do Koše, nikoli fyzické smazání
+- řádková akce vyžaduje potvrzení konkrétního článku, hromadná akce samostatné potvrzení celého výběru
 - před přesunem musí správce potvrdit kontrolu výběru; obrázky, komentáře, štítky, série, související články, revize a redirecty zůstanou zachované pro obnovu
 - server ověřuje celý výběr včetně autorského a blogového oprávnění a při jediném nepovoleném nebo změněném článku neprovede žádnou část akce
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
 
 Checkbox potvrzení se vztahuje jen k tlačítku `Přesunout vybrané do Koše`; běžné hromadné změny stavu a přesun mezi blogy jej nevyžadují. Chybějící potvrzení vrátí textový alert a chybu přímo u checkboxu, zachová viditelnou část výběru a nezmění článek ani audit log. Potvrzená změna běží v jedné transakci, nastaví pouze datum smazání a vrátí stav s odkazem na možnost obnovy v Koši.
+
+Řádkové `Přesunout do Koše` má vlastní checkbox pro konkrétní článek. Bez něj server vrátí textový alert a chybu přímo u potvrzení, aniž změní článek, vazby, soubory nebo audit log. Po potvrzení se běžný publikovaný detail i dříve vytvořená preview URL skryjí textovou 404 odpovědí a článek se objeví v Koši; obnova vrátí obě URL, obrázek, komentáře, štítky, série, související články, revize i redirecty. Samostatně potvrzené trvalé smazání v Koši pod zámkem odstraní databázová data a po commitu původní obrázek, miniaturu, WebP i responsive varianty.
 
 ### Série článků
 

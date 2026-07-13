@@ -14915,7 +14915,7 @@ try {
         )->execute([$blogRow['name'], $blogRow['slug'], $adminUserId]);
         $createdBlogs[] = (int)$pdo->lastInsertId();
     }
-    [$sourceBlogId, $targetBlogId, $foreignBlogId] = $createdBlogs;
+    [$sourceBlogId, $targetBlogId, $foreignBlogId] = array_slice($createdBlogs, -3);
 
     foreach ([
         [$sourceBlogId, $authorId, 'author'],
@@ -15411,12 +15411,27 @@ try {
 
     httpIntegrationPrintResult('blog_transfer_http', $blogTransferIssues, $failures);
 
+    $articleDeleteIssues = [];
     $articleBulkDeleteIssues = [];
     $articleBulkDeleteToken = bin2hex(random_bytes(4));
     $articleBulkDeleteImageFile = 'http-bulk-delete-' . $articleBulkDeleteToken . '.png';
     $articleBulkDeleteImagePath = dirname(__DIR__) . '/uploads/articles/' . $articleBulkDeleteImageFile;
     $articleBulkDeleteThumbPath = dirname(__DIR__) . '/uploads/articles/thumbs/' . $articleBulkDeleteImageFile;
-    foreach ([$articleBulkDeleteImagePath, $articleBulkDeleteThumbPath] as $articleBulkDeleteStoredFile) {
+    $articleBulkDeleteImageBaseName = pathinfo($articleBulkDeleteImageFile, PATHINFO_FILENAME);
+    $articleBulkDeleteImagePaths = [$articleBulkDeleteImagePath, $articleBulkDeleteThumbPath];
+    foreach ([400, 800, 1200] as $articleBulkDeleteImageWidth) {
+        $articleBulkDeleteImagePaths[] = dirname(__DIR__) . '/uploads/articles/'
+            . $articleBulkDeleteImageBaseName . '-' . $articleBulkDeleteImageWidth . 'w.png';
+    }
+    $articleBulkDeleteWebpPaths = [];
+    foreach ($articleBulkDeleteImagePaths as $articleBulkDeleteStoredFile) {
+        $articleBulkDeleteWebpPaths[] = presentationWebpVariantPath($articleBulkDeleteStoredFile);
+    }
+    $articleBulkDeleteImagePaths = array_values(array_unique(array_merge(
+        $articleBulkDeleteImagePaths,
+        $articleBulkDeleteWebpPaths
+    )));
+    foreach ($articleBulkDeleteImagePaths as $articleBulkDeleteStoredFile) {
         if (file_put_contents($articleBulkDeleteStoredFile, 'HTTP bulk article delete fixture') === false) {
             $articleBulkDeleteIssues[] = 'nepodařilo se vytvořit souborový fixture hromadného přesunu článku do Koše';
         }
@@ -15429,25 +15444,31 @@ try {
             'slug' => 'http-bulk-delete-admin-' . $articleBulkDeleteToken,
             'author_id' => $adminUserId,
             'image_file' => $articleBulkDeleteImageFile,
+            'status' => 'published',
+            'preview_token' => bin2hex(random_bytes(16)),
         ],
         [
             'title' => 'HTTP hromadný přesun autora',
             'slug' => 'http-bulk-delete-author-' . $articleBulkDeleteToken,
             'author_id' => $authorId,
             'image_file' => '',
+            'status' => 'draft',
+            'preview_token' => bin2hex(random_bytes(16)),
         ],
         [
             'title' => 'HTTP cizí článek pro hromadný přesun',
             'slug' => 'http-bulk-delete-foreign-' . $articleBulkDeleteToken,
             'author_id' => $authorNoTaxId,
             'image_file' => '',
+            'status' => 'draft',
+            'preview_token' => bin2hex(random_bytes(16)),
         ],
     ];
     foreach ($articleBulkDeleteFixtureRows as $articleBulkDeleteFixtureRow) {
         $pdo->prepare(
             "INSERT INTO cms_articles
-                (title, slug, blog_id, perex, content, comments_enabled, category_id, author_id, image_file, status)
-             VALUES (?, ?, ?, '', '<p>HTTP integration test hromadného přesunu do Koše.</p>', 1, ?, ?, ?, 'draft')"
+                (title, slug, blog_id, perex, content, comments_enabled, category_id, author_id, image_file, status, preview_token)
+             VALUES (?, ?, ?, '', '<p>HTTP integration test hromadného přesunu do Koše.</p>', 1, ?, ?, ?, ?, ?)"
         )->execute([
             $articleBulkDeleteFixtureRow['title'],
             $articleBulkDeleteFixtureRow['slug'],
@@ -15455,6 +15476,8 @@ try {
             $sourceCategoryId,
             $articleBulkDeleteFixtureRow['author_id'],
             $articleBulkDeleteFixtureRow['image_file'],
+            $articleBulkDeleteFixtureRow['status'],
+            $articleBulkDeleteFixtureRow['preview_token'],
         ]);
         $createdArticles[] = (int)$pdo->lastInsertId();
     }
@@ -15492,6 +15515,9 @@ try {
         'slug' => $articleBulkDeleteFixtureRows[0]['slug'],
         'blog_slug' => $sourceBlogSlug,
     ]);
+    $articleBulkDeletePreviewPath = appendUrlQuery($articleBulkDeletePublicPath, [
+        'preview' => $articleBulkDeleteFixtureRows[0]['preview_token'],
+    ]);
     $pdo->prepare('INSERT INTO cms_redirects (old_path, new_path, status_code) VALUES (?, ?, 301)')
         ->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
     $createdRedirectPaths[] = $articleBulkDeleteOldPath;
@@ -15507,7 +15533,199 @@ try {
     );
     $articleBulkDeleteRedirectStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_redirects WHERE old_path = ? AND new_path = ?');
     $articleBulkDeletePath = BASE_URL . '/admin/blog.php?blog=' . $sourceBlogId;
+    $articleDeleteEndpoint = $baseUrl . BASE_URL . '/admin/blog_delete.php';
     $articleBulkDeleteEndpoint = $baseUrl . BASE_URL . '/admin/blog_bulk.php';
+
+    $articleDeletePage = fetchUrl($baseUrl . $articleBulkDeletePath, $adminSession['cookie'], 0);
+    $articleDeleteCsrf = extractHiddenInputValue($articleDeletePage['body'], 'csrf_token');
+    $articleDeleteInitialPublicResponse = fetchUrl($baseUrl . $articleBulkDeletePublicPath, '', 0);
+    $articleDeleteInitialPreviewResponse = fetchUrl($baseUrl . $articleBulkDeletePreviewPath, '', 0);
+    if (httpIntegrationStatusCode($articleDeletePage) !== 200
+        || $articleDeleteCsrf === ''
+        || httpIntegrationStatusCode($articleDeleteInitialPublicResponse) !== 200
+        || httpIntegrationStatusCode($articleDeleteInitialPreviewResponse) !== 200
+        || !str_contains($articleDeletePage['body'], 'Přesun skryje článek z webu, ale zachová jeho obrázek, komentáře, štítky, série, související články, revize i redirecty')
+        || !httpIntegrationElementHasAttributes($articleDeletePage['body'], 'form', 'article-delete-form-' . $articleBulkDeleteAdminId, [])
+        || !httpIntegrationInputHasAttributes($articleDeletePage['body'], 'confirm-article-delete-' . $articleBulkDeleteAdminId, [
+            'name' => 'confirm_article_delete_' . $articleBulkDeleteAdminId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'article-delete-review-' . $articleBulkDeleteAdminId,
+        ])
+        || str_contains($articleDeletePage['body'], 'data-confirm="Smazat článek?"')) {
+        $articleDeleteIssues[] = 'přehled článků nevykreslil item-specific vratný review-and-confirm formulář nebo veřejný fixture';
+    }
+
+    $articleDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn();
+    $articleDeleteRejectedResponse = postUrl($articleDeleteEndpoint, [
+        'csrf_token' => $articleDeleteCsrf,
+        'id' => (string)$articleBulkDeleteAdminId,
+        'redirect' => $articleBulkDeletePath,
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAdminId]);
+    $articleDeleteRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    $articleDeleteRejectedPublicResponse = fetchUrl($baseUrl . $articleBulkDeletePublicPath, '', 0);
+    $articleDeleteRejectedPreviewResponse = fetchUrl($baseUrl . $articleBulkDeletePreviewPath, '', 0);
+    $articleDeleteErrorPath = $articleBulkDeletePath
+        . '&delete_error=confirm_required&delete_error_id=' . $articleBulkDeleteAdminId;
+    if (httpIntegrationStatusCode($articleDeleteRejectedResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteRejectedResponse['headers'], $articleDeleteErrorPath, $baseUrl)
+        || ($articleDeleteRejectedState['deleted_at'] ?? null) !== null
+        || (int)($articleDeleteRejectedState['tag_count'] ?? 0) !== 1
+        || (int)($articleDeleteRejectedState['related_count'] ?? 0) !== 1
+        || (int)($articleDeleteRejectedState['series_count'] ?? 0) !== 1
+        || (int)($articleDeleteRejectedState['comment_count'] ?? 0) !== 1
+        || (int)($articleDeleteRejectedState['revision_count'] ?? 0) !== 1
+        || (int)$articleBulkDeleteRedirectStmt->fetchColumn() !== 1
+        || !is_file($articleBulkDeleteImagePath)
+        || !is_file($articleBulkDeleteThumbPath)
+        || httpIntegrationStatusCode($articleDeleteRejectedPublicResponse) !== 200
+        || httpIntegrationStatusCode($articleDeleteRejectedPreviewResponse) !== 200
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn() !== $articleDeleteLogBefore) {
+        $articleDeleteIssues[] = 'individuální mazání článku bez potvrzení změnilo článek, vazby, soubory, redirect, veřejný stav nebo audit log';
+    }
+
+    $articleDeleteErrorPage = fetchUrl($baseUrl . $articleDeleteErrorPath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleDeleteErrorPage) !== 200
+        || !httpIntegrationElementHasAttributes($articleDeleteErrorPage['body'], 'p', 'article-delete-form-error', [
+            'role' => 'alert',
+            'aria-atomic' => 'true',
+        ])
+        || !httpIntegrationElementHasAttributes($articleDeleteErrorPage['body'], 'form', 'article-delete-form-' . $articleBulkDeleteAdminId, [
+            'aria-describedby' => 'article-delete-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($articleDeleteErrorPage['body'], 'confirm-article-delete-' . $articleBulkDeleteAdminId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'article-delete-review-' . $articleBulkDeleteAdminId
+                . ' confirm-article-delete-' . $articleBulkDeleteAdminId . '-error',
+        ])
+        || !str_contains($articleDeleteErrorPage['body'], 'Před přesunem článku do Koše potvrďte, že jste zkontrolovali zachování obrázku')) {
+        $articleDeleteIssues[] = 'zamítnutý individuální přesun článku nevrátil atomický alert a field-level vazbu';
+    }
+
+    $articleDeleteConfirmedResponse = postUrl($articleDeleteEndpoint, [
+        'csrf_token' => extractHiddenInputValue($articleDeleteErrorPage['body'], 'csrf_token'),
+        'id' => (string)$articleBulkDeleteAdminId,
+        'redirect' => $articleBulkDeletePath,
+        'confirm_article_delete_' . $articleBulkDeleteAdminId => '1',
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAdminId]);
+    $articleDeleteConfirmedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    $articleDeleteDeletedPublicResponse = fetchUrl($baseUrl . $articleBulkDeletePublicPath, '', 0);
+    $articleDeleteDeletedPreviewResponse = fetchUrl($baseUrl . $articleBulkDeletePreviewPath, '', 0);
+    $articleDeleteSuccessPath = $articleBulkDeletePath . '&deleted=1';
+    if (httpIntegrationStatusCode($articleDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteConfirmedResponse['headers'], $articleDeleteSuccessPath, $baseUrl)
+        || trim((string)($articleDeleteConfirmedState['deleted_at'] ?? '')) === ''
+        || (int)($articleDeleteConfirmedState['tag_count'] ?? 0) !== 1
+        || (int)($articleDeleteConfirmedState['related_count'] ?? 0) !== 1
+        || (int)($articleDeleteConfirmedState['series_count'] ?? 0) !== 1
+        || (int)($articleDeleteConfirmedState['comment_count'] ?? 0) !== 1
+        || (int)($articleDeleteConfirmedState['revision_count'] ?? 0) !== 1
+        || (int)$articleBulkDeleteRedirectStmt->fetchColumn() !== 1
+        || !is_file($articleBulkDeleteImagePath)
+        || !is_file($articleBulkDeleteThumbPath)
+        || httpIntegrationStatusCode($articleDeleteDeletedPublicResponse) !== 404
+        || httpIntegrationStatusCode($articleDeleteDeletedPreviewResponse) !== 404
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn() !== $articleDeleteLogBefore + 1) {
+        $articleDeleteIssues[] = 'potvrzený individuální přesun článku nezachoval obnovitelná data, veřejné skrytí nebo audit log';
+    }
+    $articleDeleteSuccessPage = fetchUrl($baseUrl . $articleDeleteSuccessPath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleDeleteSuccessPage) !== 200
+        || !str_contains($articleDeleteSuccessPage['body'], 'Článek byl přesunut do Koše. Lze jej obnovit ve správě Koše.')
+        || !str_contains($articleDeleteSuccessPage['body'], 'role="status" aria-atomic="true"')) {
+        $articleDeleteIssues[] = 'potvrzený individuální přesun článku nevrátil textový PRG stav';
+    }
+
+    $articleDeleteTrashPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleDeleteTrashPage) !== 200
+        || !str_contains($articleDeleteTrashPage['body'], htmlspecialchars($articleBulkDeleteFixtureRows[0]['title'], ENT_QUOTES, 'UTF-8'))
+        || !str_contains($articleDeleteTrashPage['body'], '<td>Článek</td>')) {
+        $articleDeleteIssues[] = 'individuálně přesunutý článek se nezobrazil v Koši';
+    }
+    $articleDeleteRestoreResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($articleDeleteTrashPage['body'], 'csrf_token'),
+        'module' => 'articles',
+        'id' => (string)$articleBulkDeleteAdminId,
+        'action' => 'restore',
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAdminId]);
+    $articleDeleteRestoredState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    $articleDeleteRestoredPublicResponse = fetchUrl($baseUrl . $articleBulkDeletePublicPath, '', 0);
+    $articleDeleteRestoredPreviewResponse = fetchUrl($baseUrl . $articleBulkDeletePreviewPath, '', 0);
+    if (httpIntegrationStatusCode($articleDeleteRestoreResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteRestoreResponse['headers'], BASE_URL . '/admin/trash.php?ok=restored', $baseUrl)
+        || ($articleDeleteRestoredState['deleted_at'] ?? null) !== null
+        || (int)($articleDeleteRestoredState['tag_count'] ?? 0) !== 1
+        || (int)($articleDeleteRestoredState['related_count'] ?? 0) !== 1
+        || (int)($articleDeleteRestoredState['series_count'] ?? 0) !== 1
+        || (int)($articleDeleteRestoredState['comment_count'] ?? 0) !== 1
+        || (int)($articleDeleteRestoredState['revision_count'] ?? 0) !== 1
+        || (int)$articleBulkDeleteRedirectStmt->fetchColumn() !== 1
+        || !is_file($articleBulkDeleteImagePath)
+        || !is_file($articleBulkDeleteThumbPath)
+        || httpIntegrationStatusCode($articleDeleteRestoredPublicResponse) !== 200
+        || httpIntegrationStatusCode($articleDeleteRestoredPreviewResponse) !== 200) {
+        $articleDeleteIssues[] = 'obnovení individuálně přesunutého článku nevrátilo veřejný obsah a zachovaná data';
+    }
+
+    $articleDeleteAuthorLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn();
+    $articleDeleteAuthorRejectedResponse = postUrl($articleDeleteEndpoint, [
+        'csrf_token' => $authorSession['csrf'],
+        'id' => (string)$articleBulkDeleteForeignId,
+        'redirect' => $articleBulkDeletePath,
+        'confirm_article_delete_' . $articleBulkDeleteForeignId => '1',
+    ], $authorSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAuthorId]);
+    $articleDeleteAuthorRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteForeignId]);
+    $articleDeleteForeignRejectedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleDeleteAuthorInvalidPath = $articleBulkDeletePath
+        . '&delete_error=invalid&delete_error_id=' . $articleBulkDeleteForeignId;
+    if (httpIntegrationStatusCode($articleDeleteAuthorRejectedResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteAuthorRejectedResponse['headers'], $articleDeleteAuthorInvalidPath, $baseUrl)
+        || ($articleDeleteAuthorRejectedState['deleted_at'] ?? null) !== null
+        || ($articleDeleteForeignRejectedState['deleted_at'] ?? null) !== null
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn() !== $articleDeleteAuthorLogBefore) {
+        $articleDeleteIssues[] = 'podvržený cizí článek způsobil individuální přesun nebo audit log autora';
+    }
+
+    $articleDeleteAuthorPage = fetchUrl($baseUrl . $articleBulkDeletePath, $authorSession['cookie'], 0);
+    $articleDeleteAuthorConfirmedResponse = postUrl($articleDeleteEndpoint, [
+        'csrf_token' => extractHiddenInputValue($articleDeleteAuthorPage['body'], 'csrf_token'),
+        'id' => (string)$articleBulkDeleteAuthorId,
+        'redirect' => $articleBulkDeletePath,
+        'confirm_article_delete_' . $articleBulkDeleteAuthorId => '1',
+    ], $authorSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAuthorId]);
+    $articleDeleteAuthorConfirmedState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteForeignId]);
+    $articleDeleteForeignFinalState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($articleDeleteAuthorConfirmedResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteAuthorConfirmedResponse['headers'], $articleBulkDeletePath . '&deleted=1', $baseUrl)
+        || trim((string)($articleDeleteAuthorConfirmedState['deleted_at'] ?? '')) === ''
+        || ($articleDeleteForeignFinalState['deleted_at'] ?? null) !== null
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'article_delete'")->fetchColumn() !== $articleDeleteAuthorLogBefore + 1) {
+        $articleDeleteIssues[] = 'platný autorský individuální přesun neomezil změnu na vlastní článek';
+    }
+
+    $articleDeleteAuthorTrashPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $adminSession['cookie'], 0);
+    $articleDeleteAuthorRestoreResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($articleDeleteAuthorTrashPage['body'], 'csrf_token'),
+        'module' => 'articles',
+        'id' => (string)$articleBulkDeleteAuthorId,
+        'action' => 'restore',
+    ], $adminSession['cookie'], 0);
+    $articleBulkDeleteStateStmt->execute([$articleBulkDeleteAuthorId]);
+    $articleDeleteAuthorRestoredState = $articleBulkDeleteStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($articleDeleteAuthorRestoreResponse) !== 302
+        || !responseHasLocationHeader($articleDeleteAuthorRestoreResponse['headers'], BASE_URL . '/admin/trash.php?ok=restored', $baseUrl)
+        || ($articleDeleteAuthorRestoredState['deleted_at'] ?? null) !== null) {
+        $articleDeleteIssues[] = 'obnovení vlastního autorského článku nepřipravilo čistý stav pro navazující test';
+    }
+
     $articleBulkDeletePage = fetchUrl($baseUrl . $articleBulkDeletePath, $adminSession['cookie'], 0);
     $articleBulkDeleteCsrf = extractHiddenInputValue($articleBulkDeletePage['body'], 'csrf_token');
     if (httpIntegrationStatusCode($articleBulkDeletePage) !== 200
@@ -15647,6 +15865,81 @@ try {
     }
 
     httpIntegrationPrintResult('article_bulk_delete_error_prevention_http', $articleBulkDeleteIssues, $failures);
+
+    $articleDeleteTrashPurgePage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleDeleteTrashPurgePage) !== 200
+        || !str_contains($articleDeleteTrashPurgePage['body'], htmlspecialchars($articleBulkDeleteFixtureRows[0]['title'], ENT_QUOTES, 'UTF-8'))) {
+        $articleDeleteIssues[] = 'hromadně přesunutý reprezentativní článek se nezobrazil v Koši pro permanentní purge';
+    }
+    $articleDeleteTrashPurgeLogBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")
+        ->fetchColumn();
+    $articleDeleteTrashPurgeResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($articleDeleteTrashPurgePage['body'], 'csrf_token'),
+        'module' => 'articles',
+        'id' => (string)$articleBulkDeleteAdminId,
+        'action' => 'purge',
+        'confirm_permanent_delete' => '1',
+    ], $adminSession['cookie'], 0);
+    $articleDeletePurgeRelationsStmt = $pdo->prepare(
+        "SELECT
+            (SELECT COUNT(*) FROM cms_articles a WHERE a.id = ?) AS article_count,
+            (SELECT COUNT(*) FROM cms_article_tags atg WHERE atg.article_id = ?) AS tag_count,
+            (SELECT COUNT(*) FROM cms_article_related ar WHERE ar.article_id = ? OR ar.related_article_id = ?) AS related_count,
+            (SELECT COUNT(*) FROM cms_blog_series_items si WHERE si.article_id = ?) AS series_count,
+            (SELECT COUNT(*) FROM cms_comments c WHERE c.article_id = ?) AS comment_count,
+            (SELECT COUNT(*) FROM cms_revisions r WHERE r.entity_type = 'article' AND r.entity_id = ?) AS revision_count"
+    );
+    $articleDeletePurgeRelationsStmt->execute([
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+        $articleBulkDeleteAdminId,
+    ]);
+    $articleDeletePurgedState = $articleDeletePurgeRelationsStmt->fetch() ?: [];
+    $articleBulkDeleteRedirectStmt->execute([$articleBulkDeleteOldPath, $articleBulkDeletePublicPath]);
+    $articleDeleteTrashPurgeStatus = httpIntegrationStatusCode($articleDeleteTrashPurgeResponse);
+    $articleDeleteTrashPurgeLocationValid = responseHasLocationHeader(
+        $articleDeleteTrashPurgeResponse['headers'],
+        BASE_URL . '/admin/trash.php?ok=purged',
+        $baseUrl
+    );
+    $articleDeleteTrashPurgeRedirectCount = (int)$articleBulkDeleteRedirectStmt->fetchColumn();
+    foreach ($articleBulkDeleteImagePaths as $articleBulkDeleteStoredFile) {
+        clearstatcache(true, $articleBulkDeleteStoredFile);
+    }
+    $articleDeleteRemainingImagePaths = array_values(array_filter(
+        $articleBulkDeleteImagePaths,
+        static fn (string $path): bool => is_file($path)
+    ));
+    $articleDeleteTrashPurgeLogAfter = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")
+        ->fetchColumn();
+    if ($articleDeleteTrashPurgeStatus !== 302
+        || !$articleDeleteTrashPurgeLocationValid
+        || (int)($articleDeletePurgedState['article_count'] ?? -1) !== 0
+        || (int)($articleDeletePurgedState['tag_count'] ?? -1) !== 0
+        || (int)($articleDeletePurgedState['related_count'] ?? -1) !== 0
+        || (int)($articleDeletePurgedState['series_count'] ?? -1) !== 0
+        || (int)($articleDeletePurgedState['comment_count'] ?? -1) !== 0
+        || (int)($articleDeletePurgedState['revision_count'] ?? -1) !== 0
+        || $articleDeleteTrashPurgeRedirectCount !== 0
+        || $articleDeleteRemainingImagePaths !== []
+        || $articleDeleteTrashPurgeLogAfter !== $articleDeleteTrashPurgeLogBefore + 1) {
+        $articleDeletePurgeStateJson = json_encode($articleDeletePurgedState, JSON_UNESCAPED_UNICODE);
+        $articleDeleteIssues[] = 'potvrzený permanentní purge článku neuklidil transakčně řádek, vazby, redirect, obrazové varianty nebo audit log'
+            . ' (status=' . $articleDeleteTrashPurgeStatus
+            . ', location=' . ($articleDeleteTrashPurgeLocationValid ? 'ok' : 'chyba')
+            . ', state=' . ($articleDeletePurgeStateJson !== false ? $articleDeletePurgeStateJson : 'nelze serializovat')
+            . ', redirect_count=' . $articleDeleteTrashPurgeRedirectCount
+            . ', remaining_files=' . implode(',', array_map('basename', $articleDeleteRemainingImagePaths))
+            . ', log=' . $articleDeleteTrashPurgeLogBefore . '->' . $articleDeleteTrashPurgeLogAfter . ')';
+    }
+
+    httpIntegrationPrintResult('article_delete_error_prevention_http', $articleDeleteIssues, $failures);
 
     $placeTrashIssues = [];
     $placeTrashToken = bin2hex(random_bytes(4));

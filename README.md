@@ -672,6 +672,8 @@ Pro dlouhodobé vyhodnocování vznikla sada dokumentů v [docs/accessibility/](
 
 Datově dopadající převod článku a stránky používá pro WCAG `3.3.4` serverový review-and-confirm krok i vratnost přes Koš. Runtime audit zakazuje fyzické mazání zdroje a článkových vazeb při převodu a HTTP integrace ověřuje oprávnění, nulovou změnu bez potvrzení, obě potvrzené cesty a auditní stopu.
 
+Individuální i hromadné odebrání blogových článků používá stejný vratný model. Přehled předem popíše zachování obrázků, komentářů, štítků, sérií, souvisejících článků, revizí a redirectů, server vyžaduje potvrzení konkrétní akce a transakčně nastaví jen `deleted_at`. Přesunutý publikovaný článek vrací textovou 404 na běžné i preview URL, ale v Koši jej lze obnovit se všemi vazbami. Až samostatně potvrzený trvalý purge transakčně uklidí databázová data a po commitu všechny obrazové varianty.
+
 ---
 
 ## Zálohování a údržba

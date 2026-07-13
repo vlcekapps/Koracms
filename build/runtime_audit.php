@@ -11785,7 +11785,7 @@ if ($adminBulkSelectLabelIssues === []) {
 echo "=== admin_bulk_row_label_guardrails ===\n";
 $adminBulkRowLabelIssues = [];
 $adminBulkRowLabelExpectations = [
-    'admin/blog.php' => ['<label for="article-select-<?= (int)$article[\'id\'] ?>" class="sr-only">Vybrat článek', '<input type="checkbox" id="article-select-<?= (int)$article[\'id\'] ?>" name="ids[]"'],
+    'admin/blog.php' => ['<label for="article-select-<?= $articleId ?>" class="sr-only">Vybrat článek', '<input type="checkbox" id="article-select-<?= $articleId ?>" name="ids[]"'],
     'admin/blog_cats.php' => ['<label for="blog-category-select-<?= $categoryId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="blog-category-select-<?= $categoryId ?>" name="ids[]"'],
     'admin/board.php' => ['<label for="board-document-select-<?= (int)$document[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="board-document-select-<?= (int)$document[\'id\'] ?>" name="ids[]"'],
     'admin/chat.php' => ['<label for="chat-message-select-<?= (int)$message[\'id\'] ?>" class="sr-only">Vybrat chat zprávu od', '<input type="checkbox" id="chat-message-select-<?= (int)$message[\'id\'] ?>" name="ids[]"'],
@@ -12131,10 +12131,9 @@ if (!str_contains($blogPresentationSource, 'function blogSeriesSlug')
     || !str_contains($blogPresentationSource, 'function articleSeriesNavigation')) {
     $blogAdminIssues[] = 'blog helpers are missing shared article series public/admin helpers';
 }
-if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'DELETE FROM cms_blog_series_items')
-    || !str_contains($blogDeleteSource, 'DELETE FROM cms_blog_series')
+if (!str_contains($blogDeleteSource, 'DELETE FROM cms_blog_series')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_blog_series_items')) {
-    $blogAdminIssues[] = 'article series links are missing cleanup on destructive article or blog workflows';
+    $blogAdminIssues[] = 'article series links are missing cleanup on permanent article or blog deletion workflows';
 }
 if (!str_contains($blogExportSource, 'blog_series') || !str_contains($blogExportSource, 'blog_series_items')
     || !str_contains($blogImportSource, 'cms_blog_series')
@@ -12732,10 +12731,9 @@ if (!str_contains($blogCatsSource, 'upsertPathRedirect(')
     || !str_contains($blogSeriesAdminSource, 'blogSeriesPath($blog, $existingSeriesForRedirect)')) {
     $blogAdminIssues[] = 'blog category, tag or series admin no longer creates canonical redirects after slug changes';
 }
-if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForPurge))')
     || !str_contains($blogDeleteSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleRow))')) {
-    $blogAdminIssues[] = 'destructive article workflows no longer clean redirects pointing to removed article URLs';
+    $blogAdminIssues[] = 'permanent article workflows no longer clean redirects pointing to removed article URLs';
 }
 if (!str_contains($blogExportSource, "'blog_members'") || !str_contains($blogExportSource, "'blog_slug_redirects'")) {
     $blogAdminIssues[] = 'export is missing blog membership and slug redirect datasets';
@@ -21157,6 +21155,137 @@ if ($navigationLinkDeleteGuardrailIssues === []) {
     $failures++;
     foreach ($navigationLinkDeleteGuardrailIssues as $navigationLinkDeleteGuardrailIssue) {
         echo '- ' . $navigationLinkDeleteGuardrailIssue . "\n";
+    }
+}
+
+echo "=== article_delete_error_prevention_guardrails ===\n";
+$articleDeleteGuardrailIssues = [];
+$articleDeleteListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$articleDeleteHandlerSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php');
+$articleDeleteTrashSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
+$articleDeletePublicSource = (string)file_get_contents(dirname(__DIR__) . '/blog/article.php');
+$articleDeleteHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    "requireModuleEnabled('blog')",
+    "requireHttpMethods(['POST'])",
+    'verifyCsrf()',
+    'internalRedirectTarget(',
+    "\$confirmFieldName = 'confirm_article_delete_' . \$id",
+    "'delete_error' => 'confirm_required'",
+    "'delete_error_id' => \$id",
+    '$pdo->beginTransaction()',
+    'canManageOwnBlogOnly()',
+    'canCurrentUserWriteToBlog',
+    "WHERE id = ? AND deleted_at IS NULL{\$ownershipSql}",
+    'FOR UPDATE',
+    "UPDATE cms_articles SET deleted_at = NOW()",
+    "WHERE id = ? AND deleted_at IS NULL{\$updateOwnershipSql}",
+    '$updateStmt->rowCount() !== 1',
+    '$pdo->rollBack()',
+    '$pdo->commit()',
+    "logAction('article_delete', \"id={\$id} soft=true\")",
+    "koraLog('warning', 'admin article soft delete failed'",
+] as $articleDeleteHandlerFragment) {
+    if (!str_contains($articleDeleteHandlerSource, $articleDeleteHandlerFragment)) {
+        $articleDeleteGuardrailIssues[] = 'individual article deletion is missing server/reversibility guardrail: ' . $articleDeleteHandlerFragment;
+    }
+}
+foreach ([
+    "\$deleteErrorMessage = match (\$deleteError)",
+    "\$deleteConfirmField = 'confirm_article_delete_' . \$articleId",
+    'id="article-delete-form-error"',
+    'role="alert" aria-atomic="true"',
+    'id="article-delete-form-<?= $articleId ?>"',
+    'aria-describedby="article-delete-form-error"',
+    '<fieldset class="admin-inline-fieldset">',
+    '<legend class="sr-only">Přesun článku',
+    'name="<?= h($deleteConfirmField) ?>"',
+    'required aria-required="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'Přesun skryje článek z webu, ale zachová jeho obrázek, komentáře, štítky, série, související články, revize i redirecty',
+    'Článek byl přesunut do Koše. Lze jej obnovit ve správě Koše.',
+    'Přesunout do Koše',
+] as $articleDeleteListFragment) {
+    if (!str_contains($articleDeleteListSource, $articleDeleteListFragment)) {
+        $articleDeleteGuardrailIssues[] = 'individual article deletion is missing accessible review/form fragment: ' . $articleDeleteListFragment;
+    }
+}
+foreach ([
+    "elseif (\$module === 'articles')",
+    'SELECT a.id, a.slug, a.blog_id, a.image_file, b.slug AS blog_slug',
+    'INNER JOIN cms_blogs b ON b.id = a.blog_id',
+    'WHERE a.id = ? AND a.deleted_at IS NOT NULL',
+    'FOR UPDATE',
+    '$pdo->beginTransaction()',
+    'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForPurge))',
+    'DELETE FROM cms_article_tags WHERE article_id = ?',
+    'DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?',
+    'DELETE FROM cms_blog_series_items WHERE article_id = ?',
+    'DELETE FROM cms_comments WHERE article_id = ?',
+    "DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?",
+    '$deleteArticleStmt = $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND deleted_at IS NOT NULL")',
+    '$deleteArticleStmt->rowCount() !== 1',
+    "logAction('trash_purge', \"module={\$module} id={\$itemId}\")",
+    '$pdo->commit()',
+    'deleteArticleImageFile($articleImageFile)',
+    "koraLog('warning', 'article trash purge failed'",
+    "!in_array(\$module, ['places', 'articles'], true)",
+] as $articleDeleteTrashFragment) {
+    if (!str_contains($articleDeleteTrashSource, $articleDeleteTrashFragment)) {
+        $articleDeleteGuardrailIssues[] = 'article Trash purge is missing deferred permanent cleanup: ' . $articleDeleteTrashFragment;
+    }
+}
+foreach ([
+    "a.deleted_at IS NULL AND a.status = 'published'",
+    'WHERE a.slug = ? AND a.preview_token = ? AND a.deleted_at IS NULL',
+    'WHERE a.id = ? AND a.preview_token = ? AND a.deleted_at IS NULL',
+    'renderPublicNotFoundPage([',
+    "'title' => 'Článek nenalezen'",
+    "'body_class' => 'page-blog-article-not-found'",
+] as $articleDeletePublicFragment) {
+    if (!str_contains($articleDeletePublicSource, $articleDeletePublicFragment)) {
+        $articleDeleteGuardrailIssues[] = 'public article detail is missing deleted-content 404 guardrail: ' . $articleDeletePublicFragment;
+    }
+}
+foreach ([
+    'data-confirm="Smazat článek?"',
+    'unlink(',
+    'DELETE FROM cms_articles',
+    'DELETE FROM cms_article_tags',
+    'DELETE FROM cms_article_related',
+    'DELETE FROM cms_blog_series_items',
+    'DELETE FROM cms_comments',
+    'DELETE FROM cms_revisions',
+    'deleteRedirectsTargetingPath(',
+] as $articleDeleteDestructiveFragment) {
+    if (str_contains($articleDeleteHandlerSource, $articleDeleteDestructiveFragment)
+        || ($articleDeleteDestructiveFragment === 'data-confirm="Smazat článek?"'
+            && str_contains($articleDeleteListSource, $articleDeleteDestructiveFragment))) {
+        $articleDeleteGuardrailIssues[] = 'individual article soft deletion again contains legacy/destructive behavior: ' . $articleDeleteDestructiveFragment;
+    }
+}
+foreach ([
+    "httpIntegrationPrintResult('article_delete_error_prevention_http'",
+    'individuální mazání článku bez potvrzení změnilo článek, vazby, soubory, redirect, veřejný stav nebo audit log',
+    'zamítnutý individuální přesun článku nevrátil atomický alert a field-level vazbu',
+    'potvrzený individuální přesun článku nezachoval obnovitelná data, veřejné skrytí nebo audit log',
+    'obnovení individuálně přesunutého článku nevrátilo veřejný obsah a zachovaná data',
+    'podvržený cizí článek způsobil individuální přesun nebo audit log autora',
+    'platný autorský individuální přesun neomezil změnu na vlastní článek',
+    'potvrzený permanentní purge článku neuklidil transakčně řádek, vazby, redirect, obrazové varianty nebo audit log',
+] as $articleDeleteHttpFragment) {
+    if (!str_contains($articleDeleteHttpSource, $articleDeleteHttpFragment)) {
+        $articleDeleteGuardrailIssues[] = 'HTTP integration is missing individual article deletion proof: ' . $articleDeleteHttpFragment;
+    }
+}
+if ($articleDeleteGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($articleDeleteGuardrailIssues as $articleDeleteGuardrailIssue) {
+        echo '- ' . $articleDeleteGuardrailIssue . "\n";
     }
 }
 

@@ -28,7 +28,7 @@ if ($previewToken !== '') {
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
-             WHERE a.slug = ? AND a.preview_token = ?"
+             WHERE a.slug = ? AND a.preview_token = ? AND a.deleted_at IS NULL"
         );
         $stmt->execute([$slug, $previewToken]);
     } else {
@@ -40,7 +40,7 @@ if ($previewToken !== '') {
              LEFT JOIN cms_categories c ON c.id = a.category_id
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
              LEFT JOIN cms_users u ON u.id = a.author_id
-             WHERE a.id = ? AND a.preview_token = ?"
+             WHERE a.id = ? AND a.preview_token = ? AND a.deleted_at IS NULL"
         );
         $stmt->execute([$id, $previewToken]);
     }
@@ -73,8 +73,25 @@ if ($previewToken !== '') {
 }
 $article = $stmt->fetch();
 if (!$article) {
-    header('Location: index.php');
-    exit;
+    $currentBlog = is_array($GLOBALS['current_blog'] ?? null) ? $GLOBALS['current_blog'] : [];
+    $missingPath = $slug !== ''
+        ? articlePublicPath([
+            'slug' => $slug,
+            'blog_slug' => (string)($currentBlog['slug'] ?? 'blog'),
+        ])
+        : BASE_URL . '/blog/article.php?id=' . urlencode((string)$id);
+
+    renderPublicNotFoundPage([
+        'title' => 'Článek nenalezen',
+        'meta' => [
+            'url' => $missingPath,
+        ],
+        'view_data' => [
+            'message' => 'Požadovaný článek se nepodařilo najít nebo už není veřejně dostupný.',
+        ],
+        'current_nav' => 'blog',
+        'body_class' => 'page-blog-article-not-found',
+    ]);
 }
 $article = hydrateAuthorPresentation($article);
 

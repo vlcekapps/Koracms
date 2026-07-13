@@ -121,6 +121,17 @@ $bulkDeleteSelectedLookup = array_fill_keys($bulkDeleteSelectedIds, true);
 $bulkDeleteFormErrorId = 'article-bulk-delete-form-error';
 $bulkDeleteReviewId = 'article-bulk-delete-review';
 $bulkDeleteFieldErrorId = 'confirm-article-bulk-delete-error';
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorArticleId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Článek nejde přesunout do Koše bez potvrzení kontroly dopadu. U pole Potvrzení přesunu je konkrétní nápověda.',
+    'invalid' => 'Článek už není dostupný nebo jej nemůžete přesunout do Koše. Vyberte článek ze svého aktuálního seznamu.',
+    'failed' => 'Článek se nepodařilo přesunout do Koše. Data zůstala beze změny; zkontrolujte položku a zkuste akci znovu.',
+    default => '',
+};
+$deleteSuccessMessage = trim((string)($_GET['deleted'] ?? '')) === '1'
+    ? 'Článek byl přesunut do Koše. Lze jej obnovit ve správě Koše.'
+    : '';
 
 $canManageTaxonomies = $activeBlog
     ? canCurrentUserManageBlogTaxonomies((int)$activeBlog['id'])
@@ -172,6 +183,9 @@ adminHeader($blogCaptionTitle);
 <?php if ($message === 'no_blog'): ?>
   <p role="status"><strong>Nejdřív vytvořte blog.</strong> Kategorie, štítky i články se spravují až uvnitř existujícího blogu.</p>
 <?php endif; ?>
+
+<?php if ($deleteSuccessMessage !== ''): ?><p class="success" role="status" aria-atomic="true"><?= h($deleteSuccessMessage) ?></p><?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="article-delete-form-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
 
 <?php if (is_array($transferFlash) && ($transferFlash['message'] ?? '') !== ''): ?>
   <p<?= $bulkDeleteHasError ? ' id="' . h($bulkDeleteFormErrorId) . '"' : '' ?>
@@ -296,8 +310,17 @@ adminHeader($blogCaptionTitle);
     </thead>
     <tbody>
     <?php foreach ($articles as $article): ?>
+      <?php
+        $articleId = (int)$article['id'];
+        $deleteConfirmField = 'confirm_article_delete_' . $articleId;
+        $deleteConfirmId = 'confirm-article-delete-' . $articleId;
+        $deleteReviewId = 'article-delete-review-' . $articleId;
+        $deleteFieldErrorId = 'confirm-article-delete-' . $articleId . '-error';
+        $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorArticleId === $articleId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <td><label for="article-select-<?= (int)$article['id'] ?>" class="sr-only">Vybrat článek <?= h($article['title']) ?></label><input type="checkbox" id="article-select-<?= (int)$article['id'] ?>" name="ids[]" value="<?= (int)$article['id'] ?>" form="bulk-form"<?= isset($bulkDeleteSelectedLookup[(int)$article['id']]) ? ' checked' : '' ?>></td>
+        <td><label for="article-select-<?= $articleId ?>" class="sr-only">Vybrat článek <?= h($article['title']) ?></label><input type="checkbox" id="article-select-<?= $articleId ?>" name="ids[]" value="<?= $articleId ?>" form="bulk-form"<?= isset($bulkDeleteSelectedLookup[$articleId]) ? ' checked' : '' ?>></td>
         <td><?= h($article['title']) ?></td>
         <?php if ($multiBlog): ?><td><?= h($article['blog_name'] ?? '–') ?></td><?php endif; ?>
         <td><?= $article['author_name'] ? h($article['author_name']) : '<em>–</em>' ?></td>
@@ -348,11 +371,24 @@ adminHeader($blogCaptionTitle);
             <button type="submit" class="btn"
                     data-confirm="Vytvořit kopii článku?">Duplikovat</button>
           </form>
-          <form action="blog_delete.php" method="post">
+          <form id="article-delete-form-<?= $articleId ?>" action="blog_delete.php" method="post" class="admin-inline-form" novalidate<?= $deleteHasError ? ' aria-describedby="article-delete-form-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat článek?">Smazat</button>
+            <input type="hidden" name="id" value="<?= $articleId ?>">
+            <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Přesun článku <?= h((string)$article['title']) ?> do Koše</legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Přesun skryje článek z webu, ale zachová jeho obrázek, komentáře, štítky, série, související články, revize i redirecty pro případné obnovení.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1"
+                       required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji přesun tohoto článku do Koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před přesunem článku do Koše potvrďte, že jste zkontrolovali zachování obrázku, komentářů, štítků, sérií, souvisejících článků, revizí a redirectů.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Přesunout článek <?= h((string)$article['title']) ?> do Koše?">Přesunout do Koše</button>
+            </fieldset>
           </form>
         </td>
       </tr>
