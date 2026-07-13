@@ -366,6 +366,10 @@ Role v blogu:
 - `Autor blogu` – může psát a upravovat články ve svých přidělených blogech
 - `Správce blogu` – navíc může spravovat kategorie a štítky daného blogu
 
+Uložení týmu mění přístup okamžitě, proto obrazovka před odesláním popisuje dopad a vyžaduje potvrzení kontroly všech přidávaných a odebíraných uživatelů i jejich rolí. Bez potvrzení server nic neuloží. Pokud tým mezitím změnil jiný správce v druhém panelu nebo požadavku, starší formulář novější stav nepřepíše; administrace vyžádá novou kontrolu aktuálního týmu.
+
+U starších blogů bez historicky evidovaného zakladatele může globální správce jednorázově doplnit interní účet. Jde o trvalý auditní údaj, nikoli o roli: formulář vyžaduje samostatné potvrzení a doplněním se uživatel automaticky nepřidá do týmu ani nezíská přístup. Členství je případně potřeba nastavit zvlášť v tabulce týmu.
+
 Jakmile začnete používat přiřazení blogů, autor už neuvidí všechny blogy v systému, ale jen ty, do kterých patří.
 
 ### Přehled přiřazení

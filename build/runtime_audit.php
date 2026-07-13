@@ -12234,7 +12234,10 @@ if (!str_contains($blogMembersSource, 'cms_blog_members')) {
 if (!str_contains($blogMembersSource, 'blogMembershipRoleDefinitions()')) {
     $blogAdminIssues[] = 'blog team management page is missing role definitions';
 }
-if (!str_contains($blogMembersSource, 'canCurrentUserManageBlogTaxonomies($blogId)')) {
+if (!str_contains($blogMembersSource, '$canManageAllBlogTeams = currentUserHasCapability')
+    || !str_contains($blogMembersSource, 'getTaxonomyManagedBlogsForUser()')
+    || !str_contains($blogMembersSource, 'if (!$postBlogScopeValid)')
+    || !str_contains($blogMembersSource, 'if (!$canManageAllBlogTeams)')) {
     $blogAdminIssues[] = 'blog team management page is missing capability enforcement';
 }
 if (!str_contains($blogMembersSource, 'Zakladatel blogu:') || !str_contains($blogMembersSource, 'created_by_user_id')) {
@@ -12243,7 +12246,7 @@ if (!str_contains($blogMembersSource, 'Zakladatel blogu:') || !str_contains($blo
 if (!str_contains($blogMembersSource, "name=\"action\" value=\"set_creator\"") || !str_contains($blogMembersSource, 'name="creator_user_id"')) {
     $blogAdminIssues[] = 'blog team management page is missing founder backfill form';
 }
-if (!str_contains($blogMembersSource, "currentUserHasCapability('blog_taxonomies_manage') || currentUserHasCapability('settings_manage')")) {
+if (!str_contains($blogMembersSource, '$canAssignBlogCreator = $canManageAllBlogTeams')) {
     $blogAdminIssues[] = 'blog team management page is missing founder backfill global-permission guard';
 }
 if (!str_contains($blogMembersSource, 'UPDATE cms_blogs') || !str_contains($blogMembersSource, 'created_by_user_id IS NULL')) {
@@ -21070,6 +21073,100 @@ if ($contentConversionGuardrailIssues === []) {
     $failures++;
     foreach ($contentConversionGuardrailIssues as $contentConversionGuardrailIssue) {
         echo '- ' . $contentConversionGuardrailIssue . "\n";
+    }
+}
+
+echo "=== blog_access_error_prevention_guardrails ===\n";
+$blogAccessGuardrailIssues = [];
+$blogAccessSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_members.php');
+$blogAccessHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    "\$requestedBlogId = \$isPostRequest ? inputInt('post', 'blog_id') : inputInt('get', 'blog_id')",
+    '$postBlogScopeValid = !$isPostRequest || $requestedBlogIsAccessible',
+    'if (!$postBlogScopeValid)',
+    'internalRedirectTarget(',
+    "(int)(\$blogMemberFlash['blog_id'] ?? 0) === \$blogId",
+    "\$flash['blog_id'] = \$blogId",
+] as $blogAccessScopeFragment) {
+    if (!str_contains($blogAccessSource, $blogAccessScopeFragment)) {
+        $blogAccessGuardrailIssues[] = 'blog team management is missing request-scope protection: ' . $blogAccessScopeFragment;
+    }
+}
+foreach ([
+    "\$creatorConfirmField = 'confirm_blog_creator_backfill'",
+    "\$teamConfirmField = 'confirm_blog_members_save'",
+    'id="blog-creator-form"',
+    'id="blog-team-form"',
+    "\$creatorReviewId = 'blog-creator-review'",
+    "\$teamReviewId = 'blog-team-review'",
+    'role="alert" aria-atomic="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'aria-required="true"',
+] as $blogAccessReviewFragment) {
+    if (!str_contains($blogAccessSource, $blogAccessReviewFragment)) {
+        $blogAccessGuardrailIssues[] = 'blog team management is missing accessible review fragment: ' . $blogAccessReviewFragment;
+    }
+}
+if (substr_count($blogAccessSource, '$pdo->beginTransaction()') < 2
+    || substr_count($blogAccessSource, '$pdo->rollBack()') < 2
+    || substr_count($blogAccessSource, '$pdo->commit()') < 2) {
+    $blogAccessGuardrailIssues[] = 'blog team and creator changes are missing transactional protection';
+}
+foreach ([
+    'SELECT created_by_user_id',
+    'FOR UPDATE',
+    'WHERE id = ? AND created_by_user_id IS NULL',
+    '$updateCreatorStmt->rowCount() !== 1',
+    "logAction('blog_creator_backfill'",
+] as $blogCreatorPersistenceFragment) {
+    if (!str_contains($blogAccessSource, $blogCreatorPersistenceFragment)) {
+        $blogAccessGuardrailIssues[] = 'blog creator backfill is missing persistence guardrail: ' . $blogCreatorPersistenceFragment;
+    }
+}
+foreach ([
+    "\$postedMembershipSnapshot = trim((string)(\$_POST['team_membership_snapshot'] ?? ''))",
+    "preg_match('/\\A[a-f0-9]{64}\\z/'",
+    'hash_equals($membershipFingerprint($currentMemberMap), $postedMembershipSnapshot)',
+    'SELECT member_role',
+    'WHERE blog_id = ? AND user_id = ?',
+    'SELECT user_id, member_role',
+    'DELETE FROM cms_blog_members WHERE blog_id = ?',
+    'INSERT INTO cms_blog_members (blog_id, user_id, member_role)',
+    "'blog_members_save'",
+] as $blogTeamPersistenceFragment) {
+    if (!str_contains($blogAccessSource, $blogTeamPersistenceFragment)) {
+        $blogAccessGuardrailIssues[] = 'blog team save is missing persistence guardrail: ' . $blogTeamPersistenceFragment;
+    }
+}
+if (str_contains($blogAccessSource, "if (!isset(\$roleOptions[\$memberRole])) {\n                \$memberRole = 'author';")) {
+    $blogAccessGuardrailIssues[] = 'blog team save silently falls back to the author role again';
+}
+if (str_contains($blogAccessSource, 'foreach ($roleOptions as $roleKey => $roleLabel)')) {
+    $blogAccessGuardrailIssues[] = 'blog team role option rendering shadows the cross-blog role-label helper';
+}
+foreach ([
+    "httpIntegrationPrintResult('blog_access_error_prevention_http'",
+    'správa týmu bez potvrzení změnila role nebo audit log',
+    'neplatná role změnila tým nebo audit log místo přístupné validační chyby',
+    'podvržený blog_id změnil vlastní/cizí tým nebo audit log',
+    'chybový stav týmu přetekl do jiného blogu nebo změnil jeho tým',
+    'souběžně změněný tým přepsal novější data nebo audit log',
+    'potvrzená změna týmu neuložila celý výběr transakčně nebo nezapsala audit log',
+    'doplnění zakladatele bez potvrzení změnilo auditní údaj nebo log',
+    'potvrzené doplnění zakladatele neuložilo údaj transakčně nebo nezapsalo audit log',
+] as $blogAccessHttpFragment) {
+    if (!str_contains($blogAccessHttpSource, $blogAccessHttpFragment)) {
+        $blogAccessGuardrailIssues[] = 'HTTP integration is missing blog-access proof: ' . $blogAccessHttpFragment;
+    }
+}
+if ($blogAccessGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($blogAccessGuardrailIssues as $blogAccessGuardrailIssue) {
+        echo '- ' . $blogAccessGuardrailIssue . "\n";
     }
 }
 

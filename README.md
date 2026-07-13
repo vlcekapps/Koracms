@@ -674,6 +674,8 @@ Datově dopadající převod článku a stránky používá pro WCAG `3.3.4` ser
 
 Individuální i hromadné odebrání blogových článků používá stejný vratný model. Přehled předem popíše zachování obrázků, komentářů, štítků, sérií, souvisejících článků, revizí a redirectů, server vyžaduje potvrzení konkrétní akce a transakčně nastaví jen `deleted_at`. Přesunutý publikovaný článek vrací textovou 404 na běžné i preview URL, ale v Koši jej lze obnovit se všemi vazbami. Až samostatně potvrzený trvalý purge transakčně uklidí databázová data a po commitu všechny obrazové varianty.
 
+Změny týmu blogu a jednorázové doplnění zakladatele používají stejný WCAG `3.3.4` review-and-confirm princip. Server odmítne chybějící potvrzení, neplatnou roli, cizí blog i zastaralý formulář bez částečného zápisu; potvrzený tým nebo auditní údaj zakladatele uloží pod zámkem v transakci a zapíše audit log. Doplnění zakladatele samo nemění členství ani přístup uživatele.
+
 ---
 
 ## Zálohování a údržba

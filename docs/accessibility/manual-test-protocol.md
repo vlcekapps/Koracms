@@ -195,6 +195,14 @@ V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání b
 3. Ve **Stránky a odkazy blogu** zopakujte průchod bez a s `confirm_blog_nav_link_delete_<id>`. Review musí navíc pojmenovat blog a dopad na jeho samostatné pořadí; bez potvrzení se nesmí změnit odkaz ani audit log, po potvrzení se mají zbývající stránky a odkazy seřadit bez mezery.
 4. Ověřte jen klávesnicí, že se lze z kontrolního bloku vrátit přes `Zrušit smazání`, focus order zůstává logický a globální odkaz nelze omylem smazat z blogové obrazovky ani blogový odkaz z globální obrazovky. Oddělení scope je pokryté automatizovaně, ruční průchod potvrzuje srozumitelnost kontextu.
 
+### Doplňkový průchod změn přístupů k blogu
+
+1. Jako správce jednoho konkrétního blogu otevřete **Tým blogu**. NVDA má přečíst review dopadu na přidávané a odebírané přístupy, tabulkové popisky zařazení i rolí a potvrzovací checkbox. Odešlete změnu bez `confirm_blog_members_save`: jednou se má oznámit atomický alert, checkbox má mít `aria-invalid` a popis přes review i lokální chybu, rozepsané členství a role se mají zachovat a uložený tým ani audit log se nesmí změnit.
+2. Zvolte neplatnou roli simulovaným POST požadavkem nebo testovacím nástrojem. Server nesmí roli tiše změnit na autora; po návratu má být chyba navázaná na konkrétní výběr role a žádná část týmu se nesmí uložit.
+3. Otevřete stejný tým ve dvou panelech. V prvním změnu potvrďte, ve druhém pak odešlete starší formulář. Druhý požadavek musí oznámit, že tým mezitím změnil jiný požadavek, zachovat novější uložený stav a vyžádat novou kontrolu; focus order musí zůstat logický.
+4. V aktuálním formuláři potvrďte přidání, odebrání i změnu role. Ověřte jediný PRG status, přesně očekávané přístupy a to, že správce omezený na jeden blog nemůže změnit tým jiného blogu ani podvrženým `blog_id`.
+5. Jako globální správce otevřete starší blog bez evidovaného zakladatele. Review musí výslovně oznámit trvalý auditní údaj a to, že doplnění samo nepřidá členství. Bez `confirm_blog_creator_backfill` se údaj ani audit log nesmí změnit a výběr uživatele se musí zachovat s field-level chybou; po potvrzení se zakladatel uloží právě jednou, oznámí se PRG status a původní tým zůstane beze změny. Výsledek zapište k `3.3.4`.
+
 ### Doplňkový průchod vratného mazání Míst
 
 1. Připravte veřejné místo s obrázkem a navázanou veřejnou událostí. V přehledu Míst odešlete řádkový přesun bez `confirm_place_delete_<id>`. NVDA má jednou oznámit atomický alert; checkbox má mít `aria-invalid` a popis přes existující review i field-level chybu. Místo, obrázek, událost ani audit log se nesmí změnit.
@@ -258,6 +266,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - ZIP export šablony má před stažením čitelný review přenášené konfigurace a statických assetů, samostatné potvrzení oprávnění a serverově odmítá nepotvrzený download bez attachmentu nebo audit logu.
 - Sdílené hromadné smazání přes `bulkActions()` má čitelný review dopadu, checkbox `confirm_bulk_delete`, field-level chybu při chybějícím potvrzení a serverově odmítá nepotvrzený požadavek bez cleanupu, smazání nebo audit logu.
 - Trvalé smazání vlastního odkazu hlavní nebo blogové navigace má čitelný item-specific review názvu, cílové adresy, stavu a dopadu na správné pořadí, samostatné potvrzení a serverově odmítá nepotvrzený nebo cross-scope požadavek bez změny odkazu, pořadí nebo audit logu.
+- Uložení týmu blogu a jednorázové doplnění zakladatele mají čitelný review dopadu, samostatné potvrzení, přístupnou field-level chybu a serverově odmítají nepotvrzenou, neplatnou, cross-scope nebo zastaralou změnu bez částečného zápisu či audit logu.
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Při vypršení admin session dlouhý formulář neztratí rozepsaný obsah: heartbeat oznámí vypršení přihlášení, login oznámí návrat na původní stránku a autosave recovery koncept jde obnovit nebo vědomě zahodit.

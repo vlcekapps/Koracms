@@ -48,7 +48,8 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 - field-level guardrail a HTTP scénář pro veřejný komentářový formulář včetně předvyplnění jména/e-mailu přihlášeného veřejného uživatele přes `currentUserContactDefaults()`,
 - guardrail a HTTP scénář pro srozumitelné odebrání článku ze všech sérií v editoru článku,
 - `article_delete_error_prevention_guardrails` a `article_delete_error_prevention_http` pro item-specific serverové potvrzení, autorský scope, vratný individuální přesun, veřejné 404 a obnovu všech článkových souborů i vazeb,
-- `article_bulk_delete_error_prevention_guardrails` a `article_bulk_delete_error_prevention_http` pro serverové potvrzení, přesný autorský scope, vratný transakční přesun do Koše a zachování článkových souborů i vazeb.
+- `article_bulk_delete_error_prevention_guardrails` a `article_bulk_delete_error_prevention_http` pro serverové potvrzení, přesný autorský scope, vratný transakční přesun do Koše a zachování článkových souborů i vazeb,
+- `blog_access_error_prevention_guardrails` a `blog_access_error_prevention_http` pro review-and-confirm změn týmu a zakladatele, odmítnutí cizího blogu/neplatné role/zastaralého formuláře a transakční auditované uložení.
 
 ## WCAG 2.2 A/AA Shrnutí
 
@@ -69,7 +70,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 3.1.2 Language of Parts | Partially Supports | HTML editor nabízí helper pro `lang`; blogové kategorie, štítky a série mají stejný helper u veřejně renderovaných popisů a runtime guardrail hlídá editor coverage. Checklist vysvětluje odpovědnost autora. | Ručně ověřit cizojazyčné citace v článcích i taxonomických popisech. |
 | 3.3.1 Error Identification | Supports | Admin editory i veřejné komentáře mají form-level alert a field-level chyby. | Ručně projít kombinované chybové stavy editoru článku. |
 | 3.3.3 Error Suggestion | Partially Supports | Blog admin formuláře a veřejný komentář používají konkrétní návrhy oprav. | Pokračovat copy passem u méně častých validačních větví. |
-| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových taxonomií má item-level review a individuální i hromadné odebrání článků používá serverově potvrzený vratný přesun do Koše s HTTP důkazem pro správce i autora. | Ručně projít oba přesuny článků s NVDA/keyboard-only a pokračovat v produktové inventuře mimo Blog. |
+| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových taxonomií má item-level review, odebrání článků je vratné přes Koš a změny týmu i zakladatele jsou serverově potvrzené, scope-safe, transakční a auditované. | Ručně projít přesuny článků i změny týmu/zakladatele s NVDA/keyboard-only a pokračovat v produktové inventuře mimo Blog. |
 | 3.3.7 Redundant Entry | Partially Supports | Přihlášený veřejný uživatel dostane v komentářovém formuláři předvyplněné jméno a e-mail z profilu a POST chyba zachová ručně zadané hodnoty. | Ručně ověřit sdílená zařízení a širší custom komentářové workflow. |
 | 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav; ruční NVDA průchod blogů a blogové administrace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách content/media pickeru nebo blog editoru zopakovat NVDA/keyboard průchod. |
 | 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region a ruční NVDA průchod dlouhé editace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách live regionů nebo autosave/content-lock chování zopakovat NVDA průchod. |
@@ -157,11 +158,29 @@ Oprava:
 
 Snížené riziko: WCAG `1.3.1 Info and Relationships`, `3.3.4 Error Prevention`, `4.1.2 Name, Role, Value` a `4.1.3 Status Messages`.
 
+### Správa týmu blogu mohla uložit nezkontrolovanou nebo částečnou změnu přístupu
+
+Priorita: vysoká.
+
+Riziko: tým se mazal a znovu vkládal bez transakce, neplatná role se tiše změnila na autora a podvržený `blog_id` mohl spadnout na jiný dostupný blog. Jednorázové doplnění zakladatele nemělo serverové potvrzení nevratného auditního údaje. U určitého pořadí členů s dalším blogovým přiřazením navíc kolize proměnné role ukončila render stránky serverovou chybou.
+
+Oprava:
+
+- oba formuláře popisují dopad a vyžadují samostatný serverově ověřený checkbox,
+- atomické alerty a field-level chyby zachovají odeslané členství, role i vybraného zakladatele,
+- nepřístupný POST scope a neplatná role se odmítnou bez tichého fallbacku,
+- snapshot aktuálního týmu odmítne zastaralý formulář místo přepsání novější změny,
+- vykreslení role používá oddělenou proměnnou a víceblogový HTTP scénář hlídá úplný render všech členů,
+- tým i zakladatel se ukládají pod databázovým zámkem v transakci a zapisují přesný audit log,
+- runtime audit a HTTP integrace hlídají odmítnuté i potvrzené větve včetně nulové částečné změny.
+
+Snížené riziko: WCAG `1.3.1 Info and Relationships`, `3.3.4 Error Prevention`, `4.1.2 Name, Role, Value` a `4.1.3 Status Messages`.
+
 ## Ruční Evidence
 
 2026-07-09: uživatel ručně zrevidoval blogy s NVDA bez nahlášené regrese. Evidence pokrývá veřejný i administrační blogový průchod včetně focus order, dlouhých formulářů, statických stránek a blogových stránek. Pro aktuální ACR draft tím už Blog nezůstává otevřený jen kvůli základnímu screen-reader/keyboard průchodu.
 
-Po změnách z 2026-07-13 zbývá znovu projít individuální a hromadný přesun článků s NVDA/keyboard-only. Další blogové ruční oblasti jsou vizuální: 400% zoom, text-spacing override, sticky/anchor skoky, custom theme variace, kontrast malých štítků/focus stavů a kvalita reálného author contentu podle `author-content-checklist.md`.
+Po změnách z 2026-07-13 zbývá znovu projít individuální a hromadný přesun článků a změny týmu/zakladatele s NVDA/keyboard-only. Další blogové ruční oblasti jsou vizuální: 400% zoom, text-spacing override, sticky/anchor skoky, custom theme variace, kontrast malých štítků/focus stavů a kvalita reálného author contentu podle `author-content-checklist.md`.
 
 ## Ruční Scénáře Pro Blog
 
@@ -181,8 +200,9 @@ Administrace Blogu:
 4. Ve správě blogů zkusit smazání celého blogu bez `confirm_blog_delete_<id>`: čtečka má oznámit review dopadu, alert i field-level chybu, obsah/tým/audit log se nesmí změnit; potvrzený průchod má vrátit PRG stav.
 5. U řádkového `Přesunout do Koše` odeslat vlastní publikovaný článek bez `confirm_article_delete_<id>`: ověřit review, alert, field-level chybu a nulovou změnu; po potvrzení ověřit veřejnou 404, Koš a obnovu souborů, komentářů, štítků, sérií, souvisejících vazeb, revizí i redirectů. Zopakovat jako autor a ověřit odmítnutí cizího článku.
 6. V přehledu článků vybrat článek s reprezentativními vazbami a odeslat přesun do Koše bez `confirm_article_bulk_delete`: ověřit alert, field-level chybu, zachovaný výběr a nulovou změnu; po potvrzení ověřit PRG stav, Koš a obnovu všech vazeb. Zopakovat jako autor nad vlastním článkem.
-7. Dlouhá editace: nechat vypršet session, ověřit heartbeat live hlášku, návrat přes login a recovery koncept.
-8. Ověřit content/media picker, HTML helper `Jazyk části textu` a author-content checklist pro reálný článek.
+7. Ve správě týmu odeslat změnu bez potvrzení, s neplatnou rolí a ze zastaralého druhého panelu; ověřit alert, field-level vazby, zachované hodnoty a nulovou změnu. Potom potvrdit očekávaný tým a jako globální správce stejným způsobem projít jednorázové doplnění zakladatele bez automatické změny členství.
+8. Dlouhá editace: nechat vypršet session, ověřit heartbeat live hlášku, návrat přes login a recovery koncept.
+9. Ověřit content/media picker, HTML helper `Jazyk části textu` a author-content checklist pro reálný článek.
 
 ## Backlog
 
@@ -191,6 +211,7 @@ Střední priorita:
 - Ručně ověřit Blog při 400% zoomu v kombinaci s TOC kotvami, sticky prvky a dlouhým editorem článku.
 - Projít reálný publikovaný blogový obsah podle `docs/accessibility/author-content-checklist.md` a oddělit author-content nálezy od core/theme defektů.
 - Ručně projít individuální i hromadný přesun článků do Koše s NVDA/keyboard-only a obnovit reprezentativní článek se všemi vazbami.
+- Ručně projít změnu týmu blogu a jednorázové doplnění zakladatele s NVDA/keyboard-only, včetně chybějícího potvrzení a zastaralého formuláře.
 
 Nízká priorita:
 

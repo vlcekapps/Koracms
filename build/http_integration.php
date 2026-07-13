@@ -404,6 +404,17 @@ function httpIntegrationCheckboxIsChecked(string $html, string $fieldId): bool
     return preg_match($pattern, $html) === 1;
 }
 
+function httpIntegrationSelectHasSelectedValue(string $html, string $fieldId, string $value): bool
+{
+    $selectPattern = '/<select\b(?=[^>]*\bid="' . preg_quote($fieldId, '/') . '")[^>]*>(.*?)<\/select>/is';
+    if (preg_match($selectPattern, $html, $selectMatches) !== 1) {
+        return false;
+    }
+
+    $optionPattern = '/<option\b(?=[^>]*\bvalue="' . preg_quote($value, '/') . '")(?=[^>]*\bselected\b)[^>]*>/i';
+    return preg_match($optionPattern, $selectMatches[1]) === 1;
+}
+
 /**
  * @param array<string, string> $attributes
  */
@@ -9220,6 +9231,368 @@ try {
     }
 
     httpIntegrationPrintResult('public_feed_http', $publicFeedIssues, $failures);
+
+    $blogAccessIssues = [];
+    $blogAccessToken = bin2hex(random_bytes(4));
+    $blogAccessPasswordHash = password_hash('HttpBlogAccess123!', PASSWORD_BCRYPT);
+    foreach ([
+        [
+            'email' => 'http-blog-manager-' . $blogAccessToken . '@example.test',
+            'first_name' => 'HTTP',
+            'last_name' => 'Team Manager',
+        ],
+        [
+            'email' => 'http-blog-member-' . $blogAccessToken . '@example.test',
+            'first_name' => 'HTTP',
+            'last_name' => 'Team Candidate',
+        ],
+    ] as $blogAccessUserRow) {
+        $pdo->prepare(
+            "INSERT INTO cms_users
+                (email, password, first_name, last_name, role, is_superadmin, is_confirmed, created_at)
+             VALUES (?, ?, ?, ?, 'author', 0, 1, NOW())"
+        )->execute([
+            $blogAccessUserRow['email'],
+            $blogAccessPasswordHash,
+            $blogAccessUserRow['first_name'],
+            $blogAccessUserRow['last_name'],
+        ]);
+        $createdUsers[] = (int)$pdo->lastInsertId();
+    }
+    [$blogAccessManagerId, $blogAccessCandidateId] = array_slice($createdUsers, -2);
+
+    $blogAccessTargetSlug = 'http-blog-access-target-' . $blogAccessToken;
+    $blogAccessForeignSlug = 'http-blog-access-foreign-' . $blogAccessToken;
+    $blogAccessOtherSlug = 'http-blog-access-other-' . $blogAccessToken;
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, NULL)")
+        ->execute(['HTTP tým blogu', $blogAccessTargetSlug]);
+    $blogAccessTargetId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $blogAccessTargetId;
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP cizí tým blogu', $blogAccessForeignSlug, $adminUserId]);
+    $blogAccessForeignId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $blogAccessForeignId;
+    $pdo->prepare("INSERT INTO cms_blogs (name, slug, created_by_user_id) VALUES (?, ?, ?)")
+        ->execute(['HTTP další tým blogu', $blogAccessOtherSlug, $adminUserId]);
+    $blogAccessOtherId = (int)$pdo->lastInsertId();
+    $createdBlogs[] = $blogAccessOtherId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+         VALUES (?, ?, ?)"
+    )->execute([$blogAccessTargetId, $blogAccessManagerId, 'manager']);
+    $pdo->prepare(
+        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+         VALUES (?, ?, ?)"
+    )->execute([$blogAccessTargetId, $blogAccessCandidateId, 'author']);
+    $pdo->prepare(
+        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+         VALUES (?, ?, ?)"
+    )->execute([$blogAccessForeignId, $blogAccessCandidateId, 'manager']);
+    $pdo->prepare(
+        "INSERT INTO cms_blog_members (blog_id, user_id, member_role)
+         VALUES (?, ?, ?)"
+    )->execute([$blogAccessOtherId, $blogAccessManagerId, 'manager']);
+
+    $blogAccessManagerSession = koraPrimeTestSession([
+        'cms_logged_in' => true,
+        'cms_superadmin' => false,
+        'cms_user_id' => $blogAccessManagerId,
+        'cms_user_name' => 'HTTP Team Manager',
+        'cms_user_role' => 'author',
+    ], 'kora-http-blog-access-manager-' . $blogAccessToken);
+    $fetchBlogAccessMemberMap = static function (PDO $pdo, int $blogId): array {
+        $stmt = $pdo->prepare(
+            "SELECT user_id, member_role
+             FROM cms_blog_members
+             WHERE blog_id = ?
+             ORDER BY user_id"
+        );
+        $stmt->execute([$blogId]);
+        $memberMap = [];
+        foreach ($stmt->fetchAll() as $memberRow) {
+            $memberMap[(int)$memberRow['user_id']] = (string)$memberRow['member_role'];
+        }
+
+        return $memberMap;
+    };
+
+    $blogAccessTargetPath = BASE_URL . '/admin/blog_members.php?blog_id=' . $blogAccessTargetId;
+    $blogAccessTargetUrl = $baseUrl . $blogAccessTargetPath;
+    $blogAccessTeamLogBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")
+        ->fetchColumn();
+    $blogAccessInitialMap = $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId);
+    $blogAccessTeamPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    $blogAccessTeamCsrf = extractHiddenInputValue($blogAccessTeamPage['body'], 'csrf_token');
+    $blogAccessTeamSnapshot = extractHiddenInputValue($blogAccessTeamPage['body'], 'team_membership_snapshot');
+    $blogAccessTeamRenderChecks = [
+        'status' => httpIntegrationStatusCode($blogAccessTeamPage) === 200,
+        'csrf' => $blogAccessTeamCsrf !== '',
+        'snapshot' => preg_match('/\A[a-f0-9]{64}\z/', $blogAccessTeamSnapshot) === 1,
+        'form' => httpIntegrationElementHasAttributes($blogAccessTeamPage['body'], 'form', 'blog-team-form', []),
+        'confirmation' => httpIntegrationInputHasAttributes($blogAccessTeamPage['body'], 'confirm-blog-members-save', [
+            'name' => 'confirm_blog_members_save',
+            'aria-required' => 'true',
+            'aria-describedby' => 'blog-team-review',
+        ]),
+        'manager_checked' => httpIntegrationCheckboxIsChecked($blogAccessTeamPage['body'], 'member-' . $blogAccessManagerId),
+        'candidate_checked' => httpIntegrationCheckboxIsChecked($blogAccessTeamPage['body'], 'member-' . $blogAccessCandidateId),
+        'candidate_role' => httpIntegrationSelectHasSelectedValue($blogAccessTeamPage['body'], 'member-role-' . $blogAccessCandidateId, 'author'),
+        'review' => str_contains($blogAccessTeamPage['body'], 'Uložení okamžitě přidá nebo odebere přístup k tomuto blogu'),
+    ];
+    $blogAccessTeamRenderFailures = array_keys(array_filter(
+        $blogAccessTeamRenderChecks,
+        static fn (bool $passed): bool => !$passed
+    ));
+    if ($blogAccessTeamRenderFailures !== []) {
+        $blogAccessIssues[] = 'správa týmu nevykreslila review, snapshot, pojmenované role nebo serverový potvrzovací checkbox: '
+            . implode(', ', $blogAccessTeamRenderFailures);
+    }
+
+    $blogAccessMissingConfirmResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessTeamCsrf,
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'team_membership_snapshot' => $blogAccessTeamSnapshot,
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'member_' . $blogAccessCandidateId => '1',
+        'member_role_' . $blogAccessCandidateId => 'manager',
+    ], $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessMissingConfirmResponse) !== 302
+        || !responseHasLocationHeader($blogAccessMissingConfirmResponse['headers'], $blogAccessTargetPath, $baseUrl)
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId) !== $blogAccessInitialMap
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore) {
+        $blogAccessIssues[] = 'správa týmu bez potvrzení změnila role nebo audit log';
+    }
+
+    $blogAccessMissingConfirmPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    $blogAccessTeamCsrf = extractHiddenInputValue($blogAccessMissingConfirmPage['body'], 'csrf_token');
+    $blogAccessTeamSnapshot = extractHiddenInputValue($blogAccessMissingConfirmPage['body'], 'team_membership_snapshot');
+    $blogAccessTeamErrorChecks = [
+        'status' => httpIntegrationStatusCode($blogAccessMissingConfirmPage) === 200,
+        'alert' => httpIntegrationElementHasAttributes($blogAccessMissingConfirmPage['body'], 'p', 'blog-team-form-error', [
+            'role' => 'alert',
+            'aria-atomic' => 'true',
+        ]),
+        'form_description' => httpIntegrationElementHasAttributes($blogAccessMissingConfirmPage['body'], 'form', 'blog-team-form', [
+            'aria-describedby' => 'blog-team-form-error',
+        ]),
+        'confirmation_error' => httpIntegrationInputHasAttributes($blogAccessMissingConfirmPage['body'], 'confirm-blog-members-save', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-team-review confirm-blog-members-save-error',
+        ]),
+        'candidate_checked' => httpIntegrationCheckboxIsChecked($blogAccessMissingConfirmPage['body'], 'member-' . $blogAccessCandidateId),
+        'candidate_role' => httpIntegrationSelectHasSelectedValue($blogAccessMissingConfirmPage['body'], 'member-role-' . $blogAccessCandidateId, 'manager'),
+        'field_error' => str_contains($blogAccessMissingConfirmPage['body'], 'id="confirm-blog-members-save-error"'),
+    ];
+    $blogAccessTeamErrorFailures = array_keys(array_filter(
+        $blogAccessTeamErrorChecks,
+        static fn (bool $passed): bool => !$passed
+    ));
+    if ($blogAccessTeamErrorFailures !== []) {
+        $blogAccessIssues[] = 'chybový stav týmu nezachoval výběr nebo přístupné field-level vazby: '
+            . implode(', ', $blogAccessTeamErrorFailures);
+    }
+
+    $blogAccessOtherPath = BASE_URL . '/admin/blog_members.php?blog_id=' . $blogAccessOtherId;
+    $blogAccessOtherUrl = $baseUrl . $blogAccessOtherPath;
+    $blogAccessOtherMapBefore = $fetchBlogAccessMemberMap($pdo, $blogAccessOtherId);
+    $blogAccessCrossFlashResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessTeamCsrf,
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessOtherPath,
+        'team_membership_snapshot' => $blogAccessTeamSnapshot,
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'member_' . $blogAccessCandidateId => '1',
+        'member_role_' . $blogAccessCandidateId => 'manager',
+    ], $blogAccessManagerSession['cookie'], 0);
+    $blogAccessOtherPage = fetchUrl($blogAccessOtherUrl, $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessCrossFlashResponse) !== 302
+        || !responseHasLocationHeader($blogAccessCrossFlashResponse['headers'], $blogAccessOtherPath, $baseUrl)
+        || httpIntegrationStatusCode($blogAccessOtherPage) !== 200
+        || str_contains($blogAccessOtherPage['body'], 'id="blog-team-form-error"')
+        || !httpIntegrationCheckboxIsChecked($blogAccessOtherPage['body'], 'member-' . $blogAccessManagerId)
+        || httpIntegrationCheckboxIsChecked($blogAccessOtherPage['body'], 'member-' . $blogAccessCandidateId)
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId) !== $blogAccessInitialMap
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessOtherId) !== $blogAccessOtherMapBefore
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore) {
+        $blogAccessIssues[] = 'chybový stav týmu přetekl do jiného blogu nebo změnil jeho tým';
+    }
+
+    $blogAccessTeamPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    $blogAccessTeamCsrf = extractHiddenInputValue($blogAccessTeamPage['body'], 'csrf_token');
+    $blogAccessTeamSnapshot = extractHiddenInputValue($blogAccessTeamPage['body'], 'team_membership_snapshot');
+
+    $blogAccessInvalidRoleResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessTeamCsrf,
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'team_membership_snapshot' => $blogAccessTeamSnapshot,
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'member_' . $blogAccessCandidateId => '1',
+        'member_role_' . $blogAccessCandidateId => 'owner',
+        'confirm_blog_members_save' => '1',
+    ], $blogAccessManagerSession['cookie'], 0);
+    $blogAccessInvalidRolePage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessInvalidRoleResponse) !== 302
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId) !== $blogAccessInitialMap
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore
+        || !httpIntegrationElementHasAttributes($blogAccessInvalidRolePage['body'], 'select', 'member-role-' . $blogAccessCandidateId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'member-role-' . $blogAccessCandidateId . '-error',
+        ])
+        || !str_contains($blogAccessInvalidRolePage['body'], 'id="member-role-' . $blogAccessCandidateId . '-error"')) {
+        $blogAccessIssues[] = 'neplatná role změnila tým nebo audit log místo přístupné validační chyby';
+    }
+
+    $blogAccessScopeCsrf = extractHiddenInputValue($blogAccessInvalidRolePage['body'], 'csrf_token');
+    $blogAccessScopeSnapshot = extractHiddenInputValue($blogAccessInvalidRolePage['body'], 'team_membership_snapshot');
+    $blogAccessForeignMapBefore = $fetchBlogAccessMemberMap($pdo, $blogAccessForeignId);
+    $blogAccessScopeResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessScopeCsrf,
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessForeignId,
+        'redirect' => $blogAccessTargetPath,
+        'team_membership_snapshot' => $blogAccessScopeSnapshot,
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'confirm_blog_members_save' => '1',
+    ], $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessScopeResponse) !== 302
+        || !responseHasLocationHeader($blogAccessScopeResponse['headers'], $blogAccessTargetPath, $baseUrl)
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId) !== $blogAccessInitialMap
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessForeignId) !== $blogAccessForeignMapBefore
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore) {
+        $blogAccessIssues[] = 'podvržený blog_id změnil vlastní/cizí tým nebo audit log';
+    }
+
+    $blogAccessScopeErrorPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    $blogAccessStaleCsrf = extractHiddenInputValue($blogAccessScopeErrorPage['body'], 'csrf_token');
+    $blogAccessStaleSnapshot = extractHiddenInputValue($blogAccessScopeErrorPage['body'], 'team_membership_snapshot');
+    $pdo->prepare(
+        "UPDATE cms_blog_members
+         SET member_role = 'manager'
+         WHERE blog_id = ? AND user_id = ?"
+    )->execute([$blogAccessTargetId, $blogAccessCandidateId]);
+    $blogAccessConcurrentMap = $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId);
+    $blogAccessStaleResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessStaleCsrf,
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'team_membership_snapshot' => $blogAccessStaleSnapshot,
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'member_' . $blogAccessCandidateId => '1',
+        'member_role_' . $blogAccessCandidateId => 'author',
+        'confirm_blog_members_save' => '1',
+    ], $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessStaleResponse) !== 302
+        || $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId) !== $blogAccessConcurrentMap
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore) {
+        $blogAccessIssues[] = 'souběžně změněný tým přepsal novější data nebo audit log';
+    }
+
+    $blogAccessStaleErrorPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    $blogAccessConfirmedResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => extractHiddenInputValue($blogAccessStaleErrorPage['body'], 'csrf_token'),
+        'action' => 'save_team',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'team_membership_snapshot' => extractHiddenInputValue($blogAccessStaleErrorPage['body'], 'team_membership_snapshot'),
+        'member_' . $blogAccessManagerId => '1',
+        'member_role_' . $blogAccessManagerId => 'manager',
+        'member_' . $blogAccessCandidateId => '1',
+        'member_role_' . $blogAccessCandidateId => 'author',
+        'confirm_blog_members_save' => '1',
+    ], $blogAccessManagerSession['cookie'], 0);
+    $blogAccessConfirmedMap = $fetchBlogAccessMemberMap($pdo, $blogAccessTargetId);
+    $blogAccessSuccessPage = fetchUrl($blogAccessTargetUrl, $blogAccessManagerSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessConfirmedResponse) !== 302
+        || !responseHasLocationHeader($blogAccessConfirmedResponse['headers'], $blogAccessTargetPath, $baseUrl)
+        || $blogAccessConfirmedMap !== [
+            $blogAccessManagerId => 'manager',
+            $blogAccessCandidateId => 'author',
+        ]
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_members_save'")->fetchColumn() !== $blogAccessTeamLogBefore + 1
+        || !str_contains($blogAccessSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Tým blogu byl uložen.</p>')) {
+        $blogAccessIssues[] = 'potvrzená změna týmu neuložila celý výběr transakčně nebo nezapsala audit log';
+    }
+
+    $blogAccessCreatorLogBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_creator_backfill'")
+        ->fetchColumn();
+    $blogAccessCreatorPage = fetchUrl($blogAccessTargetUrl, $adminSession['cookie'], 0);
+    $blogAccessCreatorCsrf = extractHiddenInputValue($blogAccessCreatorPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($blogAccessCreatorPage) !== 200
+        || $blogAccessCreatorCsrf === ''
+        || !httpIntegrationElementHasAttributes($blogAccessCreatorPage['body'], 'form', 'blog-creator-form', [])
+        || !httpIntegrationInputHasAttributes($blogAccessCreatorPage['body'], 'confirm-blog-creator-backfill', [
+            'name' => 'confirm_blog_creator_backfill',
+            'aria-required' => 'true',
+            'aria-describedby' => 'blog-creator-review',
+        ])
+        || !str_contains($blogAccessCreatorPage['body'], 'Uložením vznikne trvalý auditní údaj')) {
+        $blogAccessIssues[] = 'doplnění zakladatele nevykreslilo nevratný review a serverový potvrzovací checkbox';
+    }
+
+    $blogAccessCreatorMissingConfirmResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => $blogAccessCreatorCsrf,
+        'action' => 'set_creator',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'creator_user_id' => (string)$blogAccessCandidateId,
+    ], $adminSession['cookie'], 0);
+    $blogAccessCreatorStateStmt = $pdo->prepare("SELECT created_by_user_id FROM cms_blogs WHERE id = ?");
+    $blogAccessCreatorStateStmt->execute([$blogAccessTargetId]);
+    if (httpIntegrationStatusCode($blogAccessCreatorMissingConfirmResponse) !== 302
+        || $blogAccessCreatorStateStmt->fetchColumn() !== null
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_creator_backfill'")->fetchColumn() !== $blogAccessCreatorLogBefore) {
+        $blogAccessIssues[] = 'doplnění zakladatele bez potvrzení změnilo auditní údaj nebo log';
+    }
+
+    $blogAccessCreatorErrorPage = fetchUrl($blogAccessTargetUrl, $adminSession['cookie'], 0);
+    if (!httpIntegrationElementHasAttributes($blogAccessCreatorErrorPage['body'], 'p', 'blog-creator-form-error', [
+        'role' => 'alert',
+        'aria-atomic' => 'true',
+    ])
+        || !httpIntegrationElementHasAttributes($blogAccessCreatorErrorPage['body'], 'form', 'blog-creator-form', [
+            'aria-describedby' => 'blog-creator-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($blogAccessCreatorErrorPage['body'], 'confirm-blog-creator-backfill', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'blog-creator-review confirm-blog-creator-backfill-error',
+        ])
+        || !httpIntegrationSelectHasSelectedValue($blogAccessCreatorErrorPage['body'], 'creator_user_id', (string)$blogAccessCandidateId)
+        || !str_contains($blogAccessCreatorErrorPage['body'], 'id="confirm-blog-creator-backfill-error"')) {
+        $blogAccessIssues[] = 'chybový stav zakladatele nezachoval uživatele nebo přístupné field-level vazby';
+    }
+
+    $blogAccessCreatorConfirmedResponse = postUrl($blogAccessTargetUrl, [
+        'csrf_token' => extractHiddenInputValue($blogAccessCreatorErrorPage['body'], 'csrf_token'),
+        'action' => 'set_creator',
+        'blog_id' => (string)$blogAccessTargetId,
+        'redirect' => $blogAccessTargetPath,
+        'creator_user_id' => (string)$blogAccessCandidateId,
+        'confirm_blog_creator_backfill' => '1',
+    ], $adminSession['cookie'], 0);
+    $blogAccessCreatorStateStmt->execute([$blogAccessTargetId]);
+    $blogAccessCreatorSuccessPage = fetchUrl($blogAccessTargetUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($blogAccessCreatorConfirmedResponse) !== 302
+        || (int)$blogAccessCreatorStateStmt->fetchColumn() !== $blogAccessCandidateId
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_creator_backfill'")->fetchColumn() !== $blogAccessCreatorLogBefore + 1
+        || !str_contains($blogAccessCreatorSuccessPage['body'], '<p class="success" role="status" aria-atomic="true">Zakladatel blogu byl doplněn.</p>')) {
+        $blogAccessIssues[] = 'potvrzené doplnění zakladatele neuložilo údaj transakčně nebo nezapsalo audit log';
+    }
+
+    httpIntegrationPrintResult('blog_access_error_prevention_http', $blogAccessIssues, $failures);
 
     $blogManagementValidationIssues = [];
     $existingBlogValidationSlug = 'http-blog-validation-existing-' . bin2hex(random_bytes(4));
