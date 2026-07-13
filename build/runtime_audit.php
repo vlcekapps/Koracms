@@ -8976,7 +8976,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'reservations/index.php reservations/resource.php reservations/book.php reservations/my.php reservations/cancel.php reservations/calendar.php reservations/cancel_booking.php')
         && str_contains($composerSource, '"@analyse:strict:public-reservations"')
         && str_contains($composerSource, '--level=6')
-        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php admin/chat_topics.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/help.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
+        && str_contains($composerSource, 'admin/approve.php admin/audit_log.php admin/backup.php admin/blog.php admin/blog_blog_delete.php admin/blog_bulk.php admin/blog_cats.php admin/blog_cat_delete.php admin/blog_clone.php admin/blog_content_reference_search.php admin/blog_delete.php admin/blog_form.php admin/blog_members.php admin/blog_pages.php admin/blog_save.php admin/blog_tags.php admin/blog_tag_delete.php admin/blog_transfer.php admin/blogs.php admin/board.php admin/board_cats.php admin/board_cat_delete.php admin/board_clone.php admin/board_delete.php admin/board_form.php admin/board_save.php admin/bulk.php admin/chat.php admin/chat_action.php admin/chat_bulk.php admin/chat_delete.php admin/chat_message.php admin/chat_reply.php admin/chat_reply_action.php admin/chat_update.php admin/chat_topics.php admin/comments.php admin/comment_action.php admin/comment_approve.php admin/comment_bulk.php admin/comment_delete.php admin/command.php admin/command_search.php admin/contact.php admin/contact_action.php admin/contact_bulk.php admin/contact_delete.php admin/contact_message.php admin/contact_reply.php admin/contact_topics.php admin/content_lock_refresh.php admin/content_reference_picker.php admin/content_reference_search.php admin/convert_content.php admin/dl_cats.php admin/dl_cat_delete.php admin/downloads.php admin/download_series.php admin/download_form.php admin/download_save.php admin/download_delete.php admin/event_form.php admin/event_save.php admin/events.php admin/event_clone.php admin/event_delete.php admin/faq.php admin/faq_cats.php admin/faq_cat_delete.php admin/faq_delete.php admin/faq_form.php admin/faq_save.php admin/food.php admin/food_form.php admin/food_save.php admin/food_delete.php admin/food_items.php admin/food_orders.php admin/food_order.php admin/form_delete.php admin/form_form.php admin/form_save.php admin/form_submission.php admin/form_submission_action.php admin/form_submission_bulk.php admin/form_submission_delete.php admin/form_submission_file.php admin/form_submission_issue.php admin/form_submission_reply.php admin/form_submissions.php admin/forms.php admin/gallery_album_delete.php admin/gallery_album_form.php admin/gallery_album_save.php admin/gallery_albums.php admin/gallery_export_zip.php admin/gallery_photo_delete.php admin/gallery_photo_form.php admin/gallery_photo_reorder.php admin/gallery_photo_save.php admin/gallery_photos.php admin/help.php admin/index.php admin/integrity.php admin/layout.php admin/login.php admin/login_2fa.php admin/logout.php admin/media.php admin/menu.php admin/nav_reorder.php admin/news.php admin/news_clone.php admin/news_delete.php admin/news_form.php admin/news_save.php admin/newsletter.php admin/newsletter_bulk.php admin/newsletter_form.php admin/newsletter_history.php admin/newsletter_send.php admin/newsletter_subscriber.php admin/newsletter_subscriber_action.php admin/newsletter_subscriber_delete.php admin/page_clone.php admin/page_delete.php admin/page_form.php admin/page_positions.php admin/page_reorder.php admin/page_save.php admin/pages.php admin/place_bulk.php admin/place_delete.php admin/place_form.php admin/place_save.php admin/places.php admin/podcast.php admin/podcast_delete.php admin/podcast_form.php admin/podcast_save.php admin/podcast_show_delete.php admin/podcast_show_form.php admin/podcast_show_save.php admin/podcast_shows.php admin/polls.php admin/polls_form.php admin/polls_save.php admin/polls_delete.php admin/polls_results_export.php admin/profile.php admin/redirects.php admin/reorder_ajax.php admin/res_booking_add.php admin/res_booking_detail.php admin/res_booking_save.php admin/res_bookings.php admin/res_cat_delete.php admin/res_categories.php admin/res_location_delete.php admin/res_locations.php admin/res_resource_delete.php admin/res_resource_form.php admin/res_resource_save.php admin/res_resources.php admin/review_queue.php admin/revisions.php admin/settings.php admin/settings_display.php admin/settings_modules.php admin/settings_save.php admin/settings_shared.php admin/shortcut.php admin/statistics.php admin/theme_preview.php admin/themes.php admin/trash.php admin/user_delete.php admin/user_form.php admin/user_save.php admin/users.php admin/widget_add.php admin/widget_delete.php admin/widgets.php admin/widget_save.php author.php blog_router.php build/lint_php.php build/phpstan_bootstrap.php build/workflow_audit.php build/repository_guardrails_audit.php build/config_sample_audit.php build/version_metadata_audit.php build/schema_parity_audit.php build/redirect_guardrails_audit.php build/source_encoding_audit.php build/mojibake_audit.php build/whitespace_audit.php auth.php confirm_email.php cron.php csp-report.php db.php feed.php health.php index.php install.php maintenance.php migrate.php newsletter_widget_subscribe.php page.php public_login.php public_logout.php public_profile.php register.php reset_password.php robots.php search.php sitemap.php subscribe.php subscribe_confirm.php unsubscribe.php')
         && str_contains($composerSource, 'csp-report.php')
         && str_contains($composerSource, 'lib/admin_command.php lib/backup.php')
         && str_contains($composerSource, 'lib/comments.php lib/content.php lib/definitions.php')
@@ -11801,7 +11801,7 @@ $adminBulkRowLabelExpectations = [
     'admin/news.php' => ['<label for="news-select-<?= (int)$item[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="news-select-<?= (int)$item[\'id\'] ?>" name="ids[]"'],
     'admin/newsletter.php' => ['<label for="newsletter-subscriber-select-<?= $subscriberId ?>" class="sr-only">Vybrat odběratele', '<input type="checkbox" id="newsletter-subscriber-select-<?= $subscriberId ?>" name="ids[]"'],
     'admin/pages.php' => ['<label for="page-select-<?= $pageId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="page-select-<?= $pageId ?>" name="ids[]"'],
-    'admin/places.php' => ['<label for="place-select-<?= (int)$place[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="place-select-<?= (int)$place[\'id\'] ?>" name="ids[]"'],
+    'admin/places.php' => ['<label for="place-select-<?= $placeId ?>" class="sr-only">Vybrat', '<input type="checkbox" id="place-select-<?= $placeId ?>" name="ids[]"'],
     'admin/polls.php' => ['<label for="poll-select-<?= (int)$poll[\'id\'] ?>" class="sr-only">Vybrat', '<input type="checkbox" id="poll-select-<?= (int)$poll[\'id\'] ?>" name="ids[]"'],
 ];
 foreach ($adminBulkRowLabelExpectations as $adminBulkRowRelativePath => $adminBulkRowFragments) {
@@ -13185,7 +13185,8 @@ if (!str_contains($eventFormSource, 'name="event_type_id"')
     $eventsSourceIssues[] = 'event form is missing managed type, venue or recurrence controls';
 }
 if (!str_contains($eventSaveSource, 'SELECT * FROM cms_event_types WHERE id = ?')
-    || !str_contains($eventSaveSource, 'SELECT id FROM cms_places WHERE id = ? AND deleted_at IS NULL')
+    || !str_contains($eventSaveSource, 'SELECT id, deleted_at FROM cms_places WHERE id = ?')
+    || !str_contains($eventSaveSource, '$keepsCurrentTrashedPlace')
     || !str_contains($eventSaveSource, 'eventRecurrenceGroupId()')
     || !str_contains($eventSaveSource, 'eventRecurrenceShift(')) {
     $eventsSourceIssues[] = 'event save is missing type/place validation or recurrence row generation';
@@ -13202,7 +13203,7 @@ if (!str_contains($eventIndexViewSourceForGuard, 'events-type-description-title'
 }
 if (!str_contains($eventDetailSourceForGuard, 'recurrence_group_id')
     || !str_contains($eventDetailSourceForGuard, 'ORDER BY e.event_date ASC, e.id ASC')
-    || !str_contains($eventDetailSourceForGuard, 'LEFT JOIN cms_places p ON p.id = e.place_id')) {
+    || !str_contains($eventDetailSourceForGuard, 'LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL')) {
     $eventsSourceIssues[] = 'event detail is missing recurrence lookup or place join';
 }
 if (!str_contains($eventArticleViewSourceForGuard, 'aria-labelledby="event-place-title"')
@@ -21249,6 +21250,174 @@ if ($articleBulkDeleteGuardrailIssues === []) {
     $failures++;
     foreach ($articleBulkDeleteGuardrailIssues as $articleBulkDeleteGuardrailIssue) {
         echo '- ' . $articleBulkDeleteGuardrailIssue . "\n";
+    }
+}
+
+echo "=== place_trash_error_prevention_guardrails ===\n";
+$placeTrashGuardrailIssues = [];
+$placeListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/places.php');
+$placeDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_delete.php');
+$placeBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_bulk.php');
+$placeFormGuardSource = (string)file_get_contents(dirname(__DIR__) . '/admin/place_form.php');
+$trashGuardSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
+$genericBulkGuardSource = (string)file_get_contents(dirname(__DIR__) . '/admin/bulk.php');
+$placeImageGuardSource = (string)file_get_contents(dirname(__DIR__) . '/places/image.php');
+$eventFormPlaceGuardSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_form.php');
+$eventSavePlaceGuardSource = (string)file_get_contents(dirname(__DIR__) . '/admin/event_save.php');
+$placeTrashHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    "requireCapability('content_manage_shared'",
+    "requireModuleEnabled('places')",
+    "\$_SERVER['REQUEST_METHOD'] !== 'POST'",
+    'verifyCsrf()',
+    'internalRedirectTarget(',
+    "'confirm_place_delete_' . \$id",
+    "'delete_error' => 'confirm_required'",
+    '$pdo->beginTransaction()',
+    'deleted_at IS NULL',
+    'FOR UPDATE',
+    'UPDATE cms_places SET deleted_at = NOW()',
+    '$updateStmt->rowCount() !== 1',
+    "logAction('place_delete', \"id={\$id} soft=true\")",
+    '$pdo->rollBack()',
+    '$pdo->commit()',
+] as $placeDeleteGuardFragment) {
+    if (!str_contains($placeDeleteSource, $placeDeleteGuardFragment)) {
+        $placeTrashGuardrailIssues[] = 'individual place deletion is missing guardrail: ' . $placeDeleteGuardFragment;
+    }
+}
+foreach (['DELETE FROM cms_places', 'deletePlaceImageFile('] as $placeDeleteDestructiveFragment) {
+    if (str_contains($placeDeleteSource, $placeDeleteDestructiveFragment)) {
+        $placeTrashGuardrailIssues[] = 'individual place deletion again contains destructive behavior: ' . $placeDeleteDestructiveFragment;
+    }
+}
+
+foreach ([
+    "\$_SERVER['REQUEST_METHOD'] !== 'POST'",
+    'verifyCsrf()',
+    'internalRedirectTarget(',
+    'confirm_place_bulk_delete',
+    'place_bulk_delete_confirm_required',
+    'place_bulk_delete_selection_invalid',
+    "'selected_ids' => \$ids",
+    '$pdo->beginTransaction()',
+    'deleted_at IS NULL',
+    'FOR UPDATE',
+    'UPDATE cms_places SET deleted_at = NOW()',
+    '$updateStmt->rowCount() !== count($ids)',
+    "logAction('place_bulk_delete', 'ids=' . implode(',', \$ids) . ' soft=true')",
+    '$pdo->rollBack()',
+    '$pdo->commit()',
+] as $placeBulkGuardFragment) {
+    if (!str_contains($placeBulkSource, $placeBulkGuardFragment)) {
+        $placeTrashGuardrailIssues[] = 'bulk place deletion is missing guardrail: ' . $placeBulkGuardFragment;
+    }
+}
+foreach (['DELETE FROM cms_places', 'deletePlaceImageFile(', 'unlink('] as $placeBulkDestructiveFragment) {
+    if (str_contains($placeBulkSource, $placeBulkDestructiveFragment)) {
+        $placeTrashGuardrailIssues[] = 'bulk place deletion again contains destructive behavior: ' . $placeBulkDestructiveFragment;
+    }
+}
+if (str_contains($genericBulkGuardSource, "'places' => [")) {
+    $placeTrashGuardrailIssues[] = 'legacy generic bulk handler can again bypass the reversible Places workflow';
+}
+
+foreach ([
+    "\$whereParts = ['p.deleted_at IS NULL']",
+    "\$bulkDeleteFormErrorId = 'place-bulk-delete-form-error'",
+    "\$bulkDeleteReviewId = 'place-bulk-delete-review'",
+    'action="place_bulk.php"',
+    'name="confirm_place_bulk_delete"',
+    'required aria-required="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'Přesunout vybrané do Koše',
+    'form="bulk-form"',
+    "'confirm_place_delete_' . \$placeId",
+    'id="place-delete-error" class="error" role="alert" aria-atomic="true"',
+    'class="admin-inline-form" novalidate',
+    'Přesun skryje místo z webu a výběrů',
+] as $placeListGuardFragment) {
+    if (!str_contains($placeListSource, $placeListGuardFragment)) {
+        $placeTrashGuardrailIssues[] = 'Places overview is missing accessible review/form guardrail: ' . $placeListGuardFragment;
+    }
+}
+$placeBulkFormStart = strpos($placeListSource, 'id="bulk-form"');
+$placeBulkFormEnd = $placeBulkFormStart === false ? false : strpos($placeListSource, '</form>', $placeBulkFormStart);
+$placeTableStart = strpos($placeListSource, '<table>', $placeBulkFormStart === false ? 0 : $placeBulkFormStart);
+if ($placeBulkFormStart === false
+    || $placeBulkFormEnd === false
+    || $placeTableStart === false
+    || $placeBulkFormEnd > $placeTableStart) {
+    $placeTrashGuardrailIssues[] = 'bulk Places form wraps row-level forms instead of using form-associated checkboxes';
+}
+
+foreach ([
+    "'places'        => ['table' => 'cms_places'",
+    "'places'        => ['table' => 'cms_places',         'label' => 'Místo'",
+    'SELECT id, slug, image_file',
+    'WHERE id = ? AND deleted_at IS NOT NULL',
+    'FOR UPDATE',
+    'deleteRedirectsTargetingPath($pdo, placePublicPath($place))',
+    'UPDATE cms_events SET place_id = NULL WHERE place_id = ?',
+    "DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?",
+    'DELETE FROM cms_places WHERE id = ? AND deleted_at IS NOT NULL',
+    'deletePlaceImageFile($placeImageFile)',
+    "logAction('trash_purge', \"module={\$module} id={\$itemId}\")",
+] as $placeTrashLifecycleFragment) {
+    if (!str_contains($trashGuardSource, $placeTrashLifecycleFragment)) {
+        $placeTrashGuardrailIssues[] = 'Places trash lifecycle is missing fragment: ' . $placeTrashLifecycleFragment;
+    }
+}
+
+foreach ([
+    [$placeFormGuardSource, 'SELECT * FROM cms_places WHERE id = ? AND deleted_at IS NULL', 'Places edit form'],
+    [$placeImageGuardSource, 'SELECT id, image_file, status, is_published, deleted_at', 'Places image endpoint'],
+    [$placeImageGuardSource, "(\$place['deleted_at'] ?? null) === null", 'Places image endpoint public check'],
+    [$eventFormPlaceGuardSource, '(deleted_at IS NULL OR id = ?)', 'event editor current trash relation'],
+    [$eventFormPlaceGuardSource, '(v Koši; vazba se zachová pro obnovení)', 'event editor trash relation text'],
+    [$eventSavePlaceGuardSource, '$keepsCurrentTrashedPlace', 'event save preserved trash relation'],
+    [$adminExportSource, 'status, deleted_at, created_at, updated_at', 'Places export trash state'],
+    [$adminImportSource, 'status, deleted_at, created_at, updated_at)', 'Places import trash state'],
+] as $placeLifecycleSourceCheck) {
+    if (!str_contains((string)$placeLifecycleSourceCheck[0], (string)$placeLifecycleSourceCheck[1])) {
+        $placeTrashGuardrailIssues[] = $placeLifecycleSourceCheck[2] . ' is missing fragment: ' . $placeLifecycleSourceCheck[1];
+    }
+}
+foreach ([
+    dirname(__DIR__) . '/admin/events.php',
+    dirname(__DIR__) . '/events/index.php',
+    dirname(__DIR__) . '/events/event.php',
+    dirname(__DIR__) . '/events/ics.php',
+] as $eventPlaceJoinFile) {
+    $eventPlaceJoinSource = (string)file_get_contents($eventPlaceJoinFile);
+    if (!str_contains($eventPlaceJoinSource, 'LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL')) {
+        $placeTrashGuardrailIssues[] = basename($eventPlaceJoinFile) . ' exposes soft-deleted Places through event joins';
+    }
+}
+foreach ([
+    "httpIntegrationPrintResult('place_trash_error_prevention_http'",
+    'nepotvrzený přesun místa změnil místo, vazbu události, revizi, redirect, obrázek nebo audit log',
+    'potvrzený přesun místa nezachoval obnovitelná data nebo je ponechal veřejně dostupné',
+    'obnovení místa nevrátilo veřejný obsah a zachovanou vazbu události',
+    'hromadný přesun místa bez potvrzení změnil data nebo audit log',
+    'potvrzené trvalé smazání místa nevrátilo očekávaný PRG redirect',
+    'potvrzené trvalé smazání místa neuklidilo řádek, revizi nebo redirect',
+    'potvrzené trvalé smazání místa nezachovalo událost s odpojenou vazbou',
+    'potvrzené trvalé smazání místa neodstranilo jeho obrázek',
+    'potvrzené trvalé smazání místa nezapsalo právě jeden auditní záznam',
+] as $placeTrashHttpFragment) {
+    if (!str_contains($placeTrashHttpSource, $placeTrashHttpFragment)) {
+        $placeTrashGuardrailIssues[] = 'HTTP integration is missing Places trash proof: ' . $placeTrashHttpFragment;
+    }
+}
+if ($placeTrashGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($placeTrashGuardrailIssues as $placeTrashGuardrailIssue) {
+        echo '- ' . $placeTrashGuardrailIssue . "\n";
     }
 }
 

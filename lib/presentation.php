@@ -4753,7 +4753,8 @@ function hydratePlacePresentation(array $place): array
     $place['map_url'] = $place['has_coordinates']
         ? 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($latitude . ',' . $longitude)
         : '';
-    $place['is_publicly_visible'] = ((string)($place['status'] ?? 'published') === 'published')
+    $place['is_publicly_visible'] = ($place['deleted_at'] ?? null) === null
+        && ((string)($place['status'] ?? 'published') === 'published')
         && (int)($place['is_published'] ?? 1) === 1;
     $place['public_path'] = placePublicPath($place);
     $place['public_url'] = placePublicUrl($place);

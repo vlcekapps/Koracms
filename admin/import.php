@@ -719,8 +719,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT IGNORE INTO cms_places
                          (id, name, slug, place_kind, excerpt, description, url, image_file, category,
                           address, locality, latitude, longitude, contact_phone, contact_email,
-                          opening_hours, meta_title, meta_description, is_published, sort_order, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          opening_hours, meta_title, meta_description, is_published, sort_order, status, deleted_at, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['places'] as $row) {
                         $importName = trim((string)($row['name'] ?? ''));
@@ -754,6 +754,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)($row['is_published'] ?? 1),
                             (int)($row['sort_order'] ?? 0),
                             $row['status'] ?? 'published',
+                            !empty($row['deleted_at']) ? $row['deleted_at'] : null,
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                             $row['updated_at'] ?? ($row['created_at'] ?? date('Y-m-d H:i:s')),
                         ]);

@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'gallery_albums' => ['table' => 'cms_gallery_albums', 'label' => 'Galerie – album'],
         'gallery_photos' => ['table' => 'cms_gallery_photos', 'label' => 'Galerie – fotografie'],
         'polls'          => ['table' => 'cms_polls',          'label' => 'Anketa'],
+        'places'        => ['table' => 'cms_places',         'label' => 'Místo'],
     ];
 
     if ($itemId !== null && isset($moduleConfig[$module])) {
@@ -53,8 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $previousStmt->execute([$itemId]);
                 $previousBoardDocument = $previousStmt->fetch() ?: null;
             }
-            $pdo->prepare("UPDATE {$cfg['table']} SET deleted_at = NULL WHERE id = ?")->execute([$itemId]);
-            if ($module === 'board' && is_array($previousBoardDocument)) {
+            $restoreStmt = $pdo->prepare("UPDATE {$cfg['table']} SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL");
+            $restoreStmt->execute([$itemId]);
+            if ($restoreStmt->rowCount() !== 1) {
+                $redirectQuery = 'err=invalid_action';
+            } elseif ($module === 'board' && is_array($previousBoardDocument)) {
                 $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
                 $updatedStmt->execute([$itemId]);
                 $updatedBoardDocument = $updatedStmt->fetch() ?: null;
@@ -68,8 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
-            logAction('trash_restore', "module={$module} id={$itemId}");
-            $redirectQuery = 'ok=restored';
+            if ($restoreStmt->rowCount() === 1) {
+                logAction('trash_restore', "module={$module} id={$itemId}");
+                $redirectQuery = 'ok=restored';
+            }
         } elseif ($action === 'purge') {
             $confirmedPermanentDelete = isset($_POST['confirm_permanent_delete'])
                 && (string)$_POST['confirm_permanent_delete'] === '1';
@@ -80,7 +86,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'purge_id' => $itemId,
                 ]);
             } else {
-                if ($module === 'articles') {
+                if ($module === 'places') {
+                    $placeImageFile = '';
+                    try {
+                        $pdo->beginTransaction();
+                        $placeStmt = $pdo->prepare(
+                            "SELECT id, slug, image_file
+                             FROM cms_places
+                             WHERE id = ? AND deleted_at IS NOT NULL
+                             FOR UPDATE"
+                        );
+                        $placeStmt->execute([$itemId]);
+                        $place = $placeStmt->fetch() ?: null;
+                        if (!$place) {
+                            $pdo->rollBack();
+                            $redirectQuery = 'err=invalid_action';
+                        } else {
+                            $placeImageFile = trim((string)($place['image_file'] ?? ''));
+                            deleteRedirectsTargetingPath($pdo, placePublicPath($place));
+                            $pdo->prepare("UPDATE cms_events SET place_id = NULL WHERE place_id = ?")->execute([$itemId]);
+                            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?")->execute([$itemId]);
+                            $deletePlaceStmt = $pdo->prepare("DELETE FROM cms_places WHERE id = ? AND deleted_at IS NOT NULL");
+                            $deletePlaceStmt->execute([$itemId]);
+                            if ($deletePlaceStmt->rowCount() !== 1) {
+                                throw new RuntimeException('Místo se nepodařilo trvale smazat.');
+                            }
+                            logAction('trash_purge', "module={$module} id={$itemId}");
+                            $pdo->commit();
+                            if ($placeImageFile !== '') {
+                                deletePlaceImageFile($placeImageFile);
+                            }
+                            $redirectQuery = 'ok=purged';
+                        }
+                    } catch (Throwable $e) {
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+                        koraLog('warning', 'place trash purge failed', [
+                            'operation' => 'place_trash_purge',
+                            'place_id' => $itemId,
+                            'exception' => $e,
+                        ]);
+                        $redirectQuery = 'err=invalid_action';
+                    }
+                } elseif ($module === 'articles') {
                     $articleRedirectStmt = $pdo->prepare(
                         "SELECT id, slug, blog_id
                          FROM cms_articles
@@ -153,9 +202,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
                 }
-                $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
-                logAction('trash_purge', "module={$module} id={$itemId}");
-                $redirectQuery = 'ok=purged';
+                if ($module !== 'places') {
+                    $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
+                    logAction('trash_purge', "module={$module} id={$itemId}");
+                    $redirectQuery = 'ok=purged';
+                }
             }
         }
     }
@@ -181,6 +232,7 @@ $modules = [
     'gallery_albums' => ['table' => 'cms_gallery_albums', 'label' => 'Galerie – album',      'title_col' => 'name',     'edit_url' => 'gallery_album_form.php?id='],
     'gallery_photos' => ['table' => 'cms_gallery_photos', 'label' => 'Galerie – fotografie', 'title_col' => 'title',    'edit_url' => 'gallery_photo_form.php?id='],
     'polls'          => ['table' => 'cms_polls',          'label' => 'Anketa',               'title_col' => 'question', 'edit_url' => 'polls_form.php?id='],
+    'places'        => ['table' => 'cms_places',         'label' => 'Místo',                'title_col' => 'name',     'edit_url' => 'place_form.php?id='],
 ];
 
 foreach ($modules as $moduleKey => $cfg) {

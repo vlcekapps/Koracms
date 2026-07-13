@@ -7,6 +7,18 @@ requireModuleEnabled('events');
 $pdo = db_connect();
 $id = inputInt('get', 'id');
 $event = null;
+$eventPlaceId = 0;
+if ($id !== null) {
+    $stmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ? AND deleted_at IS NULL");
+    $stmt->execute([$id]);
+    $event = $stmt->fetch() ?: null;
+    if (!$event) {
+        header('Location: events.php');
+        exit;
+    }
+    $eventPlaceId = (int)($event['place_id'] ?? 0);
+}
+
 $eventTypes = loadEventTypes($pdo, false);
 $eventTypeByLegacy = [];
 foreach ($eventTypes as $eventType) {
@@ -18,24 +30,22 @@ foreach ($eventTypes as $eventType) {
 $placeOptions = [];
 if (isModuleEnabled('places')) {
     try {
-        $placeOptions = $pdo->query(
-            "SELECT id, name, slug, address, locality, status, is_published
+        $placeWhereSql = 'deleted_at IS NULL';
+        $placeOptionParams = [];
+        if ($eventPlaceId > 0) {
+            $placeWhereSql = '(deleted_at IS NULL OR id = ?)';
+            $placeOptionParams[] = $eventPlaceId;
+        }
+        $placeOptionsStmt = $pdo->prepare(
+            "SELECT id, name, slug, address, locality, status, is_published, deleted_at
              FROM cms_places
-             WHERE deleted_at IS NULL
+             WHERE {$placeWhereSql}
              ORDER BY name, id"
-        )->fetchAll();
+        );
+        $placeOptionsStmt->execute($placeOptionParams);
+        $placeOptions = $placeOptionsStmt->fetchAll();
     } catch (PDOException) {
         $placeOptions = [];
-    }
-}
-
-if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ?");
-    $stmt->execute([$id]);
-    $event = $stmt->fetch() ?: null;
-    if (!$event) {
-        header('Location: events.php');
-        exit;
     }
 }
 
@@ -207,7 +217,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
         ], static fn (string $value): bool => $value !== '')));
           ?>
         <option value="<?= (int)$placeOption['id'] ?>"<?= (int)($event['place_id'] ?? 0) === (int)$placeOption['id'] ? ' selected' : '' ?>>
-          <?= h($placeLabel) ?><?= ((string)($placeOption['status'] ?? 'published') !== 'published' || (int)($placeOption['is_published'] ?? 1) !== 1) ? ' (není veřejné)' : '' ?>
+          <?= h($placeLabel) ?><?php if (($placeOption['deleted_at'] ?? null) !== null): ?> (v Koši; vazba se zachová pro obnovení)<?php elseif ((string)($placeOption['status'] ?? 'published') !== 'published' || (int)($placeOption['is_published'] ?? 1) !== 1): ?> (není veřejné)<?php endif; ?>
         </option>
       <?php endforeach; ?>
     </select>

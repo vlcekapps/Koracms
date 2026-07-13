@@ -17,9 +17,7 @@ Tuto úplnost a shodu s aktuální WCAG maticí hlídá `build/accessibility_con
 
 ## Vysoká priorita
 
-| Oblast | Kritéria | Riziko | Doporučený další krok |
-|---|---|---|---|
-| Individuální trvalé mazání míst | 3.3.4 | `admin/places.php` nabízí jen klientské `data-confirm`, zatímco přímý POST do `admin/place_delete.php` fyzicky smaže místo i jeho obrázek bez serverového review, potvrzovacího checkboxu nebo transakční ochrany. Místa jsou veřejný obsah a současná cesta nemá obnovu přes Koš. | Navrhnout a provést end-to-end vratný model míst včetně `deleted_at`, instalace/migrace, filtrů veřejné i admin vrstvy, Koše, exportu/importu a auditů; před vlastní změnou vždy vyžadovat item-specific serverové potvrzení a doplnit runtime/HTTP důkaz. |
+Po uzavření vratného mazání Míst zde není evidované další potvrzené P1 riziko. Nový P1 nález musí být zapsán hned při inventuře; další automatizované kolo pokračuje systematickou kontrolou zbývajících datově dopadajících akcí, zatímco ruční scénáře zůstávají ve střední prioritě.
 
 ## Střední priorita
 
@@ -107,6 +105,7 @@ Poznámka 2026-07-10: změna interního stavu Food objednávkové poptávky už 
 
 ## Uzavřená evidence
 
+- 2026-07-13: Individuální i hromadné mazání Míst už používá item-specific/serverově potvrzený přesun do Koše místo fyzického odstranění. Transakční handlery nastavují pouze `deleted_at`, zachovávají obrázek, revize, redirecty a vazby událostí a odmítnutý požadavek vrací atomický alert s field-level chybou; starý generic bulk endpoint už Místa nepřijímá. Smazaná místa nejsou veřejná, v admin přehledech ani ve veřejné prezentaci událostí, ale editor existující události umí zachovat její interní vazbu pro obnovu. Koš umí místo obnovit a teprve potvrzený purge transakčně odpojí události, odstraní revize, redirecty a řádek a následně smaže obrázek. Export/import zachovává `deleted_at`; runtime `place_trash_error_prevention_guardrails` a HTTP `place_trash_error_prevention_http` hlídají celý životní cyklus. Ruční NVDA/keyboard-only průchod zůstává odložený podle protokolu.
 - 2026-07-09: Širší ruční NVDA průchod bez nahlášené regrese pokryl blogy, nastavení, dlouhé administrační formuláře, odstraňování a přeskupování widgetů, statické stránky i stránky blogu, statistiky, hledání v administraci včetně command palety, focus order a připínání/odepínání položek z osobního dashboardu. Tato evidence uzavírá samostatné screen-reader follow-upy pro uvedené workflow; vizuální 400% zoom, kontrast, hover/ikonové stavy a custom theme varianty zůstávají otevřené jako samostatná ruční práce.
 - 2026-07-04: Prioritní browser průchod admin reflow při 320 px ověřil media, widgets, statistics, Form Builder a přehled formulářů. Nalezený globální horizontální scroll ve statistikách a přehledu formulářů byl opraven přes `.table-responsive`, posílené CSS containment, cache-busting `admin/assets/layout.css` a wrapper skrytých datových tabulek grafů; runtime `admin_mobile_reflow_guardrails` teď hlídá i forms overview a cache-busting.
 - 2026-07-05: Administrace má jednotný help entrypoint `Nápověda a podpora` dostupný ze stabilní spodní navigace. `admin/help.php` inventarizuje command centrum, profil, redakční checklist, kontaktní/chat/Form Builder flow, provozní nastavení a návaznou dokumentaci; runtime `admin_consistent_help_guardrails` a HTTP `admin_consistent_help_http` hlídají route guard, link order, heading-backed sekce a render.

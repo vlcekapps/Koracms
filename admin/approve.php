@@ -15,7 +15,7 @@ $moduleConfig = [
     'podcast_shows' => ['table' => 'cms_podcast_shows', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'events' => ['table' => 'cms_events', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'faq' => ['table' => 'cms_faqs', 'has_published' => true, 'capability' => 'content_approve_shared'],
-    'places' => ['table' => 'cms_places', 'has_published' => true, 'capability' => 'content_approve_shared'],
+    'places' => ['table' => 'cms_places', 'has_published' => true, 'has_deleted' => true, 'capability' => 'content_approve_shared'],
     'pages' => ['table' => 'cms_pages', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'downloads' => ['table' => 'cms_downloads', 'has_published' => true, 'capability' => 'content_approve_shared'],
     'food' => ['table' => 'cms_food_cards', 'has_published' => true, 'capability' => 'content_approve_shared'],
@@ -38,8 +38,9 @@ if ($id !== null && isset($moduleConfig[$module])) {
         $previousBoardDocument = $previousStmt->fetch() ?: null;
     }
     if ($config['has_published']) {
+        $activeRowSql = !empty($config['has_deleted']) ? ' AND deleted_at IS NULL' : '';
         $pdo->prepare(
-            "UPDATE {$config['table']} SET status = 'published', is_published = 1 WHERE id = ?"
+            "UPDATE {$config['table']} SET status = 'published', is_published = 1 WHERE id = ?{$activeRowSql}"
         )->execute([$id]);
     } else {
         $pdo->prepare(

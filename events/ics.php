@@ -30,7 +30,7 @@ if ($slug !== '') {
                 p.is_published AS place_is_published
          FROM cms_events e
          LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-         LEFT JOIN cms_places p ON p.id = e.place_id
+         LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
          WHERE e.slug = ? AND " . eventPublicVisibilitySql('e') . "
          LIMIT 1"
     );
@@ -46,7 +46,7 @@ if ($slug !== '') {
                 p.is_published AS place_is_published
          FROM cms_events e
          LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-         LEFT JOIN cms_places p ON p.id = e.place_id
+         LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
          WHERE e.id = ? AND " . eventPublicVisibilitySql('e') . "
          LIMIT 1"
     );

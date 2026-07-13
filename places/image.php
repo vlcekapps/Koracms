@@ -15,7 +15,7 @@ if ($placeId === null) {
 
 $pdo = db_connect();
 $stmt = $pdo->prepare(
-    "SELECT id, image_file, status, is_published
+    "SELECT id, image_file, status, is_published, deleted_at
      FROM cms_places
      WHERE id = ?
      LIMIT 1"
@@ -32,7 +32,8 @@ if ($filename === '') {
     sendFileDownloadNotFound();
 }
 
-$isPublic = (string)($place['status'] ?? 'published') === 'published'
+$isPublic = ($place['deleted_at'] ?? null) === null
+    && (string)($place['status'] ?? 'published') === 'published'
     && (int)($place['is_published'] ?? 1) === 1;
 
 if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {

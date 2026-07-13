@@ -203,7 +203,7 @@ if (in_array($scope, ['all', 'content'], true)) {
                 'edit_builder' => static fn (array $row): string => 'place_form.php?id=' . (int)$row['id'],
                 'sql' => "SELECT id, name, category, created_at
                           FROM cms_places
-                          WHERE status = 'pending'
+                          WHERE status = 'pending' AND deleted_at IS NULL
                           ORDER BY sort_order, name
                           LIMIT 10",
                 'row_builder' => static fn (array $row): array => [

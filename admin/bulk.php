@@ -126,26 +126,6 @@ $moduleConfig = match ($module) {
             }
         },
     ],
-    'places' => [
-        'table'      => 'cms_places',
-        'capability' => 'content_manage_shared',
-        'own_column' => null,
-        'own_check'  => null,
-        'log_prefix' => 'place',
-        'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
-            $dir = dirname(__DIR__) . '/uploads/places/';
-            foreach ($deleteIds as $id) {
-                $stmt = $pdo->prepare("SELECT image_file FROM cms_places WHERE id = ?");
-                $stmt->execute([$id]);
-                $file = (string)$stmt->fetchColumn();
-                if ($file !== '' && is_file($dir . $file)) {
-                    if (!unlink($dir . $file)) {
-                        adminBulkLogFileDeleteFailure('places', (int)$id, 'image_file', $dir . $file);
-                    }
-                }
-            }
-        },
-    ],
     'polls' => [
         'table'      => 'cms_polls',
         'capability' => 'content_manage_shared',

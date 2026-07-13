@@ -9,7 +9,7 @@ $backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . 
 $place = null;
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_places WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM cms_places WHERE id = ? AND deleted_at IS NULL");
     $stmt->execute([$id]);
     $place = $stmt->fetch() ?: null;
     if (!$place) {
@@ -42,7 +42,7 @@ $place = $place ?: [
 $place = hydratePlacePresentation($place);
 
 $categories = $pdo->query(
-    "SELECT DISTINCT category FROM cms_places WHERE category <> '' ORDER BY category"
+    "SELECT DISTINCT category FROM cms_places WHERE category <> '' AND deleted_at IS NULL ORDER BY category"
 )->fetchAll(\PDO::FETCH_COLUMN);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim((string)($_GET['err'] ?? ''));

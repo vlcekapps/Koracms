@@ -130,7 +130,7 @@ if ($canManageSharedContent) {
         ['module' => null, 'table' => 'cms_pages', 'label' => 'Stránky', 'url' => 'pages.php'],
         ['module' => 'events', 'table' => 'cms_events', 'label' => 'Události', 'url' => 'events.php'],
         ['module' => 'podcast', 'table' => 'cms_podcasts', 'label' => 'Podcasty', 'url' => 'podcast_shows.php'],
-        ['module' => 'places', 'table' => 'cms_places', 'label' => 'Místa', 'url' => 'places.php'],
+        ['module' => 'places', 'table' => 'cms_places', 'label' => 'Místa', 'url' => 'places.php', 'where' => 'deleted_at IS NULL'],
         ['module' => 'downloads', 'table' => 'cms_downloads', 'label' => 'Ke stažení', 'url' => 'downloads.php'],
         ['module' => 'food', 'table' => 'cms_food_cards', 'label' => 'Lístky', 'url' => 'food.php'],
         ['module' => 'faq', 'table' => 'cms_faqs', 'label' => 'Znalostní báze', 'url' => 'faq.php'],
@@ -144,7 +144,8 @@ if ($canManageSharedContent) {
         if (!empty($item['module']) && !isModuleEnabled($item['module'])) {
             continue;
         }
-        $itemCount = $safeCount($pdo, "SELECT COUNT(*) FROM {$item['table']}");
+        $whereSql = !empty($item['where']) ? ' WHERE ' . $item['where'] : '';
+        $itemCount = $safeCount($pdo, "SELECT COUNT(*) FROM {$item['table']}{$whereSql}");
         if ($itemCount === null) {
             continue;
         }

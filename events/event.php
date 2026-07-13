@@ -38,7 +38,7 @@ if ($previewToken !== '') {
                     p.is_published AS place_is_published
              FROM cms_events e
              LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-             LEFT JOIN cms_places p ON p.id = e.place_id
+             LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
              WHERE e.slug = ? AND e.preview_token = ? AND e.deleted_at IS NULL
              LIMIT 1"
         );
@@ -54,7 +54,7 @@ if ($previewToken !== '') {
                     p.is_published AS place_is_published
              FROM cms_events e
              LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-             LEFT JOIN cms_places p ON p.id = e.place_id
+             LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
              WHERE e.id = ? AND e.preview_token = ? AND e.deleted_at IS NULL
              LIMIT 1"
         );
@@ -72,7 +72,7 @@ if ($previewToken !== '') {
                     p.is_published AS place_is_published
              FROM cms_events e
              LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-             LEFT JOIN cms_places p ON p.id = e.place_id
+             LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
              WHERE e.slug = ? AND " . eventPublicVisibilitySql('e') . "
              LIMIT 1"
         );
@@ -88,7 +88,7 @@ if ($previewToken !== '') {
                     p.is_published AS place_is_published
              FROM cms_events e
              LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-             LEFT JOIN cms_places p ON p.id = e.place_id
+             LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
              WHERE e.id = ? AND " . eventPublicVisibilitySql('e') . "
              LIMIT 1"
         );
@@ -124,7 +124,7 @@ if ($previewToken === '' && (string)($event['recurrence_group_id'] ?? '') !== ''
                 p.is_published AS place_is_published
          FROM cms_events e
          LEFT JOIN cms_event_types t ON t.id = e.event_type_id
-         LEFT JOIN cms_places p ON p.id = e.place_id
+         LEFT JOIN cms_places p ON p.id = e.place_id AND p.deleted_at IS NULL
          WHERE e.recurrence_group_id = ?
            AND " . eventPublicVisibilitySql('e') . "
          ORDER BY e.event_date ASC, e.id ASC"

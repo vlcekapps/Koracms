@@ -15648,6 +15648,357 @@ try {
 
     httpIntegrationPrintResult('article_bulk_delete_error_prevention_http', $articleBulkDeleteIssues, $failures);
 
+    $placeTrashIssues = [];
+    $placeTrashToken = bin2hex(random_bytes(4));
+    $placeTrashFixtureRows = [
+        [
+            'name' => 'HTTP vratné místo ' . $placeTrashToken,
+            'slug' => 'http-place-trash-restore-' . $placeTrashToken,
+            'image_file' => 'http-place-trash-restore-' . $placeTrashToken . '.png',
+            'event_title' => 'HTTP událost s vratným místem ' . $placeTrashToken,
+            'event_slug' => 'http-event-place-restore-' . $placeTrashToken,
+        ],
+        [
+            'name' => 'HTTP hromadně smazané místo ' . $placeTrashToken,
+            'slug' => 'http-place-trash-purge-' . $placeTrashToken,
+            'image_file' => 'http-place-trash-purge-' . $placeTrashToken . '.png',
+            'event_title' => 'HTTP událost s trvale smazaným místem ' . $placeTrashToken,
+            'event_slug' => 'http-event-place-purge-' . $placeTrashToken,
+        ],
+    ];
+    $placeTrashIds = [];
+    $placeTrashEventIds = [];
+    $placeTrashImagePaths = [];
+    $placeTrashOldPaths = [];
+    $placeTrashPublicPaths = [];
+    $placeTrashEventPaths = [];
+    $placeUploadDirectory = dirname(__DIR__) . '/uploads/places';
+    if (!is_dir($placeUploadDirectory) && !mkdir($placeUploadDirectory, 0775, true) && !is_dir($placeUploadDirectory)) {
+        $placeTrashIssues[] = 'nepodařilo se připravit adresář obrázků míst';
+    }
+    foreach ($placeTrashFixtureRows as $placeFixtureIndex => $placeTrashFixtureRow) {
+        $placeImageFixture = httpIntegrationCreatePngFixtureFile('kora-place-trash-', $createdTempFiles);
+        $placeImagePath = $placeUploadDirectory . '/' . $placeTrashFixtureRow['image_file'];
+        if (!copy($placeImageFixture, $placeImagePath)) {
+            $placeTrashIssues[] = 'nepodařilo se připravit obrázek místa pro test Koše';
+        }
+        $createdTempFiles[] = $placeImagePath;
+        $placeTrashImagePaths[] = $placeImagePath;
+
+        $pdo->prepare(
+            "INSERT INTO cms_places
+                (name, slug, place_kind, excerpt, description, image_file, category, address, locality, is_published, status)
+             VALUES (?, ?, 'info', 'HTTP test vratného mazání.', '<p>Místo musí projít Košem.</p>', ?, 'HTTP ACR', 'Testovací 1', 'Testov', 1, 'published')"
+        )->execute([
+            $placeTrashFixtureRow['name'],
+            $placeTrashFixtureRow['slug'],
+            $placeTrashFixtureRow['image_file'],
+        ]);
+        $placeId = (int)$pdo->lastInsertId();
+        $createdPlaceIds[] = $placeId;
+        $placeTrashIds[] = $placeId;
+
+        $pdo->prepare(
+            "INSERT INTO cms_events
+                (title, slug, place_id, description, location, event_date, is_published, status, preview_token)
+             VALUES (?, ?, ?, '<p>Událost ověřuje zachování vazby na místo.</p>', 'Náhradní popis místa', DATE_ADD(NOW(), INTERVAL ? DAY), 1, 'published', ?)"
+        )->execute([
+            $placeTrashFixtureRow['event_title'],
+            $placeTrashFixtureRow['event_slug'],
+            $placeId,
+            5 + $placeFixtureIndex,
+            bin2hex(random_bytes(16)),
+        ]);
+        $eventId = (int)$pdo->lastInsertId();
+        $createdEventIds[] = $eventId;
+        $placeTrashEventIds[] = $eventId;
+
+        $pdo->prepare(
+            "INSERT INTO cms_revisions (entity_type, entity_id, field_name, old_value, new_value, user_id, created_at)
+             VALUES ('place', ?, 'description', 'Původní popis', 'Aktuální popis', ?, NOW())"
+        )->execute([$placeId, $adminUserId]);
+
+        $placePublicPath = placePublicPath(['id' => $placeId, 'slug' => $placeTrashFixtureRow['slug']]);
+        $placeOldPath = '/http-place-legacy-' . $placeTrashToken . '-' . $placeFixtureIndex;
+        $pdo->prepare('INSERT INTO cms_redirects (old_path, new_path, status_code) VALUES (?, ?, 301)')
+            ->execute([$placeOldPath, $placePublicPath]);
+        $createdRedirectPaths[] = $placeOldPath;
+        $placeTrashOldPaths[] = $placeOldPath;
+        $placeTrashPublicPaths[] = $placePublicPath;
+        $placeTrashEventPaths[] = eventPublicPath(['id' => $eventId, 'slug' => $placeTrashFixtureRow['event_slug']]);
+    }
+    [$placeRestoreId, $placePurgeId] = $placeTrashIds;
+    [$placeRestoreEventId, $placePurgeEventId] = $placeTrashEventIds;
+    [$placeRestoreImagePath, $placePurgeImagePath] = $placeTrashImagePaths;
+    [$placeRestoreOldPath, $placePurgeOldPath] = $placeTrashOldPaths;
+    [$placeRestorePublicPath, $placePurgePublicPath] = $placeTrashPublicPaths;
+    [$placeRestoreEventPath, $placePurgeEventPath] = $placeTrashEventPaths;
+
+    $placeStateStmt = $pdo->prepare(
+        "SELECT p.deleted_at,
+                (SELECT COUNT(*) FROM cms_revisions r WHERE r.entity_type = 'place' AND r.entity_id = p.id) AS revision_count,
+                (SELECT COUNT(*) FROM cms_events e WHERE e.place_id = p.id) AS event_count
+         FROM cms_places p
+         WHERE p.id = ?"
+    );
+    $placeRedirectStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_redirects WHERE old_path = ? AND new_path = ?');
+    $placeEventLinkStmt = $pdo->prepare('SELECT place_id FROM cms_events WHERE id = ?');
+    $placeListPath = BASE_URL . '/admin/places.php';
+    $placeDeleteEndpoint = $baseUrl . BASE_URL . '/admin/place_delete.php';
+    $placeBulkEndpoint = $baseUrl . BASE_URL . '/admin/place_bulk.php';
+    $placeListPage = fetchUrl($baseUrl . $placeListPath, $adminSession['cookie'], 0);
+    $placeListCsrf = extractHiddenInputValue($placeListPage['body'], 'csrf_token');
+    if (httpIntegrationStatusCode($placeListPage) !== 200
+        || $placeListCsrf === ''
+        || !str_contains($placeListPage['body'], htmlspecialchars($placeTrashFixtureRows[0]['name'], ENT_QUOTES, 'UTF-8'))
+        || !str_contains($placeListPage['body'], 'Přesun skryje místo z webu a výběrů, ale zachová jeho obrázek, revize, redirecty a vazby událostí')
+        || !httpIntegrationInputHasAttributes($placeListPage['body'], 'confirm-place-delete-' . $placeRestoreId, [
+            'name' => 'confirm_place_delete_' . $placeRestoreId,
+            'aria-required' => 'true',
+            'aria-describedby' => 'place-delete-review-' . $placeRestoreId,
+        ])
+        || !httpIntegrationInputHasAttributes($placeListPage['body'], 'confirm-place-bulk-delete', [
+            'name' => 'confirm_place_bulk_delete',
+            'aria-required' => 'true',
+            'aria-describedby' => 'place-bulk-delete-review',
+        ])
+        || !httpIntegrationInputHasAttributes($placeListPage['body'], 'place-select-' . $placePurgeId, [
+            'form' => 'bulk-form',
+        ])) {
+        $placeTrashIssues[] = 'přehled míst nevykreslil item-specific a hromadný review-and-confirm kontrakt';
+    }
+
+    $placeDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_delete'")->fetchColumn();
+    $placeDeleteRejectedResponse = postUrl($placeDeleteEndpoint, [
+        'csrf_token' => $placeListCsrf,
+        'id' => (string)$placeRestoreId,
+        'redirect' => $placeListPath,
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placeRestoreId]);
+    $placeRejectedState = $placeStateStmt->fetch() ?: [];
+    $placeRedirectStmt->execute([$placeRestoreOldPath, $placeRestorePublicPath]);
+    if (httpIntegrationStatusCode($placeDeleteRejectedResponse) !== 302
+        || !responseHasLocationHeader($placeDeleteRejectedResponse['headers'], $placeListPath . '?delete_error=confirm_required&delete_error_id=' . $placeRestoreId, $baseUrl)
+        || ($placeRejectedState['deleted_at'] ?? null) !== null
+        || (int)($placeRejectedState['revision_count'] ?? 0) !== 1
+        || (int)($placeRejectedState['event_count'] ?? 0) !== 1
+        || (int)$placeRedirectStmt->fetchColumn() !== 1
+        || !is_file($placeRestoreImagePath)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_delete'")->fetchColumn() !== $placeDeleteLogBefore) {
+        $placeTrashIssues[] = 'nepotvrzený přesun místa změnil místo, vazbu události, revizi, redirect, obrázek nebo audit log';
+    }
+
+    $placeDeleteErrorPath = $placeListPath . '?delete_error=confirm_required&delete_error_id=' . $placeRestoreId;
+    $placeDeleteErrorPage = fetchUrl($baseUrl . $placeDeleteErrorPath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($placeDeleteErrorPage) !== 200
+        || !httpIntegrationElementHasAttributes($placeDeleteErrorPage['body'], 'p', 'place-delete-error', [
+            'role' => 'alert',
+            'aria-atomic' => 'true',
+        ])
+        || !httpIntegrationInputHasAttributes($placeDeleteErrorPage['body'], 'confirm-place-delete-' . $placeRestoreId, [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'place-delete-review-' . $placeRestoreId . ' confirm-place-delete-' . $placeRestoreId . '-error',
+        ])
+        || !str_contains($placeDeleteErrorPage['body'], 'Před přesunem místa do Koše potvrďte, že jste zkontrolovali zachování obrázku')) {
+        $placeTrashIssues[] = 'zamítnutý přesun místa nevrátil atomický alert a field-level vazbu';
+    }
+
+    $placeDeleteConfirmedResponse = postUrl($placeDeleteEndpoint, [
+        'csrf_token' => extractHiddenInputValue($placeDeleteErrorPage['body'], 'csrf_token'),
+        'id' => (string)$placeRestoreId,
+        'redirect' => $placeListPath,
+        'confirm_place_delete_' . $placeRestoreId => '1',
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placeRestoreId]);
+    $placeDeletedState = $placeStateStmt->fetch() ?: [];
+    $placeRedirectStmt->execute([$placeRestoreOldPath, $placeRestorePublicPath]);
+    $placeDeletedPublicResponse = fetchUrl($baseUrl . $placeRestorePublicPath, '', 0);
+    $placeDeletedImageResponse = fetchUrl($baseUrl . BASE_URL . '/places/image.php?id=' . $placeRestoreId, '', 0);
+    $placeDeletedEventResponse = fetchUrl($baseUrl . $placeRestoreEventPath, '', 0);
+    $placeDeletedEventForm = fetchUrl($baseUrl . BASE_URL . '/admin/event_form.php?id=' . $placeRestoreEventId, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($placeDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($placeDeleteConfirmedResponse['headers'], $placeListPath . '?deleted=1', $baseUrl)
+        || trim((string)($placeDeletedState['deleted_at'] ?? '')) === ''
+        || (int)($placeDeletedState['revision_count'] ?? 0) !== 1
+        || (int)($placeDeletedState['event_count'] ?? 0) !== 1
+        || (int)$placeRedirectStmt->fetchColumn() !== 1
+        || !is_file($placeRestoreImagePath)
+        || httpIntegrationStatusCode($placeDeletedPublicResponse) !== 404
+        || httpIntegrationStatusCode($placeDeletedImageResponse) !== 404
+        || str_contains($placeDeletedEventResponse['body'], htmlspecialchars($placeTrashFixtureRows[0]['name'], ENT_QUOTES, 'UTF-8'))
+        || !str_contains($placeDeletedEventForm['body'], '(v Koši; vazba se zachová pro obnovení)')
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_delete'")->fetchColumn() !== $placeDeleteLogBefore + 1) {
+        $placeTrashIssues[] = 'potvrzený přesun místa nezachoval obnovitelná data nebo je ponechal veřejně dostupné';
+    }
+
+    $placeTrashPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($placeTrashPage) !== 200
+        || !str_contains($placeTrashPage['body'], htmlspecialchars($placeTrashFixtureRows[0]['name'], ENT_QUOTES, 'UTF-8'))
+        || !str_contains($placeTrashPage['body'], '<td>Místo</td>')) {
+        $placeTrashIssues[] = 'přesunuté místo se nezobrazilo v Koši';
+    }
+    $placeRestoreResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($placeTrashPage['body'], 'csrf_token'),
+        'module' => 'places',
+        'id' => (string)$placeRestoreId,
+        'action' => 'restore',
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placeRestoreId]);
+    $placeRestoredState = $placeStateStmt->fetch() ?: [];
+    $placeRestoredPublicResponse = fetchUrl($baseUrl . $placeRestorePublicPath, '', 0);
+    $placeRestoredImageResponse = fetchUrl($baseUrl . BASE_URL . '/places/image.php?id=' . $placeRestoreId, '', 0);
+    $placeRestoredEventResponse = fetchUrl($baseUrl . $placeRestoreEventPath, '', 0);
+    if (httpIntegrationStatusCode($placeRestoreResponse) !== 302
+        || !responseHasLocationHeader($placeRestoreResponse['headers'], BASE_URL . '/admin/trash.php?ok=restored', $baseUrl)
+        || ($placeRestoredState['deleted_at'] ?? null) !== null
+        || (int)($placeRestoredState['revision_count'] ?? 0) !== 1
+        || (int)($placeRestoredState['event_count'] ?? 0) !== 1
+        || httpIntegrationStatusCode($placeRestoredPublicResponse) !== 200
+        || httpIntegrationStatusCode($placeRestoredImageResponse) !== 200
+        || !str_contains($placeRestoredEventResponse['body'], htmlspecialchars($placeTrashFixtureRows[0]['name'], ENT_QUOTES, 'UTF-8'))) {
+        $placeTrashIssues[] = 'obnovení místa nevrátilo veřejný obsah a zachovanou vazbu události';
+    }
+
+    $placeBulkPage = fetchUrl($baseUrl . $placeListPath, $adminSession['cookie'], 0);
+    $placeBulkCsrf = extractHiddenInputValue($placeBulkPage['body'], 'csrf_token');
+    $legacyBulkBypassResponse = postUrl($baseUrl . BASE_URL . '/admin/bulk.php', [
+        'csrf_token' => $placeBulkCsrf,
+        'module' => 'places',
+        'action' => 'delete',
+        'ids' => [(string)$placePurgeId],
+        'confirm_bulk_delete' => '1',
+        'redirect' => $placeListPath,
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placePurgeId]);
+    $placeLegacyBypassState = $placeStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($legacyBulkBypassResponse) !== 302
+        || ($placeLegacyBypassState['deleted_at'] ?? null) !== null
+        || !is_file($placePurgeImagePath)) {
+        $placeTrashIssues[] = 'starý generický bulk endpoint obešel vratný tok Míst';
+    }
+
+    $placeBulkLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_bulk_delete'")->fetchColumn();
+    $placeBulkRejectedResponse = postUrl($placeBulkEndpoint, [
+        'csrf_token' => $placeBulkCsrf,
+        'redirect' => $placeListPath,
+        'action' => 'delete',
+        'ids' => [(string)$placePurgeId],
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placePurgeId]);
+    $placeBulkRejectedState = $placeStateStmt->fetch() ?: [];
+    $placeRedirectStmt->execute([$placePurgeOldPath, $placePurgePublicPath]);
+    if (httpIntegrationStatusCode($placeBulkRejectedResponse) !== 302
+        || !responseHasLocationHeader($placeBulkRejectedResponse['headers'], $placeListPath, $baseUrl)
+        || ($placeBulkRejectedState['deleted_at'] ?? null) !== null
+        || (int)($placeBulkRejectedState['revision_count'] ?? 0) !== 1
+        || (int)($placeBulkRejectedState['event_count'] ?? 0) !== 1
+        || (int)$placeRedirectStmt->fetchColumn() !== 1
+        || !is_file($placePurgeImagePath)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_bulk_delete'")->fetchColumn() !== $placeBulkLogBefore) {
+        $placeTrashIssues[] = 'hromadný přesun místa bez potvrzení změnil data nebo audit log';
+    }
+    $placeBulkErrorPage = fetchUrl($baseUrl . $placeListPath, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($placeBulkErrorPage) !== 200
+        || !httpIntegrationElementHasAttributes($placeBulkErrorPage['body'], 'p', 'place-bulk-delete-form-error', [
+            'role' => 'alert',
+            'aria-atomic' => 'true',
+        ])
+        || !httpIntegrationElementHasAttributes($placeBulkErrorPage['body'], 'form', 'bulk-form', [
+            'aria-describedby' => 'place-bulk-delete-form-error',
+        ])
+        || !httpIntegrationInputHasAttributes($placeBulkErrorPage['body'], 'confirm-place-bulk-delete', [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'place-bulk-delete-review confirm-place-bulk-delete-error',
+        ])
+        || !httpIntegrationCheckboxIsChecked($placeBulkErrorPage['body'], 'place-select-' . $placePurgeId)) {
+        $placeTrashIssues[] = 'zamítnutý hromadný přesun místa nezachoval výběr a přístupné vazby';
+    }
+
+    $placeBulkConfirmedResponse = postUrl($placeBulkEndpoint, [
+        'csrf_token' => extractHiddenInputValue($placeBulkErrorPage['body'], 'csrf_token'),
+        'redirect' => $placeListPath,
+        'action' => 'delete',
+        'ids' => [(string)$placePurgeId],
+        'confirm_place_bulk_delete' => '1',
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placePurgeId]);
+    $placeBulkDeletedState = $placeStateStmt->fetch() ?: [];
+    $placeRedirectStmt->execute([$placePurgeOldPath, $placePurgePublicPath]);
+    if (httpIntegrationStatusCode($placeBulkConfirmedResponse) !== 302
+        || trim((string)($placeBulkDeletedState['deleted_at'] ?? '')) === ''
+        || (int)($placeBulkDeletedState['revision_count'] ?? 0) !== 1
+        || (int)($placeBulkDeletedState['event_count'] ?? 0) !== 1
+        || (int)$placeRedirectStmt->fetchColumn() !== 1
+        || !is_file($placePurgeImagePath)
+        || httpIntegrationStatusCode(fetchUrl($baseUrl . $placePurgePublicPath, '', 0)) !== 404
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'place_bulk_delete'")->fetchColumn() !== $placeBulkLogBefore + 1) {
+        $placeTrashIssues[] = 'potvrzený hromadný přesun místa nezachoval obnovitelná data nebo veřejné skrytí';
+    }
+
+    $placePurgeTrashPage = fetchUrl($baseUrl . BASE_URL . '/admin/trash.php', $adminSession['cookie'], 0);
+    $placePurgeLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")->fetchColumn();
+    $placePurgeRejectedResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($placePurgeTrashPage['body'], 'csrf_token'),
+        'module' => 'places',
+        'id' => (string)$placePurgeId,
+        'action' => 'purge',
+    ], $adminSession['cookie'], 0);
+    $placeStateStmt->execute([$placePurgeId]);
+    $placePurgeRejectedState = $placeStateStmt->fetch() ?: [];
+    if (httpIntegrationStatusCode($placePurgeRejectedResponse) !== 302
+        || trim((string)($placePurgeRejectedState['deleted_at'] ?? '')) === ''
+        || (int)($placePurgeRejectedState['revision_count'] ?? 0) !== 1
+        || (int)($placePurgeRejectedState['event_count'] ?? 0) !== 1
+        || !is_file($placePurgeImagePath)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")->fetchColumn() !== $placePurgeLogBefore) {
+        $placeTrashIssues[] = 'Koš změnil místo nebo jeho vazby bez potvrzení trvalého smazání';
+    }
+
+    $placePurgeErrorPath = BASE_URL . '/admin/trash.php?err=confirm_purge&purge_module=places&purge_id=' . $placePurgeId;
+    $placePurgeErrorPage = fetchUrl($baseUrl . $placePurgeErrorPath, $adminSession['cookie'], 0);
+    $placePurgeConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+        'csrf_token' => extractHiddenInputValue($placePurgeErrorPage['body'], 'csrf_token'),
+        'module' => 'places',
+        'id' => (string)$placePurgeId,
+        'action' => 'purge',
+        'confirm_permanent_delete' => '1',
+    ], $adminSession['cookie'], 0);
+    $placeRowCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_places WHERE id = ?');
+    $placeRowCountStmt->execute([$placePurgeId]);
+    $placeRevisionCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?");
+    $placeRevisionCountStmt->execute([$placePurgeId]);
+    $placeRedirectStmt->execute([$placePurgeOldPath, $placePurgePublicPath]);
+    $placeEventLinkStmt->execute([$placePurgeEventId]);
+    $placeEventLinkRow = $placeEventLinkStmt->fetch();
+    $placePurgeStatus = httpIntegrationStatusCode($placePurgeConfirmedResponse);
+    $placePurgeLocationMatches = responseHasLocationHeader(
+        $placePurgeConfirmedResponse['headers'],
+        BASE_URL . '/admin/trash.php?ok=purged',
+        $baseUrl
+    );
+    $placePurgeRowCount = (int)$placeRowCountStmt->fetchColumn();
+    $placePurgeRevisionCount = (int)$placeRevisionCountStmt->fetchColumn();
+    $placePurgeRedirectCount = (int)$placeRedirectStmt->fetchColumn();
+    $placePurgeLogCount = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'trash_purge'")->fetchColumn();
+    clearstatcache(true, $placePurgeImagePath);
+    if ($placePurgeStatus !== 302 || !$placePurgeLocationMatches) {
+        $placeTrashIssues[] = 'potvrzené trvalé smazání místa nevrátilo očekávaný PRG redirect';
+    }
+    if ($placePurgeRowCount !== 0 || $placePurgeRevisionCount !== 0 || $placePurgeRedirectCount !== 0) {
+        $placeTrashIssues[] = 'potvrzené trvalé smazání místa neuklidilo řádek, revizi nebo redirect';
+    }
+    if (!is_array($placeEventLinkRow) || ($placeEventLinkRow['place_id'] ?? null) !== null) {
+        $placeTrashIssues[] = 'potvrzené trvalé smazání místa nezachovalo událost s odpojenou vazbou';
+    }
+    if (is_file($placePurgeImagePath)) {
+        $placeTrashIssues[] = 'potvrzené trvalé smazání místa neodstranilo jeho obrázek';
+    }
+    if ($placePurgeLogCount !== $placePurgeLogBefore + 1) {
+        $placeTrashIssues[] = 'potvrzené trvalé smazání místa nezapsalo právě jeden auditní záznam';
+    }
+
+    httpIntegrationPrintResult('place_trash_error_prevention_http', $placeTrashIssues, $failures);
+
     $blogStaticPagesIssues = [];
     $blogStaticMainSlug = 'http-blog-pages-main-' . bin2hex(random_bytes(4));
     $blogStaticOtherSlug = 'http-blog-pages-other-' . bin2hex(random_bytes(4));

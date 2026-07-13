@@ -34,6 +34,17 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
     exit;
 };
 
+$existingEvent = null;
+if ($id !== null) {
+    $existingStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ? AND deleted_at IS NULL");
+    $existingStmt->execute([$id]);
+    $existingEvent = $existingStmt->fetch() ?: null;
+    if (!$existingEvent) {
+        header('Location: ' . BASE_URL . '/admin/events.php');
+        exit;
+    }
+}
+
 $eventType = null;
 if ($eventTypeId !== null) {
     $eventTypeStmt = $pdo->prepare("SELECT * FROM cms_event_types WHERE id = ?");
@@ -54,9 +65,14 @@ if ($eventTypeId !== null) {
 }
 
 if ($placeId !== null) {
-    $placeStmt = $pdo->prepare("SELECT id FROM cms_places WHERE id = ? AND deleted_at IS NULL");
+    $placeStmt = $pdo->prepare("SELECT id, deleted_at FROM cms_places WHERE id = ?");
     $placeStmt->execute([$placeId]);
-    if (!$placeStmt->fetch()) {
+    $selectedPlace = $placeStmt->fetch() ?: null;
+    $keepsCurrentTrashedPlace = $selectedPlace !== null
+        && ($selectedPlace['deleted_at'] ?? null) !== null
+        && $existingEvent !== null
+        && (int)($existingEvent['place_id'] ?? 0) === $placeId;
+    if ($selectedPlace === null || (($selectedPlace['deleted_at'] ?? null) !== null && !$keepsCurrentTrashedPlace)) {
         $redirectToForm('place');
     }
 }
@@ -145,17 +161,6 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
     $redirectToForm('slug');
 }
 $slug = $uniqueSlug;
-
-$existingEvent = null;
-if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_events WHERE id = ? AND deleted_at IS NULL");
-    $existingStmt->execute([$id]);
-    $existingEvent = $existingStmt->fetch() ?: null;
-    if (!$existingEvent) {
-        header('Location: ' . BASE_URL . '/admin/events.php');
-        exit;
-    }
-}
 
 $imageFilename = (string)($existingEvent['image_file'] ?? '');
 $imageUpload = uploadEventImage($_FILES['event_image'] ?? [], $imageFilename);

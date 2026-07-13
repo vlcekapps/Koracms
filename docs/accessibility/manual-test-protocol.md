@@ -193,6 +193,14 @@ V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání b
 3. Ve **Stránky a odkazy blogu** zopakujte průchod bez a s `confirm_blog_nav_link_delete_<id>`. Review musí navíc pojmenovat blog a dopad na jeho samostatné pořadí; bez potvrzení se nesmí změnit odkaz ani audit log, po potvrzení se mají zbývající stránky a odkazy seřadit bez mezery.
 4. Ověřte jen klávesnicí, že se lze z kontrolního bloku vrátit přes `Zrušit smazání`, focus order zůstává logický a globální odkaz nelze omylem smazat z blogové obrazovky ani blogový odkaz z globální obrazovky. Oddělení scope je pokryté automatizovaně, ruční průchod potvrzuje srozumitelnost kontextu.
 
+### Doplňkový průchod vratného mazání Míst
+
+1. Připravte veřejné místo s obrázkem a navázanou veřejnou událostí. V přehledu Míst odešlete řádkový přesun bez `confirm_place_delete_<id>`. NVDA má jednou oznámit atomický alert; checkbox má mít `aria-invalid` a popis přes existující review i field-level chybu. Místo, obrázek, událost ani audit log se nesmí změnit.
+2. Potvrzení zaškrtněte a odešlete znovu. Ověřte PRG stav, zmizení místa z veřejného i admin výpisu, nedostupnost veřejného obrázku, zachování náhradního ručně psaného místa na události a přítomnost položky v Koši. V editoru navázané události musí být původní vazba stále vybraná a srozumitelně označená jako uložená v Koši.
+3. Místo obnovte. Veřejný detail, obrázek a odkaz/název místa na události se mají vrátit bez nové editace události. Focus po PRG návratech musí zůstat v logickém pořadí a stavová zpráva se má oznámit právě jednou.
+4. U druhého místa zopakujte hromadný přesun bez a s `confirm_place_bulk_delete`. Po odmítnutí musí zůstat viditelný výběr, data i audit log beze změny; potvrzený průchod musí zachovat obrázek, revize, redirecty a vazbu události pro obnovu.
+5. V Koši zkuste trvalý výmaz bez a s `confirm_permanent_delete`. Bez potvrzení se nic nesmí změnit a chyba musí být navázaná na checkbox konkrétního místa. Po potvrzení se má oznámit PRG stav, místo a jeho obrázek, revize a redirecty mají být odstraněné a událost má zůstat zachovaná bez interní vazby na zaniklé místo. Výsledek zapište k `3.3.4`.
+
 ## Scénáře pro nové moduly
 
 Před větší implementací modulu zapsat, zda přidává nebo mění:

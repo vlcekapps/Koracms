@@ -9,6 +9,8 @@ $statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $kindFilter = trim((string)($_GET['kind'] ?? 'all'));
 $categoryFilter = trim((string)($_GET['category'] ?? ''));
 $localityFilter = trim((string)($_GET['locality'] ?? ''));
+$placeBulkFlash = $_SESSION['place_bulk_flash'] ?? null;
+unset($_SESSION['place_bulk_flash']);
 
 $allowedStatusFilters = ['all', 'pending', 'published', 'hidden'];
 if (!in_array($statusFilter, $allowedStatusFilters, true)) {
@@ -23,7 +25,8 @@ if ($kindFilter !== 'all' && !isset($kindOptions[$kindFilter])) {
 $categoryOptions = $pdo->query(
     "SELECT DISTINCT TRIM(category) AS category_label
      FROM cms_places
-     WHERE TRIM(COALESCE(category, '')) <> ''
+     WHERE deleted_at IS NULL
+       AND TRIM(COALESCE(category, '')) <> ''
      ORDER BY category_label"
 )->fetchAll(PDO::FETCH_COLUMN);
 $categoryOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $categoryOptions)));
@@ -34,7 +37,8 @@ if ($categoryFilter !== '' && !in_array($categoryFilter, $categoryOptions, true)
 $localityOptions = $pdo->query(
     "SELECT DISTINCT TRIM(locality) AS locality_label
      FROM cms_places
-     WHERE TRIM(COALESCE(locality, '')) <> ''
+     WHERE deleted_at IS NULL
+       AND TRIM(COALESCE(locality, '')) <> ''
      ORDER BY locality_label"
 )->fetchAll(PDO::FETCH_COLUMN);
 $localityOptions = array_values(array_filter(array_map(static fn ($value): string => trim((string)$value), $localityOptions)));
@@ -42,7 +46,7 @@ if ($localityFilter !== '' && !in_array($localityFilter, $localityOptions, true)
     $localityFilter = '';
 }
 
-$whereParts = [];
+$whereParts = ['p.deleted_at IS NULL'];
 $params = [];
 $perPage = 25;
 
@@ -76,7 +80,7 @@ if ($localityFilter !== '') {
     $params[] = $localityFilter;
 }
 
-$whereSql = $whereParts !== [] ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $whereParts);
 $pagination = paginate(
     $pdo,
     "SELECT COUNT(*) FROM cms_places p {$whereSql}",
@@ -99,6 +103,43 @@ $places = array_map(
     $stmt->fetchAll()
 );
 
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorPlaceId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Místo nejde přesunout do Koše bez potvrzení kontroly dopadu. U pole Potvrzení přesunu je konkrétní nápověda.',
+    'invalid' => 'Místo už není dostupné. Vyberte místo ze seznamu znovu.',
+    'failed' => 'Místo se nepodařilo přesunout do Koše. Data zůstala beze změny; zkontrolujte položku a zkuste akci znovu.',
+    default => '',
+};
+$deleteSuccessMessage = trim((string)($_GET['deleted'] ?? '')) === '1'
+    ? 'Místo bylo přesunuto do Koše a lze je obnovit.'
+    : '';
+
+$bulkDeleteErrorCode = is_array($placeBulkFlash) ? trim((string)($placeBulkFlash['code'] ?? '')) : '';
+$bulkDeleteHasError = is_array($placeBulkFlash)
+    && ($placeBulkFlash['type'] ?? '') === 'error'
+    && in_array($bulkDeleteErrorCode, [
+        'place_bulk_delete_selection_required',
+        'place_bulk_delete_confirm_required',
+        'place_bulk_delete_selection_invalid',
+        'place_bulk_delete_failed',
+    ], true);
+$bulkDeleteConfirmError = $bulkDeleteErrorCode === 'place_bulk_delete_confirm_required';
+$bulkDeleteErrorFields = $bulkDeleteConfirmError ? ['confirm_place_bulk_delete'] : [];
+$bulkDeleteSelectedIds = [];
+foreach ((array)(is_array($placeBulkFlash) ? ($placeBulkFlash['selected_ids'] ?? []) : []) as $selectedId) {
+    $selectedId = (int)$selectedId;
+    if ($selectedId > 0) {
+        $bulkDeleteSelectedIds[] = $selectedId;
+    }
+}
+$visiblePlaceIds = array_map(static fn (array $place): int => (int)$place['id'], $places);
+$bulkDeleteSelectedIds = array_values(array_intersect(array_unique($bulkDeleteSelectedIds), $visiblePlaceIds));
+$bulkDeleteSelectedLookup = array_fill_keys($bulkDeleteSelectedIds, true);
+$bulkDeleteFormErrorId = 'place-bulk-delete-form-error';
+$bulkDeleteReviewId = 'place-bulk-delete-review';
+$bulkDeleteFieldErrorId = 'confirm-place-bulk-delete-error';
+
 $currentListQuery = array_filter([
     'q' => $q !== '' ? $q : null,
     'status' => $statusFilter !== 'all' ? $statusFilter : null,
@@ -120,6 +161,12 @@ $pagerBaseUrl = '?' . ($pagerParams !== [] ? http_build_query($pagerParams) . '&
 
 adminHeader('Zajímavá místa');
 ?>
+<?php if ($deleteSuccessMessage !== ''): ?><p class="success" role="status" aria-atomic="true"><?= h($deleteSuccessMessage) ?></p><?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="place-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
+<?php if (is_array($placeBulkFlash) && trim((string)($placeBulkFlash['message'] ?? '')) !== ''): ?>
+  <p id="<?= h($bulkDeleteFormErrorId) ?>" class="<?= ($placeBulkFlash['type'] ?? '') === 'success' ? 'success' : 'error' ?>"
+     role="<?= ($placeBulkFlash['type'] ?? '') === 'success' ? 'status' : 'alert' ?>" aria-atomic="true"><?= h((string)$placeBulkFlash['message']) ?></p>
+<?php endif; ?>
 <p><a href="place_form.php?redirect=<?= urlencode($currentListUrl) ?>" class="btn">+ Přidat místo</a></p>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
@@ -178,7 +225,34 @@ adminHeader('Zajímavá místa');
     <?php endif; ?>
   </p>
 <?php else: ?>
-  <?= bulkActions('places', $currentListUrl, 'Hromadné akce s místy', 'místo') ?>
+  <form method="post" action="place_bulk.php" id="bulk-form"<?= $bulkDeleteHasError ? ' aria-describedby="' . h($bulkDeleteFormErrorId) . '"' : '' ?>>
+    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+    <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
+    <fieldset class="admin-fieldset-card">
+      <legend>Hromadné akce s místy</legend>
+      <p id="bulk-status" data-selection-status="bulk" class="field-help field-help--flush" aria-live="polite">Zatím není vybrané žádné místo.</p>
+      <p id="<?= h($bulkDeleteReviewId) ?>" class="field-help field-help--flush">
+        Přesun do Koše skryje vybraná místa z webu, administrativních přehledů a výběrů, ale zachová obrázky, revize, redirecty i vazby událostí. Místa lze v Koši obnovit; data a soubory se odstraní až samostatně potvrzeným trvalým smazáním.
+      </p>
+      <label for="confirm-place-bulk-delete" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm-place-bulk-delete" name="confirm_place_bulk_delete" value="1"
+               required aria-required="true"<?= adminFieldAttributes('confirm_place_bulk_delete', $bulkDeleteErrorFields, [], [$bulkDeleteReviewId], $bulkDeleteFieldErrorId) ?>>
+        Zkontroloval(a) jsem vybraná místa a chci je přesunout do Koše.
+      </label>
+      <?php adminRenderFieldError(
+          'confirm_place_bulk_delete',
+          $bulkDeleteErrorFields,
+          [],
+          'Před přesunem míst do Koše potvrďte, že jste zkontrolovali výběr a zachování souvisejících dat.',
+          $bulkDeleteFieldErrorId
+      ); ?>
+      <div class="button-row">
+        <button type="submit" name="action" value="delete" class="btn btn-danger bulk-action-btn" disabled data-confirm="Přesunout vybraná místa do Koše?">Přesunout vybrané do Koše</button>
+        <button type="submit" name="action" value="publish" class="btn bulk-action-btn" disabled formnovalidate>Publikovat vybrané</button>
+        <button type="submit" name="action" value="hide" class="btn bulk-action-btn" disabled formnovalidate>Skrýt vybrané</button>
+      </div>
+    </fieldset>
+  </form>
   <table>
     <caption>Přehled zajímavých míst</caption>
     <thead>
@@ -192,8 +266,17 @@ adminHeader('Zajímavá místa');
     </thead>
     <tbody>
     <?php foreach ($places as $place): ?>
+      <?php
+        $placeId = (int)$place['id'];
+        $deleteConfirmField = 'confirm_place_delete_' . $placeId;
+        $deleteConfirmId = 'confirm-place-delete-' . $placeId;
+        $deleteReviewId = 'place-delete-review-' . $placeId;
+        $deleteFieldErrorId = 'confirm-place-delete-' . $placeId . '-error';
+        $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorPlaceId === $placeId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
-        <td><label for="place-select-<?= (int)$place['id'] ?>" class="sr-only">Vybrat <?= h((string)$place['name']) ?></label><input type="checkbox" id="place-select-<?= (int)$place['id'] ?>" name="ids[]" value="<?= (int)$place['id'] ?>" form="bulk-form"></td>
+        <td><label for="place-select-<?= $placeId ?>" class="sr-only">Vybrat <?= h((string)$place['name']) ?></label><input type="checkbox" id="place-select-<?= $placeId ?>" name="ids[]" value="<?= $placeId ?>" form="bulk-form"<?= isset($bulkDeleteSelectedLookup[$placeId]) ? ' checked' : '' ?>></td>
         <td>
           <strong><?= h((string)$place['name']) ?></strong><br>
           <small class="table-meta">/places/<?= h((string)$place['slug']) ?></small>
@@ -239,12 +322,24 @@ adminHeader('Zajímavá místa');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="place_delete.php" method="post">
+          <form action="place_delete.php" method="post" class="admin-inline-form" novalidate<?= $deleteHasError ? ' aria-describedby="place-delete-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="id" value="<?= (int)$place['id'] ?>">
+            <input type="hidden" name="id" value="<?= $placeId ?>">
             <input type="hidden" name="redirect" value="<?= h($currentListUrl) ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat místo?">Smazat</button>
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Přesun místa <?= h((string)$place['name']) ?> do Koše</legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Přesun skryje místo z webu a výběrů, ale zachová jeho obrázek, revize, redirecty a vazby událostí pro případné obnovení.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1"
+                       required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId], $deleteFieldErrorId) ?>>
+                Potvrzuji přesun tohoto místa do Koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před přesunem místa do Koše potvrďte, že jste zkontrolovali zachování obrázku, revizí, redirectů a vazeb událostí.', $deleteFieldErrorId); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Přesunout místo <?= h((string)$place['name']) ?> do Koše?">Přesunout do Koše</button>
+            </fieldset>
           </form>
         </td>
       </tr>
