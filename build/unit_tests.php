@@ -214,6 +214,7 @@ assert_admin_route_module_requirement('/admin/newsletter_send.php', 'newsletter'
 assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservations', 'Rezervace', 'reservation save route is guarded');
 assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
 assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
+assert_equals('content_manage_shared', adminRouteCapability('/admin/convert_content.php'), 'content conversion requires shared content management');
 
 test_section('module public entrypoints');
 

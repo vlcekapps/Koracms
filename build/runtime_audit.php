@@ -12092,8 +12092,7 @@ if (!str_contains($blogPresentationSource, 'manualRelatedArticles') || !str_cont
 }
 if (!str_contains($blogBulkSource, 'DELETE FROM cms_article_related')
     || !str_contains($blogDeleteSource, 'DELETE FROM cms_article_related')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_article_related')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'DELETE FROM cms_article_related')) {
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_article_related')) {
     $blogAdminIssues[] = 'manual related article links are missing cleanup on destructive article workflows';
 }
 if (!str_contains($blogExportSource, 'article_related') || !str_contains($blogImportSource, 'article_related')) {
@@ -12138,8 +12137,7 @@ if (!str_contains($blogPresentationSource, 'function blogSeriesSlug')
 if (!str_contains($blogBulkSource, 'DELETE FROM cms_blog_series_items')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'DELETE FROM cms_blog_series_items')
     || !str_contains($blogDeleteSource, 'DELETE FROM cms_blog_series')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_blog_series_items')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'DELETE FROM cms_blog_series_items')) {
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'DELETE FROM cms_blog_series_items')) {
     $blogAdminIssues[] = 'article series links are missing cleanup on destructive article or blog workflows';
 }
 if (!str_contains($blogExportSource, 'blog_series') || !str_contains($blogExportSource, 'blog_series_items')
@@ -12740,7 +12738,6 @@ if (!str_contains($blogCatsSource, 'upsertPathRedirect(')
 }
 if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/blog_delete.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
     || !str_contains($blogBulkSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($article))')
-    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($article))')
     || !str_contains((string)file_get_contents(dirname(__DIR__) . '/admin/trash.php'), 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForRedirectCleanup))')
     || !str_contains($blogDeleteSource, 'deleteRedirectsTargetingPath($pdo, articlePublicPath($articleRow))')) {
     $blogAdminIssues[] = 'destructive article workflows no longer clean redirects pointing to removed article URLs';
@@ -20928,10 +20925,15 @@ if (!str_contains($blogStaticPagesListSource, 'Blogová stránka') || !str_conta
 if (!str_contains($blogStaticMenuSource, 'WHERE blog_id IS NULL AND deleted_at IS NULL')) {
     $blogStaticPageIssues[] = 'global navigation management still includes blog pages';
 }
-if (!str_contains($blogStaticConvertSource, 'blog_nav_order') || !str_contains($blogStaticConvertSource, 'nextBlogPageNavigationOrder') || !str_contains($blogStaticConvertSource, '$targetBlogId = !empty($page[\'blog_id\']) ? (int)$page[\'blog_id\'] : $defaultBlogId')) {
+if (!str_contains($blogStaticConvertSource, 'blog_nav_order')
+    || !str_contains($blogStaticConvertSource, 'nextBlogPageNavigationOrder')
+    || !str_contains($blogStaticConvertSource, '$targetBlog = !empty($page[\'blog_id\']) ? getBlogById((int)$page[\'blog_id\']) : getDefaultBlog()')
+    || !str_contains($blogStaticConvertSource, '$targetBlogId = (int)$targetBlog[\'id\']')) {
     $blogStaticPageIssues[] = 'content conversion is missing blog-preserving page/article behavior';
 }
-if (!str_contains($blogStaticConvertSource, 'uniquePageSlug($pdo, pageSlug((string)$article[\'slug\'] ?: (string)$article[\'title\']), null, $pageBlogId)')) {
+if (!str_contains($blogStaticConvertSource, '$slug = uniquePageSlug(')
+    || !str_contains($blogStaticConvertSource, 'pageSlug((string)$article[\'slug\'] ?: (string)$article[\'title\'])')
+    || !str_contains($blogStaticConvertSource, '$pageBlogId')) {
     $blogStaticPageIssues[] = 'article-to-page conversion does not generate page slug in the target blog context';
 }
 if (!str_contains($blogExportSource, 'blog_id, blog_nav_order') || !str_contains($blogImportSource, 'blog_id, blog_nav_order') || !str_contains($blogExportSource, 'nav_links') || !str_contains($blogImportSource, 'nav_links')) {
@@ -20959,6 +20961,121 @@ if ($blogStaticPageIssues === []) {
     $failures++;
     foreach ($blogStaticPageIssues as $blogStaticPageIssue) {
         echo '- ' . $blogStaticPageIssue . "\n";
+    }
+}
+
+echo "=== content_conversion_error_prevention_guardrails ===\n";
+$contentConversionGuardrailIssues = [];
+$contentConversionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/convert_content.php');
+$contentConversionAuthSource = (string)file_get_contents(dirname(__DIR__) . '/auth.php');
+$contentConversionBlogListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog.php');
+$contentConversionBlogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
+$contentConversionPagesListSource = (string)file_get_contents(dirname(__DIR__) . '/admin/pages.php');
+$contentConversionPageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
+$contentConversionHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    "requireCapability('content_manage_shared'",
+    "requireModuleEnabled('blog')",
+    "requireHttpMethods(['POST'])",
+    'verifyCsrf()',
+    'internalRedirectTarget(',
+] as $contentConversionAccessFragment) {
+    if (!str_contains($contentConversionSource, $contentConversionAccessFragment)) {
+        $contentConversionGuardrailIssues[] = 'content conversion is missing access/request guardrail: ' . $contentConversionAccessFragment;
+    }
+}
+if (!str_contains($contentConversionAuthSource, "\$file === 'convert_content.php'")
+    || !str_contains($contentConversionAuthSource, "'blog_members.php', 'blog_pages.php', 'blog_series.php', 'blog_blog_delete.php', 'convert_content.php'")) {
+    $contentConversionGuardrailIssues[] = 'content conversion route is missing capability or blog-module routing protection';
+}
+foreach ([
+    'function renderContentConversionReview',
+    '<fieldset>',
+    '<legend>Kontrola dopadu převodu</legend>',
+    'role="alert" aria-atomic="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'aria-required="true"',
+    "'confirm_article_to_page_' . \$sourceId",
+    "'confirm_page_to_article_' . \$sourceId",
+] as $contentConversionReviewFragment) {
+    if (!str_contains($contentConversionSource, $contentConversionReviewFragment)) {
+        $contentConversionGuardrailIssues[] = 'content conversion is missing accessible review fragment: ' . $contentConversionReviewFragment;
+    }
+}
+if (substr_count($contentConversionSource, "if (\$stage !== 'confirm' || \$review['confirm_error'])") < 2) {
+    $contentConversionGuardrailIssues[] = 'content conversion no longer requires server-side confirmation for both directions';
+}
+if (substr_count($contentConversionSource, '$pdo->beginTransaction()') < 2
+    || substr_count($contentConversionSource, '$pdo->rollBack()') < 2
+    || substr_count($contentConversionSource, '$pdo->commit()') < 2) {
+    $contentConversionGuardrailIssues[] = 'content conversion is missing transactional protection in both directions';
+}
+foreach ([
+    'UPDATE cms_articles SET deleted_at = NOW()',
+    'UPDATE cms_pages SET deleted_at = NOW()',
+    'publish_at',
+    'unpublish_at',
+    'admin_note',
+    'preview_token',
+    'source_soft_deleted=true',
+] as $contentConversionPersistenceFragment) {
+    if (!str_contains($contentConversionSource, $contentConversionPersistenceFragment)) {
+        $contentConversionGuardrailIssues[] = 'content conversion is missing reversible/common-metadata persistence fragment: ' . $contentConversionPersistenceFragment;
+    }
+}
+foreach ([
+    'DELETE FROM cms_comments',
+    'DELETE FROM cms_article_tags',
+    'DELETE FROM cms_article_related',
+    'DELETE FROM cms_blog_series_items',
+    'DELETE FROM cms_articles',
+    'DELETE FROM cms_pages',
+    'deleteRedirectsTargetingPath',
+] as $contentConversionDestructiveFragment) {
+    if (str_contains($contentConversionSource, $contentConversionDestructiveFragment)) {
+        $contentConversionGuardrailIssues[] = 'content conversion again contains destructive cleanup: ' . $contentConversionDestructiveFragment;
+    }
+}
+foreach ([
+    'admin/blog.php' => $contentConversionBlogListSource,
+    'admin/blog_form.php' => $contentConversionBlogFormSource,
+    'admin/pages.php' => $contentConversionPagesListSource,
+    'admin/page_form.php' => $contentConversionPageFormSource,
+] as $contentConversionEntryFile => $contentConversionEntrySource) {
+    if (!str_contains($contentConversionEntrySource, 'name="stage" value="review"')
+        || !str_contains($contentConversionEntrySource, '<fieldset class="admin-inline-fieldset">')
+        || !str_contains($contentConversionEntrySource, '<legend class="sr-only">')) {
+        $contentConversionGuardrailIssues[] = $contentConversionEntryFile . ' is missing the labeled review entry form';
+    }
+}
+if (!str_contains($contentConversionBlogListSource, "\$canConvertContent = currentUserHasCapability('content_manage_shared')")
+    || !str_contains($contentConversionBlogFormSource, "currentUserHasCapability('content_manage_shared')")) {
+    $contentConversionGuardrailIssues[] = 'article conversion controls are still exposed without shared-content capability gating';
+}
+if (!str_contains($contentConversionPageFormSource, 'Původní článek včetně komentářů a vazeb zůstal obnovitelný v Koši.')
+    || !str_contains($contentConversionBlogFormSource, 'Původní stránka zůstala obnovitelná v Koši.')) {
+    $contentConversionGuardrailIssues[] = 'conversion destination screens are missing reversible outcome status messages';
+}
+foreach ([
+    "httpIntegrationPrintResult('content_conversion_error_prevention_http'",
+    'autor bez oprávnění ke statickým stránkám provedl přímý převod článku',
+    'převod článku bez potvrzení změnil data/log nebo nevrátil přístupnou field-level chybu',
+    'potvrzený převod článku nepřesunul zdroj do Koše se zachovanými komentáři/vazbami nebo audit logem',
+    'převod stránky bez potvrzení změnil data/log nebo nevrátil přístupnou field-level chybu',
+    'potvrzený převod stránky nepřesunul zdroj do Koše nebo nezapsal audit log',
+] as $contentConversionHttpFragment) {
+    if (!str_contains($contentConversionHttpSource, $contentConversionHttpFragment)) {
+        $contentConversionGuardrailIssues[] = 'HTTP integration is missing content-conversion proof: ' . $contentConversionHttpFragment;
+    }
+}
+if ($contentConversionGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($contentConversionGuardrailIssues as $contentConversionGuardrailIssue) {
+        echo '- ' . $contentConversionGuardrailIssue . "\n";
     }
 }
 

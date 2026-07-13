@@ -15909,73 +15909,254 @@ try {
         }
     }
 
+    $contentConversionIssues = [];
     $convertArticleTitle = 'HTTP Převod článku na blogovou stránku';
     $convertArticleSlug = 'http-blog-page-convert-' . bin2hex(random_bytes(4));
+    $convertPreviewToken = bin2hex(random_bytes(16));
+    $convertPublishAt = '2026-07-01 09:15:00';
+    $convertUnpublishAt = '2030-07-01 09:15:00';
+    $convertAdminNote = 'Interní poznámka musí převod přežít.';
     $pdo->prepare(
-        "INSERT INTO cms_articles (title, slug, blog_id, perex, content, comments_enabled, status)
-         VALUES (?, ?, ?, ?, ?, 1, 'published')"
+        "INSERT INTO cms_articles
+            (title, slug, blog_id, perex, content, comments_enabled, author_id, status,
+             publish_at, unpublish_at, admin_note, preview_token)
+         VALUES (?, ?, ?, ?, ?, 1, ?, 'published', ?, ?, ?, ?)"
     )->execute([
         $convertArticleTitle,
         $convertArticleSlug,
         $blogStaticMainId,
         'Perex pro převod článku.',
         '<p>Obsah převáděného článku.</p>',
+        $adminUserId,
+        $convertPublishAt,
+        $convertUnpublishAt,
+        $convertAdminNote,
+        $convertPreviewToken,
     ]);
     $convertSourceArticleId = (int)$pdo->lastInsertId();
     $createdArticles[] = $convertSourceArticleId;
 
-    $articleToPageResponse = postUrl(
-        $baseUrl . BASE_URL . '/admin/convert_content.php',
-        [
-            'csrf_token' => $adminSession['csrf'],
-            'direction' => 'article_to_page',
-            'id' => (string)$convertSourceArticleId,
-        ],
-        $adminSession['cookie'],
-        0
+    $convertTagSlug = 'http-convert-tag-' . bin2hex(random_bytes(4));
+    $pdo->prepare('INSERT INTO cms_tags (name, slug, blog_id) VALUES (?, ?, ?)')
+        ->execute(['HTTP štítek převodu', $convertTagSlug, $blogStaticMainId]);
+    $convertTagId = (int)$pdo->lastInsertId();
+    $createdTags[] = $convertTagId;
+    $pdo->prepare('INSERT INTO cms_article_tags (article_id, tag_id) VALUES (?, ?)')
+        ->execute([$convertSourceArticleId, $convertTagId]);
+
+    $convertSeriesSlug = 'http-convert-series-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        'INSERT INTO cms_blog_series (blog_id, title, slug, description, is_active, sort_order) VALUES (?, ?, ?, ?, 1, 1)'
+    )->execute([$blogStaticMainId, 'HTTP série převodu', $convertSeriesSlug, 'Série musí zůstat zachovaná u zdrojového článku.']);
+    $convertSeriesId = (int)$pdo->lastInsertId();
+    $createdBlogSeriesIds[] = $convertSeriesId;
+    $pdo->prepare('INSERT INTO cms_blog_series_items (series_id, article_id, sort_order) VALUES (?, ?, 1)')
+        ->execute([$convertSeriesId, $convertSourceArticleId]);
+
+    $pdo->prepare(
+        "INSERT INTO cms_comments (article_id, author_name, author_email, content, status, is_approved)
+         VALUES (?, 'HTTP autor komentáře', 'convert-comment@example.test', 'Komentář musí zůstat zachovaný.', 'approved', 1)"
+    )->execute([$convertSourceArticleId]);
+    $convertCommentId = (int)$pdo->lastInsertId();
+    $createdCommentIds[] = $convertCommentId;
+    $pdo->prepare('INSERT INTO cms_article_related (article_id, related_article_id, sort_order) VALUES (?, ?, 1)')
+        ->execute([$convertSourceArticleId, $blogArticleId]);
+
+    $convertArticleStateStmt = $pdo->prepare(
+        "SELECT a.deleted_at,
+                (SELECT COUNT(*) FROM cms_comments c WHERE c.article_id = a.id) AS comment_count,
+                (SELECT COUNT(*) FROM cms_article_tags at WHERE at.article_id = a.id) AS tag_count,
+                (SELECT COUNT(*) FROM cms_blog_series_items si WHERE si.article_id = a.id) AS series_count,
+                (SELECT COUNT(*) FROM cms_article_related ar WHERE ar.article_id = a.id OR ar.related_article_id = a.id) AS related_count
+         FROM cms_articles a
+         WHERE a.id = ?"
     );
-    if (httpIntegrationStatusCode($articleToPageResponse) !== 302) {
-        $blogStaticPagesIssues[] = 'převod článku na blogovou stránku nevrátil redirect';
+    $convertedPageCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_pages WHERE slug = ? AND blog_id = ?');
+    $articleToPageLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_article_to_page'")->fetchColumn();
+    $articleConfirmField = 'confirm_article_to_page_' . $convertSourceArticleId;
+    $convertUrl = $baseUrl . BASE_URL . '/admin/convert_content.php';
+
+    $unauthorizedConversionResponse = postUrl($convertUrl, [
+        'csrf_token' => $authorSession['csrf'],
+        'direction' => 'article_to_page',
+        'id' => (string)$convertSourceArticleId,
+        'stage' => 'confirm',
+        $articleConfirmField => '1',
+    ], $authorSession['cookie'], 0);
+    $convertedPageCountStmt->execute([$convertArticleSlug, $blogStaticMainId]);
+    if (httpIntegrationStatusCode($unauthorizedConversionResponse) !== 403
+        || (int)$convertedPageCountStmt->fetchColumn() !== 0) {
+        $contentConversionIssues[] = 'autor bez oprávnění ke statickým stránkám provedl přímý převod článku';
     }
-    $convertedPageStmt = $pdo->prepare("SELECT * FROM cms_pages WHERE title = ? ORDER BY id DESC LIMIT 1");
-    $convertedPageStmt->execute([$convertArticleTitle]);
+
+    $articleReviewResponse = postUrl($convertUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'direction' => 'article_to_page',
+        'id' => (string)$convertSourceArticleId,
+        'stage' => 'review',
+        'redirect' => BASE_URL . '/admin/blog.php',
+    ], $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($articleReviewResponse) !== 200
+        || !str_contains($articleReviewResponse['body'], 'Kontrola převodu článku na stránku')
+        || !str_contains($articleReviewResponse['body'], $convertArticleTitle)
+        || !str_contains($articleReviewResponse['body'], 'Původní článek se přesune do Koše')
+        || !str_contains($articleReviewResponse['body'], 'name="' . $articleConfirmField . '"')
+        || (!str_contains($articleReviewResponse['body'], 'Komentářů')
+            && !str_contains($articleReviewResponse['body'], 'komentářů'))) {
+        $contentConversionIssues[] = 'review převodu článku nezobrazuje zdroj, dopad, zachovaná data nebo potvrzovací pole';
+    }
+    $convertArticleStateStmt->execute([$convertSourceArticleId]);
+    $articleStateAfterReview = $convertArticleStateStmt->fetch() ?: [];
+    $convertedPageCountStmt->execute([$convertArticleSlug, $blogStaticMainId]);
+    if (($articleStateAfterReview['deleted_at'] ?? null) !== null
+        || (int)$convertedPageCountStmt->fetchColumn() !== 0
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_article_to_page'")->fetchColumn() !== $articleToPageLogBefore) {
+        $contentConversionIssues[] = 'samotná review obrazovka převodu změnila článek, vytvořila stránku nebo zapsala audit log';
+    }
+
+    $articleMissingConfirmResponse = postUrl($convertUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'direction' => 'article_to_page',
+        'id' => (string)$convertSourceArticleId,
+        'stage' => 'confirm',
+        'redirect' => BASE_URL . '/admin/blog.php',
+    ], $adminSession['cookie'], 0);
+    $convertArticleStateStmt->execute([$convertSourceArticleId]);
+    $articleStateAfterMissingConfirm = $convertArticleStateStmt->fetch() ?: [];
+    $convertedPageCountStmt->execute([$convertArticleSlug, $blogStaticMainId]);
+    if (httpIntegrationStatusCode($articleMissingConfirmResponse) !== 200
+        || !str_contains($articleMissingConfirmResponse['body'], 'role="alert"')
+        || !str_contains($articleMissingConfirmResponse['body'], 'aria-invalid="true"')
+        || !str_contains($articleMissingConfirmResponse['body'], 'content-conversion-confirm-error')
+        || ($articleStateAfterMissingConfirm['deleted_at'] ?? null) !== null
+        || (int)$convertedPageCountStmt->fetchColumn() !== 0
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_article_to_page'")->fetchColumn() !== $articleToPageLogBefore) {
+        $contentConversionIssues[] = 'převod článku bez potvrzení změnil data/log nebo nevrátil přístupnou field-level chybu';
+    }
+
+    $articleToPageResponse = postUrl($convertUrl, [
+        'csrf_token' => $adminSession['csrf'],
+        'direction' => 'article_to_page',
+        'id' => (string)$convertSourceArticleId,
+        'stage' => 'confirm',
+        'redirect' => BASE_URL . '/admin/blog.php',
+        $articleConfirmField => '1',
+    ], $adminSession['cookie'], 0);
+    $articleToPageLocation = responseLocationHeaderValue($articleToPageResponse['headers']);
+    if (httpIntegrationStatusCode($articleToPageResponse) !== 302
+        || !str_contains($articleToPageLocation, 'converted=article_to_page')) {
+        $contentConversionIssues[] = 'potvrzený převod článku na stránku nevrátil očekávaný PRG stav';
+    }
+
+    $convertedPageStmt = $pdo->prepare('SELECT * FROM cms_pages WHERE slug = ? AND blog_id = ? ORDER BY id DESC LIMIT 1');
+    $convertedPageStmt->execute([$convertArticleSlug, $blogStaticMainId]);
     $convertedPage = $convertedPageStmt->fetch() ?: null;
+    $convertArticleStateStmt->execute([$convertSourceArticleId]);
+    $articleStateAfterConversion = $convertArticleStateStmt->fetch() ?: [];
     if (!$convertedPage) {
-        $blogStaticPagesIssues[] = 'převod článku na stránku nevytvořil blogovou stránku';
+        $contentConversionIssues[] = 'potvrzený převod článku nevytvořil blogovou stránku';
     } else {
         $createdPageIds[] = (int)$convertedPage['id'];
-        if ((int)($convertedPage['blog_id'] ?? 0) !== $blogStaticMainId) {
-            $blogStaticPagesIssues[] = 'převod článku na stránku nezachoval blog původního článku';
-        }
-        if ((int)($convertedPage['blog_nav_order'] ?? 0) !== 4) {
-            $blogStaticPagesIssues[] = 'převod článku na stránku nezařadil novou blogovou stránku na konec pořadí';
-        }
-
-        $pageToArticleResponse = postUrl(
-            $baseUrl . BASE_URL . '/admin/convert_content.php',
-            [
-                'csrf_token' => $adminSession['csrf'],
-                'direction' => 'page_to_article',
-                'id' => (string)$convertedPage['id'],
-            ],
-            $adminSession['cookie'],
-            0
-        );
-        if (httpIntegrationStatusCode($pageToArticleResponse) !== 302) {
-            $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nevrátil redirect';
-        }
-        $reconvertedArticleStmt = $pdo->prepare("SELECT * FROM cms_articles WHERE title = ? ORDER BY id DESC LIMIT 1");
-        $reconvertedArticleStmt->execute([$convertArticleTitle]);
-        $reconvertedArticle = $reconvertedArticleStmt->fetch() ?: null;
-        if (!$reconvertedArticle) {
-            $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nevytvořil článek';
-        } else {
-            $createdArticles[] = (int)$reconvertedArticle['id'];
-            if ((int)($reconvertedArticle['blog_id'] ?? 0) !== $blogStaticMainId) {
-                $blogStaticPagesIssues[] = 'převod blogové stránky zpět na článek nezachoval původní blog';
-            }
+        if ((int)($convertedPage['blog_id'] ?? 0) !== $blogStaticMainId
+            || (int)($convertedPage['blog_nav_order'] ?? 0) !== 4
+            || (string)($convertedPage['publish_at'] ?? '') !== $convertPublishAt
+            || (string)($convertedPage['unpublish_at'] ?? '') !== $convertUnpublishAt
+            || (string)($convertedPage['admin_note'] ?? '') !== $convertAdminNote
+            || (string)($convertedPage['preview_token'] ?? '') !== $convertPreviewToken
+            || !str_contains((string)($convertedPage['content'] ?? ''), 'Perex pro převod článku.')) {
+            $contentConversionIssues[] = 'převod článku na stránku nezachoval blog, pořadí, obsah nebo společná publikační metadata';
         }
     }
+    if (($articleStateAfterConversion['deleted_at'] ?? null) === null
+        || (int)($articleStateAfterConversion['comment_count'] ?? 0) !== 1
+        || (int)($articleStateAfterConversion['tag_count'] ?? 0) !== 1
+        || (int)($articleStateAfterConversion['series_count'] ?? 0) !== 1
+        || (int)($articleStateAfterConversion['related_count'] ?? 0) !== 1
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_article_to_page'")->fetchColumn() !== $articleToPageLogBefore + 1) {
+        $contentConversionIssues[] = 'potvrzený převod článku nepřesunul zdroj do Koše se zachovanými komentáři/vazbami nebo audit logem';
+    }
+
+    if ($convertedPage) {
+        $pageToArticleLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_page_to_article'")->fetchColumn();
+        $pageConfirmField = 'confirm_page_to_article_' . (int)$convertedPage['id'];
+        $reconvertedArticleCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_articles WHERE title = ? AND id != ?');
+
+        $pageReviewResponse = postUrl($convertUrl, [
+            'csrf_token' => $adminSession['csrf'],
+            'direction' => 'page_to_article',
+            'id' => (string)$convertedPage['id'],
+            'stage' => 'review',
+            'redirect' => BASE_URL . '/admin/pages.php',
+        ], $adminSession['cookie'], 0);
+        $reconvertedArticleCountStmt->execute([$convertArticleTitle, $convertSourceArticleId]);
+        if (httpIntegrationStatusCode($pageReviewResponse) !== 200
+            || !str_contains($pageReviewResponse['body'], 'Kontrola převodu stránky na článek')
+            || !str_contains($pageReviewResponse['body'], 'name="' . $pageConfirmField . '"')
+            || (int)$reconvertedArticleCountStmt->fetchColumn() !== 0) {
+            $contentConversionIssues[] = 'review převodu stránky nezobrazuje dopad nebo už změnilo data';
+        }
+
+        $pageMissingConfirmResponse = postUrl($convertUrl, [
+            'csrf_token' => $adminSession['csrf'],
+            'direction' => 'page_to_article',
+            'id' => (string)$convertedPage['id'],
+            'stage' => 'confirm',
+            'redirect' => BASE_URL . '/admin/pages.php',
+        ], $adminSession['cookie'], 0);
+        $convertedPageStateStmt = $pdo->prepare('SELECT deleted_at FROM cms_pages WHERE id = ?');
+        $convertedPageStateStmt->execute([(int)$convertedPage['id']]);
+        $convertedPageStateAfterMissingConfirm = $convertedPageStateStmt->fetch();
+        $reconvertedArticleCountStmt->execute([$convertArticleTitle, $convertSourceArticleId]);
+        if (httpIntegrationStatusCode($pageMissingConfirmResponse) !== 200
+            || !str_contains($pageMissingConfirmResponse['body'], 'role="alert"')
+            || !str_contains($pageMissingConfirmResponse['body'], 'aria-invalid="true"')
+            || !$convertedPageStateAfterMissingConfirm
+            || ($convertedPageStateAfterMissingConfirm['deleted_at'] ?? null) !== null
+            || (int)$reconvertedArticleCountStmt->fetchColumn() !== 0
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_page_to_article'")->fetchColumn() !== $pageToArticleLogBefore) {
+            $contentConversionIssues[] = 'převod stránky bez potvrzení změnil data/log nebo nevrátil přístupnou field-level chybu';
+        }
+
+        $pageToArticleResponse = postUrl($convertUrl, [
+            'csrf_token' => $adminSession['csrf'],
+            'direction' => 'page_to_article',
+            'id' => (string)$convertedPage['id'],
+            'stage' => 'confirm',
+            'redirect' => BASE_URL . '/admin/pages.php',
+            $pageConfirmField => '1',
+        ], $adminSession['cookie'], 0);
+        $pageToArticleLocation = responseLocationHeaderValue($pageToArticleResponse['headers']);
+        if (httpIntegrationStatusCode($pageToArticleResponse) !== 302
+            || !str_contains($pageToArticleLocation, 'converted=page_to_article')) {
+            $contentConversionIssues[] = 'potvrzený převod blogové stránky zpět na článek nevrátil očekávaný PRG stav';
+        }
+
+        $reconvertedArticleStmt = $pdo->prepare('SELECT * FROM cms_articles WHERE title = ? AND id != ? ORDER BY id DESC LIMIT 1');
+        $reconvertedArticleStmt->execute([$convertArticleTitle, $convertSourceArticleId]);
+        $reconvertedArticle = $reconvertedArticleStmt->fetch() ?: null;
+        $convertedPageStateStmt->execute([(int)$convertedPage['id']]);
+        $convertedPageStateAfterConversion = $convertedPageStateStmt->fetch();
+        if (!$reconvertedArticle) {
+            $contentConversionIssues[] = 'potvrzený převod blogové stránky zpět na článek nevytvořil článek';
+        } else {
+            $createdArticles[] = (int)$reconvertedArticle['id'];
+            if ((int)($reconvertedArticle['blog_id'] ?? 0) !== $blogStaticMainId
+                || (int)($reconvertedArticle['author_id'] ?? 0) !== $adminUserId
+                || (string)($reconvertedArticle['publish_at'] ?? '') !== $convertPublishAt
+                || (string)($reconvertedArticle['unpublish_at'] ?? '') !== $convertUnpublishAt
+                || (string)($reconvertedArticle['admin_note'] ?? '') !== $convertAdminNote
+                || (string)($reconvertedArticle['preview_token'] ?? '') !== $convertPreviewToken) {
+                $contentConversionIssues[] = 'převod stránky na článek nezachoval blog, autora nebo společná publikační metadata';
+            }
+        }
+        if (!$convertedPageStateAfterConversion
+            || ($convertedPageStateAfterConversion['deleted_at'] ?? null) === null
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'convert_page_to_article'")->fetchColumn() !== $pageToArticleLogBefore + 1) {
+            $contentConversionIssues[] = 'potvrzený převod stránky nepřesunul zdroj do Koše nebo nezapsal audit log';
+        }
+    }
+
+    httpIntegrationPrintResult('content_conversion_error_prevention_http', $contentConversionIssues, $failures);
 
     httpIntegrationPrintResult('blog_static_pages_http', $blogStaticPagesIssues, $failures);
 

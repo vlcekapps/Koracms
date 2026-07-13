@@ -102,6 +102,7 @@ $canManageTaxonomies = $activeBlog
     ? canCurrentUserManageBlogTaxonomies((int)$activeBlog['id'])
     : canCurrentUserManageAnyBlogTaxonomies();
 $canApproveBlog = currentUserHasCapability('blog_approve');
+$canConvertContent = currentUserHasCapability('content_manage_shared');
 $filterParams = [];
 if ($q !== '') {
     $filterParams['q'] = $q;
@@ -287,13 +288,19 @@ adminHeader($blogCaptionTitle);
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="convert_content.php" method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-            <input type="hidden" name="direction" value="article_to_page">
-            <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
-            <button type="submit" class="btn"
-                  data-confirm="Převést článek na statickou stránku?"><span aria-hidden="true">→</span> Stránka</button>
-          </form>
+          <?php if ($canConvertContent): ?>
+            <form action="convert_content.php" method="post" class="admin-inline-form">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Kontrola převodu článku <?= h((string)$article['title']) ?> na stránku</legend>
+                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                <input type="hidden" name="direction" value="article_to_page">
+                <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+                <input type="hidden" name="stage" value="review">
+                <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+                <button type="submit" class="btn"><span aria-hidden="true">→</span> Převést na stránku</button>
+              </fieldset>
+            </form>
+          <?php endif; ?>
           <form action="blog_clone.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">

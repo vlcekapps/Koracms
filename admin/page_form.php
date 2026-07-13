@@ -134,6 +134,10 @@ $fieldErrorMessages = [
 adminHeader($pageTitle);
 ?>
 
+<?php if (trim((string)($_GET['converted'] ?? '')) === 'article_to_page'): ?>
+  <p class="success" role="status" aria-atomic="true">Článek byl převeden na stránku. Původní článek včetně komentářů a vazeb zůstal obnovitelný v Koši.</p>
+<?php endif; ?>
+
 <?php if ($contentLockWarning !== null): ?>
   <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
@@ -147,11 +151,15 @@ adminHeader($pageTitle);
   <div class="button-row button-row--baseline admin-stack-sm">
     <a href="revisions.php?type=page&amp;id=<?= (int)$id ?>">Historie revizí</a>
     <form action="convert_content.php" method="post" class="admin-inline-form">
-      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-      <input type="hidden" name="direction" value="page_to_article">
-      <input type="hidden" name="id" value="<?= (int)$id ?>">
-      <button type="submit" class="btn"
-              data-confirm="Převést stránku na článek blogu? Stránka bude smazána a nahrazena článkem.">Převést na článek</button>
+      <fieldset class="admin-inline-fieldset">
+        <legend class="sr-only">Kontrola převodu stránky <?= h((string)$page['title']) ?> na článek</legend>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="direction" value="page_to_article">
+        <input type="hidden" name="id" value="<?= (int)$id ?>">
+        <input type="hidden" name="stage" value="review">
+        <input type="hidden" name="redirect" value="<?= h($redirect) ?>">
+        <button type="submit" class="btn">Převést na článek</button>
+      </fieldset>
     </form>
   </div>
 <?php endif; ?>

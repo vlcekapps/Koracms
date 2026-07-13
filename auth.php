@@ -754,6 +754,7 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         in_array($file, ['places.php'], true) ||
         str_starts_with($file, 'podcast') ||
         str_starts_with($file, 'poll') ||
+        $file === 'convert_content.php' ||
         $file === 'nav_reorder.php'
     ) {
         return 'content_manage_shared';
@@ -794,7 +795,7 @@ function adminRouteModuleRequirements(): array
             'files' => [
                 'blog.php', 'blogs.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php',
                 'blog_clone.php', 'blog_bulk.php', 'blog_transfer.php', 'blog_content_reference_search.php',
-                'blog_members.php', 'blog_pages.php', 'blog_series.php', 'blog_blog_delete.php',
+                'blog_members.php', 'blog_pages.php', 'blog_series.php', 'blog_blog_delete.php', 'convert_content.php',
                 'blog_cats.php', 'blog_cat_delete.php', 'blog_tags.php', 'blog_tag_delete.php',
                 'comments.php', 'comment_action.php', 'comment_approve.php', 'comment_bulk.php', 'comment_delete.php',
             ],

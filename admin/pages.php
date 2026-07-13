@@ -261,12 +261,16 @@ adminHeader('Statické stránky');
             <?php if ((int)$page['is_published'] === 1 && (string)$page['status'] === 'published'): ?>
               <a href="<?= h($publicPath) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
-            <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php"
-                  data-confirm="Převést stránku na článek blogu?">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="direction" value="page_to_article">
-              <input type="hidden" name="id" value="<?= $pageId ?>">
-              <button type="submit" class="btn"><span aria-hidden="true">→</span> Článek</button>
+            <form method="post" action="<?= BASE_URL ?>/admin/convert_content.php" class="admin-inline-form">
+              <fieldset class="admin-inline-fieldset">
+                <legend class="sr-only">Kontrola převodu stránky <?= h((string)$page['title']) ?> na článek</legend>
+                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                <input type="hidden" name="direction" value="page_to_article">
+                <input type="hidden" name="id" value="<?= $pageId ?>">
+                <input type="hidden" name="stage" value="review">
+                <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
+                <button type="submit" class="btn"><span aria-hidden="true">→</span> Převést na článek</button>
+              </fieldset>
             </form>
             <form action="<?= BASE_URL ?>/admin/page_clone.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">

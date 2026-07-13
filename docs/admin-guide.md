@@ -432,6 +432,14 @@ Globální hlavní navigace v **Navigace webu** používá stejný model pro odk
 
 V přehledech `Statické stránky` a `Články` se pro převod obsahu dál zobrazuje šipka jako vizuální vodítko, ale pro čtečky obrazovky je nově skrytá. Asistivní technologie tak hlásí jen samotnou akci `Článek` nebo `Stránka`, ne dekorativní symbol před ní.
 
+### Převod článku a stránky
+
+Převod `Článek → Stránka` nebo `Stránka → Článek` může spustit jen uživatel s oprávněním spravovat sdílený obsah. Akce nejdřív otevře samostatnou kontrolní obrazovku, která ukáže zdroj, cílový typ a blog, dosavadní veřejnou cestu, přenášená data a metadata, která zůstanou pouze u zdroje. Bez zaškrtnutí item-specific potvrzení server převod neprovede.
+
+Potvrzený převod běží v jedné databázové transakci. CMS vytvoří nový cílový záznam a původní článek nebo stránku přesune do Koše; fyzicky jej nesmaže. Při převodu článku zůstávají u obnovitelného zdroje komentáře, štítky, série, související články, nepřenositelná článková metadata a existující redirecty. Nová stránka převezme název, slug, perex s obsahem, blog, publikační stav a plánování, interní poznámku, náhledový token a časové údaje. Při opačném směru nový článek převezme společná publikační metadata a jako autora dostane aktuálně přihlášeného správce.
+
+Po dokončení se otevře editor nového záznamu s textovým stavem a zdroj lze později obnovit z Koše. Obnovení zdroje samo neodstraní nově vytvořený záznam, takže správce musí případnou dvojici ručně zkontrolovat. Veřejná adresa se převodem mění a nový obsah se automaticky nepřidává do veřejné navigace.
+
 ### Přesun článků mezi blogy
 
 Z přehledu článků lze nově hromadně přesouvat články mezi blogy. Funkce je dostupná jen tehdy, když má uživatel přístup alespoň do dvou blogů, do kterých smí zapisovat.

@@ -356,6 +356,10 @@ if (isMultiBlog() && $currentBlog) {
 adminHeader($pageTitle);
 ?>
 
+<?php if (trim((string)($_GET['converted'] ?? '')) === 'page_to_article'): ?>
+  <p class="success" role="status" aria-atomic="true">Stránka byla převedena na článek. Původní stránka zůstala obnovitelná v Koši.</p>
+<?php endif; ?>
+
 <?php if ($contentLockWarning !== null): ?>
   <div role="alert" class="admin-warning-box">
     <strong>Upozornění:</strong>
@@ -395,17 +399,22 @@ adminHeader($pageTitle);
 <?php endif; ?>
 
 <?php if ($article): ?>
-  <p>
+  <div class="button-row button-row--start">
     <a href="revisions.php?type=article&amp;id=<?= (int)$article['id'] ?>">Historie revizí</a>
-    ·
-    <form action="convert_content.php" method="post" class="admin-inline-form">
-      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-      <input type="hidden" name="direction" value="article_to_page">
-      <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
-      <button type="submit" class="btn"
-              data-confirm="Převést článek na statickou stránku? Článek bude smazán a nahrazen stránkou.">Převést na stránku</button>
-    </form>
-  </p>
+    <?php if (currentUserHasCapability('content_manage_shared')): ?>
+      <form action="convert_content.php" method="post" class="admin-inline-form">
+        <fieldset class="admin-inline-fieldset">
+          <legend class="sr-only">Kontrola převodu článku <?= h((string)$article['title']) ?> na stránku</legend>
+          <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+          <input type="hidden" name="direction" value="article_to_page">
+          <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+          <input type="hidden" name="stage" value="review">
+          <input type="hidden" name="redirect" value="<?= h($articleListUrl) ?>">
+          <button type="submit" class="btn">Převést na stránku</button>
+        </fieldset>
+      </form>
+    <?php endif; ?>
+  </div>
 <?php endif; ?>
 
 <?php if (isset($formErrorMessages[$err])): ?>
