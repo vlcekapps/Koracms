@@ -21079,6 +21079,91 @@ if ($contentConversionGuardrailIssues === []) {
     }
 }
 
+echo "=== navigation_link_delete_error_prevention_guardrails ===\n";
+$navigationLinkDeleteGuardrailIssues = [];
+$navigationLinkDeleteGlobalSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');
+$navigationLinkDeleteBlogSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_pages.php');
+$navigationLinkDeleteHttpSource = (string)file_get_contents(dirname(__DIR__) . '/build/http_integration.php');
+
+foreach ([
+    'SELECT id, title, url',
+    'if (!$deleteConfirmed)',
+    "'delete_error' => 'confirm_required'",
+    '$pdo->beginTransaction()',
+    '$deleteStmt->rowCount() !== 1',
+    '$pdo->rollBack()',
+    '$pdo->commit()',
+    '<fieldset>',
+    'role="alert" aria-atomic="true"',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'aria-required="true"',
+] as $navigationLinkDeleteCommonFragment) {
+    foreach ([
+        'admin/menu.php' => $navigationLinkDeleteGlobalSource,
+        'admin/blog_pages.php' => $navigationLinkDeleteBlogSource,
+    ] as $navigationLinkDeleteFile => $navigationLinkDeleteSource) {
+        if (!str_contains($navigationLinkDeleteSource, $navigationLinkDeleteCommonFragment)) {
+            $navigationLinkDeleteGuardrailIssues[] = $navigationLinkDeleteFile . ' is missing deletion guardrail: ' . $navigationLinkDeleteCommonFragment;
+        }
+    }
+}
+foreach ([
+    "WHERE id = ? AND blog_id IS NULL",
+    "\$confirmFieldName = 'confirm_nav_link_delete_' . \$linkId",
+    'DELETE FROM cms_nav_links WHERE id = ? AND blog_id IS NULL',
+    "'link:' . \$linkId",
+    "saveSetting('nav_order_unified'",
+    'id="nav-link-delete-form"',
+    'Kontrola trvalého smazání externího odkazu',
+] as $navigationLinkDeleteGlobalFragment) {
+    if (!str_contains($navigationLinkDeleteGlobalSource, $navigationLinkDeleteGlobalFragment)) {
+        $navigationLinkDeleteGuardrailIssues[] = 'global navigation deletion is missing guardrail: ' . $navigationLinkDeleteGlobalFragment;
+    }
+}
+foreach ([
+    "WHERE id = ? AND blog_id = ?",
+    "\$confirmFieldName = 'confirm_blog_nav_link_delete_' . \$linkId",
+    'DELETE FROM cms_nav_links WHERE id = ? AND blog_id = ?',
+    'normalizeBlogPageNavigationOrder($pdo, (int)$blog[\'id\'])',
+    'id="blog-nav-link-delete-form"',
+    'Kontrola trvalého smazání externího odkazu blogu',
+] as $navigationLinkDeleteBlogFragment) {
+    if (!str_contains($navigationLinkDeleteBlogSource, $navigationLinkDeleteBlogFragment)) {
+        $navigationLinkDeleteGuardrailIssues[] = 'blog navigation deletion is missing guardrail: ' . $navigationLinkDeleteBlogFragment;
+    }
+}
+foreach ([
+    'data-confirm="Opravdu smazat tento externí odkaz?"',
+    'data-confirm="Opravdu smazat tento externí odkaz blogu?"',
+] as $navigationLinkDeleteLegacyFragment) {
+    if (str_contains($navigationLinkDeleteGlobalSource, $navigationLinkDeleteLegacyFragment)
+        || str_contains($navigationLinkDeleteBlogSource, $navigationLinkDeleteLegacyFragment)) {
+        $navigationLinkDeleteGuardrailIssues[] = 'navigation link deletion again relies on legacy client-only confirmation: ' . $navigationLinkDeleteLegacyFragment;
+    }
+}
+foreach ([
+    "httpIntegrationPrintResult('navigation_link_delete_error_prevention_http'",
+    'globální endpoint smazal nebo zalogoval blogový navigační odkaz',
+    'blogový endpoint smazal nebo zalogoval globální navigační odkaz',
+    'hlavní navigace bez potvrzení změnila odkaz, pořadí nebo audit log',
+    'blogová navigace bez potvrzení změnila odkaz nebo audit log',
+    'potvrzené smazání hlavního odkazu neuklidilo odkaz, pořadí nebo audit log',
+    'potvrzené smazání blogového odkazu neuklidilo odkaz, pořadí nebo audit log',
+] as $navigationLinkDeleteHttpFragment) {
+    if (!str_contains($navigationLinkDeleteHttpSource, $navigationLinkDeleteHttpFragment)) {
+        $navigationLinkDeleteGuardrailIssues[] = 'HTTP integration is missing navigation-link deletion proof: ' . $navigationLinkDeleteHttpFragment;
+    }
+}
+if ($navigationLinkDeleteGuardrailIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($navigationLinkDeleteGuardrailIssues as $navigationLinkDeleteGuardrailIssue) {
+        echo '- ' . $navigationLinkDeleteGuardrailIssue . "\n";
+    }
+}
+
 echo "=== menu_admin_guardrails ===\n";
 $menuAdminIssues = [];
 $adminMenuSource = (string)file_get_contents(dirname(__DIR__) . '/admin/menu.php');

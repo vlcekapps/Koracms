@@ -16156,6 +16156,220 @@ try {
         }
     }
 
+    $navigationLinkDeleteIssues = [];
+    $globalDeleteLinkTitle = 'HTTP odkaz hlavní navigace ke smazání';
+    $globalDeleteLinkUrl = 'https://example.com/global-delete-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_nav_links (blog_id, title, url, alt_text, target_blank, is_active, nav_order)
+         VALUES (NULL, ?, ?, 'Review globálního odkazu', 1, 1, ?)"
+    )->execute([
+        $globalDeleteLinkTitle,
+        $globalDeleteLinkUrl,
+        nextNavigationLinkOrder($pdo, null),
+    ]);
+    $globalDeleteLinkId = (int)$pdo->lastInsertId();
+    $createdNavLinkIds[] = $globalDeleteLinkId;
+    $globalDeleteLinkKey = 'link:' . $globalDeleteLinkId;
+    $currentUnifiedOrder = array_values(array_filter(
+        explode(',', (string)(httpIntegrationSettingValue($pdo, 'nav_order_unified') ?? '')),
+        static fn (string $key): bool => $key !== ''
+    ));
+    $currentUnifiedOrder[] = $globalDeleteLinkKey;
+    saveSetting('nav_order_unified', implode(',', array_values(array_unique($currentUnifiedOrder))));
+
+    $globalDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'nav_link_delete'")->fetchColumn();
+    $blogDeleteLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_nav_link_delete'")->fetchColumn();
+    $globalDeleteConfirmField = 'confirm_nav_link_delete_' . $globalDeleteLinkId;
+    $blogDeleteConfirmField = 'confirm_blog_nav_link_delete_' . (int)($blogExternalLink['id'] ?? 0);
+    $globalDeleteStateStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_nav_links WHERE id = ? AND blog_id IS NULL');
+    $blogDeleteStateStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_nav_links WHERE id = ? AND blog_id = ?');
+    if (!$blogExternalLink) {
+        $navigationLinkDeleteIssues[] = 'chybí blogový navigační odkaz pro scénář trvalého smazání';
+    }
+
+    $globalDeleteReviewResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/menu.php?edit_link=' . $globalDeleteLinkId,
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($globalDeleteReviewResponse) !== 200
+        || !str_contains($globalDeleteReviewResponse['body'], 'Kontrola trvalého smazání externího odkazu')
+        || !str_contains($globalDeleteReviewResponse['body'], $globalDeleteLinkTitle)
+        || !str_contains($globalDeleteReviewResponse['body'], $globalDeleteLinkUrl)
+        || !str_contains($globalDeleteReviewResponse['body'], 'name="' . $globalDeleteConfirmField . '"')
+        || !str_contains($globalDeleteReviewResponse['body'], 'Tato akce nepoužívá Koš a nelze ji obnovit.')
+        || str_contains($globalDeleteReviewResponse['body'], 'data-confirm="Opravdu smazat tento externí odkaz?"')) {
+        $navigationLinkDeleteIssues[] = 'hlavní navigace nezobrazuje item-specific review trvalého smazání odkazu';
+    }
+
+    if ($blogExternalLink) {
+        $blogDeleteReviewResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId . '&edit_link=' . (int)$blogExternalLink['id'],
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($blogDeleteReviewResponse) !== 200
+            || !str_contains($blogDeleteReviewResponse['body'], 'Kontrola trvalého smazání externího odkazu blogu')
+            || !str_contains($blogDeleteReviewResponse['body'], $blogExternalLinkTitle)
+            || !str_contains($blogDeleteReviewResponse['body'], $blogExternalLinkUrl)
+            || !str_contains($blogDeleteReviewResponse['body'], 'name="' . $blogDeleteConfirmField . '"')
+            || !str_contains($blogDeleteReviewResponse['body'], 'zbývající položky se znovu seřadí')
+            || str_contains($blogDeleteReviewResponse['body'], 'data-confirm="Opravdu smazat tento externí odkaz blogu?"')) {
+            $navigationLinkDeleteIssues[] = 'blogová navigace nezobrazuje item-specific review trvalého smazání odkazu';
+        }
+
+        $globalScopeAttackResponse = postUrl($baseUrl . BASE_URL . '/admin/menu.php', [
+            'csrf_token' => $adminSession['csrf'],
+            'action' => 'delete_link',
+            'link_id' => (string)$blogExternalLink['id'],
+            'confirm_nav_link_delete_' . (int)$blogExternalLink['id'] => '1',
+        ], $adminSession['cookie'], 0);
+        $blogDeleteStateStmt->execute([(int)$blogExternalLink['id'], $blogStaticMainId]);
+        if (httpIntegrationStatusCode($globalScopeAttackResponse) !== 302
+            || (int)$blogDeleteStateStmt->fetchColumn() !== 1
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'nav_link_delete'")->fetchColumn() !== $globalDeleteLogBefore) {
+            $navigationLinkDeleteIssues[] = 'globální endpoint smazal nebo zalogoval blogový navigační odkaz';
+        }
+
+        $blogScopeAttackResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'delete_link',
+                'link_id' => (string)$globalDeleteLinkId,
+                'confirm_blog_nav_link_delete_' . $globalDeleteLinkId => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $globalDeleteStateStmt->execute([$globalDeleteLinkId]);
+        if (httpIntegrationStatusCode($blogScopeAttackResponse) !== 302
+            || (int)$globalDeleteStateStmt->fetchColumn() !== 1
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_nav_link_delete'")->fetchColumn() !== $blogDeleteLogBefore) {
+            $navigationLinkDeleteIssues[] = 'blogový endpoint smazal nebo zalogoval globální navigační odkaz';
+        }
+    }
+
+    $globalDeleteMissingConfirmResponse = postUrl($baseUrl . BASE_URL . '/admin/menu.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'action' => 'delete_link',
+        'link_id' => (string)$globalDeleteLinkId,
+    ], $adminSession['cookie'], 0);
+    $globalDeleteMissingLocation = responseLocationHeaderValue($globalDeleteMissingConfirmResponse['headers']);
+    $globalDeleteStateStmt->execute([$globalDeleteLinkId]);
+    $globalDeleteOrderAfterMissing = array_values(array_filter(
+        explode(',', (string)(httpIntegrationSettingValue($pdo, 'nav_order_unified') ?? '')),
+        static fn (string $key): bool => $key !== ''
+    ));
+    if (httpIntegrationStatusCode($globalDeleteMissingConfirmResponse) !== 302
+        || !str_contains($globalDeleteMissingLocation, 'delete_error=confirm_required')
+        || !str_contains($globalDeleteMissingLocation, 'edit_link=' . $globalDeleteLinkId)
+        || (int)$globalDeleteStateStmt->fetchColumn() !== 1
+        || !in_array($globalDeleteLinkKey, $globalDeleteOrderAfterMissing, true)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'nav_link_delete'")->fetchColumn() !== $globalDeleteLogBefore) {
+        $navigationLinkDeleteIssues[] = 'hlavní navigace bez potvrzení změnila odkaz, pořadí nebo audit log';
+    }
+    if ($globalDeleteMissingLocation !== '') {
+        $globalDeleteErrorPath = explode('#', $globalDeleteMissingLocation, 2)[0];
+        $globalDeleteErrorResponse = fetchUrl($baseUrl . $globalDeleteErrorPath, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($globalDeleteErrorResponse) !== 200
+            || !str_contains($globalDeleteErrorResponse['body'], 'id="nav-link-delete-error" class="error" role="alert" aria-atomic="true"')
+            || !str_contains($globalDeleteErrorResponse['body'], 'aria-invalid="true"')
+            || !str_contains($globalDeleteErrorResponse['body'], 'nav-link-delete-review-' . $globalDeleteLinkId)
+            || !str_contains($globalDeleteErrorResponse['body'], 'confirm-nav-link-delete-' . $globalDeleteLinkId . '-error')) {
+            $navigationLinkDeleteIssues[] = 'hlavní navigace bez potvrzení nevrátila přístupný alert a field-level chybu';
+        }
+    }
+
+    if ($blogExternalLink) {
+        $blogDeleteMissingConfirmResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'delete_link',
+                'link_id' => (string)$blogExternalLink['id'],
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $blogDeleteMissingLocation = responseLocationHeaderValue($blogDeleteMissingConfirmResponse['headers']);
+        $blogDeleteStateStmt->execute([(int)$blogExternalLink['id'], $blogStaticMainId]);
+        if (httpIntegrationStatusCode($blogDeleteMissingConfirmResponse) !== 302
+            || !str_contains($blogDeleteMissingLocation, 'delete_error=confirm_required')
+            || !str_contains($blogDeleteMissingLocation, 'edit_link=' . (int)$blogExternalLink['id'])
+            || (int)$blogDeleteStateStmt->fetchColumn() !== 1
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_nav_link_delete'")->fetchColumn() !== $blogDeleteLogBefore) {
+            $navigationLinkDeleteIssues[] = 'blogová navigace bez potvrzení změnila odkaz nebo audit log';
+        }
+        if ($blogDeleteMissingLocation !== '') {
+            $blogDeleteErrorPath = explode('#', $blogDeleteMissingLocation, 2)[0];
+            $blogDeleteErrorResponse = fetchUrl($baseUrl . $blogDeleteErrorPath, $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($blogDeleteErrorResponse) !== 200
+                || !str_contains($blogDeleteErrorResponse['body'], 'id="blog-nav-link-delete-error" class="error" role="alert" aria-atomic="true"')
+                || !str_contains($blogDeleteErrorResponse['body'], 'aria-invalid="true"')
+                || !str_contains($blogDeleteErrorResponse['body'], 'blog-nav-link-delete-review-' . (int)$blogExternalLink['id'])
+                || !str_contains($blogDeleteErrorResponse['body'], 'confirm-blog-nav-link-delete-' . (int)$blogExternalLink['id'] . '-error')) {
+                $navigationLinkDeleteIssues[] = 'blogová navigace bez potvrzení nevrátila přístupný alert a field-level chybu';
+            }
+        }
+    }
+
+    $globalDeleteConfirmedResponse = postUrl($baseUrl . BASE_URL . '/admin/menu.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'action' => 'delete_link',
+        'link_id' => (string)$globalDeleteLinkId,
+        $globalDeleteConfirmField => '1',
+    ], $adminSession['cookie'], 0);
+    $globalDeleteStateStmt->execute([$globalDeleteLinkId]);
+    $globalDeleteOrderAfterConfirmed = array_values(array_filter(
+        explode(',', (string)(httpIntegrationSettingValue($pdo, 'nav_order_unified') ?? '')),
+        static fn (string $key): bool => $key !== ''
+    ));
+    if (httpIntegrationStatusCode($globalDeleteConfirmedResponse) !== 302
+        || !responseHasLocationHeader($globalDeleteConfirmedResponse['headers'], BASE_URL . '/admin/menu.php?link_deleted=1', $baseUrl)
+        || (int)$globalDeleteStateStmt->fetchColumn() !== 0
+        || in_array($globalDeleteLinkKey, $globalDeleteOrderAfterConfirmed, true)
+        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'nav_link_delete'")->fetchColumn() !== $globalDeleteLogBefore + 1) {
+        $navigationLinkDeleteIssues[] = 'potvrzené smazání hlavního odkazu neuklidilo odkaz, pořadí nebo audit log';
+    }
+
+    if ($blogExternalLink && $blogPageOne && $blogPageTwo) {
+        $blogDeleteConfirmedResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId,
+            [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'delete_link',
+                'link_id' => (string)$blogExternalLink['id'],
+                $blogDeleteConfirmField => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $blogDeleteStateStmt->execute([(int)$blogExternalLink['id'], $blogStaticMainId]);
+        $normalizedBlogPageOrderStmt = $pdo->prepare(
+            'SELECT id, blog_nav_order FROM cms_pages WHERE id IN (?, ?) ORDER BY blog_nav_order, id'
+        );
+        $normalizedBlogPageOrderStmt->execute([(int)$blogPageOne['id'], (int)$blogPageTwo['id']]);
+        $normalizedBlogPageRows = $normalizedBlogPageOrderStmt->fetchAll() ?: [];
+        if (httpIntegrationStatusCode($blogDeleteConfirmedResponse) !== 302
+            || !responseHasLocationHeader(
+                $blogDeleteConfirmedResponse['headers'],
+                BASE_URL . '/admin/blog_pages.php?blog_id=' . $blogStaticMainId . '&link_deleted=1',
+                $baseUrl
+            )
+            || (int)$blogDeleteStateStmt->fetchColumn() !== 0
+            || count($normalizedBlogPageRows) !== 2
+            || (int)$normalizedBlogPageRows[0]['blog_nav_order'] !== 1
+            || (int)$normalizedBlogPageRows[1]['blog_nav_order'] !== 2
+            || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'blog_nav_link_delete'")->fetchColumn() !== $blogDeleteLogBefore + 1) {
+            $navigationLinkDeleteIssues[] = 'potvrzené smazání blogového odkazu neuklidilo odkaz, pořadí nebo audit log';
+        }
+    } elseif ($blogExternalLink) {
+        $navigationLinkDeleteIssues[] = 'potvrzené smazání blogového odkazu nemá připravené stránky pro kontrolu pořadí';
+    }
+
+    httpIntegrationPrintResult('navigation_link_delete_error_prevention_http', $navigationLinkDeleteIssues, $failures);
+
     httpIntegrationPrintResult('content_conversion_error_prevention_http', $contentConversionIssues, $failures);
 
     httpIntegrationPrintResult('blog_static_pages_http', $blogStaticPagesIssues, $failures);

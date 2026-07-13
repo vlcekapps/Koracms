@@ -29,6 +29,8 @@ $linkForm = [
     'target_blank' => 0,
     'is_active' => 1,
 ];
+$linkDeleteErrorCode = trim((string)($_GET['delete_error'] ?? ''));
+$linkDeleteErrorId = inputInt('get', 'delete_error_id');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($_POST['action'] ?? 'reorder');
@@ -88,10 +90,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete_link') {
         verifyCsrf();
         $linkId = inputInt('post', 'link_id');
-        if ($linkId !== null) {
-            $pdo->prepare("DELETE FROM cms_nav_links WHERE id = ? AND blog_id = ?")->execute([$linkId, (int)$blog['id']]);
-            logAction('blog_nav_link_delete', 'blog_id=' . (int)$blog['id'] . ', id=' . $linkId);
+        $blogPagesUrl = BASE_URL . '/admin/blog_pages.php?blog_id=' . (int)$blog['id'];
+        if ($linkId === null) {
+            header('Location: ' . $blogPagesUrl . '&delete_error=not_found');
+            exit;
         }
+
+        $deleteLinkStmt = $pdo->prepare(
+            "SELECT id, title, url
+             FROM cms_nav_links
+             WHERE id = ? AND blog_id = ?
+             LIMIT 1"
+        );
+        $deleteLinkStmt->execute([$linkId, (int)$blog['id']]);
+        $linkForDelete = $deleteLinkStmt->fetch() ?: null;
+        if (!$linkForDelete) {
+            header('Location: ' . $blogPagesUrl . '&delete_error=not_found');
+            exit;
+        }
+
+        $confirmFieldName = 'confirm_blog_nav_link_delete_' . $linkId;
+        $deleteConfirmed = isset($_POST[$confirmFieldName])
+            && (string)$_POST[$confirmFieldName] === '1';
+        if (!$deleteConfirmed) {
+            header('Location: ' . appendUrlQuery($blogPagesUrl, [
+                'edit_link' => $linkId,
+                'delete_error' => 'confirm_required',
+                'delete_error_id' => $linkId,
+            ]) . '#blog-nav-link-delete-form');
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $deleteStmt = $pdo->prepare("DELETE FROM cms_nav_links WHERE id = ? AND blog_id = ?");
+            $deleteStmt->execute([$linkId, (int)$blog['id']]);
+            if ($deleteStmt->rowCount() !== 1) {
+                throw new RuntimeException('Externí odkaz blogové navigace se během mazání změnil.');
+            }
+
+            normalizeBlogPageNavigationOrder($pdo, (int)$blog['id']);
+            logAction('blog_nav_link_delete', 'blog_id=' . (int)$blog['id'] . ', id=' . $linkId);
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            koraLog('error', 'blog navigation link deletion failed', [
+                'blog_id' => (int)$blog['id'],
+                'link_id' => $linkId,
+                'exception' => $e,
+            ]);
+            header('Location: ' . appendUrlQuery($blogPagesUrl, [
+                'edit_link' => $linkId,
+                'delete_error' => 'failed',
+                'delete_error_id' => $linkId,
+            ]) . '#blog-nav-link-delete-form');
+            exit;
+        }
+
         header('Location: ' . BASE_URL . '/admin/blog_pages.php?blog_id=' . (int)$blog['id'] . '&link_deleted=1');
         exit;
     }
@@ -117,6 +176,21 @@ if ($linkError === '' && $editLinkId !== null) {
         ];
     }
 }
+
+$linkDeleteConfirmField = 'confirm_blog_nav_link_delete_' . (int)$linkForm['id'];
+$linkDeleteConfirmId = 'confirm-blog-nav-link-delete-' . (int)$linkForm['id'];
+$linkDeleteReviewId = 'blog-nav-link-delete-review-' . (int)$linkForm['id'];
+$linkDeleteFieldErrorId = 'confirm-blog-nav-link-delete-' . (int)$linkForm['id'] . '-error';
+$linkDeleteErrorMessage = match ($linkDeleteErrorCode) {
+    'confirm_required' => 'Externí odkaz blogu nelze trvale smazat bez potvrzení. U pole Potvrzení trvalého smazání je konkrétní nápověda.',
+    'failed' => 'Externí odkaz blogu se nepodařilo smazat. Odkaz i pořadí zůstaly beze změny; zkontrolujte údaje a zkuste akci znovu.',
+    'not_found' => 'Externí odkaz pro smazání nebyl v tomto blogu nalezen. Obnovte přehled a vyberte existující odkaz.',
+    default => '',
+};
+$linkDeleteErrorVisible = $linkDeleteErrorMessage !== ''
+    && ($linkDeleteErrorCode === 'not_found' || $linkDeleteErrorId === (int)$linkForm['id']);
+$linkDeleteConfirmError = $linkDeleteErrorVisible && $linkDeleteErrorCode === 'confirm_required';
+$linkDeleteErrorFields = $linkDeleteConfirmError ? [$linkDeleteConfirmField] : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? 'reorder') === 'reorder') {
     verifyCsrf();
@@ -221,7 +295,10 @@ adminHeader('Pořadí stránek blogu');
   <p class="success" role="status">Externí odkaz blogu byl uložen.</p>
 <?php endif; ?>
 <?php if (isset($_GET['link_deleted'])): ?>
-  <p class="success" role="status">Externí odkaz blogu byl smazán.</p>
+  <p class="success" role="status" aria-atomic="true">Externí odkaz blogu byl smazán.</p>
+<?php endif; ?>
+<?php if ($linkDeleteErrorMessage !== '' && (int)$linkForm['id'] === 0): ?>
+  <p class="error" role="alert" aria-atomic="true"><?= h($linkDeleteErrorMessage) ?></p>
 <?php endif; ?>
 
 <p class="button-row button-row--start">
@@ -271,11 +348,40 @@ adminHeader('Pořadí stránek blogu');
 </form>
 
 <?php if ((int)$linkForm['id'] > 0): ?>
-  <form method="post" class="admin-inline-form" novalidate data-confirm="Opravdu smazat tento externí odkaz blogu?">
+  <form method="post" id="blog-nav-link-delete-form" class="form-card" novalidate<?= $linkDeleteErrorVisible ? ' aria-describedby="blog-nav-link-delete-error"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="action" value="delete_link">
     <input type="hidden" name="link_id" value="<?= (int)$linkForm['id'] ?>">
-    <button type="submit" class="btn btn-danger">Smazat externí odkaz blogu</button>
+    <fieldset>
+      <legend>Kontrola trvalého smazání externího odkazu blogu</legend>
+
+      <?php if ($linkDeleteErrorVisible): ?>
+        <p id="blog-nav-link-delete-error" class="error" role="alert" aria-atomic="true"><?= h($linkDeleteErrorMessage) ?></p>
+      <?php endif; ?>
+
+      <dl class="admin-summary-list">
+        <dt>Blog</dt>
+        <dd><?= h((string)$blog['name']) ?></dd>
+        <dt>Odkaz</dt>
+        <dd><?= h((string)$linkForm['title']) ?></dd>
+        <dt>Cílová adresa</dt>
+        <dd><code><?= h((string)$linkForm['url']) ?></code></dd>
+        <dt>Stav v navigaci</dt>
+        <dd><?= (int)$linkForm['is_active'] === 1 ? 'Zobrazený' : 'Vypnutý' ?><?= (int)$linkForm['target_blank'] === 1 ? ', otevírá se v novém okně' : '' ?></dd>
+      </dl>
+
+      <p id="<?= h($linkDeleteReviewId) ?>" class="admin-description admin-description--muted">Odkaz bude trvale odstraněn z navigace tohoto blogu a zbývající položky se znovu seřadí. Tato akce nepoužívá Koš a nelze ji obnovit.</p>
+      <label for="<?= h($linkDeleteConfirmId) ?>" class="admin-checkbox-label">
+        <input type="checkbox" id="<?= h($linkDeleteConfirmId) ?>" name="<?= h($linkDeleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($linkDeleteConfirmField, $linkDeleteErrorFields, [], [$linkDeleteReviewId], $linkDeleteFieldErrorId) ?>>
+        Potvrzuji trvalé smazání tohoto externího odkazu z navigace blogu.
+      </label>
+      <?php adminRenderFieldError($linkDeleteConfirmField, $linkDeleteErrorFields, [], 'Před smazáním potvrďte, že jste zkontrolovali blog, název, cílovou adresu a dopad na navigaci.', $linkDeleteFieldErrorId); ?>
+
+      <div class="button-row admin-action-row">
+        <button type="submit" class="btn btn-danger">Trvale smazat externí odkaz blogu</button>
+        <a href="<?= BASE_URL ?>/admin/blog_pages.php?blog_id=<?= (int)$blog['id'] ?>#blog-nav-link-form" class="button-secondary">Zrušit smazání</a>
+      </div>
+    </fieldset>
   </form>
 <?php endif; ?>
 

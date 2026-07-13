@@ -430,6 +430,8 @@ Statická stránka přiřazená k blogu má veřejnou adresu `/{blog-slug}/stran
 
 Globální hlavní navigace v **Navigace webu** používá stejný model pro odkazy napříč celým webem. Blogové odkazy jsou ale oddělené od globální navigace a řadí se jen v kontextu konkrétního blogu.
 
+Trvalé smazání odkazu otevřete přes jeho editaci. Kontrolní blok ukáže název, cílovou adresu, stav a dopad na příslušné pořadí a vyžaduje samostatné potvrzení; bez něj server akci odmítne a zobrazí chybu přímo u checkboxu. Globální endpoint nemůže odstranit odkaz blogu ani blogový endpoint globální odkaz. Potvrzené smazání proběhne transakčně, uklidí `nav_order_unified` nebo znovu očísluje pořadí konkrétního blogu a oznámí výsledek textovým PRG stavem.
+
 V přehledech `Statické stránky` a `Články` se pro převod obsahu dál zobrazuje šipka jako vizuální vodítko, ale pro čtečky obrazovky je nově skrytá. Asistivní technologie tak hlásí jen samotnou akci `Článek` nebo `Stránka`, ne dekorativní symbol před ní.
 
 ### Převod článku a stránky

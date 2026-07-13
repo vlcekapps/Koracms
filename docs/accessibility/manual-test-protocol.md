@@ -184,6 +184,13 @@ V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání b
 4. U chatové zprávy s odpověďmi a historií odešlete smazání bez `confirm_chat_delete_<id>`. Review musí výslovně popsat odstranění celé zprávy, odpovědí a historie; bez potvrzení se žádná z těchto dat ani audit log nesmí změnit. Po potvrzení ověřte transakční odstranění všech souvisejících záznamů a jediný auditní záznam.
 5. V přehledu chatu zopakujte stejný průchod hromadně bez a s `confirm_chat_bulk_delete`. Historické přímé endpointy kontaktu a chatu jsou pokryté automatizovaně a nemají samostatný UI ovládací prvek. Ruční výsledek zapište k `3.3.4`.
 
+### Doplňkový průchod trvalého mazání navigačních odkazů
+
+1. V **Navigace webu** otevřete existující vlastní odkaz. V kontrolním bloku musí NVDA oznámit název, cílovou adresu, stav a nevratný dopad na hlavní navigaci. Odešlete formulář bez `confirm_nav_link_delete_<id>`: čtečka má jednou oznámit atomický alert, checkbox má mít `aria-invalid` a popis přes review i lokální chybu; odkaz, `nav_order_unified` ani audit log se nesmí změnit.
+2. Zaškrtněte potvrzení a odešlete znovu. Ověřte PRG stav `Externí odkaz byl smazán.`, odstranění pouze zvoleného odkazu a zachování ovladatelného pořadí ostatních položek.
+3. Ve **Stránky a odkazy blogu** zopakujte průchod bez a s `confirm_blog_nav_link_delete_<id>`. Review musí navíc pojmenovat blog a dopad na jeho samostatné pořadí; bez potvrzení se nesmí změnit odkaz ani audit log, po potvrzení se mají zbývající stránky a odkazy seřadit bez mezery.
+4. Ověřte jen klávesnicí, že se lze z kontrolního bloku vrátit přes `Zrušit smazání`, focus order zůstává logický a globální odkaz nelze omylem smazat z blogové obrazovky ani blogový odkaz z globální obrazovky. Oddělení scope je pokryté automatizovaně, ruční průchod potvrzuje srozumitelnost kontextu.
+
 ## Scénáře pro nové moduly
 
 Před větší implementací modulu zapsat, zda přidává nebo mění:
@@ -237,6 +244,7 @@ Každá kladná odpověď musí mít ruční testovací scénář, automatizovat
 - Hromadné smazání a ZIP export alb galerie mají před odesláním čitelný review vybraných alb a zvolené akce, samostatné potvrzení a serverově odmítají nepotvrzený požadavek bez smazání, attachmentu nebo audit logu.
 - ZIP export šablony má před stažením čitelný review přenášené konfigurace a statických assetů, samostatné potvrzení oprávnění a serverově odmítá nepotvrzený download bez attachmentu nebo audit logu.
 - Sdílené hromadné smazání přes `bulkActions()` má čitelný review dopadu, checkbox `confirm_bulk_delete`, field-level chybu při chybějícím potvrzení a serverově odmítá nepotvrzený požadavek bez cleanupu, smazání nebo audit logu.
+- Trvalé smazání vlastního odkazu hlavní nebo blogové navigace má čitelný item-specific review názvu, cílové adresy, stavu a dopadu na správné pořadí, samostatné potvrzení a serverově odmítá nepotvrzený nebo cross-scope požadavek bez změny odkazu, pořadí nebo audit logu.
 - TOTP pole je použitelné jen klávesnicí, rozpoznatelné jako jednorázový kód a jeho chyba se oznámí jako jeden alert.
 - Tokenový reset hesla jde dokončit bez znovuzadávání údajů, které už CMS zná, a chybový token má srozumitelnou textovou zpětnou vazbu.
 - Při vypršení admin session dlouhý formulář neztratí rozepsaný obsah: heartbeat oznámí vypršení přihlášení, login oznámí návrat na původní stránku a autosave recovery koncept jde obnovit nebo vědomě zahodit.
