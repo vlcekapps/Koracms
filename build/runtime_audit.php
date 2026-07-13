@@ -12635,6 +12635,8 @@ $blogCategoryRoutePos = strpos($blogHtaccessSource, '/kategorie/([a-z0-9\\-]+)')
 $blogTagRoutePos = strpos($blogHtaccessSource, '/stitky/([a-z0-9\\-]+)');
 $blogArchiveRoutePos = strpos($blogHtaccessSource, '/archiv/([0-9]{4})/');
 $blogArticleRoutePos = strpos($blogHtaccessSource, 'blog_router.php?blog_slug=$1&slug=$2');
+$blogHttpArchiveRoutePos = strpos($httpServerRouterSource, '/archiv/([0-9]{4})/(0[1-9]|1[0-2])');
+$blogHttpArticleRoutePos = strpos($httpServerRouterSource, "#^([a-z0-9-]+)/([a-z0-9-]+)/?$#i");
 if (!str_contains($blogRouterSource, "\$_GET['category_slug']")
     || !str_contains($blogRouterSource, "\$_GET['tag_slug']")
     || !str_contains($blogRouterSource, "require __DIR__ . '/blog/index.php'")
@@ -12650,8 +12652,11 @@ if (!str_contains($blogRouterSource, "\$_GET['archive_year']")
     || !str_contains($blogRouterSource, "\$_GET['archiv'] = \$archiveKey")
     || $blogArchiveRoutePos === false
     || $blogArticleRoutePos === false
-    || $blogArchiveRoutePos > $blogArticleRoutePos) {
-    $blogAdminIssues[] = 'blog router or rewrite rules are missing clean archive route before article catch-all';
+    || $blogArchiveRoutePos > $blogArticleRoutePos
+    || $blogHttpArchiveRoutePos === false
+    || $blogHttpArticleRoutePos === false
+    || $blogHttpArchiveRoutePos > $blogHttpArticleRoutePos) {
+    $blogAdminIssues[] = 'blog router, rewrite rules or HTTP test router are missing clean archive route before article catch-all';
 }
 if (!str_contains($blogPresentationSource, 'function normalizeBlogArchiveKey(')
     || !str_contains($blogPresentationSource, 'function blogArchivePath(')

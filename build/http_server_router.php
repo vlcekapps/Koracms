@@ -135,6 +135,7 @@ if ($routePath === '') {
         '#^places/([a-z0-9-]+)/?$#i' => ['places/place.php', ['slug']],
         '#^podcast/([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['podcast/episode.php', ['show', 'slug']],
         '#^podcast/([a-z0-9-]+)/?$#i' => ['podcast/show.php', ['slug']],
+        '#^([a-z0-9-]+)/archiv/([0-9]{4})/(0[1-9]|1[0-2])/?$#i' => ['blog_router.php', ['blog_slug', 'archive_year', 'archive_month']],
         '#^([a-z0-9-]+)/kategorie/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'category_slug']],
         '#^([a-z0-9-]+)/stitky/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'tag_slug']],
         '#^([a-z0-9-]+)/serie/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'series_slug']],

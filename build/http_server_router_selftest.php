@@ -333,6 +333,13 @@ try {
     httpServerRouterSelfTestAssert(($blogTagRoute['get']['tag_slug'] ?? '') === 'nvda-tip', 'Blog tag slug was not routed.');
     httpServerRouterSelfTestAssert(($blogTagRoute['get']['preview'] ?? '') === '1', 'Blog tag query string was not preserved.');
 
+    $blogArchiveRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/archiv/2026/07?preview=1');
+    httpServerRouterSelfTestAssertRoute($blogArchiveRoute, 'blog-router', '/blog_router.php');
+    httpServerRouterSelfTestAssert(($blogArchiveRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog archive blog_slug was not routed.');
+    httpServerRouterSelfTestAssert(($blogArchiveRoute['get']['archive_year'] ?? '') === '2026', 'Blog archive year was not routed.');
+    httpServerRouterSelfTestAssert(($blogArchiveRoute['get']['archive_month'] ?? '') === '07', 'Blog archive month was not routed.');
+    httpServerRouterSelfTestAssert(($blogArchiveRoute['get']['preview'] ?? '') === '1', 'Blog archive query string was not preserved.');
+
     $blogRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/snd/vikend-s-veterany');
     httpServerRouterSelfTestAssertRoute($blogRoute, 'blog-router', '/blog_router.php');
     httpServerRouterSelfTestAssert(($blogRoute['get']['blog_slug'] ?? '') === 'snd', 'Blog route blog_slug was not routed.');
