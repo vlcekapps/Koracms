@@ -91,6 +91,8 @@ Poznámka 2026-07-10: strukturované sekce a položky jídelních lístků už n
 
 Poznámka 2026-07-10: změna interního stavu Food objednávkové poptávky už není součástí otevřeného základního rizika `3.3.4`. Detail má review referenčního kódu, aktuálního stavu, auditního dopadu a absence automatického e-mailu, serverové odmítnutí nepovoleného stavu i změny bez `confirm_food_order_status_<id>` a HTTP důkaz zachování stavu/auditního logu i potvrzeného PRG průchodu. Ručně zbývá NVDA/keyboard-only ověření oznámení review textu, zachované volby, checkboxu a obou chybových stavů; obecná inventura pokračuje nad jinými externě dopadajícími a destruktivními akcemi.
 
+Poznámka 2026-07-13: individuální e-mailové odpovědi z Kontaktu, Chatu a Form Builderu už nejsou součástí otevřeného základního rizika `3.3.4` externě dopadajících operací. Všechny tři formuláře ukazují příjemce a účinky, vyžadují dynamický serverově ověřený checkbox, zachovají draft při validaci nebo selhání doručení a bez potvrzení neprovedou e-mail, stavovou změnu, historii, audit log ani webhook `reply_sent`. Runtime `admin_field_error_guardrails` a HTTP scénáře kontaktu, chatu a Form Builderu hlídají render, přesné chyby, nulovou změnu i potvrzenou cestu. Otevřený zůstává ruční scénář s NVDA/keyboard-only a produktová inventura jiných specializovaných exportů, individuálních destruktivních akcí a externích integrací; další konkrétní P1 riziko tímto blokem potvrzené není.
+
 ## Nízká priorita
 
 | Oblast | Kritéria | Riziko | Doporučený další krok |

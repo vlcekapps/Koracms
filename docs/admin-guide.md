@@ -116,7 +116,7 @@ Odpovědi mají referenční kód a procházejí stavy:
 3. **Vyřešené** – vyřízené
 4. **Uzavřené** – archivované
 
-U každé odpovědi lze nastavit prioritu, štítky, přiřazení řešiteli a interní poznámku. Z detailu odpovědi je možné přímo odpovědět odesílateli.
+U každé odpovědi lze nastavit prioritu, štítky, přiřazení řešiteli a interní poznámku. Z detailu odpovědi je možné přímo odpovědět odesílateli. Před odesláním se zobrazí příjemce, zápis do interní historie a případný aktivní webhook `reply_sent`; server vyžaduje potvrzení kontroly příjemce, předmětu, textu a uvedených účinků. Chybný nebo neúspěšný pokus zachová rozepsaný předmět i text, ale potvrzení je potřeba provést znovu.
 
 Rychlé kroky: `Převzít řešení`, `Označit jako rozpracované`, `Označit jako vyřešené`, `Uzavřít hlášení`.
 
@@ -799,6 +799,8 @@ Detail zprávy přidává:
 - moderaci odpovědí ve veřejném vlákně
 - odpověď odesílateli e-mailem, pokud je k dispozici platná adresa
 
+E-mailová odpověď se odešle až po kontrole příjemce, předmětu a textu a po zaškrtnutí samostatného potvrzení. Bez něj server nezmění metadata odpovědi, historii ani audit log; validační chyba nebo selhání doručení zachová rozepsaný obsah pro opravu a nový kontrolovaný pokus.
+
 Samotné otevření detailu označí zprávu jako přečtenou, ale automaticky ji nezveřejní.
 
 ### Automatický úklid přes cron
@@ -842,7 +844,7 @@ Bez aktivních témat se formulář chová jako dříve, jen navíc nabízí vol
 
 ### Odpověď z administrace
 
-Detail kontaktní zprávy zobrazuje referenční kód, jméno, e-mail, téma, stav a poslední uloženou odpověď. Pokud zpráva obsahuje platný e-mail odesílatele, lze odeslat odpověď přímo z detailu.
+Detail kontaktní zprávy zobrazuje referenční kód, jméno, e-mail, téma, stav a poslední uloženou odpověď. Pokud zpráva obsahuje platný e-mail odesílatele, lze odeslat odpověď přímo z detailu. Kontrolní blok předem zopakuje příjemce a nevratný dopad; bez item-specific potvrzení server e-mail neodešle, zprávu neoznačí jako vyřízenou a nezapíše audit log. Při validační chybě nebo selhání doručení zůstanou předmět i text zachované pro opravu.
 
 Po úspěšném odeslání odpovědi CMS uloží předmět, text odpovědi, čas, uživatele a zprávu označí jako **Vyřízené**. První verze ukládá poslední odpověď; plná historie konverzace patří případně do budoucího helpdesk rozšíření.
 

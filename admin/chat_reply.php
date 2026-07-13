@@ -14,6 +14,8 @@ if ($messageId === null) {
 
 $subject = trim((string)($_POST['subject'] ?? ''));
 $replyMessage = trim((string)($_POST['message'] ?? ''));
+$confirmFieldName = 'confirm_chat_reply_send_' . $messageId;
+$confirmed = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
 $pdo = db_connect();
 $chatStmt = $pdo->prepare(
     "SELECT id, name, email, status, public_visibility
@@ -34,12 +36,18 @@ if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-if ($subject === '' || $replyMessage === '') {
-    header('Location: ' . appendUrlQuery($redirect, ['reply' => 'invalid']));
+$errorFields = adminReplyValidationErrorFields($subject, $replyMessage, $confirmFieldName, $confirmed);
+if ($errorFields !== []) {
+    adminReplyFlashStore('chat', $messageId, $subject, $replyMessage, $errorFields);
+    $errorCode = in_array('reply_subject', $errorFields, true) || in_array('reply_message', $errorFields, true)
+        ? 'invalid'
+        : 'confirm_required';
+    header('Location: ' . appendUrlQuery($redirect, ['reply' => $errorCode]));
     exit;
 }
 
 if (!sendChatReply($recipient, (string)($message['name'] ?? ''), $subject, $replyMessage)) {
+    adminReplyFlashStore('chat', $messageId, $subject, $replyMessage);
     header('Location: ' . appendUrlQuery($redirect, ['reply' => 'failed']));
     exit;
 }

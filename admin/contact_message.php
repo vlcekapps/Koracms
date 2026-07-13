@@ -46,10 +46,31 @@ $repliedByLabel = trim((string)($message['replied_by_email'] ?? '')) !== ''
         'nickname' => (string)($message['replied_by_nickname'] ?? ''),
     ])
     : '–';
-$replyFieldErrors = isset($_GET['reply']) && $_GET['reply'] === 'invalid' ? ['reply_subject', 'reply_message'] : [];
+$replyStatus = trim((string)($_GET['reply'] ?? ''));
+$replyConfirmField = 'confirm_contact_reply_send_' . $messageId;
+$replyConfirmId = 'confirm-contact-reply-send-' . $messageId;
+$replyReviewId = 'contact-reply-review-' . $messageId;
+$replyConfirmErrorId = 'confirm-contact-reply-send-' . $messageId . '-error';
+$replyFormErrorId = 'contact-reply-form-error';
+$replyFlash = adminReplyFlashPull('contact', $messageId);
+$replyHasFlash = in_array($replyStatus, ['invalid', 'confirm_required', 'failed'], true) && $replyFlash !== [];
+$replyFlashErrorFields = $replyHasFlash ? $replyFlash['error_fields'] : [];
+$replyFieldErrors = match ($replyStatus) {
+    'invalid' => $replyFlashErrorFields !== [] ? $replyFlashErrorFields : ['reply_subject', 'reply_message'],
+    'confirm_required' => $replyFlashErrorFields !== [] ? $replyFlashErrorFields : [$replyConfirmField],
+    default => [],
+};
+$replySubjectValue = $replyHasFlash
+    ? (string)$replyFlash['subject']
+    : (trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Re: ' . (string)$message['subject']);
+$replyMessageValue = $replyHasFlash
+    ? (string)$replyFlash['message']
+    : (trim((string)($message['reply_body'] ?? '')) !== '' ? (string)$message['reply_body'] : "Dobrý den,\n\nděkujeme za vaši zprávu.\n\n");
+$replyHasFormError = in_array($replyStatus, ['invalid', 'confirm_required', 'failed'], true);
 $replyFieldErrorMessages = [
     'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jaké zprávě se vracíte.',
     'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
+    $replyConfirmField => 'Před odesláním potvrďte, že jste zkontrolovali příjemce, předmět a text odpovědi.',
 ];
 $deleteConfirmError = trim((string)($_GET['error'] ?? '')) === 'contact_delete_confirm_required'
     && inputInt('get', 'delete_id') === $messageId;
@@ -68,14 +89,16 @@ adminHeader('Kontaktní zpráva');
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Kontaktní zpráva byla aktualizována.</p>
 <?php endif; ?>
-<?php if (isset($_GET['reply']) && $_GET['reply'] === 'sent'): ?>
-  <p class="success" role="status">Odpověď odesílateli byla úspěšně odeslána.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
-  <p class="error" role="alert">U této zprávy není dostupná žádná platná e-mailová adresa pro odpověď.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
-  <p class="error" role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text. U obou polí je doplněná konkrétní nápověda.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
-  <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
+<?php if ($replyStatus === 'sent'): ?>
+  <p class="success" role="status" aria-atomic="true">Odpověď odesílateli byla úspěšně odeslána.</p>
+<?php elseif ($replyStatus === 'missing'): ?>
+  <p class="error" role="alert" aria-atomic="true">U této zprávy není dostupná žádná platná e-mailová adresa pro odpověď.</p>
+<?php elseif ($replyStatus === 'invalid'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď nejde odeslat, protože chybí povinný obsah nebo potvrzení kontroly. U zvýrazněných polí je konkrétní nápověda.</p>
+<?php elseif ($replyStatus === 'confirm_required'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď nejde odeslat bez potvrzení kontroly příjemce a obsahu. U pole Potvrzení odeslání je konkrétní nápověda.</p>
+<?php elseif ($replyStatus === 'failed'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď se nepodařilo odeslat. Rozepsaný obsah zůstal zachovaný; před dalším pokusem jej zkontrolujte a znovu potvrďte odeslání.</p>
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled kontaktních zpráv</a></p>
@@ -203,27 +226,39 @@ adminHeader('Kontaktní zpráva');
 <?php if (!filter_var((string)$message['sender_email'], FILTER_VALIDATE_EMAIL)): ?>
   <p>Tato zpráva neobsahuje platnou e-mailovou adresu, takže na ni nejde odpovědět přímo z administrace.</p>
 <?php else: ?>
-  <form method="post" action="<?= BASE_URL ?>/admin/contact_reply.php">
+  <form method="post" action="<?= BASE_URL ?>/admin/contact_reply.php" novalidate<?= $replyHasFormError ? ' aria-describedby="' . h($replyFormErrorId) . '"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$message['id'] ?>">
     <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
     <fieldset>
-      <legend>Odeslat odpověď e-mailem</legend>
+      <legend>Obsah e-mailové odpovědi</legend>
 
       <label for="reply-to">Komu</label>
       <input type="email" id="reply-to" value="<?= h((string)$message['sender_email']) ?>" disabled>
 
       <label for="reply-subject">Předmět</label>
-      <input type="text" id="reply-subject" name="subject" maxlength="255"
-             value="<?= h(trim((string)($message['reply_subject'] ?? '')) !== '' ? (string)$message['reply_subject'] : 'Re: ' . (string)$message['subject']) ?>"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
+      <input type="text" id="reply-subject" name="subject" maxlength="255" required aria-required="true"
+             value="<?= h($replySubjectValue) ?>"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
       <?php adminRenderFieldError('reply_subject', $replyFieldErrors, [], $replyFieldErrorMessages['reply_subject'], 'reply-subject-error'); ?>
 
       <label for="reply-message">Text odpovědi</label>
-      <textarea id="reply-message" name="message" rows="7"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], [], 'reply-message-error') ?>><?= h(trim((string)($message['reply_body'] ?? '')) !== '' ? (string)$message['reply_body'] : "Dobrý den,\n\nděkujeme za vaši zprávu.\n\n") ?></textarea>
+      <textarea id="reply-message" name="message" rows="7" required aria-required="true"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], [], 'reply-message-error') ?>><?= h($replyMessageValue) ?></textarea>
       <?php adminRenderFieldError('reply_message', $replyFieldErrors, [], $replyFieldErrorMessages['reply_message'], 'reply-message-error'); ?>
-
-      <button type="submit" class="btn">Odeslat odpověď</button>
     </fieldset>
+
+    <fieldset class="admin-fieldset-card admin-fieldset-spaced" aria-describedby="<?= h($replyReviewId) ?>">
+      <legend>Kontrola odeslání</legend>
+      <p id="<?= h($replyReviewId) ?>" class="field-help field-help--flush">E-mail se po potvrzení nevratně odešle na <strong><?= h((string)$message['sender_email']) ?></strong>. Před odesláním zkontrolujte příjemce, předmět a text; odpověď se také uloží ke kontaktní zprávě.</p>
+      <label for="<?= h($replyConfirmId) ?>" class="admin-checkbox-label">
+        <input type="checkbox" id="<?= h($replyConfirmId) ?>" name="<?= h($replyConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($replyConfirmField, $replyFieldErrors, [], [$replyReviewId], $replyConfirmErrorId) ?>>
+        Potvrzuji, že jsem zkontroloval(a) příjemce, předmět a text odpovědi.
+      </label>
+      <?php adminRenderFieldError($replyConfirmField, $replyFieldErrors, [], $replyFieldErrorMessages[$replyConfirmField], $replyConfirmErrorId); ?>
+    </fieldset>
+
+    <div class="button-row admin-action-row">
+      <button type="submit" class="btn" data-confirm="Opravdu odeslat tuto odpověď na <?= h((string)$message['sender_email']) ?>?">Odeslat odpověď</button>
+    </div>
   </form>
 <?php endif; ?>
 

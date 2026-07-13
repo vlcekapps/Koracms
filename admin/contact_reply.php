@@ -15,6 +15,8 @@ if ($messageId === null) {
 
 $subject = trim((string)($_POST['subject'] ?? ''));
 $replyMessage = trim((string)($_POST['message'] ?? ''));
+$confirmFieldName = 'confirm_contact_reply_send_' . $messageId;
+$confirmed = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
 $pdo = db_connect();
 $stmt = $pdo->prepare(
     "SELECT id, sender_name, sender_email, reference_code, subject
@@ -35,8 +37,13 @@ if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-if ($subject === '' || $replyMessage === '') {
-    header('Location: ' . appendUrlQuery($redirect, ['reply' => 'invalid']));
+$errorFields = adminReplyValidationErrorFields($subject, $replyMessage, $confirmFieldName, $confirmed);
+if ($errorFields !== []) {
+    adminReplyFlashStore('contact', $messageId, $subject, $replyMessage, $errorFields);
+    $errorCode = in_array('reply_subject', $errorFields, true) || in_array('reply_message', $errorFields, true)
+        ? 'invalid'
+        : 'confirm_required';
+    header('Location: ' . appendUrlQuery($redirect, ['reply' => $errorCode]));
     exit;
 }
 
@@ -47,6 +54,7 @@ if (!sendContactReply(
     $subject,
     $replyMessage
 )) {
+    adminReplyFlashStore('contact', $messageId, $subject, $replyMessage);
     header('Location: ' . appendUrlQuery($redirect, ['reply' => 'failed']));
     exit;
 }

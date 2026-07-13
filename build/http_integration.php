@@ -7487,24 +7487,45 @@ try {
         if (httpIntegrationStatusCode($contactDetailResponse) !== 200
             || $contactReplyCsrf === ''
             || !str_contains($contactDetailResponse['body'], 'Odpověď odesílateli')
-            || !str_contains($contactDetailResponse['body'], (string)($contactMessage['reference_code'] ?? ''))) {
+            || !str_contains($contactDetailResponse['body'], (string)($contactMessage['reference_code'] ?? ''))
+            || !str_contains($contactDetailResponse['body'], 'name="confirm_contact_reply_send_' . $contactMessageId . '"')
+            || !str_contains($contactDetailResponse['body'], 'id="contact-reply-review-' . $contactMessageId . '"')) {
             $contactCenterIssues[] = 'detail kontaktní zprávy nezobrazil referenci nebo formulář odpovědi';
         } else {
-            $contactInvalidReplyResponse = fetchUrl($contactDetailUrl . '&reply=invalid', $adminSession['cookie'], 0);
-            if (httpIntegrationStatusCode($contactInvalidReplyResponse) !== 200
-                || !str_contains($contactInvalidReplyResponse['body'], 'role="alert" aria-atomic="true"')
-                || !str_contains($contactInvalidReplyResponse['body'], 'aria-describedby="reply-subject-error"')
-                || !str_contains($contactInvalidReplyResponse['body'], 'id="reply-subject-error"')
-                || !str_contains($contactInvalidReplyResponse['body'], 'Zadejte předmět odpovědi, aby příjemce poznal')
-                || !str_contains($contactInvalidReplyResponse['body'], 'aria-describedby="reply-message-error"')
-                || !str_contains($contactInvalidReplyResponse['body'], 'id="reply-message-error"')
-                || !str_contains($contactInvalidReplyResponse['body'], 'Doplňte text odpovědi. Nestačí prázdná zpráva.')) {
-                $contactCenterIssues[] = 'detail kontaktní zprávy po neplatné odpovědi nezobrazil field-level návrhy oprav';
-            }
-
             $replySubject = 'Re: ' . $validContactSubject;
             $replyBody = 'HTTP odpověď na kontaktní zprávu.';
-            $contactReplyResponse = postUrl(
+            $contactInvalidDraft = 'Rozepsaná kontaktní odpověď zůstává zachovaná.';
+            $contactInvalidReplyPost = postUrl(
+                $baseUrl . BASE_URL . '/admin/contact_reply.php',
+                [
+                    'csrf_token' => $contactReplyCsrf,
+                    'id' => (string)$contactMessageId,
+                    'redirect' => BASE_URL . '/admin/contact_message.php?id=' . $contactMessageId,
+                    'subject' => '',
+                    'message' => $contactInvalidDraft,
+                    'confirm_contact_reply_send_' . $contactMessageId => '1',
+                ],
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($contactInvalidReplyPost) !== 302
+                || !str_contains(responseLocationHeaderValue($contactInvalidReplyPost['headers']), 'reply=invalid')) {
+                $contactCenterIssues[] = 'neplatná kontaktní odpověď nebyla odmítnuta přes PRG';
+            }
+
+            $contactInvalidReplyResponse = fetchUrl($contactDetailUrl . '&reply=invalid', $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($contactInvalidReplyResponse) !== 200
+                || !str_contains($contactInvalidReplyResponse['body'], 'id="contact-reply-form-error" class="error" role="alert" aria-atomic="true"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'aria-invalid="true" aria-describedby="reply-subject-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'id="reply-subject-error"')
+                || !str_contains($contactInvalidReplyResponse['body'], 'Zadejte předmět odpovědi, aby příjemce poznal')
+                || !str_contains($contactInvalidReplyResponse['body'], h($contactInvalidDraft))) {
+                $contactCenterIssues[] = 'detail kontaktní zprávy po neplatné odpovědi nezobrazil přesnou chybu nebo zachovaný draft';
+            }
+
+            $contactReplyCsrf = extractHiddenInputValue($contactInvalidReplyResponse['body'], 'csrf_token');
+            $contactReplyLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_reply'")->fetchColumn();
+            $contactMissingConfirmResponse = postUrl(
                 $baseUrl . BASE_URL . '/admin/contact_reply.php',
                 [
                     'csrf_token' => $contactReplyCsrf,
@@ -7516,7 +7537,51 @@ try {
                 $adminSession['cookie'],
                 0
             );
-            if (httpIntegrationStatusCode($contactReplyResponse) !== 302) {
+            $contactReplyLogAfterMissingConfirm = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_reply'")->fetchColumn();
+            $replyStoredBeforeConfirmStmt = $pdo->prepare(
+                "SELECT status, replied_at, replied_by_user_id, reply_subject, reply_body FROM cms_contact WHERE id = ? LIMIT 1"
+            );
+            $replyStoredBeforeConfirmStmt->execute([$contactMessageId]);
+            $replyStoredBeforeConfirm = $replyStoredBeforeConfirmStmt->fetch();
+            if (httpIntegrationStatusCode($contactMissingConfirmResponse) !== 302
+                || !str_contains(responseLocationHeaderValue($contactMissingConfirmResponse['headers']), 'reply=confirm_required')
+                || $contactReplyLogAfterMissingConfirm !== $contactReplyLogBefore
+                || !is_array($replyStoredBeforeConfirm)
+                || (string)($replyStoredBeforeConfirm['status'] ?? '') === 'handled'
+                || trim((string)($replyStoredBeforeConfirm['replied_at'] ?? '')) !== ''
+                || trim((string)($replyStoredBeforeConfirm['reply_subject'] ?? '')) !== ''
+                || trim((string)($replyStoredBeforeConfirm['reply_body'] ?? '')) !== '') {
+                $contactCenterIssues[] = 'kontaktní odpověď bez potvrzení změnila zprávu nebo audit log';
+            }
+
+            $contactConfirmDetail = fetchUrl($contactDetailUrl . '&reply=confirm_required', $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($contactConfirmDetail) !== 200
+                || !str_contains($contactConfirmDetail['body'], 'aria-describedby="contact-reply-form-error"')
+                || !str_contains($contactConfirmDetail['body'], 'id="contact-reply-form-error" class="error" role="alert" aria-atomic="true"')
+                || !str_contains($contactConfirmDetail['body'], 'name="confirm_contact_reply_send_' . $contactMessageId . '"')
+                || !str_contains($contactConfirmDetail['body'], 'aria-invalid="true" aria-describedby="contact-reply-review-' . $contactMessageId . ' confirm-contact-reply-send-' . $contactMessageId . '-error"')
+                || !str_contains($contactConfirmDetail['body'], 'id="confirm-contact-reply-send-' . $contactMessageId . '-error"')
+                || !str_contains($contactConfirmDetail['body'], 'value="' . h($replySubject) . '"')
+                || !str_contains($contactConfirmDetail['body'], h($replyBody))) {
+                $contactCenterIssues[] = 'kontaktní odpověď bez potvrzení nezobrazila review, field-level chybu nebo zachovaný draft';
+            }
+
+            $contactReplyCsrf = extractHiddenInputValue($contactConfirmDetail['body'], 'csrf_token');
+            $contactReplyResponse = postUrl(
+                $baseUrl . BASE_URL . '/admin/contact_reply.php',
+                [
+                    'csrf_token' => $contactReplyCsrf,
+                    'id' => (string)$contactMessageId,
+                    'redirect' => BASE_URL . '/admin/contact_message.php?id=' . $contactMessageId,
+                    'subject' => $replySubject,
+                    'message' => $replyBody,
+                    'confirm_contact_reply_send_' . $contactMessageId => '1',
+                ],
+                $adminSession['cookie'],
+                0
+            );
+            if (httpIntegrationStatusCode($contactReplyResponse) !== 302
+                || !str_contains(responseLocationHeaderValue($contactReplyResponse['headers']), 'reply=sent')) {
                 $contactCenterIssues[] = 'odeslání odpovědi na kontaktní zprávu nevrátilo 302 redirect';
             }
 
@@ -7533,7 +7598,8 @@ try {
                 || trim((string)($replyStored['replied_at'] ?? '')) === ''
                 || (int)($replyStored['replied_by_user_id'] ?? 0) !== $adminUserId
                 || (string)($replyStored['reply_subject'] ?? '') !== $replySubject
-                || (string)($replyStored['reply_body'] ?? '') !== $replyBody) {
+                || (string)($replyStored['reply_body'] ?? '') !== $replyBody
+                || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'contact_reply'")->fetchColumn() !== $contactReplyLogBefore + 1) {
                 $contactCenterIssues[] = 'odpověď z administrace neuložila stav vyřízeno a metadata odpovědi';
             }
         }
@@ -8008,6 +8074,105 @@ try {
             if (httpIntegrationStatusCode($privateDetailProbe) !== 404) {
                 $chatCenterIssues[] = 'soukromý chat dotaz má veřejně dostupný detail';
             }
+
+            $supportAdminDetailUrl = $baseUrl . BASE_URL . '/admin/chat_message.php?id=' . $supportId;
+            $supportAdminDetail = fetchUrl($supportAdminDetailUrl, $adminSession['cookie'], 0);
+            $supportReplyCsrf = extractHiddenInputValue($supportAdminDetail['body'], 'csrf_token');
+            if (httpIntegrationStatusCode($supportAdminDetail) !== 200
+                || $supportReplyCsrf === ''
+                || !str_contains($supportAdminDetail['body'], 'name="confirm_chat_reply_send_' . $supportId . '"')
+                || !str_contains($supportAdminDetail['body'], 'id="chat-reply-review-' . $supportId . '"')
+                || !str_contains($supportAdminDetail['body'], h($supportEmail))) {
+                $chatCenterIssues[] = 'admin detail soukromého chat dotazu nezobrazil review odeslání odpovědi';
+            } else {
+                $supportReplySubject = 'Re: soukromý chat dotaz';
+                $supportReplyBody = 'HTTP odpověď na soukromý chat dotaz.';
+                $chatReplyLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply'")->fetchColumn();
+                $chatReplyHistoryBeforeStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ? AND event_type = 'reply'"
+                );
+                $chatReplyHistoryBeforeStmt->execute([$supportId]);
+                $chatReplyHistoryBefore = (int)$chatReplyHistoryBeforeStmt->fetchColumn();
+                $supportMissingConfirm = postUrl(
+                    $baseUrl . BASE_URL . '/admin/chat_reply.php',
+                    [
+                        'csrf_token' => $supportReplyCsrf,
+                        'id' => (string)$supportId,
+                        'redirect' => BASE_URL . '/admin/chat_message.php?id=' . $supportId,
+                        'subject' => $supportReplySubject,
+                        'message' => $supportReplyBody,
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $supportReplyStateStmt = $pdo->prepare(
+                    "SELECT replied_at, replied_by_user_id, replied_subject, replied_to_email, replied_body FROM cms_chat WHERE id = ? LIMIT 1"
+                );
+                $supportReplyStateStmt->execute([$supportId]);
+                $supportReplyStateBeforeConfirm = $supportReplyStateStmt->fetch();
+                $chatReplyHistoryBeforeConfirmStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ? AND event_type = 'reply'"
+                );
+                $chatReplyHistoryBeforeConfirmStmt->execute([$supportId]);
+                if (httpIntegrationStatusCode($supportMissingConfirm) !== 302
+                    || !str_contains(responseLocationHeaderValue($supportMissingConfirm['headers']), 'reply=confirm_required')
+                    || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply'")->fetchColumn() !== $chatReplyLogBefore
+                    || (int)$chatReplyHistoryBeforeConfirmStmt->fetchColumn() !== $chatReplyHistoryBefore
+                    || !is_array($supportReplyStateBeforeConfirm)
+                    || trim((string)($supportReplyStateBeforeConfirm['replied_at'] ?? '')) !== ''
+                    || trim((string)($supportReplyStateBeforeConfirm['replied_subject'] ?? '')) !== ''
+                    || trim((string)($supportReplyStateBeforeConfirm['replied_body'] ?? '')) !== '') {
+                    $chatCenterIssues[] = 'chat odpověď bez potvrzení změnila zprávu, historii nebo audit log';
+                }
+
+                $supportConfirmDetail = fetchUrl(
+                    $supportAdminDetailUrl . '&reply=confirm_required',
+                    $adminSession['cookie'],
+                    0
+                );
+                if (httpIntegrationStatusCode($supportConfirmDetail) !== 200
+                    || !str_contains($supportConfirmDetail['body'], 'aria-describedby="chat-reply-form-error"')
+                    || !str_contains($supportConfirmDetail['body'], 'id="chat-reply-form-error" class="error" role="alert" aria-atomic="true"')
+                    || !str_contains($supportConfirmDetail['body'], 'name="confirm_chat_reply_send_' . $supportId . '"')
+                    || !str_contains($supportConfirmDetail['body'], 'aria-invalid="true" aria-describedby="chat-reply-review-' . $supportId . ' confirm-chat-reply-send-' . $supportId . '-error"')
+                    || !str_contains($supportConfirmDetail['body'], 'value="' . h($supportReplySubject) . '"')
+                    || !str_contains($supportConfirmDetail['body'], h($supportReplyBody))) {
+                    $chatCenterIssues[] = 'chat odpověď bez potvrzení nezobrazila review, field-level chybu nebo zachovaný draft';
+                }
+
+                $supportReplyCsrf = extractHiddenInputValue($supportConfirmDetail['body'], 'csrf_token');
+                $supportConfirmedReply = postUrl(
+                    $baseUrl . BASE_URL . '/admin/chat_reply.php',
+                    [
+                        'csrf_token' => $supportReplyCsrf,
+                        'id' => (string)$supportId,
+                        'redirect' => BASE_URL . '/admin/chat_message.php?id=' . $supportId,
+                        'subject' => $supportReplySubject,
+                        'message' => $supportReplyBody,
+                        'confirm_chat_reply_send_' . $supportId => '1',
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $supportReplyStateStmt->execute([$supportId]);
+                $supportReplyState = $supportReplyStateStmt->fetch();
+                $chatReplyHistoryAfterStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_chat_history WHERE chat_id = ? AND event_type = 'reply'"
+                );
+                $chatReplyHistoryAfterStmt->execute([$supportId]);
+                if (httpIntegrationStatusCode($supportConfirmedReply) !== 302
+                    || !str_contains(responseLocationHeaderValue($supportConfirmedReply['headers']), 'reply=sent')
+                    || !is_array($supportReplyState)
+                    || trim((string)($supportReplyState['replied_at'] ?? '')) === ''
+                    || (int)($supportReplyState['replied_by_user_id'] ?? 0) !== $adminUserId
+                    || (string)($supportReplyState['replied_subject'] ?? '') !== $supportReplySubject
+                    || (string)($supportReplyState['replied_to_email'] ?? '') !== $supportEmail
+                    || (string)($supportReplyState['replied_body'] ?? '') !== $supportReplyBody
+                    || (int)$chatReplyHistoryAfterStmt->fetchColumn() !== $chatReplyHistoryBefore + 1
+                    || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'chat_reply'")->fetchColumn() !== $chatReplyLogBefore + 1) {
+                    $chatCenterIssues[] = 'potvrzená chat odpověď neuložila e-mailový stav, historii nebo audit log';
+                }
+            }
         }
     }
 
@@ -8342,6 +8507,120 @@ try {
                 }
                 if (str_contains($issuePresetInvalidLinkDetail['body'], 'Zadejte platnou adresu GitHub issue ve formátu')) {
                     $formPresetIssues[] = 'detail odpovědi s neplatným odkazem GitHub issue stále používá generickou chybu';
+                }
+            }
+
+            $formReplyDetailUrl = $baseUrl . BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId;
+            $formReplyDetail = fetchUrl($formReplyDetailUrl, $adminSession['cookie'], 0);
+            $formReplyCsrf = extractHiddenInputValue($formReplyDetail['body'], 'csrf_token');
+            if (httpIntegrationStatusCode($formReplyDetail) !== 200
+                || $formReplyCsrf === ''
+                || !str_contains($formReplyDetail['body'], 'name="confirm_form_submission_reply_send_' . $issuePresetSubmissionId . '"')
+                || !str_contains($formReplyDetail['body'], 'id="form-submission-reply-review-' . $issuePresetSubmissionId . '"')
+                || !str_contains($formReplyDetail['body'], 'odpověď se uloží do interní historie')) {
+                $formPresetIssues[] = 'detail odpovědi Form Builderu nezobrazil review odeslání e-mailu';
+            } else {
+                $formReplySubject = 'Re: HTTP issue bridge validation';
+                $formReplyBody = 'HTTP odpověď z Form Builderu.';
+                $formInvalidReplyPost = postUrl(
+                    $baseUrl . BASE_URL . '/admin/form_submission_reply.php',
+                    [
+                        'csrf_token' => $formReplyCsrf,
+                        'id' => (string)$issuePresetSubmissionId,
+                        'redirect' => BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId,
+                        'subject' => $formReplySubject,
+                        'message' => '',
+                        'confirm_form_submission_reply_send_' . $issuePresetSubmissionId => '1',
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                if (httpIntegrationStatusCode($formInvalidReplyPost) !== 302
+                    || !str_contains(responseLocationHeaderValue($formInvalidReplyPost['headers']), 'reply=invalid')) {
+                    $formPresetIssues[] = 'neplatná Form Builder odpověď nebyla odmítnuta přes PRG';
+                }
+
+                $formInvalidReplyDetail = fetchUrl(
+                    $formReplyDetailUrl . '&reply=invalid',
+                    $adminSession['cookie'],
+                    0
+                );
+                if (httpIntegrationStatusCode($formInvalidReplyDetail) !== 200
+                    || !str_contains($formInvalidReplyDetail['body'], 'id="form-submission-reply-form-error" class="error" role="alert" aria-atomic="true"')
+                    || !str_contains($formInvalidReplyDetail['body'], 'aria-invalid="true" aria-describedby="reply-message-help reply-message-error"')
+                    || !str_contains($formInvalidReplyDetail['body'], 'id="reply-message-error"')
+                    || !str_contains($formInvalidReplyDetail['body'], 'value="' . h($formReplySubject) . '"')) {
+                    $formPresetIssues[] = 'neplatná Form Builder odpověď nezobrazila přesnou field-level chybu nebo zachovaný předmět';
+                }
+
+                $formReplyCsrf = extractHiddenInputValue($formInvalidReplyDetail['body'], 'csrf_token');
+                $formReplyLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_reply'")->fetchColumn();
+                $formReplyHistoryBeforeStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ? AND event_type = 'reply'"
+                );
+                $formReplyHistoryBeforeStmt->execute([$issuePresetSubmissionId]);
+                $formReplyHistoryBefore = (int)$formReplyHistoryBeforeStmt->fetchColumn();
+                $formMissingConfirmReply = postUrl(
+                    $baseUrl . BASE_URL . '/admin/form_submission_reply.php',
+                    [
+                        'csrf_token' => $formReplyCsrf,
+                        'id' => (string)$issuePresetSubmissionId,
+                        'redirect' => BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId,
+                        'subject' => $formReplySubject,
+                        'message' => $formReplyBody,
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $formReplyHistoryAfterMissingStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ? AND event_type = 'reply'"
+                );
+                $formReplyHistoryAfterMissingStmt->execute([$issuePresetSubmissionId]);
+                if (httpIntegrationStatusCode($formMissingConfirmReply) !== 302
+                    || !str_contains(responseLocationHeaderValue($formMissingConfirmReply['headers']), 'reply=confirm_required')
+                    || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_reply'")->fetchColumn() !== $formReplyLogBefore
+                    || (int)$formReplyHistoryAfterMissingStmt->fetchColumn() !== $formReplyHistoryBefore) {
+                    $formPresetIssues[] = 'Form Builder odpověď bez potvrzení změnila historii nebo audit log';
+                }
+
+                $formConfirmReplyDetail = fetchUrl(
+                    $formReplyDetailUrl . '&reply=confirm_required',
+                    $adminSession['cookie'],
+                    0
+                );
+                if (httpIntegrationStatusCode($formConfirmReplyDetail) !== 200
+                    || !str_contains($formConfirmReplyDetail['body'], 'aria-describedby="form-submission-reply-form-error"')
+                    || !str_contains($formConfirmReplyDetail['body'], 'id="form-submission-reply-form-error" class="error" role="alert" aria-atomic="true"')
+                    || !str_contains($formConfirmReplyDetail['body'], 'name="confirm_form_submission_reply_send_' . $issuePresetSubmissionId . '"')
+                    || !str_contains($formConfirmReplyDetail['body'], 'aria-invalid="true" aria-describedby="form-submission-reply-review-' . $issuePresetSubmissionId . ' confirm-form-submission-reply-send-' . $issuePresetSubmissionId . '-error"')
+                    || !str_contains($formConfirmReplyDetail['body'], 'value="' . h($formReplySubject) . '"')
+                    || !str_contains($formConfirmReplyDetail['body'], h($formReplyBody))) {
+                    $formPresetIssues[] = 'Form Builder odpověď bez potvrzení nezobrazila review, field-level chybu nebo zachovaný draft';
+                }
+
+                $formReplyCsrf = extractHiddenInputValue($formConfirmReplyDetail['body'], 'csrf_token');
+                $formConfirmedReply = postUrl(
+                    $baseUrl . BASE_URL . '/admin/form_submission_reply.php',
+                    [
+                        'csrf_token' => $formReplyCsrf,
+                        'id' => (string)$issuePresetSubmissionId,
+                        'redirect' => BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId,
+                        'subject' => $formReplySubject,
+                        'message' => $formReplyBody,
+                        'confirm_form_submission_reply_send_' . $issuePresetSubmissionId => '1',
+                    ],
+                    $adminSession['cookie'],
+                    0
+                );
+                $formReplyHistoryAfterStmt = $pdo->prepare(
+                    "SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ? AND event_type = 'reply'"
+                );
+                $formReplyHistoryAfterStmt->execute([$issuePresetSubmissionId]);
+                if (httpIntegrationStatusCode($formConfirmedReply) !== 302
+                    || !str_contains(responseLocationHeaderValue($formConfirmedReply['headers']), 'reply=sent')
+                    || (int)$formReplyHistoryAfterStmt->fetchColumn() !== $formReplyHistoryBefore + 1
+                    || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'form_submission_reply'")->fetchColumn() !== $formReplyLogBefore + 1) {
+                    $formPresetIssues[] = 'potvrzená Form Builder odpověď neuložila historii nebo audit log';
                 }
             }
         }

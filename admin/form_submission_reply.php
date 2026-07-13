@@ -58,12 +58,20 @@ if ($recipient === []) {
 
 $subject = trim((string)($_POST['subject'] ?? ''));
 $message = trim((string)($_POST['message'] ?? ''));
-if ($subject === '' || $message === '') {
-    header('Location: ' . appendUrlQuery($redirect, ['reply' => 'invalid']));
+$confirmFieldName = 'confirm_form_submission_reply_send_' . $submissionId;
+$confirmed = isset($_POST[$confirmFieldName]) && (string)$_POST[$confirmFieldName] === '1';
+$errorFields = adminReplyValidationErrorFields($subject, $message, $confirmFieldName, $confirmed);
+if ($errorFields !== []) {
+    adminReplyFlashStore('form_submission', $submissionId, $subject, $message, $errorFields);
+    $errorCode = in_array('reply_subject', $errorFields, true) || in_array('reply_message', $errorFields, true)
+        ? 'invalid'
+        : 'confirm_required';
+    header('Location: ' . appendUrlQuery($redirect, ['reply' => $errorCode]));
     exit;
 }
 
 if (!sendFormSubmissionReply((string)$recipient['email'], $subject, $message)) {
+    adminReplyFlashStore('form_submission', $submissionId, $subject, $message);
     header('Location: ' . appendUrlQuery($redirect, ['reply' => 'failed']));
     exit;
 }

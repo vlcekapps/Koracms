@@ -7547,7 +7547,7 @@ if (!isModuleEnabled('chat')) {
             if (!str_contains($noEmailDetail['status'], '200')) {
                 $chatIssues[] = 'admin detail for no-email chat message is not accessible';
             } else {
-                if (!str_contains($noEmailDetail['body'], 'Tato zpráva neobsahuje e-mailovou adresu')) {
+                if (!str_contains($noEmailDetail['body'], 'Tato zpráva neobsahuje platnou e-mailovou adresu')) {
                     $chatIssues[] = 'chat detail without e-mail is missing explanatory reply notice';
                 }
                 if (str_contains($noEmailDetail['body'], '/admin/chat_reply.php')) {
@@ -15531,6 +15531,7 @@ $faqCatDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq_c
 $faqOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/faq.php');
 $formsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/forms.php');
 $formSubmissionDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission.php');
+$formSubmissionReplySource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_reply.php');
 $formSubmissionsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submissions.php');
 $formSubmissionBulkValidationSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_bulk.php');
 $formSubmissionDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_delete.php');
@@ -15575,6 +15576,7 @@ $chatMessageDetailSource = (string)file_get_contents(dirname(__DIR__) . '/admin/
 $chatActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_action.php');
 $chatBulkSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_bulk.php');
 $chatDeleteSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_delete.php');
+$chatReplySource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_reply.php');
 $chatReplyActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/chat_reply_action.php');
 $commentsOverviewSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comments.php');
 $commentActionSource = (string)file_get_contents(dirname(__DIR__) . '/admin/comment_action.php');
@@ -15687,29 +15689,107 @@ if (str_contains($uiSource, 'alert(msg)')) {
     $adminFieldErrorIssues[] = 'shared sortable feedback still uses a browser alert on save failure';
 }
 foreach ([
+    'function adminReplyFlashStore(',
+    'function adminReplyFlashPull(',
+    'function adminReplyValidationErrorFields(',
+] as $adminReplyHelperFragment) {
+    if (!str_contains($uiSource, $adminReplyHelperFragment)) {
+        $adminFieldErrorIssues[] = 'shared admin reply guardrail is missing helper fragment: ' . $adminReplyHelperFragment;
+    }
+}
+foreach ([
     'contact reply detail' => $contactMessageDetailSource,
     'chat reply detail' => $chatMessageDetailSource,
     'form submission reply detail' => $formSubmissionDetailSource,
 ] as $adminReplyDetailLabel => $adminReplyDetailSource) {
     foreach ([
-        '$replyFieldErrors = isset($_GET[\'reply\']) && $_GET[\'reply\'] === \'invalid\' ? [\'reply_subject\', \'reply_message\'] : [];',
+        '$replyStatus = trim((string)($_GET[\'reply\'] ?? \'\'));',
+        'adminReplyFlashPull(',
+        '\'confirm_required\' =>',
+        '$replyHasFormError = in_array($replyStatus, [\'invalid\', \'confirm_required\', \'failed\'], true);',
         '\'reply_subject\' => \'Zadejte předmět odpovědi, aby příjemce poznal,',
         '\'reply_message\' => \'Doplňte text odpovědi. Nestačí prázdná zpráva.\',',
-        'role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text.',
+        'class="error" role="alert" aria-atomic="true">Odpověď nejde odeslat',
+        'novalidate<?= $replyHasFormError',
+        'required aria-required="true"',
+        '<legend>Kontrola odeslání</legend>',
         "adminFieldAttributes('reply_subject', \$replyFieldErrors",
         "adminRenderFieldError('reply_subject', \$replyFieldErrors",
         "adminFieldAttributes('reply_message', \$replyFieldErrors",
         "adminRenderFieldError('reply_message', \$replyFieldErrors",
+        'adminFieldAttributes($replyConfirmField, $replyFieldErrors',
+        'adminRenderFieldError($replyConfirmField, $replyFieldErrors',
         "'reply-subject-error'",
         "'reply-message-error'",
+        'data-confirm="Opravdu odeslat tuto odpověď na',
     ] as $adminReplyFieldErrorFragment) {
         if (!str_contains($adminReplyDetailSource, $adminReplyFieldErrorFragment)) {
-            $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' is missing reply field-level error fragment: ' . $adminReplyFieldErrorFragment;
+            $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' is missing reply review, confirmation or field-level error fragment: ' . $adminReplyFieldErrorFragment;
         }
     }
-    if (str_contains($adminReplyDetailSource, 'role="alert">Vyplňte předmět i text odpovědi.</p>')) {
-        $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' still uses generic reply validation alert without field-level suggestions';
+    foreach ([
+        'role="alert">Vyplňte předmět i text odpovědi.</p>',
+        'role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text.',
+    ] as $legacyReplyErrorFragment) {
+        if (str_contains($adminReplyDetailSource, $legacyReplyErrorFragment)) {
+            $adminFieldErrorIssues[] = $adminReplyDetailLabel . ' still uses a legacy reply validation alert without outbound-effect review';
+        }
     }
+}
+foreach ([
+    'contact reply endpoint' => [
+        'source' => $contactReplySource,
+        'confirm' => "\$confirmFieldName = 'confirm_contact_reply_send_' . \$messageId;",
+        'flash' => "adminReplyFlashStore('contact', \$messageId",
+        'effect' => 'sendContactReply(',
+    ],
+    'chat reply endpoint' => [
+        'source' => $chatReplySource,
+        'confirm' => "\$confirmFieldName = 'confirm_chat_reply_send_' . \$messageId;",
+        'flash' => "adminReplyFlashStore('chat', \$messageId",
+        'effect' => 'sendChatReply(',
+    ],
+    'form submission reply endpoint' => [
+        'source' => $formSubmissionReplySource,
+        'confirm' => "\$confirmFieldName = 'confirm_form_submission_reply_send_' . \$submissionId;",
+        'flash' => "adminReplyFlashStore('form_submission', \$submissionId",
+        'effect' => 'sendFormSubmissionReply(',
+    ],
+] as $adminReplyEndpointLabel => $adminReplyEndpoint) {
+    $adminReplyEndpointSource = (string)$adminReplyEndpoint['source'];
+    foreach ([
+        (string)$adminReplyEndpoint['confirm'],
+        '$confirmed = isset($_POST[$confirmFieldName])',
+        'adminReplyValidationErrorFields(',
+        'if ($errorFields !== []) {',
+        (string)$adminReplyEndpoint['flash'],
+        "? 'invalid'",
+        ": 'confirm_required';",
+        'internalRedirectTarget(',
+    ] as $adminReplyEndpointFragment) {
+        if (!str_contains($adminReplyEndpointSource, $adminReplyEndpointFragment)) {
+            $adminFieldErrorIssues[] = $adminReplyEndpointLabel . ' is missing server-side outbound reply guardrail fragment: ' . $adminReplyEndpointFragment;
+        }
+    }
+    if (substr_count($adminReplyEndpointSource, (string)$adminReplyEndpoint['flash']) < 2) {
+        $adminFieldErrorIssues[] = $adminReplyEndpointLabel . ' does not preserve the draft on both validation and delivery failure';
+    }
+    $adminReplyValidationPosition = strpos($adminReplyEndpointSource, 'adminReplyValidationErrorFields(');
+    $adminReplyEffectPosition = strpos($adminReplyEndpointSource, (string)$adminReplyEndpoint['effect']);
+    if (!is_int($adminReplyValidationPosition)
+        || !is_int($adminReplyEffectPosition)
+        || $adminReplyValidationPosition > $adminReplyEffectPosition) {
+        $adminFieldErrorIssues[] = $adminReplyEndpointLabel . ' validates confirmation after the irreversible mail effect';
+    }
+}
+$formReplyValidationPosition = strpos($formSubmissionReplySource, 'adminReplyValidationErrorFields(');
+$formReplyWebhookPosition = strpos($formSubmissionReplySource, 'dispatchFormWebhook(');
+if (!str_contains($formSubmissionDetailSource, 'formWebhookWantsEvent($formMeta, \'reply_sent\')')
+    || !str_contains($formSubmissionDetailSource, 'webhook události <code>reply_sent</code>')
+    || !is_int($formReplyValidationPosition)
+    || !is_int($formReplyWebhookPosition)
+    || $formReplyValidationPosition > $formReplyWebhookPosition) {
+    $adminFieldErrorIssues[] = 'form submission reply is missing review or ordering guardrails for the reply_sent webhook effect';
 }
 foreach ([
     '$issueFieldErrors = isset($_GET[\'issue\']) && $_GET[\'issue\'] === \'invalid\'',

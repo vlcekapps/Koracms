@@ -378,6 +378,84 @@ function checkMaintenanceMode(): void
 }
 
 /**
+ * @param list<string> $errorFields
+ */
+function adminReplyFlashStore(
+    string $scope,
+    int $entityId,
+    string $subject,
+    string $message,
+    array $errorFields = []
+): void {
+    $normalizedScope = strtolower(trim($scope));
+    if ($normalizedScope === '' || $entityId <= 0) {
+        return;
+    }
+    $key = $normalizedScope . ':' . $entityId;
+
+    if (!isset($_SESSION['admin_reply_flash']) || !is_array($_SESSION['admin_reply_flash'])) {
+        $_SESSION['admin_reply_flash'] = [];
+    }
+
+    $_SESSION['admin_reply_flash'][$key] = [
+        'subject' => $subject,
+        'message' => $message,
+        'error_fields' => array_values(array_unique(array_map('strval', $errorFields))),
+    ];
+}
+
+/**
+ * @return array{subject:string,message:string,error_fields:list<string>}|array{}
+ */
+function adminReplyFlashPull(string $scope, int $entityId): array
+{
+    $normalizedScope = strtolower(trim($scope));
+    if ($normalizedScope === '' || $entityId <= 0) {
+        return [];
+    }
+    if (!isset($_SESSION['admin_reply_flash']) || !is_array($_SESSION['admin_reply_flash'])) {
+        unset($_SESSION['admin_reply_flash']);
+        return [];
+    }
+    $key = $normalizedScope . ':' . $entityId;
+    $flash = $_SESSION['admin_reply_flash'][$key] ?? null;
+    unset($_SESSION['admin_reply_flash'][$key]);
+    if ($_SESSION['admin_reply_flash'] === []) {
+        unset($_SESSION['admin_reply_flash']);
+    }
+
+    if (!is_array($flash)) {
+        return [];
+    }
+
+    $errorFields = is_array($flash['error_fields'] ?? null)
+        ? array_values(array_unique(array_map('strval', $flash['error_fields'])))
+        : [];
+
+    return [
+        'subject' => (string)($flash['subject'] ?? ''),
+        'message' => (string)($flash['message'] ?? ''),
+        'error_fields' => $errorFields,
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function adminReplyValidationErrorFields(
+    string $subject,
+    string $message,
+    string $confirmField,
+    bool $confirmed
+): array {
+    return array_values(array_filter([
+        trim($subject) === '' ? 'reply_subject' : null,
+        trim($message) === '' ? 'reply_message' : null,
+        !$confirmed ? $confirmField : null,
+    ]));
+}
+
+/**
  * Zapíše záznam do audit logu (cms_log).
  */
 function logAction(string $action, string $detail = ''): void

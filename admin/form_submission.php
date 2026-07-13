@@ -85,6 +85,9 @@ $submissionStmt = $pdo->prepare(
             f.slug AS form_slug,
             f.is_active AS form_is_active,
             f.submitter_email_field AS form_submitter_email_field,
+            f.webhook_enabled AS form_webhook_enabled,
+            f.webhook_url AS form_webhook_url,
+            f.webhook_events AS form_webhook_events,
             u.email AS assigned_email,
             u.first_name AS assigned_first_name,
             u.last_name AS assigned_last_name,
@@ -154,7 +157,11 @@ $formMeta = [
     'id' => $formId,
     'title' => (string)($submission['form_title'] ?? ''),
     'slug' => (string)($submission['form_slug'] ?? ''),
+    'webhook_enabled' => (int)($submission['form_webhook_enabled'] ?? 0),
+    'webhook_url' => (string)($submission['form_webhook_url'] ?? ''),
+    'webhook_events' => (string)($submission['form_webhook_events'] ?? ''),
 ];
+$replyWebhookEnabled = formWebhookWantsEvent($formMeta, 'reply_sent');
 $githubIssueDraftRepository = githubIssueBridgeRepository();
 $githubIssueDraftLabels = githubIssueLabelsCsv(githubIssueLabelsFromSubmission($submission));
 $githubIssueDraftTitle = githubIssueDefaultTitle($formMeta, $submission, $fieldsByName, $submissionData);
@@ -163,7 +170,25 @@ $hasGitHubIssue = formSubmissionHasGitHubIssue($submission);
 $githubIssueLinkLabel = formSubmissionGitHubIssueLabel($submission);
 $currentAdminUserId = currentUserId();
 $canManageFormIntegrations = currentUserHasCapability('settings_manage');
-$replyFieldErrors = isset($_GET['reply']) && $_GET['reply'] === 'invalid' ? ['reply_subject', 'reply_message'] : [];
+$replyStatus = trim((string)($_GET['reply'] ?? ''));
+$replyConfirmField = 'confirm_form_submission_reply_send_' . $submissionId;
+$replyConfirmId = 'confirm-form-submission-reply-send-' . $submissionId;
+$replyReviewId = 'form-submission-reply-review-' . $submissionId;
+$replyConfirmErrorId = 'confirm-form-submission-reply-send-' . $submissionId . '-error';
+$replyFormErrorId = 'form-submission-reply-form-error';
+$replyFlash = adminReplyFlashPull('form_submission', $submissionId);
+$replyHasFlash = in_array($replyStatus, ['invalid', 'confirm_required', 'failed'], true) && $replyFlash !== [];
+$replyFlashErrorFields = $replyHasFlash ? $replyFlash['error_fields'] : [];
+$replyFieldErrors = match ($replyStatus) {
+    'invalid' => $replyFlashErrorFields !== [] ? $replyFlashErrorFields : ['reply_subject', 'reply_message'],
+    'confirm_required' => $replyFlashErrorFields !== [] ? $replyFlashErrorFields : [$replyConfirmField],
+    default => [],
+};
+if ($replyHasFlash) {
+    $replySubject = (string)$replyFlash['subject'];
+    $replyMessage = (string)$replyFlash['message'];
+}
+$replyHasFormError = in_array($replyStatus, ['invalid', 'confirm_required', 'failed'], true);
 $issueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid'
     ? ['github_issue_repository', 'github_issue_title', 'github_issue_body']
     : [];
@@ -173,6 +198,7 @@ $existingIssueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid
 $replyFieldErrorMessages = [
     'reply_subject' => 'Zadejte předmět odpovědi, aby příjemce poznal, k jakému hlášení se vracíte.',
     'reply_message' => 'Doplňte text odpovědi. Nestačí prázdná zpráva.',
+    $replyConfirmField => 'Před odesláním potvrďte, že jste zkontrolovali příjemce, předmět, text a uvedené externí účinky.',
 ];
 $issueFieldErrorMessages = [
     'github_issue_repository' => 'Zadejte repozitář ve formátu owner/repo, například vlcekapps/Koracms.',
@@ -202,14 +228,16 @@ adminHeader('Detail odpovědi formuláře');
 <?php if (isset($_GET['ok'])): ?>
   <p class="success" role="status">Workflow odpovědi formuláře byl aktualizován.</p>
 <?php endif; ?>
-<?php if (isset($_GET['reply']) && $_GET['reply'] === 'sent'): ?>
-  <p class="success" role="status">Odpověď odesílateli byla úspěšně odeslána.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'missing'): ?>
-  <p class="error" role="alert">U této odpovědi není dostupná žádná platná e-mailová adresa pro odpověď.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'invalid'): ?>
-  <p class="error" role="alert" aria-atomic="true">Před odesláním odpovědi vyplňte předmět i text. U obou polí je doplněná konkrétní nápověda.</p>
-<?php elseif (isset($_GET['reply']) && $_GET['reply'] === 'failed'): ?>
-  <p class="error" role="alert">Odpověď se nepodařilo odeslat. Zkuste to prosím znovu později.</p>
+<?php if ($replyStatus === 'sent'): ?>
+  <p class="success" role="status" aria-atomic="true">Odpověď odesílateli byla úspěšně odeslána.</p>
+<?php elseif ($replyStatus === 'missing'): ?>
+  <p class="error" role="alert" aria-atomic="true">U této odpovědi není dostupná žádná platná e-mailová adresa pro odpověď.</p>
+<?php elseif ($replyStatus === 'invalid'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď nejde odeslat, protože chybí povinný obsah nebo potvrzení kontroly. U zvýrazněných polí je konkrétní nápověda.</p>
+<?php elseif ($replyStatus === 'confirm_required'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď nejde odeslat bez potvrzení kontroly příjemce, obsahu a uvedených externích účinků. U pole Potvrzení odeslání je konkrétní nápověda.</p>
+<?php elseif ($replyStatus === 'failed'): ?>
+  <p id="<?= h($replyFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Odpověď se nepodařilo odeslat. Rozepsaný obsah zůstal zachovaný; před dalším pokusem jej zkontrolujte a znovu potvrďte odeslání.</p>
 <?php endif; ?>
 <?php if (isset($_GET['issue']) && $_GET['issue'] === 'created'): ?>
   <p class="success" role="status">GitHub issue bylo úspěšně vytvořeno a připojeno k tomuto hlášení.</p>
@@ -589,28 +617,39 @@ adminHeader('Detail odpovědi formuláře');
 
 <?php if ($replyRecipient !== []): ?>
   <h2>Odpověď odesílateli</h2>
-  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_reply.php">
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_reply.php" novalidate<?= $replyHasFormError ? ' aria-describedby="' . h($replyFormErrorId) . '"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
     <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
     <fieldset>
-      <legend>Poslat odpověď e-mailem</legend>
+      <legend>Obsah e-mailové odpovědi</legend>
       <p class="field-help">Odpověď odejde na <strong><?= h((string)$replyRecipient['email']) ?></strong><?php if (trim((string)$replyRecipient['field_label']) !== ''): ?> z pole „<?= h((string)$replyRecipient['field_label']) ?>“<?php endif; ?>.</p>
       <div class="form-submission-field">
         <label for="reply-subject">Předmět odpovědi</label>
-        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
+        <input type="text" id="reply-subject" name="subject" value="<?= h($replySubject) ?>" maxlength="255" required aria-required="true" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_subject', $replyFieldErrors, [], [], 'reply-subject-error') ?>>
         <?php adminRenderFieldError('reply_subject', $replyFieldErrors, [], $replyFieldErrorMessages['reply_subject'], 'reply-subject-error'); ?>
       </div>
       <div class="form-submission-field">
         <label for="reply-message">Text odpovědi</label>
-        <textarea id="reply-message" name="message" rows="8" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], ['reply-message-help'], 'reply-message-error') ?>><?= h($replyMessage) ?></textarea>
+        <textarea id="reply-message" name="message" rows="8" required aria-required="true" class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('reply_message', $replyFieldErrors, [], ['reply-message-help'], 'reply-message-error') ?>><?= h($replyMessage) ?></textarea>
         <small id="reply-message-help" class="field-help">Tato odpověď se zároveň uloží do interní historie hlášení.</small>
         <?php adminRenderFieldError('reply_message', $replyFieldErrors, [], $replyFieldErrorMessages['reply_message'], 'reply-message-error'); ?>
       </div>
-      <div class="button-row">
-        <button type="submit" class="btn btn-primary">Poslat odpověď</button>
-      </div>
     </fieldset>
+
+    <fieldset class="admin-fieldset-card admin-fieldset-spaced" aria-describedby="<?= h($replyReviewId) ?>">
+      <legend>Kontrola odeslání</legend>
+      <p id="<?= h($replyReviewId) ?>" class="field-help field-help--flush">E-mail se po potvrzení nevratně odešle na <strong><?= h((string)$replyRecipient['email']) ?></strong> a odpověď se uloží do interní historie.<?php if ($replyWebhookEnabled): ?> Současně se do nastavené externí služby odešle webhook události <code>reply_sent</code>.<?php endif; ?> Před odesláním zkontrolujte všechny uvedené účinky.</p>
+      <label for="<?= h($replyConfirmId) ?>" class="admin-checkbox-label">
+        <input type="checkbox" id="<?= h($replyConfirmId) ?>" name="<?= h($replyConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($replyConfirmField, $replyFieldErrors, [], [$replyReviewId], $replyConfirmErrorId) ?>>
+        Potvrzuji, že jsem zkontroloval(a) příjemce, předmět, text a uvedené externí účinky.
+      </label>
+      <?php adminRenderFieldError($replyConfirmField, $replyFieldErrors, [], $replyFieldErrorMessages[$replyConfirmField], $replyConfirmErrorId); ?>
+    </fieldset>
+
+    <div class="button-row admin-action-row">
+      <button type="submit" class="btn btn-primary" data-confirm="Opravdu odeslat tuto odpověď na <?= h((string)$replyRecipient['email']) ?>?">Poslat odpověď</button>
+    </div>
   </form>
 <?php endif; ?>
 
