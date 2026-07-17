@@ -405,9 +405,28 @@ if ($metaDescription === '') {
 
 $blogLogoPath = blogLogoUrl($blog);
 $blogMetaImage = $blogLogoPath !== '' ? siteUrl(str_replace(BASE_URL, '', $blogLogoPath)) : '';
+$feedPath = blogFeedPath($blog);
 $feedUrl = blogFeedUrl($blog);
+$feedLinkLabel = 'RSS feed celého blogu';
+$feedTitle = $blogName . ' – RSS feed';
+$showFullBlogFeedLink = false;
+
+if ($activeCategory) {
+    $feedPath = blogCategoryFeedPath($blog, $activeCategory);
+    $feedUrl = blogCategoryFeedUrl($blog, $activeCategory);
+    $feedLinkLabel = 'RSS této kategorie';
+    $feedTitle = $blogName . ' – kategorie ' . (string)$activeCategory['name'] . ' – RSS feed';
+    $showFullBlogFeedLink = true;
+} elseif ($activeTag) {
+    $feedPath = blogTagFeedPath($blog, $activeTag);
+    $feedUrl = blogTagFeedUrl($blog, $activeTag);
+    $feedLinkLabel = 'RSS tohoto štítku';
+    $feedTitle = $blogName . ' – štítek ' . (string)$activeTag['name'] . ' – RSS feed';
+    $showFullBlogFeedLink = true;
+}
+
 $extraHeadHtml = '  <link rel="alternate" type="application/rss+xml" title="'
-    . h($blogName) . ' – RSS feed" href="' . h($feedUrl) . '">' . PHP_EOL;
+    . h($feedTitle) . '" href="' . h($feedUrl) . '">' . PHP_EOL;
 
 renderPublicPage([
     'title' => $pageHeading . ' – ' . $siteName,
@@ -442,6 +461,9 @@ renderPublicPage([
         'blogArchives' => $blogArchives,
         'blogPages' => $blogPages,
         'blogSeries' => $blogSeries,
+        'feedPath' => $feedPath,
+        'feedLinkLabel' => $feedLinkLabel,
+        'showFullBlogFeedLink' => $showFullBlogFeedLink,
     ],
     'current_nav' => 'blog:' . $blog['slug'],
     'body_class' => 'page-blog-index',

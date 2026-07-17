@@ -94,6 +94,15 @@ $searchAction = $activeCategory
     : ($activeTag ? blogTagPath($blog, $activeTag) : blogIndexPath($blog));
 $blogPages = is_array($blogPages ?? null) ? $blogPages : [];
 $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
+$feedPath = trim((string)($feedPath ?? ''));
+if ($feedPath === '') {
+    $feedPath = blogFeedPath($blog);
+}
+$feedLinkLabel = trim((string)($feedLinkLabel ?? ''));
+if ($feedLinkLabel === '') {
+    $feedLinkLabel = 'RSS feed celého blogu';
+}
+$showFullBlogFeedLink = !empty($showFullBlogFeedLink);
 ?>
 <div class="listing-shell">
   <section class="surface" aria-labelledby="blog-title">
@@ -120,7 +129,10 @@ $blogSeries = is_array($blogSeries ?? null) ? $blogSeries : [];
         <?php endif; ?>
       </div>
       <div class="button-row button-row--wrap button-row--start">
-        <a class="section-link" href="<?= h(blogFeedPath($blog)) ?>">RSS feed <span aria-hidden="true">→</span></a>
+        <a class="section-link" href="<?= h($feedPath) ?>"><?= h($feedLinkLabel) ?> <span aria-hidden="true">→</span></a>
+        <?php if ($showFullBlogFeedLink): ?>
+          <a class="section-link" href="<?= h(blogFeedPath($blog)) ?>">RSS celého blogu <span aria-hidden="true">→</span></a>
+        <?php endif; ?>
         <?php if (!empty($showAuthorsIndexLink)): ?>
           <a class="section-link" href="<?= authorIndexPath() ?>">Autoři <span aria-hidden="true">→</span></a>
         <?php endif; ?>

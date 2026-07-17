@@ -12618,6 +12618,23 @@ if (!str_contains($blogFeedSource, 'feed_item_limit')) {
 if (!str_contains($blogFeedSource, 'rss_subtitle')) {
     $blogAdminIssues[] = 'RSS feed is missing per-blog subtitle support';
 }
+if (!str_contains($blogPresentationSource, 'function blogCategoryFeedPath')
+    || !str_contains($blogPresentationSource, 'function blogTagFeedPath')
+    || !str_contains($blogIndexControllerSource, 'blogCategoryFeedUrl($blog, $activeCategory)')
+    || !str_contains($blogIndexControllerSource, 'blogTagFeedUrl($blog, $activeTag)')
+    || !str_contains($blogIndexControllerSource, 'RSS této kategorie')
+    || !str_contains($blogIndexControllerSource, 'RSS tohoto štítku')
+    || !str_contains($blogIndexViewSource, 'h($feedLinkLabel)')
+    || !str_contains($blogIndexViewSource, 'RSS celého blogu')) {
+    $blogAdminIssues[] = 'blog taxonomy landing pages are missing named taxonomy RSS discovery and full-blog fallback links';
+}
+if (!str_contains($blogFeedSource, '$_GET[\'category\']')
+    || !str_contains($blogFeedSource, '$_GET[\'tag\']')
+    || !str_contains($blogFeedSource, 'categoryWithChildrenIds($pdo')
+    || !str_contains($blogFeedSource, 'at2.tag_id = ?')
+    || !str_contains($blogFeedSource, 'sendReadOnlyNotFoundResponse')) {
+    $blogAdminIssues[] = 'RSS feed is missing scoped category/tag filtering or safe invalid-taxonomy handling';
+}
 if (!str_contains($blogRouterSource, 'getBlogByLegacySlug($blogSlug)')) {
     $blogAdminIssues[] = 'blog router is missing legacy slug redirect lookup';
 }

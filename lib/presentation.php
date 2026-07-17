@@ -677,19 +677,81 @@ function blogIndexUrl(array $blog): string
 /**
  * @param array<string, mixed> $blog
  */
-function blogFeedPath(array $blog): string
+function blogFeedRequestPath(array $blog, string $categorySlug = '', string $tagSlug = ''): string
 {
-    $slug = (string)($blog['slug'] ?? 'blog');
-    return BASE_URL . '/feed.php?blog=' . rawurlencode($slug);
+    $blogSlug = blogTaxonomySlug((string)($blog['slug'] ?? 'blog'));
+    $categorySlug = blogCategorySlug($categorySlug);
+    $tagSlug = blogTagSlug($tagSlug);
+    $query = ['blog' => $blogSlug !== '' ? $blogSlug : 'blog'];
+    if ($categorySlug !== '') {
+        $query['category'] = $categorySlug;
+    } elseif ($tagSlug !== '') {
+        $query['tag'] = $tagSlug;
+    }
+
+    return appendUrlQuery(BASE_URL . '/feed.php', $query);
 }
 
 /**
  * @param array<string, mixed> $blog
  */
-function blogFeedUrl(array $blog): string
+function blogFeedPath(array $blog, string $categorySlug = '', string $tagSlug = ''): string
 {
-    $slug = (string)($blog['slug'] ?? 'blog');
-    return siteUrl('/feed.php?blog=' . rawurlencode($slug));
+    return blogFeedRequestPath($blog, $categorySlug, $tagSlug);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ */
+function blogFeedUrl(array $blog, string $categorySlug = '', string $tagSlug = ''): string
+{
+    $blogSlug = blogTaxonomySlug((string)($blog['slug'] ?? 'blog'));
+    $categorySlug = blogCategorySlug($categorySlug);
+    $tagSlug = blogTagSlug($tagSlug);
+    $query = ['blog' => $blogSlug !== '' ? $blogSlug : 'blog'];
+    if ($categorySlug !== '') {
+        $query['category'] = $categorySlug;
+    } elseif ($tagSlug !== '') {
+        $query['tag'] = $tagSlug;
+    }
+
+    return appendUrlQuery(siteUrl('/feed.php'), $query);
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $category
+ */
+function blogCategoryFeedPath(array $blog, array $category): string
+{
+    return blogFeedPath($blog, blogCategorySlug((string)($category['slug'] ?? '')));
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $category
+ */
+function blogCategoryFeedUrl(array $blog, array $category): string
+{
+    return blogFeedUrl($blog, blogCategorySlug((string)($category['slug'] ?? '')));
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $tag
+ */
+function blogTagFeedPath(array $blog, array $tag): string
+{
+    return blogFeedPath($blog, '', blogTagSlug((string)($tag['slug'] ?? '')));
+}
+
+/**
+ * @param array<string, mixed> $blog
+ * @param array<string, mixed> $tag
+ */
+function blogTagFeedUrl(array $blog, array $tag): string
+{
+    return blogFeedUrl($blog, '', blogTagSlug((string)($tag['slug'] ?? '')));
 }
 
 function normalizeBlogArchiveKey(string $archiveKey): string

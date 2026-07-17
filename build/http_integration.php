@@ -11137,6 +11137,60 @@ try {
         }
     }
 
+    if (!str_contains($categoryLandingResponse['body'], 'RSS této kategorie')
+        || !str_contains($categoryLandingResponse['body'], 'RSS celého blogu')
+        || !str_contains($categoryLandingResponse['body'], 'category=' . $taxonomyCategorySlug)
+        || !str_contains($categoryLandingResponse['body'], 'rel="alternate"')) {
+        $blogTaxonomyIssues[] = 'landing stránka kategorie nenabízí pojmenovaný vlastní RSS kanál a RSS celého blogu';
+    }
+    if (!str_contains($tagLandingResponse['body'], 'RSS tohoto štítku')
+        || !str_contains($tagLandingResponse['body'], 'RSS celého blogu')
+        || !str_contains($tagLandingResponse['body'], 'tag=' . $taxonomyTagSlug)
+        || !str_contains($tagLandingResponse['body'], 'rel="alternate"')) {
+        $blogTaxonomyIssues[] = 'landing stránka štítku nenabízí pojmenovaný vlastní RSS kanál a RSS celého blogu';
+    }
+
+    $categoryFeedPath = '/feed.php?blog=' . rawurlencode($taxonomyBlogSlug)
+        . '&category=' . rawurlencode($taxonomyCategorySlug);
+    $categoryFeedResponse = fetchUrl($baseUrl . BASE_URL . $categoryFeedPath, '', 0);
+    if (httpIntegrationStatusCode($categoryFeedResponse) !== 200
+        || !httpIntegrationHeaderContains($categoryFeedResponse, 'Content-Type', 'application/rss+xml')
+        || !str_contains($categoryFeedResponse['body'], '<title>Kategorie ' . $taxonomyCategoryName)
+        || !str_contains($categoryFeedResponse['body'], htmlspecialchars($taxonomyArticleTitle, ENT_XML1 | ENT_QUOTES, 'UTF-8'))
+        || !str_contains($categoryFeedResponse['body'], 'category=' . $taxonomyCategorySlug)
+        || !str_contains($categoryFeedResponse['body'], $categoryLandingPath)
+        || str_contains($categoryFeedResponse['body'], htmlspecialchars($taxonomyOtherArticleTitle, ENT_XML1 | ENT_QUOTES, 'UTF-8'))) {
+        $blogTaxonomyIssues[] = 'RSS kategorie nevrátil pojmenovaný kanál jen s veřejnými články dané kategorie';
+    }
+
+    $tagFeedPath = '/feed.php?blog=' . rawurlencode($taxonomyBlogSlug)
+        . '&tag=' . rawurlencode($taxonomyTagSlug);
+    $tagFeedResponse = fetchUrl($baseUrl . BASE_URL . $tagFeedPath, '', 0);
+    if (httpIntegrationStatusCode($tagFeedResponse) !== 200
+        || !httpIntegrationHeaderContains($tagFeedResponse, 'Content-Type', 'application/rss+xml')
+        || !str_contains($tagFeedResponse['body'], '<title>Štítek #' . $taxonomyTagName)
+        || !str_contains($tagFeedResponse['body'], htmlspecialchars($taxonomyArticleTitle, ENT_XML1 | ENT_QUOTES, 'UTF-8'))
+        || !str_contains($tagFeedResponse['body'], 'tag=' . $taxonomyTagSlug)
+        || !str_contains($tagFeedResponse['body'], $tagLandingPath)
+        || str_contains($tagFeedResponse['body'], htmlspecialchars($taxonomyOtherArticleTitle, ENT_XML1 | ENT_QUOTES, 'UTF-8'))) {
+        $blogTaxonomyIssues[] = 'RSS štítku nevrátil pojmenovaný kanál jen s veřejnými články daného štítku';
+    }
+
+    foreach ([
+        '/feed.php?blog=' . rawurlencode($taxonomyBlogSlug) . '&category=neexistujici-taxonomie',
+        '/feed.php?category=' . rawurlencode($taxonomyCategorySlug),
+        '/feed.php?blog=' . rawurlencode($taxonomyBlogSlug)
+            . '&category=' . rawurlencode($taxonomyCategorySlug)
+            . '&tag=' . rawurlencode($taxonomyTagSlug),
+    ] as $invalidTaxonomyFeedPath) {
+        $invalidTaxonomyFeedResponse = fetchUrl($baseUrl . BASE_URL . $invalidTaxonomyFeedPath, '', 0);
+        if (httpIntegrationStatusCode($invalidTaxonomyFeedResponse) !== 404
+            || !httpIntegrationHeaderContains($invalidTaxonomyFeedResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($invalidTaxonomyFeedResponse, 'X-Robots-Tag', 'noindex')) {
+            $blogTaxonomyIssues[] = 'neplatný taxonomy RSS požadavek nevrátil bezpečnou 404: ' . $invalidTaxonomyFeedPath;
+        }
+    }
+
     $legacyCategoryResponse = fetchUrl($baseUrl . BASE_URL . '/blog/index.php?blog_id=' . $taxonomyBlogId . '&kat=' . $taxonomyCategoryId, '', 0);
     if (httpIntegrationStatusCode($legacyCategoryResponse) !== 200 || !str_contains($legacyCategoryResponse['body'], $taxonomyArticleTitle)) {
         $blogTaxonomyIssues[] = 'starý filtr ?kat= nezobrazil článek kategorie';

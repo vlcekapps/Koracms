@@ -348,6 +348,17 @@ test_section('blog taxonomy landing links');
 
 assert_equals('linuxovy-koutek', blogCategorySlug('Linuxový koutek'), 'category slug normalizes Czech diacritics');
 assert_equals('nvda-tip', blogTagSlug('NVDA tip'), 'tag slug uses shared blog taxonomy normalization');
+$taxonomyFeedBlog = ['slug' => 'Technický blog'];
+assert_equals(
+    '/feed.php?blog=technicky-blog&category=linuxovy-koutek',
+    str_replace(BASE_URL, '', blogCategoryFeedPath($taxonomyFeedBlog, ['slug' => 'Linuxový koutek'])),
+    'category feed path keeps canonical blog and category scope'
+);
+assert_equals(
+    '/feed.php?blog=technicky-blog&tag=nvda-tip',
+    str_replace(BASE_URL, '', blogTagFeedPath($taxonomyFeedBlog, ['slug' => 'NVDA tip'])),
+    'tag feed path keeps canonical blog and tag scope'
+);
 assert_equals('technicka-podpora', contactTopicSlug('Technická podpora'), 'contact topic slug normalizes Czech diacritics');
 assert_equals(
     'KNT-20260401-AB12',

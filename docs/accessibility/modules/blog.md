@@ -11,7 +11,7 @@ Veřejná část Blogu:
 - index blogu včetně doporučeného článku, vyhledávání, filtrů a stránkování,
 - detail článku včetně metadat, souvisejících článků, komentářů a kopírování odkazu,
 - dlouhý článek s automatickou osnovou `V tomto článku`,
-- landing stránky kategorií, štítků, sérií a měsíčních archivů,
+- landing stránky kategorií, štítků, sérií a měsíčních archivů včetně RSS discovery a taxonomy RSS kanálů,
 - blogová statická stránka,
 - veřejné externí odkazy v navigaci blogu,
 - legacy redirecty a read-only chování starých URL.
@@ -40,7 +40,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 
 - `blog_article_series_http` pro série článků, cross-blog validaci a veřejný blok série,
 - `blog_related_articles_http` pro ručně související články a field-level chyby editoru článku,
-- `blog_taxonomy_landing_http` pro kategorie/štítky i měsíční archivy, čisté URL, SEO metadata, sitemapu a duplicitní slugy,
+- `blog_taxonomy_landing_http` pro kategorie/štítky i měsíční archivy, čisté URL, SEO metadata, sitemapu, duplicitní slugy a pojmenované taxonomy RSS kanály s bezpečnými 404,
 - `blog_static_pages_http` pro blogové statické stránky, kontextovou unikátnost slugu a zachování rozepsaného obsahu,
 - `blog_management_validation_http` pro správu blogů, validační chyby a review-and-confirm mazání celého blogu,
 - runtime blog guardraily v `build/runtime_audit.php` pro osnovu článku, série, taxonomie, redirecty, blogové stránky, výpisy a přístupné nadpisy,
@@ -63,7 +63,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 1.4.12 Text Spacing | Partially Supports | Core CSS neblokuje text spacing patterny. | Projít blogový index/detail s text-spacing override. |
 | 2.1.1 Keyboard | Supports | Formuláře, odkazy, kopírování a admin ovládání jsou běžné klávesové prvky; ruční NVDA/keyboard průchod blogů, dlouhých formulářů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách blog editoru, sérií, souvisejících článků nebo pickerů zopakovat NVDA/keyboard průchod. |
 | 2.4.1 Bypass Blocks | Supports | Veřejný i admin layout zachovává skip link. | Ověřit ve všech aktivních theme variantách. |
-| 2.4.4 Link Purpose | Supports | Odkazy kategorií, štítků, sérií a článků mají kontextový text; nové okno používá textové doplnění. | Ručně projít opakované odkazy ve výpisech. |
+| 2.4.4 Link Purpose | Supports | Odkazy kategorií, štítků, sérií a článků mají kontextový text; taxonomy landing stránky výslovně rozlišují vlastní RSS a RSS celého blogu; nové okno používá textové doplnění. | Ručně projít opakované odkazy ve výpisech. |
 | 2.4.6 Headings and Labels | Supports | Blog index, detail, TOC, série a sidebar/footer widgety používají pojmenované sekce. | Ručně ověřit pořadí nadpisů v dlouhém článku s author contentem. |
 | 2.4.11 Focus Not Obscured | Partially Supports | TOC a anchor cíle mají scroll offset; ruční NVDA průchod blogů a blogových stránek byl potvrzený 2026-07-09 bez nahlášené regrese. | Vizuálně ověřit skoky na kotvy při 400% zoomu a se sticky prvky. |
 | 2.5.8 Target Size | Partially Supports | Sdílené CSS řeší tlačítka, akční řádky a mobilní baseline. | Ručně změřit malé tag/category/series odkazy v custom theme. |
@@ -76,6 +76,21 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region a ruční NVDA průchod dlouhé editace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách live regionů nebo autosave/content-lock chování zopakovat NVDA průchod. |
 
 ## Nález Opravený V Tomto Passu
+
+### RSS odkaz na taxonomy landing stránce nepopisoval rozsah kanálu
+
+Priorita: nízká.
+
+Riziko: obecný text `RSS feed` neříkal, zda odkaz odebírá právě otevřenou kategorii nebo štítek, anebo celý blog. HTML discovery navíc vždy oznamovalo jen kanál celého blogu.
+
+Oprava:
+
+- kategorie a štítky mají vlastní RSS kanál se stejnou public visibility logikou jako jejich landing stránka,
+- viditelné odkazy rozlišují `RSS této kategorie`, `RSS tohoto štítku` a `RSS celého blogu`,
+- taxonomy feed je pojmenovaný také přes `<link rel="alternate">`,
+- unit testy, runtime audit a HTTP integrace hlídají účel odkazu, scope obsahu i bezpečné 404.
+
+Snížené riziko: WCAG `2.4.4 Link Purpose (In Context)` a `3.2.4 Consistent Identification`.
 
 ### Veřejný komentářový formulář neměl field-level chyby u jednotlivých polí
 

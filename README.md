@@ -242,7 +242,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 
 | Modul | Co umí |
 |---|---|
-| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, čisté měsíční archivy, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální i per-blog RSS feed |
+| **Blogy** | Více blogů v jedné instalaci, týmy blogů, články, kategorie a štítky s veřejnými landing stránkami a SEO poli, čisté měsíční archivy, komentáře, plánované publikování, série článků, ručně řízené související články, veřejní autoři, autorský obsahový hub, globální, per-blog i kategoriové/štítkové RSS feedy |
 | **Novinky** | Krátké zprávy s autorem, slug URL, veřejným hledáním, autorským filtrem, plánovaným skrytím a SEO fallbacky |
 | **Události** | Přehled akcí s typy, místy konání, opakovanými termíny, detailem a ICS exportem do kalendáře |
 | **Galerie** | Alba a fotografie s detailovými URL, hledáním, stránkováním, revizemi, fotografickými metadaty a bezpečným media endpointem |
@@ -304,7 +304,7 @@ Hromadné odebrání článků v přehledu je vratný přesun do Koše. Správce
 
 Delší blogové články dostanou na veřejném detailu automatickou osnovu `V tomto článku`, pokud obsah obsahuje alespoň dva viditelné nadpisy `h2` nebo `h3`. Kora CMS doplní stabilní kotvy k nadpisům, ručně zadaná `id` zachová a odkazy v osnově pomáhají čtenářům i čtečkám obrazovky rychle přeskakovat mezi částmi článku.
 
-Kategorie a štítky blogu nejsou jen interní filtry. Správce k nim může vyplnit veřejný slug, popis, meta title a meta description. Veřejné stránky mají čisté adresy `/{blog-slug}/kategorie/{category-slug}` a `/{blog-slug}/stitky/{tag-slug}`, zobrazují popis nad výpisem článků a používají vlastní canonical/SEO metadata. Staré query odkazy `?kat=` a `?tag=` zůstávají kompatibilní.
+Kategorie a štítky blogu nejsou jen interní filtry. Správce k nim může vyplnit veřejný slug, popis, meta title a meta description. Veřejné stránky mají čisté adresy `/{blog-slug}/kategorie/{category-slug}` a `/{blog-slug}/stitky/{tag-slug}`, zobrazují popis nad výpisem článků a používají vlastní canonical/SEO metadata. Staré query odkazy `?kat=` a `?tag=` zůstávají kompatibilní. Každá landing stránka nabízí vlastní pojmenovaný RSS kanál jen pro danou kategorii nebo štítek a zároveň zachovává samostatný odkaz na RSS celého blogu.
 
 Blog zároveň automaticky chrání staré veřejné adresy. Když se změní slug nebo blog publikovaného článku, slug kategorie, slug štítku nebo slug aktivní série, CMS uloží trvalé `301` přesměrování ze staré URL na nový canonical tvar přes běžnou správu přesměrování. Při destruktivním smazání článku se redirecty mířící na zaniklou článkovou URL uklidí, aby nevznikaly slepé odkazy. Při vratném hromadném přesunu do Koše i při převodu zůstávají redirecty spolu se zdrojovým článkem zachované a lze je znovu využít po jeho obnovení.
 

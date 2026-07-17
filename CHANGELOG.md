@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Přidáno
+- **RSS kategorií a štítků blogu** – veřejné landing stránky kategorií a štítků nabízejí vlastní pojmenovaný RSS kanál i samostatný odkaz na RSS celého blogu; feed používá stejnou publikační viditelnost jako veřejný výpis, kategorie zahrnuje podkategorie a neplatné či konfliktní taxonomy požadavky vracejí bezpečnou 404.
 - **Čisté měsíční archivy blogů** – každý neprázdný měsíc blogu má stabilní URL `/{blog}/archiv/RRRR/MM`, vlastní canonical a položku v sitemapě; veřejná navigace používá čisté odkazy a dosavadní filtr `?archiv=RRRR-MM` zůstává kompatibilní.
 - **Podcastové platformy, sezóny a návazný poslech** – pořad může spravovat odkazy na Spotify, Apple Podcasts, YouTube Music a další bezpečné platformy; veřejný detail nabízí přístupný filtr sezón a detail epizody odkazy na předchozí a další veřejný díl.
 - **Hosté a tvůrčí tým podcastů** – pořady i jednotlivé epizody mohou evidovat moderátory, hosty a další tvůrce včetně role, skupiny, profilu a obrázku; osoby se zobrazují v přístupných veřejných sekcích a RSS je poskytuje standardní značkou `podcast:person`.

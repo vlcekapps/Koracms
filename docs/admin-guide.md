@@ -353,6 +353,8 @@ U každého blogu lze nastavit:
 
 Pokud blog změní slug, Kora CMS si uloží starý slug jako redirect a staré URL i RSS feed se přesměrují na nový tvar.
 
+Veřejná landing stránka kategorie nebo štítku oznamuje svůj vlastní RSS kanál také v HTML hlavičce pro čtečky feedů. Viditelné odkazy rozlišují `RSS této kategorie`, `RSS tohoto štítku` a `RSS celého blogu`, takže jejich účel zůstává jasný i mimo vizuální kontext.
+
 Pokud je u loga vyplněný alternativní text, veřejný index blogu ho použije jako `alt` obrázku. Když pole zůstane prázdné, logo se bere jako dekorativní a čtečky obrazovky ho přeskočí. Po odebrání loga se alternativní text automaticky vyprázdní, aby v administraci nezůstal viset bez obrázku.
 
 Create i edit formulář blogu jsou nově rozdělené do srozumitelných sekcí `Základní údaje blogu`, `Obsah a metadata blogu` a `Logo a zobrazení blogu`. Pomocné texty jsou napojené přes skutečné `aria-describedby`, takže formulář lépe funguje i pro čtečky obrazovky.
@@ -495,7 +497,7 @@ Každý blog může mít na svém indexu:
 - název a volitelné logo
 - krátký popis
 - rozšířený intro blok
-- přímý odkaz na RSS feed
+- přímý odkaz na RSS feed celého blogu; na landing stránce kategorie nebo štítku také vlastní pojmenovaný RSS kanál
 - vlastní vyhledávání jen v rámci daného blogu
 - archiv po měsících
 - filtr podle autora, kategorie a štítků
