@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-07-17: textové oddělení metadat widgetu Ke stažení
+
+- Datum a rozsah: homepage varianta veřejného widgetu Nejnovější položky ke stažení, konkrétně řádek typu položky, verze, data vydání a platformy.
+- Dotčená kritéria: 1.3.1 a 1.3.2.
+- Rozhodnutí: sousední elementy metadat byly vizuálně oddělené pouze CSS vlastností gap, ale jejich textový obsah neobsahoval mezery, takže NVDA spojovalo například verzi a datum. Widget nově skládá metadata do jediné textové posloupnosti se skutečnými mezerami. Stav hlavní WCAG matice se nemění, protože jde o lokální regresní opravu již podporované struktury.
+- Automatizovaný důkaz: unit sekce widget metadata semantics ověřuje přesný text Software 0.10.1 17. června 2026, 00:00 Android; runtime audit widget_registry hlídá použití sdíleného helperu a skutečného textového oddělovače v rendereru.
+- Ruční ověření nebo zbývající riziko: na veřejné homepage ověřit s NVDA/Firefox plynulé čtení celé karty a správné pauzy mezi typem, verzí, datem a platformou; sidebar/footer varianta už používá textové oddělovače a nebyla měněna.
+
 ### 2026-07-10: retrospektiva rozšíření Podcastů
 
 - Datum a rozsah: rozšíření Podcastů o kapitoly, osoby/hosty a poslechové platformy v commitech `5b2a1872`, `83d89d72` a `bf505d06` a následné opravy.

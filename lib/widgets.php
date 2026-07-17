@@ -694,6 +694,22 @@ function widgetCardTitle(array $widget, string $titleHtml): string
     return '<h3 id="' . h(widgetHeadingId($widget)) . '" class="widget-card__title">' . $titleHtml . '</h3>';
 }
 
+/**
+ * @param list<string> $items
+ */
+function widgetMetaText(array $items): string
+{
+    $parts = [];
+    foreach ($items as $item) {
+        $item = trim($item);
+        if ($item !== '') {
+            $parts[] = $item;
+        }
+    }
+
+    return implode(' ', $parts);
+}
+
 // ──────────────── Widget render funkce ───────────────────────────────────────
 
 /**
@@ -912,20 +928,20 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
         }
         $out .= '<div class="card__body">';
         $out .= '<h3 id="' . h($downloadTitleId) . '" class="card__title"><a href="' . h(downloadPublicPath($download)) . '">' . h($download['title']) . '</a></h3>';
-        $out .= '<p class="meta-row meta-row--tight"><span>' . h((string)$download['download_type_label']) . '</span>';
+        $meta = [(string)$download['download_type_label']];
         if ((int)$download['is_featured'] === 1) {
-            $out .= '<span>Doporučené</span>';
+            $meta[] = 'Doporučené';
         }
         if ($download['version_label'] !== '') {
-            $out .= '<span>' . h($download['version_label']) . '</span>';
+            $meta[] = $download['version_label'];
         }
         if ($download['release_date_label'] !== '') {
-            $out .= '<span>' . h($download['release_date_label']) . '</span>';
+            $meta[] = $download['release_date_label'];
         }
         if ($download['platform_label'] !== '') {
-            $out .= '<span>' . h($download['platform_label']) . '</span>';
+            $meta[] = $download['platform_label'];
         }
-        $out .= '</p>';
+        $out .= '<p class="meta-row meta-row--tight">' . h(widgetMetaText($meta)) . '</p>';
         if ($download['excerpt_plain'] !== '') {
             $out .= '<p>' . h(mb_substr((string)$download['excerpt_plain'], 0, 150)) . '</p>';
         }

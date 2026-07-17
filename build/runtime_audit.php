@@ -20283,6 +20283,11 @@ if (($widgetDefs['contact_info']['requires_module'] ?? null) !== null) {
 if (($widgetDefs['intro']['requires_setting'] ?? null) !== null) {
     $widgetRegistryIssues[] = 'intro widget is still incorrectly bound to legacy homepage settings';
 }
+if (!str_contains($widgetsSource, 'function widgetMetaText(array $items): string')
+    || !str_contains($widgetsSource, "return implode(' ', \$parts);")
+    || !str_contains($widgetsSource, "h(widgetMetaText(\$meta))")) {
+    $widgetRegistryIssues[] = 'latest downloads widget metadata is missing real text separators for assistive technologies';
+}
 if (!str_contains($migrateSource, "VALUES ('footer', 'social_links', 'Sociální sítě'")) {
     $widgetRegistryIssues[] = 'widget migration does not insert the correct social links default title';
 }

@@ -845,6 +845,21 @@ assert_equals('', normalizeFormWebhookUrl('http://example.com/hook'), 'webhook U
 assert_equals('', normalizeFormWebhookUrl('https://user:pass@example.com/hook'), 'webhook URL rejects credentials');
 assert_equals('', normalizeFormWebhookUrl('https://localhost/hook'), 'webhook URL rejects localhost host');
 
+test_section('widget metadata semantics');
+
+$downloadWidgetMeta = widgetMetaText([
+    'Software',
+    '0.10.1',
+    '17. června 2026, 00:00',
+    'Android',
+]);
+assert_equals(
+    'Software 0.10.1 17. června 2026, 00:00 Android',
+    $downloadWidgetMeta,
+    'download widget metadata keeps text separators for screen readers'
+);
+assert_equals('Software Android', widgetMetaText([' Software ', '', ' Android ']), 'widget metadata skips empty values and trims labels');
+
 test_section('podcast episode accessibility metadata');
 
 $podcastEpisodeWithTranscriptOnly = [
