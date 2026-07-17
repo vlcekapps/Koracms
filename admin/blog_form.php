@@ -344,6 +344,29 @@ $fieldErrorMessages = [
     'missing_tags_action' => 'Zvolte Bez chybějících štítků, nebo požádejte správce taxonomií cílového blogu o jejich vytvoření.',
     'image_upload' => $blogImageUploadErrorMessage,
 ];
+$previewResult = trim((string)($_GET['preview_result'] ?? ''));
+$previewResultMessage = match ($previewResult) {
+    'enabled' => 'Sdílený náhled byl aktivován. Nový odkaz je připravený k bezpečnému sdílení.',
+    'rotated' => 'Sdílený náhledový odkaz byl obnoven. Všechny dřívější odkazy už nefungují.',
+    'revoked' => 'Sdílený náhled byl zneplatněn. Běžné uložení článku jej znovu neaktivuje.',
+    default => '',
+};
+$previewError = trim((string)($_GET['preview_error'] ?? ''));
+$previewErrorMessage = match ($previewError) {
+    'confirm_enable' => 'Před aktivací potvrďte, že rozumíte tomu, že odkaz zpřístupní článek bez přihlášení.',
+    'confirm_rotate' => 'Před obnovením potvrďte, že dříve sdílené náhledové odkazy přestanou fungovat.',
+    'confirm_revoke' => 'Před zneplatněním potvrďte, že aktuální náhledový odkaz přestane fungovat.',
+    'stale' => 'Stav náhledového odkazu se mezitím změnil. Zkontrolujte aktuální stav a akci případně opakujte.',
+    'invalid' => 'Článek už není dostupný nebo k němu nemáte oprávnění.',
+    'failed' => 'Náhledový odkaz se nepodařilo změnit. Data článku zůstala beze změny; zkuste akci znovu.',
+    default => '',
+};
+$previewTokenActive = $article !== null
+    && isValidArticlePreviewToken((string)($article['preview_token'] ?? ''));
+$previewEnableErrorFields = $previewError === 'confirm_enable' ? ['confirm_article_preview_enable'] : [];
+$previewRotateErrorFields = $previewError === 'confirm_rotate' ? ['confirm_article_preview_rotate'] : [];
+$previewRevokeErrorFields = $previewError === 'confirm_revoke' ? ['confirm_article_preview_revoke'] : [];
+
 $publishAtInput = '';
 if (!empty($article['publish_at'])) {
     $publishAtInput = date('Y-m-d\TH:i', strtotime((string)$article['publish_at']));
@@ -415,6 +438,91 @@ adminHeader($pageTitle);
       </form>
     <?php endif; ?>
   </div>
+<?php endif; ?>
+
+<?php if ($article): ?>
+  <section id="article-preview-sharing" class="admin-section-spaced" aria-labelledby="article-preview-sharing-heading" aria-describedby="article-preview-sharing-help">
+    <h2 id="article-preview-sharing-heading">Sdílený náhled článku</h2>
+    <p id="article-preview-sharing-help" class="field-help">
+      Náhledový odkaz funguje bez přihlášení. Každý, kdo jej zná, může otevřít i koncept nebo naplánovaný článek;
+      odkaz proto neposílejte veřejně.
+    </p>
+
+    <?php if ($previewResultMessage !== ''): ?>
+      <p class="success" role="status" aria-atomic="true"><?= h($previewResultMessage) ?></p>
+    <?php endif; ?>
+    <?php if ($previewErrorMessage !== ''): ?>
+      <p id="article-preview-error" class="error" role="alert" aria-atomic="true"><?= h($previewErrorMessage) ?></p>
+    <?php endif; ?>
+
+    <?php if ($previewTokenActive): ?>
+      <p><strong>Stav:</strong> Aktivní.</p>
+      <p>
+        <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer">Otevřít sdílený náhled<?= newWindowLinkSrOnlySuffix() ?></a>
+      </p>
+
+      <form action="blog_preview_token.php" method="post"<?= $previewRotateErrorFields !== [] ? ' aria-describedby="article-preview-error"' : '' ?>>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+        <input type="hidden" name="action" value="rotate">
+        <fieldset class="admin-fieldset-card">
+          <legend>Obnovit bezpečnostní odkaz</legend>
+          <p id="article-preview-rotate-help" class="field-help field-help--flush">
+            Vytvoří se nový odkaz a všechny dříve sdílené náhledové adresy okamžitě přestanou fungovat.
+          </p>
+          <label for="confirm-article-preview-rotate" class="admin-checkbox-label">
+            <input type="checkbox" id="confirm-article-preview-rotate" name="confirm_article_preview_rotate" value="1"
+                   required aria-required="true"<?= adminFieldAttributes('confirm_article_preview_rotate', $previewRotateErrorFields, [], ['article-preview-rotate-help'], 'article-preview-error') ?>>
+            Potvrzuji zneplatnění všech dříve sdílených náhledových odkazů.
+          </label>
+          <div class="admin-field-row">
+            <button type="submit" class="btn" data-confirm="Obnovit náhledový odkaz? Všechny dřívější odkazy přestanou fungovat.">Obnovit odkaz</button>
+          </div>
+        </fieldset>
+      </form>
+
+      <form action="blog_preview_token.php" method="post"<?= $previewRevokeErrorFields !== [] ? ' aria-describedby="article-preview-error"' : '' ?>>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+        <input type="hidden" name="action" value="revoke">
+        <fieldset class="admin-fieldset-card">
+          <legend>Zneplatnit sdílený náhled</legend>
+          <p id="article-preview-revoke-help" class="field-help field-help--flush">
+            Aktuální odkaz přestane fungovat. Běžné uložení článku náhled znovu neaktivuje; později jej můžete zapnout samostatně.
+          </p>
+          <label for="confirm-article-preview-revoke" class="admin-checkbox-label">
+            <input type="checkbox" id="confirm-article-preview-revoke" name="confirm_article_preview_revoke" value="1"
+                   required aria-required="true"<?= adminFieldAttributes('confirm_article_preview_revoke', $previewRevokeErrorFields, [], ['article-preview-revoke-help'], 'article-preview-error') ?>>
+            Potvrzuji zneplatnění aktuálního náhledového odkazu.
+          </label>
+          <div class="admin-field-row">
+            <button type="submit" class="btn btn-danger" data-confirm="Zneplatnit sdílený náhled? Aktuální odkaz přestane fungovat.">Zneplatnit odkaz</button>
+          </div>
+        </fieldset>
+      </form>
+    <?php else: ?>
+      <p><strong>Stav:</strong> Neaktivní. Článek není dostupný přes sdílený náhledový odkaz.</p>
+      <form action="blog_preview_token.php" method="post"<?= $previewEnableErrorFields !== [] ? ' aria-describedby="article-preview-error"' : '' ?>>
+        <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+        <input type="hidden" name="id" value="<?= (int)$article['id'] ?>">
+        <input type="hidden" name="action" value="enable">
+        <fieldset class="admin-fieldset-card">
+          <legend>Aktivovat sdílený náhled</legend>
+          <p id="article-preview-enable-help" class="field-help field-help--flush">
+            CMS vytvoří nový tajný odkaz, přes který lze článek otevřít bez přihlášení.
+          </p>
+          <label for="confirm-article-preview-enable" class="admin-checkbox-label">
+            <input type="checkbox" id="confirm-article-preview-enable" name="confirm_article_preview_enable" value="1"
+                   required aria-required="true"<?= adminFieldAttributes('confirm_article_preview_enable', $previewEnableErrorFields, [], ['article-preview-enable-help'], 'article-preview-error') ?>>
+            Potvrzuji zpřístupnění náhledu každému, kdo bude znát odkaz.
+          </label>
+          <div class="admin-field-row">
+            <button type="submit" class="btn" data-confirm="Aktivovat sdílený náhled bez přihlášení?">Aktivovat náhled</button>
+          </div>
+        </fieldset>
+      </form>
+    <?php endif; ?>
+  </section>
 <?php endif; ?>
 
 <?php if (isset($formErrorMessages[$err])): ?>
@@ -739,11 +847,6 @@ adminHeader($pageTitle);
   <div class="button-row blog-form-actions">
     <button type="submit"><?= $article ? 'Uložit změny' : 'Přidat článek' ?></button>
     <a href="<?= h($articleListUrl) ?>">Zrušit</a>
-    <?php if ($article && !empty($article['preview_token'])): ?>
-      <a href="<?= h(articlePreviewPath($article)) ?>" target="_blank" rel="noopener noreferrer">Náhled<?= newWindowLinkSrOnlySuffix() ?></a>
-    <?php elseif ($article): ?>
-      <small class="blog-form-preview-note">(Uložte pro aktivaci odkazu „Náhled“)</small>
-    <?php endif; ?>
   </div>
 </form>
 

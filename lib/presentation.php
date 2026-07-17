@@ -5198,6 +5198,23 @@ function articlePreviewPath(array $article): string
     return articlePublicPath($article, $previewToken !== '' ? ['preview' => $previewToken] : []);
 }
 
+function normalizeArticlePreviewAction(string $action): string
+{
+    $action = strtolower(trim($action));
+
+    return in_array($action, ['enable', 'rotate', 'revoke'], true) ? $action : '';
+}
+
+function generateArticlePreviewToken(): string
+{
+    return bin2hex(random_bytes(16));
+}
+
+function isValidArticlePreviewToken(string $token): bool
+{
+    return preg_match('/\A[a-f0-9]{32}\z/D', trim($token)) === 1;
+}
+
 /**
  * @param array<string, mixed> $news
  */

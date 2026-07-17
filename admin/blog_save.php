@@ -325,12 +325,6 @@ if (koraUploadHasFile($_FILES['image'] ?? null)) {
 $pdo->beginTransaction();
 try {
     if ($existingArticle) {
-        $previewToken = (string)($existingArticle['preview_token'] ?? '');
-        if ($previewToken === '') {
-            $previewToken = bin2hex(random_bytes(16));
-            $pdo->prepare("UPDATE cms_articles SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
-        }
-
         // Revize – snapshot starých hodnot
         $oldStmt = $pdo->prepare("SELECT title, slug, perex, content, publish_at, unpublish_at, meta_title, meta_description, admin_note FROM cms_articles WHERE id = ?");
         $oldStmt->execute([$id]);
@@ -394,7 +388,7 @@ try {
             notifyPendingContent('Článek', $title, '/admin/blog.php');
         }
     } else {
-        $previewToken = bin2hex(random_bytes(16));
+        $previewToken = generateArticlePreviewToken();
         $authorId = currentUserId();
         $requestedStatus = trim($_POST['article_status'] ?? '');
         if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {

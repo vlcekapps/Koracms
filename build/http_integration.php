@@ -16117,6 +16117,195 @@ try {
 
     httpIntegrationPrintResult('blog_transfer_http', $blogTransferIssues, $failures);
 
+    $articlePreviewIssues = [];
+    $articlePreviewFixtureToken = generateArticlePreviewToken();
+    $articlePreviewSlug = 'http-preview-lifecycle-' . bin2hex(random_bytes(4));
+    $articlePreviewTitle = 'HTTP životní cyklus náhledu';
+    $pdo->prepare(
+        "INSERT INTO cms_articles
+            (title, slug, blog_id, perex, content, comments_enabled, author_id, status, preview_token)
+         VALUES (?, ?, ?, '', '<p>HTTP test náhledového odkazu.</p>', 1, ?, 'draft', ?)"
+    )->execute([
+        $articlePreviewTitle,
+        $articlePreviewSlug,
+        $sourceBlogId,
+        $adminUserId,
+        $articlePreviewFixtureToken,
+    ]);
+    $articlePreviewId = (int)$pdo->lastInsertId();
+    $createdArticles[] = $articlePreviewId;
+    $articlePreviewEndpoint = $baseUrl . BASE_URL . '/admin/blog_preview_token.php';
+    $articlePreviewUrl = $baseUrl . BASE_URL . '/blog/article.php?id=' . $articlePreviewId
+        . '&preview=' . rawurlencode($articlePreviewFixtureToken);
+
+    $articlePreviewInitialResponse = fetchUrl($articlePreviewUrl, '', 0);
+    if (httpIntegrationStatusCode($articlePreviewInitialResponse) !== 200
+        || !str_contains($articlePreviewInitialResponse['body'], $articlePreviewTitle)) {
+        $articlePreviewIssues[] = 'platný náhledový odkaz konceptu nevrátil článek';
+    }
+    foreach ([
+        'Cache-Control' => 'no-store',
+        'X-Robots-Tag' => 'noindex',
+        'Referrer-Policy' => 'no-referrer',
+    ] as $headerName => $headerNeedle) {
+        if (!httpIntegrationHeaderContains($articlePreviewInitialResponse, $headerName, $headerNeedle)) {
+            $articlePreviewIssues[] = 'platný náhledový odkaz neposlal bezpečnou hlavičku ' . $headerName;
+        }
+    }
+
+    $articlePreviewAdminResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $articlePreviewId,
+        $adminSession['cookie'],
+        0
+    );
+    foreach ([
+        'id="article-preview-sharing"',
+        'aria-labelledby="article-preview-sharing-heading"',
+        'Otevřít sdílený náhled',
+        'name="confirm_article_preview_rotate"',
+        'name="confirm_article_preview_revoke"',
+    ] as $articlePreviewAdminFragment) {
+        if (!str_contains($articlePreviewAdminResponse['body'], $articlePreviewAdminFragment)) {
+            $articlePreviewIssues[] = 'editor článku postrádá správu aktivního náhledového odkazu: ' . $articlePreviewAdminFragment;
+        }
+    }
+
+    $articlePreviewMissingConfirmResponse = postUrl($articlePreviewEndpoint, [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'action' => 'rotate',
+    ], $adminSession['cookie'], 20);
+    if (!str_contains(
+        $articlePreviewMissingConfirmResponse['body'],
+        'Před obnovením potvrďte, že dříve sdílené náhledové odkazy přestanou fungovat.'
+    ) || !httpIntegrationElementHasAttributes(
+        $articlePreviewMissingConfirmResponse['body'],
+        'input',
+        'confirm-article-preview-rotate',
+        [
+            'aria-invalid' => 'true',
+            'aria-describedby' => 'article-preview-rotate-help article-preview-error',
+        ]
+    )) {
+        $articlePreviewIssues[] = 'obnova odkazu bez potvrzení nevrátila přístupnou field-level chybu';
+    }
+    $articlePreviewTokenStmt = $pdo->prepare('SELECT preview_token FROM cms_articles WHERE id = ?');
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    if ((string)$articlePreviewTokenStmt->fetchColumn() !== $articlePreviewFixtureToken) {
+        $articlePreviewIssues[] = 'obnova odkazu bez potvrzení změnila token';
+    }
+
+    postUrl($articlePreviewEndpoint, [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'action' => 'rotate',
+        'confirm_article_preview_rotate' => '1',
+    ], $adminSession['cookie'], 0);
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    $rotatedArticlePreviewToken = (string)$articlePreviewTokenStmt->fetchColumn();
+    if (!isValidArticlePreviewToken($rotatedArticlePreviewToken)
+        || $rotatedArticlePreviewToken === $articlePreviewFixtureToken) {
+        $articlePreviewIssues[] = 'potvrzená obnova nevytvořila nový bezpečný token';
+    }
+    if (httpIntegrationStatusCode(fetchUrl($articlePreviewUrl, '', 0)) !== 404) {
+        $articlePreviewIssues[] = 'starý náhledový odkaz po obnově stále funguje';
+    }
+    $rotatedArticlePreviewUrl = $baseUrl . BASE_URL . '/blog/article.php?id=' . $articlePreviewId
+        . '&preview=' . rawurlencode($rotatedArticlePreviewToken);
+    if (httpIntegrationStatusCode(fetchUrl($rotatedArticlePreviewUrl, '', 0)) !== 200) {
+        $articlePreviewIssues[] = 'nový náhledový odkaz po obnově nefunguje';
+    }
+
+    postUrl($articlePreviewEndpoint, [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'action' => 'revoke',
+        'confirm_article_preview_revoke' => '1',
+    ], $adminSession['cookie'], 0);
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    if ((string)$articlePreviewTokenStmt->fetchColumn() !== '') {
+        $articlePreviewIssues[] = 'potvrzené zneplatnění nevyprázdnilo token';
+    }
+    if (httpIntegrationStatusCode(fetchUrl($rotatedArticlePreviewUrl, '', 0)) !== 404) {
+        $articlePreviewIssues[] = 'zneplatněný náhledový odkaz stále funguje';
+    }
+
+    $articlePreviewSaveResponse = postUrl($baseUrl . BASE_URL . '/admin/blog_save.php', [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'title' => $articlePreviewTitle,
+        'slug' => $articlePreviewSlug,
+        'perex' => '',
+        'content' => '<p>HTTP test náhledového odkazu po uložení.</p>',
+        'blog_id' => (string)$sourceBlogId,
+        'category_id' => '',
+        'category_selection_mode' => 'manual',
+        'tag_selection_mode' => 'manual',
+        'publish_at' => '',
+        'unpublish_at' => '',
+        'meta_title' => '',
+        'meta_description' => '',
+        'admin_note' => '',
+        'comments_enabled' => '1',
+        'article_status' => 'draft',
+        'redirect' => BASE_URL . '/admin/blog_form.php?id=' . $articlePreviewId,
+    ], $adminSession['cookie'], 0);
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    if (httpIntegrationStatusCode($articlePreviewSaveResponse) !== 302
+        || (string)$articlePreviewTokenStmt->fetchColumn() !== '') {
+        $articlePreviewIssues[] = 'běžné uložení znovu aktivovalo zneplatněný náhled';
+    }
+
+    $articlePreviewInactiveForm = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/blog_form.php?id=' . $articlePreviewId,
+        $adminSession['cookie'],
+        0
+    );
+    if (!str_contains($articlePreviewInactiveForm['body'], 'Stav:</strong> Neaktivní.')
+        || !str_contains($articlePreviewInactiveForm['body'], 'name="confirm_article_preview_enable"')) {
+        $articlePreviewIssues[] = 'editor po zneplatnění nenabídl přístupnou aktivaci náhledu';
+    }
+
+    postUrl($articlePreviewEndpoint, [
+        'csrf_token' => $adminSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'action' => 'enable',
+        'confirm_article_preview_enable' => '1',
+    ], $adminSession['cookie'], 0);
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    $enabledArticlePreviewToken = (string)$articlePreviewTokenStmt->fetchColumn();
+    $enabledArticlePreviewUrl = $baseUrl . BASE_URL . '/blog/article.php?id=' . $articlePreviewId
+        . '&preview=' . rawurlencode($enabledArticlePreviewToken);
+    if (!isValidArticlePreviewToken($enabledArticlePreviewToken)
+        || httpIntegrationStatusCode(fetchUrl($enabledArticlePreviewUrl, '', 0)) !== 200) {
+        $articlePreviewIssues[] = 'opětovná aktivace nevytvořila funkční bezpečný náhled';
+    }
+
+    $foreignPreviewTokenBefore = $enabledArticlePreviewToken;
+    postUrl($articlePreviewEndpoint, [
+        'csrf_token' => $authorNoTaxSession['csrf'],
+        'id' => (string)$articlePreviewId,
+        'action' => 'rotate',
+        'confirm_article_preview_rotate' => '1',
+    ], $authorNoTaxSession['cookie'], 0);
+    $articlePreviewTokenStmt->execute([$articlePreviewId]);
+    if ((string)$articlePreviewTokenStmt->fetchColumn() !== $foreignPreviewTokenBefore) {
+        $articlePreviewIssues[] = 'autor změnil náhledový token cizího článku';
+    }
+
+    $invalidArticlePreviewResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/blog/article.php?id=' . $articlePreviewId . '&preview=neplatny-token',
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($invalidArticlePreviewResponse) !== 404
+        || !httpIntegrationHeaderContains($invalidArticlePreviewResponse, 'Cache-Control', 'no-store')
+        || !httpIntegrationHeaderContains($invalidArticlePreviewResponse, 'X-Robots-Tag', 'noindex')) {
+        $articlePreviewIssues[] = 'neplatný náhledový token nevrátil bezpečnou necacheovanou 404';
+    }
+
+    httpIntegrationPrintResult('article_preview_token_lifecycle_http', $articlePreviewIssues, $failures);
+
     $articleDeleteIssues = [];
     $articleBulkDeleteIssues = [];
     $articleBulkDeleteToken = bin2hex(random_bytes(4));

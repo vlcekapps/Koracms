@@ -32,7 +32,7 @@ if (!$source) {
 
 $blogId = (int)($source['blog_id'] ?? 1);
 $newSlug = uniqueArticleSlug($pdo, articleSlug((string)$source['slug'] . '-kopie'), null, $blogId);
-$previewToken = bin2hex(random_bytes(16));
+$previewToken = generateArticlePreviewToken();
 $authorId = currentUserId();
 
 $pdo->prepare(

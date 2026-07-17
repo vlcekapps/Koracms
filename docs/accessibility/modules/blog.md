@@ -49,7 +49,8 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 - guardrail a HTTP scénář pro srozumitelné odebrání článku ze všech sérií v editoru článku,
 - `article_delete_error_prevention_guardrails` a `article_delete_error_prevention_http` pro item-specific serverové potvrzení, autorský scope, vratný individuální přesun, veřejné 404 a obnovu všech článkových souborů i vazeb,
 - `article_bulk_delete_error_prevention_guardrails` a `article_bulk_delete_error_prevention_http` pro serverové potvrzení, přesný autorský scope, vratný transakční přesun do Koše a zachování článkových souborů i vazeb,
-- `blog_access_error_prevention_guardrails` a `blog_access_error_prevention_http` pro review-and-confirm změn týmu a zakladatele, odmítnutí cizího blogu/neplatné role/zastaralého formuláře a transakční auditované uložení.
+- `blog_access_error_prevention_guardrails` a `blog_access_error_prevention_http` pro review-and-confirm změn týmu a zakladatele, odmítnutí cizího blogu/neplatné role/zastaralého formuláře a transakční auditované uložení,
+- `article_preview_token_lifecycle_guardrails` a `article_preview_token_lifecycle_http` pro potvrzenou aktivaci, obnovu a zneplatnění sdíleného náhledu, field-level chyby, autorský scope a `no-store`/`noindex` ochranu veřejné preview URL.
 
 ## WCAG 2.2 A/AA Shrnutí
 
@@ -70,7 +71,7 @@ Aktuální automatizované guardraily a HTTP scénáře pokrývají hlavně:
 | 3.1.2 Language of Parts | Partially Supports | HTML editor nabízí helper pro `lang`; blogové kategorie, štítky a série mají stejný helper u veřejně renderovaných popisů a runtime guardrail hlídá editor coverage. Checklist vysvětluje odpovědnost autora. | Ručně ověřit cizojazyčné citace v článcích i taxonomických popisech. |
 | 3.3.1 Error Identification | Supports | Admin editory i veřejné komentáře mají form-level alert a field-level chyby. | Ručně projít kombinované chybové stavy editoru článku. |
 | 3.3.3 Error Suggestion | Partially Supports | Blog admin formuláře a veřejný komentář používají konkrétní návrhy oprav. | Pokračovat copy passem u méně častých validačních větví. |
-| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových taxonomií má item-level review, odebrání článků je vratné přes Koš a změny týmu i zakladatele jsou serverově potvrzené, scope-safe, transakční a auditované. | Ručně projít přesuny článků i změny týmu/zakladatele s NVDA/keyboard-only a pokračovat v produktové inventuře mimo Blog. |
+| 3.3.4 Error Prevention | Partially Supports | Kritické obecné akce mají review/confirm guardraily; mazání celého blogu i blogových taxonomií má item-level review, odebrání článků je vratné přes Koš, změny týmu i zakladatele jsou serverově potvrzené a sdílený náhled vyžaduje potvrzenou aktivaci, obnovu nebo zneplatnění. | Ručně projít přesuny článků, změny týmu/zakladatele a správu sdíleného náhledu s NVDA/keyboard-only; pokračovat v produktové inventuře mimo Blog. |
 | 3.3.7 Redundant Entry | Partially Supports | Přihlášený veřejný uživatel dostane v komentářovém formuláři předvyplněné jméno a e-mail z profilu a POST chyba zachová ručně zadané hodnoty. | Ručně ověřit sdílená zařízení a širší custom komentářové workflow. |
 | 4.1.2 Name, Role, Value | Supports | Pole, tlačítka, landmarky a dialogové/picker vzory mají pojmenování a stav; ruční NVDA průchod blogů a blogové administrace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách content/media pickeru nebo blog editoru zopakovat NVDA/keyboard průchod. |
 | 4.1.3 Status Messages | Supports | Alerty/statusy používají textové role; copy akce oznamuje výsledek přes live region a ruční NVDA průchod dlouhé editace byl potvrzený 2026-07-09 bez nahlášené regrese. | Při změnách live regionů nebo autosave/content-lock chování zopakovat NVDA průchod. |
@@ -190,6 +191,21 @@ Oprava:
 - runtime audit a HTTP integrace hlídají odmítnuté i potvrzené větve včetně nulové částečné změny.
 
 Snížené riziko: WCAG `1.3.1 Info and Relationships`, `3.3.4 Error Prevention`, `4.1.2 Name, Role, Value` a `4.1.3 Status Messages`.
+
+### Sdílený náhled článku neměl spravovatelný životní cyklus
+
+Priorita: střední.
+
+Riziko: náhledový token po prvním uložení článku platil bez omezení a správce jej nemohl obnovit ani zneplatnit. Případně uniklý odkaz proto zůstával funkční; běžné uložení navíc prázdný token automaticky znovu vytvořilo bez samostatného rozhodnutí.
+
+Oprava:
+- editor článku zobrazuje viditelně pojmenovanou sekci se stavem sdíleného náhledu,
+- aktivace, obnova i zneplatnění mají vlastní `fieldset`, vysvětlení dopadu, povinné potvrzení a field-level chybu,
+- obnova ruší staré URL, zneplatnění přežije běžné uložení článku a akce respektují autorský i blogový scope,
+- veřejný náhled přijímá jen canonical 32znakový token a posílá `no-store`, `noindex` a `no-referrer`,
+- unit testy, runtime audit a HTTP `article_preview_token_lifecycle_http` hlídají celý životní cyklus i cizí článek.
+
+Snížené riziko: WCAG `3.3.1 Error Identification`, `3.3.4 Error Prevention`, `4.1.2 Name, Role, Value` a bezpečnost neveřejného obsahu.
 
 ## Ruční Evidence
 

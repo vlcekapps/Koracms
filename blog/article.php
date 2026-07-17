@@ -19,6 +19,11 @@ $pdo = db_connect();
 
 $previewToken = trim($_GET['preview'] ?? '');
 if ($previewToken !== '') {
+    sendNoStoreNoIndexHeaders();
+    if (!isValidArticlePreviewToken($previewToken)) {
+        $previewToken = '__invalid_preview_token__';
+    }
+
     if ($slug !== '') {
         $stmt = $pdo->prepare(
             "SELECT a.*, c.name AS category, c.id AS category_id, c.slug AS category_slug, b.slug AS blog_slug,

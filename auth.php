@@ -728,7 +728,7 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         return 'import_export_manage';
     }
 
-    if (in_array($file, ['blog.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php', 'blog_bulk.php', 'blog_series.php'], true)) {
+    if (in_array($file, ['blog.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php', 'blog_bulk.php', 'blog_series.php', 'blog_preview_token.php'], true)) {
         return 'blog_manage_own';
     }
 
@@ -795,6 +795,7 @@ function adminRouteModuleRequirements(): array
             'files' => [
                 'blog.php', 'blogs.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php',
                 'blog_clone.php', 'blog_bulk.php', 'blog_transfer.php', 'blog_content_reference_search.php',
+                'blog_preview_token.php',
                 'blog_members.php', 'blog_pages.php', 'blog_series.php', 'blog_blog_delete.php', 'convert_content.php',
                 'blog_cats.php', 'blog_cat_delete.php', 'blog_tags.php', 'blog_tag_delete.php',
                 'comments.php', 'comment_action.php', 'comment_approve.php', 'comment_bulk.php', 'comment_delete.php',

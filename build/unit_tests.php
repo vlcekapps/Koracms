@@ -510,6 +510,26 @@ assert_equals(
     articlePublicRequestPath(['id' => 7, 'slug' => 'jak-cist-web', 'blog_id' => 3, 'blog_slug' => 'snd']),
     'article canonical request path uses blog slug and article slug'
 );
+assert_equals('enable', normalizeArticlePreviewAction(' Enable '), 'article preview enable action normalized');
+assert_equals('rotate', normalizeArticlePreviewAction('ROTATE'), 'article preview rotate action normalized');
+assert_equals('revoke', normalizeArticlePreviewAction(' revoke '), 'article preview revoke action normalized');
+assert_equals('', normalizeArticlePreviewAction('delete'), 'unknown article preview action rejected');
+$generatedArticlePreviewToken = generateArticlePreviewToken();
+assert_true(isValidArticlePreviewToken($generatedArticlePreviewToken), 'generated article preview token has safe format');
+assert_equals(32, strlen($generatedArticlePreviewToken), 'generated article preview token has expected length');
+assert_false(isValidArticlePreviewToken('not-a-valid-preview-token'), 'invalid article preview token rejected');
+assert_false(isValidArticlePreviewToken(strtoupper($generatedArticlePreviewToken)), 'noncanonical uppercase preview token rejected');
+assert_contains(
+    'preview=' . $generatedArticlePreviewToken,
+    articlePreviewPath([
+        'id' => 7,
+        'slug' => 'jak-cist-web',
+        'blog_id' => 3,
+        'blog_slug' => 'snd',
+        'preview_token' => $generatedArticlePreviewToken,
+    ]),
+    'active article preview path contains generated token'
+);
 assert_equals(
     '/snd/serie/prvni-serie',
     str_replace(BASE_URL, '', blogSeriesPath(['slug' => 'snd'], ['id' => 4, 'slug' => 'prvni-serie'])),

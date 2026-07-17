@@ -401,6 +401,9 @@ Editor článku respektuje vybraný blog:
 - řádková akce vyžaduje potvrzení konkrétního článku, hromadná akce samostatné potvrzení celého výběru
 - před přesunem musí správce potvrdit kontrolu výběru; obrázky, komentáře, štítky, série, související články, revize a redirecty zůstanou zachované pro obnovu
 - server ověřuje celý výběr včetně autorského a blogového oprávnění a při jediném nepovoleném nebo změněném článku neprovede žádnou část akce
+- uložený článek má samostatnou sekci `Sdílený náhled článku` pro aktivaci, obnovu nebo zneplatnění tajného odkazu
+
+Náhledový odkaz zpřístupňuje koncept nebo naplánovaný článek bez přihlášení každému, kdo adresu zná. Aktivace, obnova i zneplatnění proto vyžadují potvrzení dopadu. Obnova vytvoří nový token a všechny staré náhledové URL okamžitě přestanou fungovat. Zneplatnění je trvalé až do samostatné aktivace; běžné uložení článku náhled potají znovu nezapne. Veřejný náhled posílá `Cache-Control: no-store`, `X-Robots-Tag: noindex` a `Referrer-Policy: no-referrer`.
 
 Na veřejném indexu blogu se pak bez aktivních filtrů zobrazí právě jeden doporučený článek.
 
