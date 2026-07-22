@@ -6,6 +6,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+## [5.0.0-beta.2] – 2026-07-22
+
 ### Přidáno
 - **RSS kategorií a štítků blogu** – veřejné landing stránky kategorií a štítků nabízejí vlastní pojmenovaný RSS kanál i samostatný odkaz na RSS celého blogu; feed používá stejnou publikační viditelnost jako veřejný výpis, kategorie zahrnuje podkategorie a neplatné či konfliktní taxonomy požadavky vracejí bezpečnou 404.
 - **Čisté měsíční archivy blogů** – každý neprázdný měsíc blogu má stabilní URL `/{blog}/archiv/RRRR/MM`, vlastní canonical a položku v sitemapě; veřejná navigace používá čisté odkazy a dosavadní filtr `?archiv=RRRR-MM` zůstává kompatibilní.
