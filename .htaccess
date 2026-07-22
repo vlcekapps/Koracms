@@ -10,7 +10,7 @@ Options -Indexes
 </FilesMatch>
 
 # Ochrana vývojových a CI konfiguračních souborů
-<FilesMatch "^(composer\.(json|lock)|phpstan\.neon\.dist|\.php-cs-fixer\.dist\.php)$">
+<FilesMatch "^(composer\.(json|lock)|phpstan\.neon\.dist|\.php-cs-fixer\.dist\.php|\.integrity_snapshot\.json)$">
     Require all denied
 </FilesMatch>
 

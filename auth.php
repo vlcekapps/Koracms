@@ -1096,6 +1096,102 @@ function normalizeHttpExternalUrl(string $target, bool $prependScheme = true): s
     return $validated;
 }
 
+function serverFetchIpAllowed(string $ip): bool
+{
+    return filter_var(
+        trim($ip),
+        FILTER_VALIDATE_IP,
+        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+    ) !== false;
+}
+
+/**
+ * Přeloží host na veřejné IP adresy. Pokud DNS vrátí byť jedinou interní
+ * nebo rezervovanou adresu, host se odmítne kvůli ochraně proti SSRF.
+ *
+ * @return list<string>
+ */
+function serverFetchResolvedAddresses(string $host): array
+{
+    $host = trim(strtolower(rtrim(trim($host), '.')), '[]');
+    if ($host === '' || $host === 'localhost' || preg_match('/(^|\.)localhost$/', $host)) {
+        return [];
+    }
+
+    foreach (['.local', '.localdomain', '.internal', '.lan', '.home', '.home.arpa', '.test', '.invalid'] as $suffix) {
+        if (str_ends_with($host, $suffix)) {
+            return [];
+        }
+    }
+
+    if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+        return serverFetchIpAllowed($host) ? [$host] : [];
+    }
+
+    if (!str_contains($host, '.')) {
+        return [];
+    }
+
+    $addresses = [];
+    if (function_exists('dns_get_record')) {
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (is_array($records)) {
+            foreach ($records as $record) {
+                $address = trim((string)($record['ip'] ?? $record['ipv6'] ?? ''));
+                if ($address !== '') {
+                    $addresses[] = $address;
+                }
+            }
+        }
+    }
+
+    if ($addresses === [] && function_exists('gethostbynamel')) {
+        $ipv4Addresses = @gethostbynamel($host);
+        if (is_array($ipv4Addresses)) {
+            $addresses = array_merge($addresses, $ipv4Addresses);
+        }
+    }
+
+    $addresses = array_values(array_unique(array_filter(array_map('trim', $addresses))));
+    if ($addresses === []) {
+        return [];
+    }
+
+    foreach ($addresses as $address) {
+        if (!serverFetchIpAllowed($address)) {
+            return [];
+        }
+    }
+
+    return $addresses;
+}
+
+/**
+ * Validace URL určené pro serverové stažení. Na rozdíl od běžného externího
+ * odkazu vyžaduje veřejně resolvovatelný host a standardní port.
+ */
+function normalizeServerFetchUrl(string $target, bool $prependScheme = true): string
+{
+    $validated = normalizeHttpExternalUrl($target, $prependScheme);
+    if ($validated === '') {
+        return '';
+    }
+
+    $parts = parse_url($validated);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $host = trim((string)($parts['host'] ?? ''));
+    $port = isset($parts['port']) ? (int)$parts['port'] : null;
+    if ($host === '' || ($port !== null && $port !== ($scheme === 'https' ? 443 : 80))) {
+        return '';
+    }
+
+    return serverFetchResolvedAddresses($host) !== [] ? $validated : '';
+}
+
 function adminLoginRedirectTarget(string $target, string $default = ''): string
 {
     $safeTarget = internalRedirectTarget($target, '');

@@ -58,7 +58,7 @@ Vyžadovaná PHP rozšíření:
 
 Volitelná rozšíření:
 
-- `curl` – využívá se jako fallback při importu fotografií z eStránek
+- `curl` – povinné pro bezpečný downloader fotografií z eStránek; ostatní části CMS jej nevyžadují
 
 ---
 
@@ -148,7 +148,7 @@ Pro dobrou doručitelnost doporučujeme mít na doméně nastavené záznamy `SP
 
 ### Privátní úložiště
 
-Citlivé přílohy formulářů a denní zálohy databáze se ukládají mimo webroot. Výchozí cesta je `../kora_storage`. Vlastní cestu nastavíte přes:
+Citlivé přílohy formulářů, importní dávky, snapshot integrity a denní zálohy databáze se ukládají mimo webroot. Výchozí cesta je `../kora_storage`. Vlastní cestu nastavíte přes:
 
 ```php
 define('KORA_STORAGE_DIR', '/cesta/mimo/webroot/kora_storage');
@@ -594,7 +594,7 @@ V administraci používají jednoduché potvrzovací formuláře stejný `data-c
 
 Dlouho běžící administrační formuláře, například import z WordPressu nebo eStránek, používají `data-submit-once`. Sdílený nonce skript po odeslání změní text tlačítka a zablokuje opakované kliknutí bez inline `onclick` handleru.
 
-XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílenou upload validaci jako ostatní citlivější nahrávání. CMS ověří stav PHP uploadu, dočasný soubor a prázdný soubor dřív, než ho předá parseru; WordPress náhled se navíc ukládá do `uploads/tmp` přes bezpečný upload helper. Základní URL pro stahování fotografií z eStránek prochází stejným http/https normalizátorem jako ostatní externí adresy, takže nepřijme protocol-relative URL, přihlašovací údaje ani nebezpečná schémata.
+XML/WXR soubory pro import z WordPressu a eStránek používají stejnou sdílenou upload validaci jako ostatní citlivější nahrávání. CMS ověří stav PHP uploadu, dočasný soubor a prázdný soubor dřív, než ho předá parseru; WordPress náhled se navíc ukládá do `uploads/tmp` přes bezpečný upload helper. Downloader fotografií z eStránek vyžaduje cURL a přijme jen finální veřejnou http/https URL na standardním portu. DNS cíl připne na ověřenou veřejnou IP, blokuje interní a rezervované adresy, nepovoluje přesměrování, ověřuje TLS, omezuje odpověď nastaveným upload limitem a uloží jen skutečný JPEG, PNG, GIF nebo WebP. Pokud původní URL přesměrovává, je potřeba zadat její konečnou adresu.
 
 Importní formuláře navazují tyto chyby i na konkrétní pole. JSON import, WordPress WXR, XML import z eStránek a downloader fotografií z eStránek používají field-level chyby přes `aria-describedby`; chybový panel má `role="alert"` a text radí správný exportní soubor, platné UTF-8 nebo http/https/doménovou URL webu.
 
@@ -708,7 +708,9 @@ V administraci: **Import / Export** lze obsah exportovat i znovu importovat jako
 
 ### Kontrola integrity
 
-V administraci: **Integrita souborů**. Porovná SHA-256 otisky PHP souborů s uloženým snímkem.
+V administraci: **Integrita souborů**. Porovná SHA-256 otisky PHP souborů a ochranných `.htaccess` s uloženým snímkem v privátním úložišti `../kora_storage/integrity/snapshot.json`. Kontrola zahrnuje také veřejné PHP šablony v `themes/` a případné PHP či `.htaccess` soubory v `uploads/`, aby nevznikal slepý bod pro změnu renderu nebo nahraný webshell.
+
+Vytvoření nebo obnova důvěryhodné baseline vyžaduje kontrolu aktuálního nasazení a výslovné serverově ověřené potvrzení. Selhání zápisu se zobrazí jako chyba a původní snapshot zůstane zachovaný; starý `.integrity_snapshot.json` ve webrootu se už nenačítá a po úspěšném bezpečném nahrazení se odstraní.
 
 ### Režim údržby
 
@@ -852,6 +854,7 @@ server {
     # Zakázané soubory
     location ~ ^/(config|db|auth)\.php$ { deny all; }
     location ~ ^/(composer\.(json|lock)|phpstan\.neon\.dist|\.php-cs-fixer\.dist\.php)$ { deny all; }
+    location = /.integrity_snapshot.json { deny all; }
     location ~ \.(inc|log|sql|bak|sh|cfg)$ { deny all; }
     location ~ /\.env { deny all; }
     location ~ /\.git { deny all; }

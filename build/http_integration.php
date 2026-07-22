@@ -5846,7 +5846,7 @@ try {
         ],
         'estranky_photos' => [
             'url' => $baseUrl . BASE_URL . '/admin/estranky_download_photos.php',
-            'post' => ['site_url' => 'javascript:alert(1)'],
+            'post' => ['site_url' => 'http://127.0.0.1'],
             'expected_script' => 'estranky_download_photos.php',
             'fragments' => [
                 'Opravte prosím označená pole',
@@ -5855,7 +5855,7 @@ try {
                 'id="xml-error"',
                 'aria-describedby="url-help site-url-error"',
                 'id="site-url-error"',
-                'Zadejte hlavní URL webu na eStránkách',
+                'Zadejte hlavní URL veřejně dostupného webu na eStránkách',
             ],
         ],
     ] as $adminImportLabel => $adminImportSpec) {
@@ -5896,6 +5896,96 @@ try {
     }
 
     httpIntegrationPrintResult('admin_import_error_suggestions_http', $adminImportA11yIssues, $failures);
+
+    $integritySnapshotIssues = [];
+    $integrityUrl = $baseUrl . BASE_URL . '/admin/integrity.php';
+    $integritySnapshotPath = koraStoragePath('integrity/snapshot.json');
+    $integritySnapshotExistedBefore = is_file($integritySnapshotPath);
+    $integritySnapshotHashBefore = $integritySnapshotExistedBefore
+        ? (string)hash_file('sha256', $integritySnapshotPath)
+        : '';
+    $integrityLogCountBefore = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'integrity_snapshot'")
+        ->fetchColumn();
+
+    $integrityPage = fetchUrl($integrityUrl, $adminSession['cookie'], 0);
+    if (httpIntegrationStatusCode($integrityPage) !== 200) {
+        $integritySnapshotIssues[] = 'kontrola integrity nevykreslila administrační formulář';
+    }
+    if (!str_contains($integrityPage['body'], '<fieldset class="admin-fieldset-card">')
+        || !str_contains($integrityPage['body'], '<legend>')
+        || !httpIntegrationElementHasAttributes(
+            $integrityPage['body'],
+            'form',
+            'integrity-baseline-form',
+            []
+        )
+        || str_contains($integrityPage['body'], 'data-confirm=')) {
+        $integritySnapshotIssues[] = 'integrity baseline nemá přístupný serverově potvrzovaný formulář';
+    }
+
+    $integrityCsrf = extractHiddenInputValue($integrityPage['body'], 'csrf_token');
+    if ($integrityCsrf === '') {
+        $integritySnapshotIssues[] = 'integrity baseline formulář nevykreslil csrf_token';
+    } else {
+        $integrityMissingConfirmResponse = postUrl(
+            $integrityUrl,
+            [
+                'csrf_token' => $integrityCsrf,
+                'action' => 'generate',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $integrityMissingConfirmBody = $integrityMissingConfirmResponse['body'];
+        if (httpIntegrationStatusCode($integrityMissingConfirmResponse) !== 200) {
+            $integritySnapshotIssues[] = 'nepotvrzená integrity baseline nevrátila formulář s HTTP 200';
+        }
+        if (!httpIntegrationElementHasAttributes(
+            $integrityMissingConfirmBody,
+            'form',
+            'integrity-baseline-form',
+            ['aria-describedby' => 'integrity-form-error']
+        )
+            || !httpIntegrationElementHasAttributes(
+                $integrityMissingConfirmBody,
+                'div',
+                'integrity-form-error',
+                [
+                    'role' => 'alert',
+                    'aria-atomic' => 'true',
+                    'aria-labelledby' => 'integrity-error-heading',
+                ]
+            )
+            || !httpIntegrationInputHasAttributes(
+                $integrityMissingConfirmBody,
+                'confirm_integrity_snapshot',
+                [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'integrity-baseline-review integrity-baseline-help confirm-integrity-snapshot-error',
+                ]
+            )
+            || !str_contains($integrityMissingConfirmBody, 'id="confirm-integrity-snapshot-error"')) {
+            $integritySnapshotIssues[] = 'nepotvrzená integrity baseline nemá atomický alert a field-level vazbu';
+        }
+    }
+
+    $integritySnapshotExistsAfter = is_file($integritySnapshotPath);
+    $integritySnapshotHashAfter = $integritySnapshotExistsAfter
+        ? (string)hash_file('sha256', $integritySnapshotPath)
+        : '';
+    $integrityLogCountAfter = (int)$pdo
+        ->query("SELECT COUNT(*) FROM cms_log WHERE action = 'integrity_snapshot'")
+        ->fetchColumn();
+    if ($integritySnapshotExistsAfter !== $integritySnapshotExistedBefore
+        || $integritySnapshotHashAfter !== $integritySnapshotHashBefore) {
+        $integritySnapshotIssues[] = 'nepotvrzený POST změnil integrity snapshot';
+    }
+    if ($integrityLogCountAfter !== $integrityLogCountBefore) {
+        $integritySnapshotIssues[] = 'nepotvrzený POST zapsal integrity audit log';
+    }
+
+    httpIntegrationPrintResult('integrity_snapshot_error_prevention_http', $integritySnapshotIssues, $failures);
 
     $visitorStatsWidgetIssues = [];
     saveSetting('module_statistics', '1');

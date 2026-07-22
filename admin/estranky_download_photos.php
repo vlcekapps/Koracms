@@ -98,43 +98,70 @@ function estrankyDeletePhotoBatch(?string $batchId, ?string $storageKey): void
     }
 }
 
-function estrankyFetchRemotePhoto(string $url): string|false
+function estrankyFetchRemotePhoto(string $url, ?int $maxBytes = null): string|false
 {
-    if (function_exists('curl_init')) {
-        $curlHandle = curl_init($url);
-        if ($curlHandle !== false) {
-            curl_setopt_array($curlHandle, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_CONNECTTIMEOUT => 10,
-                CURLOPT_USERAGENT => 'KoraCMS-eStrankyImport/1.0',
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => 0,
-            ]);
-            $data = curl_exec($curlHandle);
-            $httpCode = (int)curl_getinfo($curlHandle, CURLINFO_RESPONSE_CODE);
-            curl_close($curlHandle);
-            if (is_string($data) && $httpCode >= 200 && $httpCode < 400) {
-                return $data;
-            }
-        }
+    $safeUrl = normalizeServerFetchUrl($url, false);
+    if ($safeUrl === '' || !function_exists('curl_init')) {
+        return false;
     }
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => "User-Agent: KoraCMS-eStrankyImport/1.0\r\n",
-            'timeout' => 30,
-            'ignore_errors' => true,
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false,
-        ],
+    $parts = parse_url($safeUrl);
+    if (!is_array($parts)) {
+        return false;
+    }
+
+    $host = trim((string)($parts['host'] ?? ''), '[]');
+    $scheme = strtolower((string)($parts['scheme'] ?? ''));
+    $port = isset($parts['port']) ? (int)$parts['port'] : ($scheme === 'https' ? 443 : 80);
+    $addresses = serverFetchResolvedAddresses($host);
+    if ($host === '' || $addresses === []) {
+        return false;
+    }
+
+    $maxBytes ??= koraDefaultUploadMaxSizeBytes();
+    $maxBytes = max(1, $maxBytes);
+    $data = '';
+    $tooLarge = false;
+    $curlHandle = curl_init($safeUrl);
+    if ($curlHandle === false) {
+        return false;
+    }
+
+    $resolvedAddress = $addresses[0];
+    $resolveAddress = str_contains($resolvedAddress, ':') ? '[' . $resolvedAddress . ']' : $resolvedAddress;
+    curl_setopt_array($curlHandle, [
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_MAXREDIRS => 0,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_USERAGENT => 'KoraCMS-eStrankyImport/1.0',
+        CURLOPT_HTTPHEADER => ['Accept: image/jpeg,image/png,image/gif,image/webp'],
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $resolveAddress],
+        CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$data, &$tooLarge, $maxBytes): int {
+            $chunkLength = strlen($chunk);
+            if (strlen($data) + $chunkLength > $maxBytes) {
+                $tooLarge = true;
+                return 0;
+            }
+
+            $data .= $chunk;
+            return $chunkLength;
+        },
     ]);
 
-    return @file_get_contents($url, false, $context);
+    $result = curl_exec($curlHandle);
+    $httpCode = (int)curl_getinfo($curlHandle, CURLINFO_RESPONSE_CODE);
+    curl_close($curlHandle);
+
+    if ($result !== true || $tooLarge || $httpCode < 200 || $httpCode >= 300) {
+        return false;
+    }
+
+    return $data;
 }
 
 $pdo = db_connect();
@@ -155,7 +182,8 @@ if (!is_array($estrankyPhotoFormState)) {
 $estrankyPhotoSiteUrlInput = (string)($estrankyPhotoFormState['site_url'] ?? '');
 $estrankyPhotoXmlRequiredErrorMessage = 'Vyberte XML zálohu z eStránek, ze které se má sestavit seznam fotografií ke stažení.';
 $estrankyPhotoXmlInvalidErrorMessage = 'XML zálohu se nepodařilo načíst. Nahrajte stejný platný neprázdný XML soubor, který jste použili pro import obsahu z eStránek.';
-$estrankyPhotoSiteUrlErrorMessage = 'Zadejte hlavní URL webu na eStránkách jako http/https adresu nebo doménu bez schématu. URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.';
+$estrankyPhotoSiteUrlErrorMessage = 'Zadejte hlavní URL veřejně dostupného webu na eStránkách jako http/https adresu nebo doménu bez schématu. Interní a rezervované adresy, nestandardní porty, přihlašovací údaje a nebezpečná schémata nejsou povolené.';
+$estrankyPhotoCurlErrorMessage = 'Server nemá aktivní rozšíření PHP cURL, které je pro bezpečné stahování fotografií z eStránek povinné.';
 $estrankyPhotoConfirmErrorMessage = 'Před stahováním potvrďte, že jste zkontroloval(a) XML zálohu, základní URL webu a cílové album pro fotografie.';
 $batchSize = 20;
 
@@ -164,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
     $siteUrlRaw = trim((string)($_POST['site_url'] ?? ''));
-    $siteUrl = rtrim(normalizeHttpExternalUrl($siteUrlRaw), '/');
+    $siteUrl = rtrim(normalizeServerFetchUrl($siteUrlRaw), '/');
     $parentAlbumId = inputInt('post', 'parent_album_id');
     $estrankyPhotoConfirmed = isset($_POST['confirm_estranky_photo_download'])
         && (string)$_POST['confirm_estranky_photo_download'] === '1';
@@ -178,7 +206,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
 
     $postedFieldErrors = [];
-    if ($siteUrl === '') {
+    if (!function_exists('curl_init')) {
+        $postedFieldErrors['site_url'] = $estrankyPhotoCurlErrorMessage;
+    } elseif ($siteUrl === '') {
         $postedFieldErrors['site_url'] = $estrankyPhotoSiteUrlErrorMessage;
     }
     if (empty($upload['ok'])) {
@@ -304,34 +334,34 @@ if (isset($_GET['batch']) && isset($_SESSION['photo_dl'])) {
             continue;
         }
 
-        $safeFilename = preg_replace('/[^a-z0-9_\-\.]/i', '_', $filename);
-        $destFile = $destDir . $safeFilename;
-
-        if (is_file($destFile)) {
-            $dl['skipped']++;
-            continue;
-        }
-
         $url = $siteUrl . '/img/original/' . $photoId . '/' . rawurlencode($filename);
-
-        $data = estrankyFetchRemotePhoto($url);
-
+        $data = estrankyFetchRemotePhoto($url, koraDefaultUploadMaxSizeBytes());
         if ($data === false || strlen($data) < 100) {
             $dl['failed']++;
             continue;
         }
 
-        $header = substr($data, 0, 4);
-        $isImage = str_starts_with($header, "\xFF\xD8")
-                || str_starts_with($header, "\x89PNG")
-                || str_starts_with($header, "GIF8")
-                || str_starts_with($header, "RIFF");
-
-        if (!$isImage) {
+        $imageInfo = @getimagesizefromstring($data);
+        $imageExtension = is_array($imageInfo) ? match ((int)$imageInfo[2]) {
+            IMAGETYPE_JPEG => 'jpg',
+            IMAGETYPE_PNG => 'png',
+            IMAGETYPE_GIF => 'gif',
+            IMAGETYPE_WEBP => 'webp',
+            default => '',
+        } : '';
+        if ($imageExtension === '') {
             $dl['failed']++;
             continue;
         }
 
+        $filenameStem = preg_replace('/[^a-z0-9_-]/i', '_', pathinfo($filename, PATHINFO_FILENAME));
+        $filenameStem = trim((string)$filenameStem, '_-');
+        $safeFilename = ($filenameStem !== '' ? $filenameStem : 'photo_' . $photoId) . '.' . $imageExtension;
+        $destFile = $destDir . $safeFilename;
+        if (is_file($destFile)) {
+            $dl['skipped']++;
+            continue;
+        }
         if (file_put_contents($destFile, $data) !== false) {
             gallery_make_thumb($destFile, $thumbDir . $safeFilename, 400);
             generateWebp($destFile);
@@ -487,7 +517,7 @@ adminHeader('Stažení fotografií z eStránek');
              placeholder="https://www.example.cz"
              value="<?= h($estrankyPhotoSiteUrlInput) ?>"
              <?= adminFieldAttributes('site_url', $estrankyPhotoFieldErrorNames, [], ['url-help'], 'site-url-error') ?>>
-      <small id="url-help">Hlavní URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky; URL nesmí obsahovat přihlašovací údaje ani nebezpečné schéma.</small>
+      <small id="url-help">Hlavní veřejná URL webu na eStránkách. Pokud nezadáte https://, doplní se automaticky. Import vyžaduje cURL, ověřuje TLS a nepovolí interní adresu ani nestandardní port.</small>
       <?php adminRenderFieldError('site_url', $estrankyPhotoFieldErrorNames, [], $estrankyPhotoFieldErrors['site_url'] ?? '', 'site-url-error'); ?>
     </div>
 

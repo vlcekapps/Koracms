@@ -7,7 +7,8 @@ require_once __DIR__ . '/layout.php';
 requireCapability('settings_manage', 'Přístup odepřen.');
 
 $baseDir = dirname(__DIR__);
-$snapshotFile = $baseDir . '/.integrity_snapshot.json';
+$snapshotFile = koraStoragePath('integrity/snapshot.json');
+$legacySnapshotFile = $baseDir . '/.integrity_snapshot.json';
 
 /**
  * Projde adresáře a vrátí pole [relativní_cesta => sha256_hash] pro PHP soubory.
@@ -22,7 +23,8 @@ function scanPhpFiles(string $baseDir): array
         RecursiveIteratorIterator::LEAVES_ONLY
     );
 
-    $skipDirs = ['vendor', 'node_modules', '.git', '.claude', 'uploads', 'themes'];
+    // Vývojové závislosti nejsou v release; runtime šablony a uploads se naopak skenují.
+    $skipDirs = ['vendor', 'node_modules', '.git', '.claude'];
 
     foreach ($iterator as $file) {
         if (!$file->isFile()) {
@@ -42,10 +44,6 @@ function scanPhpFiles(string $baseDir): array
             continue;
         }
 
-        // Přeskočit temp/cache soubory
-        if (str_contains($relativePath, '/tmp/') || str_contains($relativePath, '/cache/')) {
-            continue;
-        }
 
         $hashes[$relativePath] = hash_file('sha256', $file->getPathname());
     }
@@ -54,35 +52,115 @@ function scanPhpFiles(string $baseDir): array
     return $hashes;
 }
 
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+/**
+ * @param array<string, mixed> $snapshot
+ */
+function writeIntegritySnapshotFile(string $snapshotFile, array $snapshot): bool
+{
+    if (!koraEnsureDirectory(dirname($snapshotFile))) {
+        return false;
+    }
+
+    $encoded = json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    if (!is_string($encoded)) {
+        return false;
+    }
+
+    try {
+        $suffix = bin2hex(random_bytes(8));
+    } catch (Throwable $exception) {
+        return false;
+    }
+
+    $temporaryFile = $snapshotFile . '.tmp.' . $suffix;
+    $backupFile = $snapshotFile . '.previous.' . $suffix;
+    if (@file_put_contents($temporaryFile, $encoded, LOCK_EX) === false) {
+        return false;
+    }
+
+    $hasPreviousSnapshot = is_file($snapshotFile);
+    if ($hasPreviousSnapshot && !@rename($snapshotFile, $backupFile)) {
+        @unlink($temporaryFile);
+        return false;
+    }
+
+    if (!@rename($temporaryFile, $snapshotFile)) {
+        if ($hasPreviousSnapshot) {
+            @rename($backupFile, $snapshotFile);
+        }
+        @unlink($temporaryFile);
+        return false;
+    }
+
+    if ($hasPreviousSnapshot) {
+        @unlink($backupFile);
+    }
+    @chmod($snapshotFile, 0600);
+    return true;
+}
+
+$submittedAction = $_POST['action'] ?? $_GET['action'] ?? '';
+$action = is_string($submittedAction) ? $submittedAction : '';
 $log = [];
+$integrityError = '';
+$integrityConfirmField = 'confirm_integrity_snapshot';
+$integrityFieldErrors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'generate') {
     verifyCsrf();
-    $currentHashes = scanPhpFiles($baseDir);
-    $snapshot = [
-        'generated_at' => date('Y-m-d H:i:s'),
-        'file_count' => count($currentHashes),
-        'files' => $currentHashes,
-    ];
-    file_put_contents($snapshotFile, json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    logAction('integrity_snapshot', 'files=' . count($currentHashes));
-    $log[] = '✓ Snapshot vytvořen (' . count($currentHashes) . ' souborů)';
+    $integrityConfirmed = isset($_POST[$integrityConfirmField])
+        && (string)$_POST[$integrityConfirmField] === '1';
+
+    if (!$integrityConfirmed) {
+        $integrityFieldErrors[] = $integrityConfirmField;
+        $integrityError = 'Před uložením nové baseline potvrďte kontrolu aktuálního stavu souborů.';
+    } else {
+        $currentHashes = scanPhpFiles($baseDir);
+        $newSnapshot = [
+            'generated_at' => date('Y-m-d H:i:s'),
+            'file_count' => count($currentHashes),
+            'files' => $currentHashes,
+        ];
+
+        if (!writeIntegritySnapshotFile($snapshotFile, $newSnapshot)) {
+            $integrityError = 'Snapshot se nepodařilo bezpečně uložit do privátního úložiště. Zkontrolujte nastavení KORA_STORAGE_DIR a oprávnění adresáře.';
+            koraLog('error', 'integrity snapshot write failed', [
+                'snapshot_path_hash' => hash('sha256', $snapshotFile),
+            ]);
+        } else {
+            if (is_file($legacySnapshotFile) && !@unlink($legacySnapshotFile)) {
+                $log[] = 'Nový snapshot byl uložen, ale starý snapshot ve webrootu se nepodařilo odstranit.';
+                koraLog('warning', 'legacy integrity snapshot cleanup failed', [
+                    'snapshot_path_hash' => hash('sha256', $legacySnapshotFile),
+                ]);
+            }
+
+            logAction('integrity_snapshot', 'files=' . count($currentHashes));
+            $log[] = 'Snapshot vytvořen (' . count($currentHashes) . ' souborů).';
+        }
+    }
 }
 
-// Načtení existujícího snapshotu
+// Načtení existujícího snapshotu z privátního úložiště.
 $snapshot = null;
+$snapshotReadError = '';
 if (is_file($snapshotFile)) {
-    $snapshot = json_decode(file_get_contents($snapshotFile), true);
+    $rawSnapshot = @file_get_contents($snapshotFile);
+    $decodedSnapshot = is_string($rawSnapshot) ? json_decode($rawSnapshot, true) : null;
+    if (is_array($decodedSnapshot) && is_array($decodedSnapshot['files'] ?? null)) {
+        $snapshot = $decodedSnapshot;
+    } else {
+        $snapshotReadError = 'Uložený snapshot integrity je poškozený nebo nečitelný. Vytvořte novou baseline až po kontrole aktuálních souborů.';
+    }
 }
 
 // Porovnání
 $changes = ['new' => [], 'modified' => [], 'deleted' => []];
 $hasChanges = false;
 
-if ($snapshot !== null && ($action === 'check' || $_SERVER['REQUEST_METHOD'] === 'POST')) {
+if ($snapshot !== null && $action === 'check') {
     $currentHashes = $currentHashes ?? scanPhpFiles($baseDir);
-    $savedHashes = $snapshot['files'] ?? [];
+    $savedHashes = $snapshot['files'];
 
     foreach ($currentHashes as $path => $hash) {
         if (!isset($savedHashes[$path])) {
@@ -105,39 +183,91 @@ adminHeader('Kontrola integrity souborů');
 ?>
 
 <?php if (!empty($log)): ?>
-  <div class="integrity-panel integrity-panel--success" role="status">
-    <?php foreach ($log as $line): ?><p class="integrity-copy--flush"><?= $line ?></p><?php endforeach; ?>
+  <div class="integrity-panel integrity-panel--success" role="status" aria-atomic="true" aria-labelledby="integrity-status-heading">
+    <h2 id="integrity-status-heading" class="sr-only">Výsledek uložení snapshotu</h2>
+    <?php foreach ($log as $line): ?><p class="integrity-copy--flush"><?= h($line) ?></p><?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<?php if ($integrityError !== ''): ?>
+  <div id="integrity-form-error" class="integrity-panel integrity-panel--danger" role="alert" aria-atomic="true" aria-labelledby="integrity-error-heading">
+    <h2 id="integrity-error-heading" class="integrity-heading--flush">Snapshot nebyl uložen</h2>
+    <p class="integrity-copy--footer"><?= h($integrityError) ?></p>
+  </div>
+<?php endif; ?>
+
+<?php if ($snapshotReadError !== ''): ?>
+  <div class="integrity-panel integrity-panel--danger" role="alert" aria-atomic="true" aria-labelledby="integrity-read-error-heading">
+    <h2 id="integrity-read-error-heading" class="integrity-heading--flush">Snapshot nelze načíst</h2>
+    <p class="integrity-copy--footer"><?= h($snapshotReadError) ?></p>
   </div>
 <?php endif; ?>
 
 <p>Kontrola integrity sleduje změny v PHP souborech. Porovnává aktuální SHA-256 hashe s uloženým snapshotem a hlásí nové, změněné nebo smazané soubory.</p>
 
+<?php if (is_file($legacySnapshotFile)): ?>
+  <section class="integrity-panel integrity-panel--warning" aria-labelledby="integrity-legacy-heading">
+    <h2 id="integrity-legacy-heading" class="integrity-heading--flush">Starý snapshot čeká na bezpečné nahrazení</h2>
+    <p class="integrity-copy--footer">Snapshot uložený ve webrootu se už z bezpečnostních důvodů nepoužívá. Po kontrole souborů vytvořte novou baseline; úspěšné uložení starý soubor odstraní.</p>
+  </section>
+<?php endif; ?>
+
 <?php if ($snapshot === null): ?>
-  <div class="integrity-panel integrity-panel--warning" role="alert">
-    <p class="integrity-copy--flush"><strong>Žádný snapshot nebyl vytvořen.</strong> Vygenerujte první snapshot pro zahájení sledování.</p>
-  </div>
+  <section class="integrity-panel integrity-panel--warning" aria-labelledby="integrity-missing-heading">
+    <h2 id="integrity-missing-heading" class="integrity-heading--flush">Žádný použitelný snapshot</h2>
+    <p class="integrity-copy--footer">Zkontrolujte aktuální stav instalace a potom vytvořte první bezpečnou baseline.</p>
+  </section>
 <?php else: ?>
   <p>
-    <strong>Poslední snapshot:</strong> <?= h($snapshot['generated_at'] ?? '?') ?> ·
+    <strong>Poslední snapshot:</strong> <?= h((string)($snapshot['generated_at'] ?? '?')) ?> ·
     <strong>Sledovaných souborů:</strong> <?= (int)($snapshot['file_count'] ?? 0) ?>
   </p>
 <?php endif; ?>
 
-<div class="button-row integrity-actions">
-  <?php if ($snapshot !== null): ?>
+<?php if ($snapshot !== null): ?>
+  <div class="button-row integrity-actions">
     <a href="integrity.php?action=check" class="btn btn-primary">Zkontrolovat integritu</a>
-  <?php endif; ?>
-  <form method="post" class="admin-inline-form">
-    <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-    <input type="hidden" name="action" value="generate">
-    <button type="submit" class="btn"
-            data-confirm="<?= $snapshot !== null ? 'Přepsat existující snapshot novým? Tím se aktuální stav označí jako důvěryhodný.' : 'Vytvořit první snapshot?' ?>">
-      <?= $snapshot !== null ? 'Obnovit snapshot (nová baseline)' : 'Vytvořit první snapshot' ?>
-    </button>
-  </form>
-</div>
+  </div>
+<?php endif; ?>
 
-<?php if ($action === 'check' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $snapshot !== null)): ?>
+<form method="post" id="integrity-baseline-form" class="integrity-baseline-form" novalidate<?= $integrityError !== '' ? ' aria-describedby="integrity-form-error"' : '' ?>>
+  <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+  <input type="hidden" name="action" value="generate">
+  <fieldset class="admin-fieldset-card">
+    <legend><?= $snapshot !== null ? 'Obnova důvěryhodné baseline' : 'Vytvoření důvěryhodné baseline' ?></legend>
+    <p id="integrity-baseline-review" class="field-help field-help--flush">
+      Nová baseline označí právě aktuální PHP soubory a <code>.htaccess</code> jako důvěryhodné. Nejdříve prověřte, že instalace neobsahuje neočekávané změny.
+    </p>
+    <div class="admin-field-row">
+      <label for="confirm_integrity_snapshot" class="checkbox-label">
+        <input type="checkbox" id="confirm_integrity_snapshot" name="confirm_integrity_snapshot" value="1"
+               required aria-required="true"
+               <?= adminFieldAttributes(
+                   $integrityConfirmField,
+                   $integrityFieldErrors,
+                   [],
+                   ['integrity-baseline-review', 'integrity-baseline-help'],
+                   'confirm-integrity-snapshot-error'
+               ) ?>>
+        Potvrzuji, že jsem zkontroloval(a) aktuální stav souborů a chci jej uložit jako důvěryhodnou baseline.
+      </label>
+      <small id="integrity-baseline-help" class="field-help">Obnova baseline odstraní důkaz o dosud zjištěných změnách, proto ji provádějte až po ověření nasazení.</small>
+      <?php adminRenderFieldError(
+          $integrityConfirmField,
+          $integrityFieldErrors,
+          [],
+          'Před uložením nové baseline potvrďte kontrolu aktuálního stavu souborů.',
+          'confirm-integrity-snapshot-error'
+      ); ?>
+    </div>
+    <div class="button-row">
+      <button type="submit" class="btn">
+        <?= $snapshot !== null ? 'Obnovit snapshot (nová baseline)' : 'Vytvořit první snapshot' ?>
+      </button>
+    </div>
+  </fieldset>
+</form>
+<?php if ($action === 'check' && $snapshot !== null): ?>
   <section aria-labelledby="check-result-heading" class="integrity-result">
     <?php if (!$hasChanges): ?>
       <div class="integrity-panel integrity-panel--success" role="status">

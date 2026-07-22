@@ -814,6 +814,17 @@ assert_equals('', normalizeHttpExternalUrl('javascript:alert(1)'), 'external URL
 assert_equals('', normalizeHttpExternalUrl('https://user:pass@example.com/path'), 'external URL helper rejects credentials');
 assert_equals('', normalizeHttpExternalUrl("https://example.com\npath"), 'external URL helper rejects control characters');
 assert_equals('', normalizeHttpExternalUrl('example.com/path', false), 'external URL helper can require explicit scheme');
+assert_true(serverFetchIpAllowed('8.8.8.8'), 'server fetch allows a public IP address');
+assert_false(serverFetchIpAllowed('127.0.0.1'), 'server fetch rejects loopback IPv4');
+assert_false(serverFetchIpAllowed('169.254.169.254'), 'server fetch rejects link-local metadata IPv4');
+assert_false(serverFetchIpAllowed('::1'), 'server fetch rejects loopback IPv6');
+assert_false(serverFetchIpAllowed('::ffff:127.0.0.1'), 'server fetch rejects IPv4-mapped loopback IPv6');
+assert_equals(['8.8.8.8'], serverFetchResolvedAddresses('8.8.8.8'), 'server fetch keeps a public literal address');
+assert_equals([], serverFetchResolvedAddresses('localhost'), 'server fetch rejects localhost');
+assert_equals([], serverFetchResolvedAddresses('service.internal'), 'server fetch rejects internal host suffix');
+assert_equals('https://8.8.8.8/photo.jpg', normalizeServerFetchUrl('https://8.8.8.8/photo.jpg', false), 'server fetch accepts explicit public HTTPS URL');
+assert_equals('', normalizeServerFetchUrl('http://127.0.0.1/photo.jpg', false), 'server fetch rejects private target');
+assert_equals('', normalizeServerFetchUrl('https://8.8.8.8:8443/photo.jpg', false), 'server fetch rejects non-standard port');
 assert_equals('https://podcast.example/show', normalizePodcastWebsiteUrl('podcast.example/show'), 'podcast website URL uses shared external helper');
 assert_equals('', normalizePodcastWebsiteUrl('https://user:pass@example.com/show'), 'podcast website URL rejects credentials');
 assert_true(str_starts_with(newPodcastFeedGuid(), 'urn:uuid:'), 'podcast feed GUID generator uses immutable UUID URN');

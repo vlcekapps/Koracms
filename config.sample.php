@@ -15,7 +15,8 @@ define('BASE_URL', '');
 
 // Privátní úložiště mimo webroot
 // Výchozí umístění je o úroveň výš než webroot, např. ../kora_storage
-// Používá se pro citlivé přílohy formulářů a denní SQL zálohy z cron.php
+// Používá se pro citlivé přílohy formulářů, importní dávky, integrity snapshoty
+// a denní SQL zálohy z cron.php.
 // Při vlastním nastavení zadejte absolutní cestu.
 define('KORA_STORAGE_DIR', '');
 

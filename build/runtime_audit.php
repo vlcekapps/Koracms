@@ -8439,7 +8439,7 @@ $foundationChecks = [
         && str_contains($migrateSourceForUrlGuard, 'normalizeWidgetExternalUrl($rawSocialUrl)')
         && !str_contains($migrateSourceForUrlGuard, '$validatedSocialUrl = filter_var($rawSocialUrl, FILTER_VALIDATE_URL)')
         && str_contains($estrankyPhotoSourceForUrlGuard, '$siteUrlRaw = trim((string)($_POST[\'site_url\'] ?? \'\'));')
-        && str_contains($estrankyPhotoSourceForUrlGuard, 'normalizeHttpExternalUrl($siteUrlRaw)')
+        && str_contains($estrankyPhotoSourceForUrlGuard, 'normalizeServerFetchUrl($siteUrlRaw)')
         && !str_contains($estrankyPhotoSourceForUrlGuard, "'https://' . \$siteUrl")
         && str_contains($webhooksSource, 'normalizeHttpExternalUrl($url, false)')
         && str_contains($webhooksSource, 'formWebhookHostAllowed($host)')
@@ -16480,13 +16480,56 @@ foreach ([
     'class="integrity-panel integrity-panel--warning"',
     'class="integrity-panel integrity-panel--danger"',
     'class="button-row integrity-actions"',
-    'class="admin-inline-form"',
+    'class="integrity-baseline-form"',
+    'id="integrity-baseline-form"',
     'class="integrity-result"',
     'class="integrity-panel integrity-panel--info integrity-panel--spaced"',
 ] as $integrityAdminUtilityFragment) {
     if (!str_contains($integrityAdminSource, $integrityAdminUtilityFragment)) {
         $adminFieldErrorIssues[] = 'admin integrity page is missing utility class fragment: ' . $integrityAdminUtilityFragment;
     }
+}
+foreach ([
+    "koraStoragePath('integrity/snapshot.json')",
+    "\$skipDirs = ['vendor', 'node_modules', '.git', '.claude'];",
+    'function writeIntegritySnapshotFile(',
+    'file_put_contents($temporaryFile, $encoded, LOCK_EX)',
+    "\$integrityConfirmField = 'confirm_integrity_snapshot';",
+    '!$integrityConfirmed',
+    'adminFieldAttributes(',
+    'adminRenderFieldError(',
+    'id="integrity-form-error"',
+    'aria-labelledby="integrity-error-heading"',
+    '<fieldset class="admin-fieldset-card">',
+    '<legend><?= $snapshot !== null ?',
+] as $integritySecurityFragment) {
+    if (!str_contains($integrityAdminSource, $integritySecurityFragment)) {
+        $adminFieldErrorIssues[] = 'admin integrity page is missing secure baseline fragment: ' . $integritySecurityFragment;
+    }
+}
+foreach ([
+    "\$skipDirs = ['vendor', 'node_modules', '.git', '.claude', 'uploads', 'themes'];",
+    "str_contains(\$relativePath, '/tmp/') || str_contains(\$relativePath, '/cache/')",
+    "\$snapshotFile = \$baseDir . '/.integrity_snapshot.json';",
+    'data-confirm="<?= $snapshot !== null ?',
+    'file_put_contents($snapshotFile, json_encode(',
+] as $integrityLegacyFragment) {
+    if (str_contains($integrityAdminSource, $integrityLegacyFragment)) {
+        $adminFieldErrorIssues[] = 'admin integrity page again contains legacy snapshot behavior: ' . $integrityLegacyFragment;
+    }
+}
+if (!str_contains($mediaHtaccessSource, '\.integrity_snapshot\.json')) {
+    $adminFieldErrorIssues[] = 'Apache config does not block the legacy webroot integrity snapshot';
+}
+if (!str_contains($readmeSource, 'location = /.integrity_snapshot.json { deny all; }')) {
+    $adminFieldErrorIssues[] = 'Nginx example does not block the legacy webroot integrity snapshot';
+}
+if ($httpIntegrationSource === ''
+    || !str_contains($httpIntegrationSource, "httpIntegrationPrintResult('integrity_snapshot_error_prevention_http'")) {
+    $adminFieldErrorIssues[] = 'integrity baseline confirmation is missing HTTP regression evidence';
+}
+if (!str_contains($accessibilityImpactDecisionsSource, 'bezpečná baseline integrity a vzdálený import fotografií')) {
+    $adminFieldErrorIssues[] = 'integrity and remote import hardening is missing accessibility impact review';
 }
 foreach ([
     'class="admin-description"',
@@ -20237,8 +20280,41 @@ if (str_contains($estrankyPhotoSource, "'photos' => \$photoList")) {
 if (!str_contains($estrankyPhotoSource, 'function estrankyFetchRemotePhoto')) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader is missing resilient remote download helper';
 }
-if (!str_contains($estrankyPhotoSource, 'function_exists(\'curl_init\')')) {
-    $estrankyPhotoIssues[] = 'eStránky photo downloader is missing cURL fallback for stricter hosting';
+if (!str_contains($estrankyPhotoSource, "function_exists('curl_init')")
+    || !str_contains($estrankyPhotoSource, '$estrankyPhotoCurlErrorMessage')) {
+    $estrankyPhotoIssues[] = 'eStránky photo downloader no longer requires cURL for its pinned secure transport';
+}
+foreach ([
+    'normalizeServerFetchUrl($url, false)',
+    'serverFetchResolvedAddresses($host)',
+    'CURLOPT_FOLLOWLOCATION => false',
+    'CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS',
+    'CURLOPT_SSL_VERIFYPEER => true',
+    'CURLOPT_SSL_VERIFYHOST => 2',
+    'CURLOPT_RESOLVE =>',
+    'koraDefaultUploadMaxSizeBytes()',
+    'CURLOPT_WRITEFUNCTION =>',
+    'getimagesizefromstring($data)',
+] as $estrankySecureFetchFragment) {
+    if (!str_contains($estrankyPhotoSource, $estrankySecureFetchFragment)) {
+        $estrankyPhotoIssues[] = 'eStránky photo downloader is missing secure fetch fragment: ' . $estrankySecureFetchFragment;
+    }
+}
+foreach ([
+    'CURLOPT_FOLLOWLOCATION => true',
+    'CURLOPT_SSL_VERIFYPEER => false',
+    'CURLOPT_SSL_VERIFYHOST => 0',
+    'return @file_get_contents($url',
+    'str_starts_with($header, "RIFF")',
+] as $estrankyUnsafeFetchFragment) {
+    if (str_contains($estrankyPhotoSource, $estrankyUnsafeFetchFragment)) {
+        $estrankyPhotoIssues[] = 'eStránky photo downloader again contains unsafe fetch fragment: ' . $estrankyUnsafeFetchFragment;
+    }
+}
+if (!str_contains($authSource, 'function normalizeServerFetchUrl(')
+    || !str_contains($authSource, 'FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE')
+    || !str_contains($authSource, 'function serverFetchResolvedAddresses(')) {
+    $estrankyPhotoIssues[] = 'shared server fetch URL helper no longer rejects private or reserved network targets';
 }
 if (!str_contains($estrankyPhotoSource, 'function estrankyFallbackPhotoBatchDirectory')) {
     $estrankyPhotoIssues[] = 'eStránky photo downloader is missing uploads/tmp fallback for batch storage';
