@@ -37,7 +37,12 @@ $currentVersion = $currentVersion ?? null;
           <?php if ($download['license_label'] !== ''): ?>
             <span>Licence: <?= h((string)$download['license_label']) ?></span>
           <?php endif; ?>
-          <span><?= h((string)$download['download_count_label']) ?></span>
+          <?php if ($download['has_file']): ?>
+            <span><?= h((string)$download['download_count_label']) ?></span>
+          <?php endif; ?>
+          <?php if ($download['has_external_url']): ?>
+            <span><?= h((string)$download['external_click_count_label']) ?></span>
+          <?php endif; ?>
         </p>
 
         <?php if ($download['excerpt_plain'] !== ''): ?>
@@ -134,7 +139,12 @@ $currentVersion = $currentVersion ?? null;
             <?php if ($download['has_checksum']): ?>
               <div><dt>SHA-256</dt><dd><code><?= h((string)$download['checksum_sha256']) ?></code></dd></div>
             <?php endif; ?>
-            <div><dt>Stažení</dt><dd><?= h((string)$download['download_count_label']) ?></dd></div>
+            <?php if ($download['has_file']): ?>
+              <div><dt>Stažení souboru</dt><dd><?= h((string)$download['download_count_label']) ?></dd></div>
+            <?php endif; ?>
+            <?php if ($download['has_external_url']): ?>
+              <div><dt>Otevření externího zdroje</dt><dd><?= h((string)$download['external_click_count_label']) ?></dd></div>
+            <?php endif; ?>
             <div><dt>Aktualizováno</dt><dd><?= formatCzechDate((string)($download['updated_at'] ?? $download['created_at'])) ?></dd></div>
           </dl>
 
@@ -144,7 +154,7 @@ $currentVersion = $currentVersion ?? null;
                  download="<?= h((string)$download['original_name']) ?>">Stáhnout soubor</a>
             <?php endif; ?>
             <?php if ($download['has_external_url']): ?>
-              <a class="btn btn-secondary" href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít externí odkaz<?= newWindowLinkSrOnlySuffix() ?></a>
+              <a class="btn btn-secondary" href="<?= h(downloadExternalOpenPath($download)) ?>" target="_blank" rel="nofollow noopener noreferrer">Otevřít externí odkaz na <?= h((string)$download['external_host_label']) ?><?= newWindowLinkSrOnlySuffix() ?></a>
             <?php endif; ?>
             <?php if ($download['has_project_url']): ?>
               <a class="btn btn-secondary" href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu<?= newWindowLinkSrOnlySuffix() ?></a>

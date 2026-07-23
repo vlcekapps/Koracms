@@ -859,6 +859,18 @@ assert_contains('<podcast:person role="guest" group="cast" href="https://example
 assert_contains('Jana Nováková</podcast:person>', $podcastPersonTag, 'podcast person feed tag keeps UTF-8 name');
 assert_equals('https://downloads.example/item', normalizeDownloadExternalUrl('downloads.example/item'), 'download external URL uses shared external helper');
 assert_equals('', normalizeDownloadExternalUrl('/downloads/local'), 'download external URL rejects internal path');
+assert_equals('downloads.example', downloadExternalHostLabel('https://downloads.example/item'), 'download external host label exposes the stored destination');
+$downloadMetricPresentation = hydrateDownloadPresentation([
+    'id' => 42,
+    'external_url' => 'https://downloads.example/item',
+    'download_count' => 1,
+    'external_click_count' => 3,
+]);
+assert_equals('Staženo 1×', $downloadMetricPresentation['download_count_label'], 'download presentation labels one local download');
+assert_equals('Externí zdroj otevřen 3×', $downloadMetricPresentation['external_click_count_label'], 'download presentation labels external openings separately');
+assert_equals(4, $downloadMetricPresentation['source_interaction_count'], 'download presentation totals source interactions');
+assert_equals('downloads.example', $downloadMetricPresentation['external_host_label'], 'download presentation exposes external destination host');
+assert_equals(BASE_URL . '/downloads/external.php?id=42', downloadExternalOpenPath($downloadMetricPresentation), 'download external opening path uses stored item id');
 assert_equals('https://places.example', normalizePlaceUrl('places.example'), 'place URL uses shared external helper');
 assert_equals('', normalizePlaceUrl('//places.example'), 'place URL rejects protocol-relative URL');
 assert_equals('https://social.example/profile', normalizeWidgetExternalUrl('social.example/profile'), 'widget external URL uses shared external helper');

@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-07-22: přehled využití zdrojů Ke stažení
+
+- Datum a rozsah: read-only sekce `Ke stažení` v detailních administračních statistikách, veřejné metriky na detailu položky a bezpečný externí redirect endpoint.
+- Dotčená kritéria: `1.3.1`, `1.3.2`, `2.4.4`, `2.4.6`, `3.2.2` a `4.1.2`.
+- Rozhodnutí: dosavadní čítače veřejných lokálních downloadů a otevření externích zdrojů u aktuálně zveřejněných položek se zobrazují samostatně a odděleně od návštěvnosti za zvolené období. Sekce má skutečný nadpis, tabulka je pojmenovaná přes `aria-labelledby`, používá caption a sloupcové hlavičky a viditelný text vysvětluje význam obou metrik. Externí CTA zachovává svůj srozumitelný název, před aktivací zobrazuje cílovou doménu a oznamuje nové okno; interní read-only endpoint pouze načte uložený bezpečný cíl, započítá veřejný GET a přesměruje bez další volby nebo změny kontextu formuláře. Stav hlavní WCAG matice se nemění.
+- Automatizovaný důkaz: runtime guardrail kontroluje lokální preflight před čítačem, uložený a normalizovaný externí cíl, bezpečné hlavičky, oddělené metriky, heading-backed tabulku a canonical odkazy; HTTP scénáře ověřují GET/HEAD chování obou endpointů, zachování čítače při chybějícím souboru, veřejný detail, statistiky i skrytí sekce při vypnutém modulu.
+- Ruční ověření nebo zbývající riziko: s NVDA/Firefox a pouze klávesnicí ověřit veřejná tlačítka, oddělené metriky detailu a průchod administrační tabulkou. Otevření externího zdroje je pouze počet veřejných přesměrování a neprokazuje dokončený download na vzdáleném webu; `nofollow` omezuje běžné roboty, ale neodfiltruje veškeré automatizované požadavky.
+
 ### 2026-07-22: bezpečná baseline integrity a vzdálený import fotografií
 
 - Datum a rozsah: administrační kontrola integrity souborů a dávkový downloader fotografií z eStránek.

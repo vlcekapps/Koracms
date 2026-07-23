@@ -6,6 +6,13 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Přidáno
+- **Statistiky zdrojů Ke stažení** – detailní administrace statistik má nově samostatnou sekci Ke stažení s dosavadními součty lokálních downloadů a otevření externích zdrojů u aktuálně zveřejněných položek; obě metriky zůstávají oddělené od návštěv detailu za zvolené období a externí klik je výslovně popsaný jako otevření odkazu, ne jako potvrzení dokončeného stažení na cizím webu. Měřené odkazy ukazují cílovou doménu ještě před aktivací.
+
+### Opraveno
+- **Přesnější počítání souborů ke stažení** – lokální download se započítá až po ověření, že uložený soubor skutečně existuje a je čitelný; chybějící soubor už proto nezvyšuje statistiku. Veřejné externí odkazy procházejí bezpečným read-only endpointem, který načítá cíl pouze z databáze a odděleně počítá jeho otevření.
+- **Synchronizace verze ACR při vydání** – release skript nově ještě před změnou `VERSION` ověří budoucí hodnotu `Version evaluated`, při ostrém vydání ji zapíše do ACR draftu a zahrne dokument do stejného commitu. Dry-run kontroluje stejný preflight bez změny pracovního stromu a package, smoke i runtime guardraily hlídají regresi.
+
 ## [5.0.0-beta.2] – 2026-07-22
 
 ### Přidáno

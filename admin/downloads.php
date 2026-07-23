@@ -102,7 +102,7 @@ $stmt = $pdo->prepare(
             d.excerpt, d.description, d.image_file, d.version_label, d.platform_label, d.license_label,
             d.project_url, d.release_date, d.requirements, d.checksum_sha256, d.series_key,
             d.download_series_id, d.is_current_version, COALESCE(s.title, '') AS series_title, COALESCE(s.slug, '') AS series_slug,
-            d.external_url, d.filename, d.original_name, d.file_size, d.download_count, d.is_featured, d.is_published,
+            d.external_url, d.filename, d.original_name, d.file_size, d.download_count, d.external_click_count, d.is_featured, d.is_published,
             d.created_at, d.updated_at, COALESCE(d.status,'published') AS status,
             COALESCE(NULLIF(u.nickname,''), NULLIF(TRIM(CONCAT(u.first_name,' ',u.last_name)),''), u.email) AS author_name
      FROM cms_downloads d
@@ -271,7 +271,12 @@ adminHeader('Ke stažení');
           <?php if ($download['has_project_url']): ?>
             <br><a href="<?= h((string)$download['project_url']) ?>" target="_blank" rel="noopener noreferrer">Domovská stránka projektu<?= newWindowLinkSrOnlySuffix() ?></a>
           <?php endif; ?>
-          <br><small class="table-meta"><?= h((string)$download['download_count_label']) ?></small>
+          <?php if ($download['has_file']): ?>
+            <br><small class="table-meta"><?= h((string)$download['download_count_label']) ?></small>
+          <?php endif; ?>
+          <?php if ($download['has_external_url']): ?>
+            <br><small class="table-meta"><?= h((string)$download['external_click_count_label']) ?></small>
+          <?php endif; ?>
         </td>
         <td><?= $download['author_name'] ? h((string)$download['author_name']) : '<em>–</em>' ?></td>
         <td>

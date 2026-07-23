@@ -2245,6 +2245,7 @@ try {
         '/media/preview.php?id=0' => 'media/preview.php',
         '/media/thumb.php?id=0' => 'media/thumb.php',
         '/downloads/file.php?id=0' => 'downloads/file.php',
+        '/downloads/external.php?id=0' => 'downloads/external.php',
         '/board/file.php?id=0' => 'board/file.php',
         '/gallery/image.php?id=0' => 'gallery/image.php',
         '/places/image.php?id=0' => 'places/image.php',
@@ -2263,6 +2264,7 @@ try {
         '/media/preview.php?id=0' => 'media/preview.php',
         '/media/thumb.php?id=0' => 'media/thumb.php',
         '/downloads/file.php?id=0' => 'downloads/file.php',
+        '/downloads/external.php?id=0' => 'downloads/external.php',
         '/board/file.php?id=0' => 'board/file.php',
         '/gallery/image.php?id=0' => 'gallery/image.php',
         '/places/image.php?id=0' => 'places/image.php',
@@ -6172,6 +6174,66 @@ try {
     }
 
     httpIntegrationPrintResult('visitor_top_static_pages_http', $topStaticPagesIssues, $failures);
+
+    $downloadStatisticsIssues = [];
+    $downloadStatisticsToken = bin2hex(random_bytes(4));
+    $downloadStatisticsTitle = 'HTTP download statistics ' . $downloadStatisticsToken;
+    $downloadStatisticsSlug = 'http-download-statistics-' . $downloadStatisticsToken;
+    $downloadStatisticsOriginalModule = getSetting('module_downloads', '0');
+    saveSetting('module_downloads', '1');
+    clearSettingsCache();
+
+    $pdo->prepare(
+        "INSERT INTO cms_downloads
+            (title, slug, download_type, version_label, external_url, filename, original_name,
+             download_count, external_click_count, is_published, status)
+         VALUES (?, ?, 'software', '5.0-test', 'https://example.test/download-statistics',
+                 'http-download-statistics.bin', 'http-download-statistics.bin', 37, 11, 1, 'published')"
+    )->execute([$downloadStatisticsTitle, $downloadStatisticsSlug]);
+    $downloadStatisticsId = (int)$pdo->lastInsertId();
+    $createdDownloadIds[] = $downloadStatisticsId;
+
+    $downloadStatisticsResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/statistics.php',
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($downloadStatisticsResponse) !== 200) {
+        $downloadStatisticsIssues[] = 'admin statistiky s položkou ke stažení nevrátily 200';
+    }
+    if (!str_contains($downloadStatisticsResponse['body'], 'id="sec-downloads-performance"')
+        || !str_contains($downloadStatisticsResponse['body'], 'aria-labelledby="sec-downloads-performance"')
+        || !str_contains($downloadStatisticsResponse['body'], 'Nejpoužívanější zdroje aktuálně zveřejněných položek ke stažení')) {
+        $downloadStatisticsIssues[] = 'admin statistiky nezobrazily přístupnou sekci Ke stažení';
+    }
+    if (!str_contains($downloadStatisticsResponse['body'], $downloadStatisticsTitle)
+        || !str_contains($downloadStatisticsResponse['body'], 'download_form.php?id=' . $downloadStatisticsId)
+        || !str_contains($downloadStatisticsResponse['body'], '/downloads/' . $downloadStatisticsSlug)
+        || !str_contains($downloadStatisticsResponse['body'], '>37</td>')
+        || !str_contains($downloadStatisticsResponse['body'], '>11</td>')
+        || !str_contains($downloadStatisticsResponse['body'], '>48</td>')) {
+        $downloadStatisticsIssues[] = 'admin statistiky nezobrazily testovací položku a oddělené počty zdrojových interakcí';
+    }
+    if (!str_contains($downloadStatisticsResponse['body'], 'aktuálně zveřejněných položek')
+        || !str_contains($downloadStatisticsResponse['body'], 'nezávisí na filtru období nahoře')
+        || !str_contains($downloadStatisticsResponse['body'], 'externí hodnota měří otevření odkazu, ne dokončené stažení')) {
+        $downloadStatisticsIssues[] = 'admin statistiky nevysvětlují časový rozsah a význam obou čítačů';
+    }
+
+    saveSetting('module_downloads', '0');
+    clearSettingsCache();
+    $downloadStatisticsDisabledResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/statistics.php',
+        $adminSession['cookie'],
+        0
+    );
+    if (str_contains($downloadStatisticsDisabledResponse['body'], 'id="sec-downloads-performance"')) {
+        $downloadStatisticsIssues[] = 'sekce Ke stažení zůstala ve statistikách při vypnutém modulu';
+    }
+    saveSetting('module_downloads', $downloadStatisticsOriginalModule);
+    clearSettingsCache();
+
+    httpIntegrationPrintResult('visitor_download_statistics_http', $downloadStatisticsIssues, $failures);
 
     $contentTrendsIssues = [];
     $contentTrendsToken = bin2hex(random_bytes(4));
@@ -13702,6 +13764,7 @@ try {
     $downloadOldSlug = 'http-download-old-' . bin2hex(random_bytes(4));
     $downloadExternalOnlySlug = 'http-download-external-' . bin2hex(random_bytes(4));
     $downloadExternalOnlyUrl = 'https://github.com/vlcekapps/Koracms/releases/download/http-test/' . $downloadExternalOnlySlug . '.zip';
+    $downloadExternalOnlyId = null;
     $downloadStoredName = 'http-download-' . bin2hex(random_bytes(6)) . '.txt';
     $downloadStoredPath = dirname(__DIR__) . '/uploads/downloads/' . $downloadStoredName;
     if (!is_dir(dirname($downloadStoredPath))) {
@@ -13853,6 +13916,53 @@ try {
     $downloadOldId = (int)$pdo->lastInsertId();
     $createdDownloadIds[] = $downloadOldId;
 
+    $localDownloadHeadResponse = requestRawUrl(
+        'HEAD',
+        $baseUrl . BASE_URL . '/downloads/file.php?id=' . $downloadCurrentId,
+        '',
+        'text/plain',
+        '',
+        0
+    );
+    $localDownloadCountAfterHead = (int)$pdo
+        ->query('SELECT download_count FROM cms_downloads WHERE id = ' . $downloadCurrentId)
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($localDownloadHeadResponse) !== 200 || $localDownloadCountAfterHead !== 0) {
+        $downloadIssues[] = 'HEAD požadavek na lokální soubor změnil počet stažení nebo nevrátil 200';
+    }
+
+    $localDownloadGetResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/downloads/file.php?id=' . $downloadCurrentId,
+        '',
+        0
+    );
+    $localDownloadCountAfterGet = (int)$pdo
+        ->query('SELECT download_count FROM cms_downloads WHERE id = ' . $downloadCurrentId)
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($localDownloadGetResponse) !== 200 || $localDownloadCountAfterGet !== 1) {
+        $downloadIssues[] = 'dostupný lokální soubor se nezapočítal právě jednou';
+    }
+
+    $missingStoredDownloadSlug = 'http-download-missing-file-' . bin2hex(random_bytes(4));
+    $pdo->prepare(
+        "INSERT INTO cms_downloads
+            (title, slug, download_type, filename, original_name, download_count, is_published, status)
+         VALUES ('HTTP Chybějící soubor', ?, 'document', ?, 'missing.txt', 4, 1, 'published')"
+    )->execute([$missingStoredDownloadSlug, 'missing-' . bin2hex(random_bytes(6)) . '.txt']);
+    $missingStoredDownloadId = (int)$pdo->lastInsertId();
+    $createdDownloadIds[] = $missingStoredDownloadId;
+    $missingStoredDownloadResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/downloads/file.php?id=' . $missingStoredDownloadId,
+        '',
+        0
+    );
+    $missingStoredDownloadCount = (int)$pdo
+        ->query('SELECT download_count FROM cms_downloads WHERE id = ' . $missingStoredDownloadId)
+        ->fetchColumn();
+    if (httpIntegrationStatusCode($missingStoredDownloadResponse) !== 404 || $missingStoredDownloadCount !== 4) {
+        $downloadIssues[] = 'chybějící lokální soubor zvýšil počet stažení nebo nevrátil bezpečnou 404';
+    }
+
     $downloadExternalOnlyResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/download_save.php',
         [
@@ -13882,7 +13992,7 @@ try {
         $downloadIssues[] = 'uložení externí-only položky ke stažení bez uploadu nevrátilo redirect';
     }
     $downloadExternalOnlyStmt = $pdo->prepare(
-        "SELECT id, filename, external_url, status, is_published
+        "SELECT id, filename, external_url, external_click_count, status, is_published
          FROM cms_downloads
          WHERE slug = ? AND deleted_at IS NULL
          LIMIT 1"
@@ -13892,13 +14002,82 @@ try {
     if (!$downloadExternalOnlyRow) {
         $downloadIssues[] = 'externí-only položka ke stažení se neuložila bez uploadu souboru';
     } else {
-        $createdDownloadIds[] = (int)$downloadExternalOnlyRow['id'];
+        $downloadExternalOnlyId = (int)$downloadExternalOnlyRow['id'];
+        $createdDownloadIds[] = $downloadExternalOnlyId;
         if ((string)$downloadExternalOnlyRow['filename'] !== ''
             || (string)$downloadExternalOnlyRow['external_url'] !== $downloadExternalOnlyUrl
+            || (int)$downloadExternalOnlyRow['external_click_count'] !== 0
             || (string)$downloadExternalOnlyRow['status'] !== 'published'
             || (int)$downloadExternalOnlyRow['is_published'] !== 1) {
             $downloadIssues[] = 'externí-only položka ke stažení nemá po uložení očekávaný zdroj nebo publikovaný stav';
         }
+    }
+
+    if ($downloadExternalOnlyId !== null) {
+        $externalEndpointUrl = $baseUrl . BASE_URL . '/downloads/external.php?id=' . $downloadExternalOnlyId;
+        $externalHeadResponse = requestRawUrl('HEAD', $externalEndpointUrl, '', 'text/plain', '', 0);
+        $externalCountAfterHead = (int)$pdo
+            ->query('SELECT external_click_count FROM cms_downloads WHERE id = ' . $downloadExternalOnlyId)
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($externalHeadResponse) !== 302
+            || httpIntegrationHeaderValue($externalHeadResponse, 'Location') !== $downloadExternalOnlyUrl
+            || $externalCountAfterHead !== 0) {
+            $downloadIssues[] = 'HEAD požadavek na externí zdroj nepřesměroval bezpečně nebo změnil čítač';
+        }
+
+        $externalGetResponse = fetchUrl($externalEndpointUrl, '', 0);
+        $externalCountAfterGet = (int)$pdo
+            ->query('SELECT external_click_count FROM cms_downloads WHERE id = ' . $downloadExternalOnlyId)
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($externalGetResponse) !== 302
+            || httpIntegrationHeaderValue($externalGetResponse, 'Location') !== $downloadExternalOnlyUrl
+            || !httpIntegrationHeaderContains($externalGetResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($externalGetResponse, 'X-Robots-Tag', 'noindex')
+            || !httpIntegrationHeaderContains($externalGetResponse, 'Referrer-Policy', 'no-referrer')
+            || !httpIntegrationHeaderContains($externalGetResponse, 'X-Content-Type-Options', 'nosniff')
+            || $externalCountAfterGet !== 1) {
+            $downloadIssues[] = 'GET externího zdroje nepřesměroval s bezpečnými hlavičkami nebo se nezapočítal právě jednou';
+        }
+
+        $externalAdminResponse = fetchUrl($externalEndpointUrl, $adminSession['cookie'], 0);
+        $externalCountAfterAdmin = (int)$pdo
+            ->query('SELECT external_click_count FROM cms_downloads WHERE id = ' . $downloadExternalOnlyId)
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($externalAdminResponse) !== 302
+            || httpIntegrationHeaderValue($externalAdminResponse, 'Location') !== $downloadExternalOnlyUrl
+            || $externalCountAfterAdmin !== 1) {
+            $downloadIssues[] = 'otevření externího zdroje přihlášeným správcem změnilo veřejný čítač';
+        }
+
+        $pdo->exec(
+            "UPDATE cms_downloads
+             SET status = 'pending', is_published = 0
+             WHERE id = " . $downloadExternalOnlyId
+        );
+        $externalPendingResponse = fetchUrl($externalEndpointUrl, '', 0);
+        $externalCountAfterPending = (int)$pdo
+            ->query('SELECT external_click_count FROM cms_downloads WHERE id = ' . $downloadExternalOnlyId)
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($externalPendingResponse) !== 404 || $externalCountAfterPending !== 1) {
+            $downloadIssues[] = 'neveřejná externí položka byla dostupná anonymně nebo změnila čítač';
+        }
+        $pdo->exec(
+            "UPDATE cms_downloads
+             SET status = 'published', is_published = 1
+             WHERE id = " . $downloadExternalOnlyId
+        );
+
+        saveSetting('module_downloads', '0');
+        clearSettingsCache();
+        $externalDisabledResponse = fetchUrl($externalEndpointUrl, '', 0);
+        $externalCountAfterDisabled = (int)$pdo
+            ->query('SELECT external_click_count FROM cms_downloads WHERE id = ' . $downloadExternalOnlyId)
+            ->fetchColumn();
+        if (httpIntegrationStatusCode($externalDisabledResponse) !== 404 || $externalCountAfterDisabled !== 1) {
+            $downloadIssues[] = 'externí zdroj zůstal veřejný při vypnutém modulu nebo změnil čítač';
+        }
+        saveSetting('module_downloads', '1');
+        clearSettingsCache();
     }
 
     $downloadExternalAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/downloads.php?source=external', $adminSession['cookie'], 0);
@@ -13909,19 +14088,28 @@ try {
     }
 
     $downloadExternalCatalog = fetchUrl($baseUrl . BASE_URL . '/downloads/index.php?source=external', '', 0);
+    $expectedExternalEndpointPath = $downloadExternalOnlyId !== null
+        ? '/downloads/external.php?id=' . $downloadExternalOnlyId
+        : '/downloads/external.php?id=0';
     if (httpIntegrationStatusCode($downloadExternalCatalog) !== 200
         || !str_contains($downloadExternalCatalog['body'], 'HTTP Externí download')
-        || !str_contains($downloadExternalCatalog['body'], 'Otevřít externí odkaz')
-        || !str_contains($downloadExternalCatalog['body'], $downloadExternalOnlyUrl)) {
-        $downloadIssues[] = 'veřejný katalog nezobrazuje externí-only položku a její externí akci';
+        || !str_contains($downloadExternalCatalog['body'], 'Otevřít externí odkaz na github.com')
+        || !str_contains($downloadExternalCatalog['body'], $expectedExternalEndpointPath)
+        || !str_contains($downloadExternalCatalog['body'], 'rel="nofollow noopener noreferrer"')
+        || str_contains($downloadExternalCatalog['body'], $downloadExternalOnlyUrl)) {
+        $downloadIssues[] = 'veřejný katalog nepoužívá měřený endpoint externí-only položky';
     }
 
     $downloadExternalDetail = fetchUrl($baseUrl . BASE_URL . '/downloads/' . $downloadExternalOnlySlug, '', 0);
     if (httpIntegrationStatusCode($downloadExternalDetail) !== 200
         || !str_contains($downloadExternalDetail['body'], 'HTTP Externí download')
-        || !str_contains($downloadExternalDetail['body'], 'Otevřít externí odkaz')
+        || !str_contains($downloadExternalDetail['body'], 'Otevřít externí odkaz na github.com')
+        || !str_contains($downloadExternalDetail['body'], $expectedExternalEndpointPath)
+        || !str_contains($downloadExternalDetail['body'], 'Externí zdroj otevřen 1×')
+        || !str_contains($downloadExternalDetail['body'], 'rel="nofollow noopener noreferrer"')
+        || str_contains($downloadExternalDetail['body'], $downloadExternalOnlyUrl)
         || str_contains($downloadExternalDetail['body'], 'Stáhnout soubor')) {
-        $downloadIssues[] = 'detail externí-only položky nemá správnou externí akci nebo nabízí lokální stažení';
+        $downloadIssues[] = 'detail externí-only položky nemá měřenou externí akci, počet otevření nebo nabízí lokální stažení';
     }
 
     $downloadCategoryAdmin = fetchUrl($baseUrl . BASE_URL . '/admin/dl_cats.php', $adminSession['cookie'], 0);

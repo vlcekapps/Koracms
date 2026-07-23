@@ -3294,6 +3294,17 @@ function normalizeDownloadExternalUrl(string $value): string
     return normalizeHttpExternalUrl($value);
 }
 
+function downloadExternalHostLabel(string $value): string
+{
+    $normalizedUrl = normalizeDownloadExternalUrl($value);
+    if ($normalizedUrl === '') {
+        return '';
+    }
+
+    $host = parse_url($normalizedUrl, PHP_URL_HOST);
+    return is_string($host) ? strtolower(rtrim($host, '.')) : '';
+}
+
 /**
  * @param array<string, mixed> $download
  * @return array<string, mixed>
@@ -3338,6 +3349,7 @@ function hydrateDownloadPresentation(array $download): array
     $download['platform_label'] = trim((string)($download['platform_label'] ?? ''));
     $download['license_label'] = trim((string)($download['license_label'] ?? ''));
     $download['external_url'] = normalizeDownloadExternalUrl((string)($download['external_url'] ?? ''));
+    $download['external_host_label'] = downloadExternalHostLabel((string)$download['external_url']);
     $download['project_url'] = normalizeDownloadExternalUrl((string)($download['project_url'] ?? ''));
     $download['release_date'] = trim((string)($download['release_date'] ?? ''));
     $download['requirements'] = trim((string)($download['requirements'] ?? ''));
@@ -3353,12 +3365,17 @@ function hydrateDownloadPresentation(array $download): array
     $download['series_description'] = trim((string)($download['series_description'] ?? ''));
     $download['is_featured'] = (int)($download['is_featured'] ?? 0) === 1 ? 1 : 0;
     $download['download_count'] = max(0, (int)($download['download_count'] ?? 0));
+    $download['external_click_count'] = max(0, (int)($download['external_click_count'] ?? 0));
+    $download['source_interaction_count'] = $download['download_count'] + $download['external_click_count'];
     $download['release_date_label'] = $download['release_date'] !== ''
         ? formatCzechDate((string)$download['release_date'])
         : '';
     $download['download_count_label'] = $download['download_count'] === 1
         ? 'Staženo 1×'
         : 'Staženo ' . $download['download_count'] . '×';
+    $download['external_click_count_label'] = $download['external_click_count'] === 1
+        ? 'Externí zdroj otevřen 1×'
+        : 'Externí zdroj otevřen ' . $download['external_click_count'] . '×';
     $download['has_external_url'] = $download['external_url'] !== '';
     $download['has_project_url'] = $download['project_url'] !== '';
     $download['filename'] = trim((string)($download['filename'] ?? ''));
@@ -6412,6 +6429,14 @@ function downloadPublicPath(array $download, array $query = []): string
 function downloadPublicUrl(array $download, array $query = []): string
 {
     return siteUrl(appendUrlQuery(downloadPublicRequestPath($download), $query));
+}
+
+/**
+ * @param array<string, mixed> $download
+ */
+function downloadExternalOpenPath(array $download): string
+{
+    return BASE_URL . '/downloads/external.php?id=' . max(0, (int)($download['id'] ?? 0));
 }
 
 /**

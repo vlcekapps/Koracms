@@ -144,7 +144,7 @@ $tables = [
     'downloads'     => "SELECT id, title, slug, download_type, dl_category_id, excerpt, description,
                                image_file, version_label, platform_label, license_label, project_url,
                                release_date, requirements, checksum_sha256, series_key, download_series_id, is_current_version, external_url,
-                               filename, original_name, file_size, download_count, is_featured, sort_order, is_published, status,
+                               filename, original_name, file_size, download_count, external_click_count, is_featured, sort_order, is_published, status,
                                created_at, updated_at
                                FROM cms_downloads",
     'food_cards'    => "SELECT id, type, title, slug, description, content, valid_from, valid_to,

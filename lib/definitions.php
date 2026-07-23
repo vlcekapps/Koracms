@@ -369,6 +369,7 @@ function coreModuleDefinitions(): array
                 '/downloads/index.php',
                 '/downloads/item.php',
                 '/downloads/file.php',
+                '/downloads/external.php',
                 '/downloads/series.php',
             ],
             'public_nav_order' => 70,

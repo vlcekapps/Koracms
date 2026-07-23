@@ -989,9 +989,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          (id, title, slug, download_type, dl_category_id, excerpt, description,
                           image_file, version_label, platform_label, license_label, project_url,
                           release_date, requirements, checksum_sha256, series_key, download_series_id, is_current_version, external_url,
-                          filename, original_name, file_size, download_count, is_featured, sort_order, is_published, status,
+                          filename, original_name, file_size, download_count, external_click_count, is_featured, sort_order, is_published, status,
                           created_at, updated_at)
-                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     $findDownloadSeriesStmt = $pdo->prepare("SELECT id FROM cms_download_series WHERE slug = ? LIMIT 1");
                     foreach ($data['downloads'] as $row) {
@@ -1034,7 +1034,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $row['filename'] ?? '',
                             $row['original_name'] ?? '',
                             (int)($row['file_size'] ?? 0),
-                            (int)($row['download_count'] ?? 0),
+                            max(0, min(2147483647, (int)($row['download_count'] ?? 0))),
+                            max(0, min(2147483647, (int)($row['external_click_count'] ?? 0))),
                             (int)($row['is_featured'] ?? 0),
                             (int)($row['sort_order'] ?? 0),
                             (int)($row['is_published'] ?? 1),

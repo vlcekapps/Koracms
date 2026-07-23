@@ -165,6 +165,7 @@ $readOnlyMediaFileSource = (string) file_get_contents(__DIR__ . '/../media/file.
 $readOnlyMediaPreviewSource = (string) file_get_contents(__DIR__ . '/../media/preview.php');
 $readOnlyMediaThumbSource = (string) file_get_contents(__DIR__ . '/../media/thumb.php');
 $readOnlyDownloadsFileSource = (string) file_get_contents(__DIR__ . '/../downloads/file.php');
+$readOnlyDownloadsExternalSource = (string) file_get_contents(__DIR__ . '/../downloads/external.php');
 $adminDownloadSeriesSource = (string) file_get_contents(__DIR__ . '/../admin/download_series.php');
 $readOnlyBoardFileSource = (string) file_get_contents(__DIR__ . '/../board/file.php');
 $readOnlyGalleryImageSource = (string) file_get_contents(__DIR__ . '/../gallery/image.php');
@@ -5417,8 +5418,8 @@ foreach ($pages as $page) {
         if ($downloadId !== false && !str_contains($result['body'], '/downloads/file.php?id=' . (int)$downloadId)) {
             $issues[] = 'downloads article is missing file download CTA';
         }
-        if ($downloadRow && !str_contains($result['body'], (string)($downloadRow['external_url'] ?? ''))) {
-            $issues[] = 'downloads article is missing external link CTA';
+        if ($downloadRow && !str_contains($result['body'], downloadExternalOpenPath($downloadRow))) {
+            $issues[] = 'downloads article is missing measured external link CTA';
         }
     }
 
@@ -8733,7 +8734,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'authors/index.php blog/index.php blog/article.php blog/page.php')
         && str_contains($composerSource, 'board/index.php board/document.php board/file.php')
         && str_contains($composerSource, 'chat/index.php chat/message.php contact/index.php')
-        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php')
+        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php downloads/external.php')
         && str_contains($composerSource, 'events/index.php events/event.php events/ics.php')
         && str_contains($composerSource, 'faq/index.php faq/item.php')
         && str_contains($composerSource, 'food/index.php food/archive.php food/card.php')
@@ -8940,7 +8941,7 @@ $foundationChecks = [
         && str_contains($composerSource, 'contact/index.php')
         && str_contains($composerSource, '"@analyse:strict:public-contact"')
         && str_contains($composerSource, '"analyse:strict:public-downloads"')
-        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php')
+        && str_contains($composerSource, 'downloads/index.php downloads/item.php downloads/series.php downloads/file.php downloads/external.php')
         && str_contains($composerSource, '"@analyse:strict:public-downloads"')
         && str_contains($composerSource, '"analyse:strict:public-events"')
         && str_contains($composerSource, 'events/index.php events/event.php events/ics.php')
@@ -9024,8 +9025,13 @@ $foundationChecks = [
         && str_contains($releaseScriptSource, 'koracms-$newVersion.zip.sha256')
         && str_contains($releaseScriptSource, 'if ($DryRun)')
         && str_contains($releaseScriptSource, '$packageFileOverrides["VERSION"] = $newVersion')
+        && str_contains($releaseScriptSource, 'function Get-UpdatedAcrVersionContent')
+        && str_contains($releaseScriptSource, '$acrVersionPath = Join-Path $projectRoot "docs/accessibility/acr-vpat-wcag-draft.md"')
+        && str_contains($releaseScriptSource, '$acrVersionPlan = Get-UpdatedAcrVersionContent -Content $acrVersionContent -NewVersion $newVersion')
+        && str_contains($releaseScriptSource, 'Dry run: ACR Version evaluated bude při ostrém vydání nastavena na $newVersion.')
+        && str_contains($releaseScriptSource, 'Invoke-Git @("add", "docs/accessibility/acr-vpat-wcag-draft.md")')
         && str_contains($releaseScriptSource, 'New-ReleaseZip -ProjectRoot $projectRoot -OutPath $zipPath -FileOverrides $packageFileOverrides')
-        && str_contains($releaseScriptSource, 'VERSION a CHANGELOG.md zůstávají beze změn')
+        && str_contains($releaseScriptSource, 'pracovní VERSION, CHANGELOG.md a ACR draft zůstávají beze změn')
         && str_contains($releaseScriptSource, 'Dry run dokončen')
         && str_contains($releaseScriptSource, 'Nebyl vytvořen commit, tag, push ani GitHub release'),
     'release package audit is wired into basic CI' => str_contains($composerSource, '"test:release-package"')
@@ -9473,6 +9479,7 @@ $foundationChecks = [
         && !str_contains($chatIndexSource, 'error_log(')
         && !str_contains($formsIndexSource, 'error_log(')
         && !str_contains($readOnlyDownloadsFileSource, 'error_log(')
+        && !str_contains($readOnlyDownloadsExternalSource, 'error_log(')
         && !str_contains($subscribeConfirmSource, 'error_log(')
         && !str_contains($unsubscribeSource, 'error_log(')
         && str_contains($boardIndexSource, "koraLog('warning', 'board archive months query failed'")
@@ -9480,6 +9487,7 @@ $foundationChecks = [
         && str_contains($chatIndexSource, "koraLog('warning', 'chat submission insert failed'")
         && str_contains($formsIndexSource, "koraLog('warning', 'public form submission insert failed'")
         && str_contains($readOnlyDownloadsFileSource, "koraLog('warning', 'download count update failed'")
+        && str_contains($readOnlyDownloadsExternalSource, "koraLog('warning', 'external download click count update failed'")
         && str_contains($subscribeConfirmSource, "koraLog('warning', 'newsletter confirmation failed'")
         && str_contains($unsubscribeSource, "koraLog('warning', 'newsletter unsubscribe failed'"),
     'admin composite pages use structured recoverable error logs' => !str_contains($adminContentReferenceSearchSource, 'error_log(')
@@ -9637,6 +9645,7 @@ $fileMethodGuardUrls = [
     '/media/preview.php?id=0' => 'media/preview.php',
     '/media/thumb.php?id=0' => 'media/thumb.php',
     '/downloads/file.php?id=0' => 'downloads/file.php',
+    '/downloads/external.php?id=0' => 'downloads/external.php',
     '/board/file.php?id=0' => 'board/file.php',
     '/gallery/image.php?id=0' => 'gallery/image.php',
     '/places/image.php?id=0' => 'places/image.php',
@@ -9943,6 +9952,7 @@ $installSchemaChecks = [
     'cms_download_series contains is_active' => $installTableContains('cms_download_series', 'is_active'),
     'cms_downloads contains download_series_id' => $installTableContains('cms_downloads', 'download_series_id'),
     'cms_downloads contains is_current_version' => $installTableContains('cms_downloads', 'is_current_version'),
+    'cms_downloads contains external_click_count' => $installTableContains('cms_downloads', 'external_click_count'),
 ];
 $installSchemaIssues = [];
 foreach ($installSchemaChecks as $label => $present) {
@@ -10022,6 +10032,7 @@ $migrateSchemaChecks = [
     'uq_cms_download_series_slug' => str_contains($migrateSource, 'uq_cms_download_series_slug'),
     'cms_downloads.download_series_id' => str_contains($migrateSource, 'cms_downloads.download_series_id'),
     'cms_downloads.is_current_version' => str_contains($migrateSource, 'cms_downloads.is_current_version'),
+    'cms_downloads.external_click_count' => str_contains($migrateSource, 'cms_downloads.external_click_count'),
     'idx_cms_downloads_series_current' => str_contains($migrateSource, 'idx_cms_downloads_series_current'),
     'migrate reruns schema consistency checks even on matching version' => str_contains($migrateSource, 'kontrola konzistence schématu a chybějících sloupců'),
 ];
@@ -13331,8 +13342,21 @@ if (!str_contains($downloadSaveSource, "\$storedFilename === '' && \$externalUrl
     || !str_contains($downloadSaveSource, "\$redirectWithError('source')")) {
     $downloadsSourceIssues[] = 'download save must reject only items missing both local file and external URL';
 }
-if (!str_contains($downloadAdminListSourceForGuard, 'Externí zdroj bez lokálního souboru')) {
-    $downloadsSourceIssues[] = 'download admin list must clearly label external-only download items';
+if (!str_contains($downloadAdminListSourceForGuard, 'Externí zdroj bez lokálního souboru')
+    || !str_contains($downloadAdminListSourceForGuard, 'external_click_count_label')) {
+    $downloadsSourceIssues[] = 'download admin list must clearly label external-only items and their opening count';
+}
+if (!str_contains($readOnlyDownloadsFileSource, 'is_file($storedPath)')
+    || !str_contains($readOnlyDownloadsFileSource, 'is_readable($storedPath)')
+    || strpos($readOnlyDownloadsFileSource, 'is_file($storedPath)') > strpos($readOnlyDownloadsFileSource, 'SET download_count = download_count + 1')) {
+    $downloadsSourceIssues[] = 'local download counter must run only after the stored file availability preflight';
+}
+if (!str_contains($readOnlyDownloadsExternalSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($readOnlyDownloadsExternalSource, 'normalizeDownloadExternalUrl((string)$download[\'external_url\'])')
+    || !str_contains($readOnlyDownloadsExternalSource, 'SET external_click_count = external_click_count + 1')
+    || !str_contains($readOnlyDownloadsExternalSource, 'sendNoStoreNoIndexHeaders();')
+    || !str_contains($readOnlyDownloadsExternalSource, "header('Location: ' . \$target, true, 302);")) {
+    $downloadsSourceIssues[] = 'external download endpoint must use a stored validated target, safe headers, read-only methods and a separate counter';
 }
 if (!str_contains($downloadsIndexSource, "\$_GET['category_slug']")
     || !str_contains($downloadsIndexSource, 'downloadCategoryPath($activeCategory)')
@@ -13345,8 +13369,14 @@ if (!str_contains($downloadsIndexViewSource, 'downloadCategoryPath($categoryRow)
 }
 if (!str_contains($downloadsIndexViewSource, 'Stáhnout soubor')
     || !str_contains($downloadsIndexViewSource, 'Otevřít externí odkaz')
+    || !str_contains($downloadsIndexViewSource, 'downloadExternalOpenPath($download)')
+    || !str_contains($downloadsArticleViewSource, 'downloadExternalOpenPath($download)')
+    || !str_contains($downloadsIndexViewSource, '$download[\'external_host_label\']')
+    || !str_contains($downloadsArticleViewSource, '$download[\'external_host_label\']')
+    || !str_contains($downloadsIndexViewSource, 'rel="nofollow noopener noreferrer"')
+    || !str_contains($downloadsArticleViewSource, 'rel="nofollow noopener noreferrer"')
     || str_contains($downloadsIndexViewSource, 'elseif ($download[\'has_external_url\'])')) {
-    $downloadsSourceIssues[] = 'public downloads index must show both local and external actions for hybrid items';
+    $downloadsSourceIssues[] = 'public downloads views must show both source actions and route nofollow external openings through the measured endpoint';
 }
 if (!str_contains($downloadsItemSource, 'download_series_id')
     || !str_contains($downloadsItemSource, '$currentVersion')
@@ -13369,13 +13399,16 @@ if (!str_contains($downloadsSeriesViewSource, 'Série ke stažení')
     $downloadsSourceIssues[] = 'public download series view is missing accessible heading or current-version marker';
 }
 if (!str_contains($adminExportSource, "'download_series'")
-    || !str_contains($adminExportSource, 'download_series_id, is_current_version')) {
-    $downloadsSourceIssues[] = 'export is missing download series or current-version metadata';
+    || !str_contains($adminExportSource, 'download_series_id, is_current_version')
+    || !str_contains($adminExportSource, 'download_count, external_click_count')) {
+    $downloadsSourceIssues[] = 'export is missing download series, current-version metadata or source counters';
 }
 if (!str_contains($adminImportSource, '$data[\'download_series\']')
     || !str_contains($adminImportSource, 'uniqueDownloadSeriesSlug(')
-    || !str_contains($adminImportSource, 'is_current_version')) {
-    $downloadsSourceIssues[] = 'import is missing download series migration or current-version metadata';
+    || !str_contains($adminImportSource, 'is_current_version')
+    || !str_contains($adminImportSource, "max(0, min(2147483647, (int)(\$row['download_count'] ?? 0)))")
+    || !str_contains($adminImportSource, "max(0, min(2147483647, (int)(\$row['external_click_count'] ?? 0)))")) {
+    $downloadsSourceIssues[] = 'import is missing download series migration, current-version metadata or external source counter';
 }
 if (!str_contains($sitemapSource, 'downloadCategoryUrl(')
     || !str_contains($sitemapSource, 'downloadSeriesUrl(')
@@ -16305,6 +16338,17 @@ if (!str_contains($adminStatisticsSource, 'Nejčtenější statické stránky')
     || !str_contains($adminStatisticsSource, 'Stránka blogu: ')
     || !str_contains($adminStatisticsSource, 'statisticsLogSectionError(\'top_pages\'')) {
     $adminFieldErrorIssues[] = 'admin statistics detail is missing top static pages report';
+}
+if (!str_contains($downloadsItemSource, "trackPageView('download', (int)\$download['id']);")
+    || !str_contains($adminStatisticsSource, 'COALESCE(SUM(download_count), 0) AS total_downloads')
+    || !str_contains($adminStatisticsSource, 'COALESCE(SUM(external_click_count), 0) AS total_external_clicks')
+    || !str_contains($adminStatisticsSource, "statisticsLogSectionError('top_downloads'")
+    || !str_contains($adminStatisticsSource, '<section aria-labelledby="sec-downloads-performance">')
+    || !str_contains($adminStatisticsSource, '<table aria-labelledby="sec-downloads-performance">')
+    || !str_contains($adminStatisticsSource, 'downloadPublicPath($downloadRow)')
+    || !str_contains($adminStatisticsSource, 'aktuálně zveřejněných položek')
+    || !str_contains($adminStatisticsSource, 'externí hodnota měří otevření odkazu, ne dokončené stažení')) {
+    $adminFieldErrorIssues[] = 'downloads must expose accessible lifetime local-download and external-opening statistics';
 }
 $statsContentAggregatePos = strpos($statsSource, 'statsAggregateContentDaily($pdo);');
 $statsRawRetentionDeletePos = strpos($statsSource, 'DELETE FROM cms_page_views');

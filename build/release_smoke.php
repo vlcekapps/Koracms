@@ -408,6 +408,9 @@ try {
     if (!str_contains($releaseOutput, 'Dry run')) {
         fail('Release dry-run output is missing the dry-run marker.');
     }
+    if (!str_contains($releaseOutput, 'Dry run: ACR Version evaluated bude při ostrém vydání nastavena na')) {
+        fail('Release dry-run output is missing the ACR version preflight marker.');
+    }
 
     if (!preg_match('/^Verze:\s*(.+)$/mu', $releaseOutput, $versionLineMatch)) {
         fail('Release dry-run output is missing the version line.');

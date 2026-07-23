@@ -191,6 +191,21 @@ function Update-Changelog {
     return $result.Updated
 }
 
+function Get-UpdatedAcrVersionContent {
+    param([string]$Content, [string]$NewVersion)
+    $versionPattern = '(?m)^- Version evaluated:\s*.*$'
+    $versionRegex = [regex]::new($versionPattern)
+    if (!$versionRegex.IsMatch($Content)) {
+        throw "ACR draft neobsahuje řádek Version evaluated."
+    }
+
+    $updatedContent = $versionRegex.Replace($Content, "- Version evaluated: $NewVersion", 1)
+    return [PSCustomObject]@{
+        Updated = $updatedContent -ne $Content
+        Content = $updatedContent
+    }
+}
+
 function Assert-CleanWorkingTree {
     $status = (& git status --porcelain)
     if ($LASTEXITCODE -ne 0) { throw "Nelze načíst git status." }
@@ -353,6 +368,7 @@ if (-not $SkipCi) {
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $versionPath = Join-Path $projectRoot "VERSION"
+$acrVersionPath = Join-Path $projectRoot "docs/accessibility/acr-vpat-wcag-draft.md"
 $distDir     = Join-Path $projectRoot "dist"
 
 Assert-CleanWorkingTree
@@ -403,6 +419,13 @@ $changelogPath = Join-Path $projectRoot "CHANGELOG.md"
 $changelogUpdated = $false
 $packageFileOverrides = @{}
 
+if (!(Test-Path $acrVersionPath)) {
+    throw "ACR draft nebyl nalezen: $acrVersionPath"
+}
+$acrVersionContent = [System.IO.File]::ReadAllText($acrVersionPath, [System.Text.UTF8Encoding]::new($false))
+$acrVersionPlan = Get-UpdatedAcrVersionContent -Content $acrVersionContent -NewVersion $newVersion
+$acrVersionUpdated = [bool]$acrVersionPlan.Updated
+
 if ($DryRun) {
     $packageFileOverrides["VERSION"] = $newVersion
 
@@ -416,10 +439,17 @@ if ($DryRun) {
             Write-Host "Dry run: CHANGELOG.md nemá sekci [Unreleased] ani [$newVersion] bez data – ZIP použije aktuální soubor."
         }
     }
-    Write-Host "Dry run: pracovní VERSION a CHANGELOG.md zůstávají beze změn."
+    Write-Host "Dry run: ACR Version evaluated bude při ostrém vydání nastavena na $newVersion."
+    Write-Host "Dry run: pracovní VERSION, CHANGELOG.md a ACR draft zůstávají beze změn."
 } else {
     # Aktualizovat VERSION
     [System.IO.File]::WriteAllText($versionPath, $newVersion, [System.Text.UTF8Encoding]::new($false))
+
+    # Synchronizovat hodnocenou verzi v ACR draftu
+    if ($acrVersionUpdated) {
+        [System.IO.File]::WriteAllText($acrVersionPath, $acrVersionPlan.Content, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "ACR Version evaluated aktualizována."
+    }
 
     # Aktualizovat CHANGELOG.md
     $changelogUpdated = Update-Changelog -Path $changelogPath -NewVersion $newVersion
@@ -448,6 +478,7 @@ if ($DryRun) {
 
 # Commit + tag
 Invoke-Git @("add", "VERSION")
+if ($acrVersionUpdated) { Invoke-Git @("add", "docs/accessibility/acr-vpat-wcag-draft.md") }
 if ($changelogUpdated) { Invoke-Git @("add", "CHANGELOG.md") }
 Invoke-Git @("commit", "-m", "chore(release): $newVersion")
 

@@ -166,7 +166,7 @@ $stmt = $pdo->prepare(
     "SELECT d.id, d.title, d.slug, d.download_type, d.dl_category_id, COALESCE(c.name, '') AS category_name,
             d.excerpt, d.description, d.image_file, d.version_label, d.platform_label, d.license_label,
             d.project_url, d.release_date, d.requirements, d.checksum_sha256, d.series_key,
-            d.external_url, d.filename, d.original_name, d.file_size, d.download_count, d.is_featured,
+            d.external_url, d.filename, d.original_name, d.file_size, d.download_count, d.external_click_count, d.is_featured,
             d.created_at, d.updated_at
      FROM cms_downloads d
      LEFT JOIN cms_dl_categories c ON c.id = d.dl_category_id

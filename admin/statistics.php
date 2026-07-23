@@ -175,6 +175,46 @@ try {
     statisticsLogSectionError('top_pages', $e);
 }
 
+// ── Skutečné interakce se zdroji ke stažení ────────────────────────────────
+$topDownloads = [];
+$totalDownloadCount = 0;
+$totalExternalClickCount = 0;
+$downloadInteractionItemsCount = 0;
+if (isModuleEnabled('downloads')) {
+    try {
+        $downloadSummary = $pdo->query(
+            "SELECT COALESCE(SUM(download_count), 0) AS total_downloads,
+                    COALESCE(SUM(external_click_count), 0) AS total_external_clicks,
+                    COALESCE(SUM(CASE WHEN download_count > 0 OR external_click_count > 0 THEN 1 ELSE 0 END), 0) AS interacted_items
+             FROM cms_downloads
+             WHERE deleted_at IS NULL
+               AND status = 'published'
+               AND is_published = 1
+               AND (filename <> '' OR external_url <> '')"
+        )->fetch();
+        $totalDownloadCount = (int)($downloadSummary['total_downloads'] ?? 0);
+        $totalExternalClickCount = (int)($downloadSummary['total_external_clicks'] ?? 0);
+        $downloadInteractionItemsCount = (int)($downloadSummary['interacted_items'] ?? 0);
+
+        $topDownloads = array_map(
+            static fn (array $download): array => hydrateDownloadPresentation($download),
+            $pdo->query(
+                "SELECT id, title, slug, download_type, version_label, filename, external_url,
+                        download_count, external_click_count, status, is_published
+                 FROM cms_downloads
+                 WHERE deleted_at IS NULL
+                   AND status = 'published'
+                   AND is_published = 1
+                   AND (download_count > 0 OR external_click_count > 0)
+                 ORDER BY (download_count + external_click_count) DESC, title ASC
+                 LIMIT 20"
+            )->fetchAll()
+        );
+    } catch (\PDOException $e) {
+        statisticsLogSectionError('top_downloads', $e);
+    }
+}
+
 // ── Dlouhodobé obsahové trendy ─────────────────────────────────────────────
 $contentTrendRows = [];
 $contentPreviousRows = [];
@@ -759,7 +799,59 @@ adminHeader('Statistiky');
 </section>
 <?php endif; ?>
 
-<!-- ── 4. Rezervace ────────────────────────────────────────────────────────── -->
+<!-- ── 4. Ke stažení ───────────────────────────────────────────────────────── -->
+<?php if (isModuleEnabled('downloads')): ?>
+<section aria-labelledby="sec-downloads-performance">
+  <h2 id="sec-downloads-performance">Ke stažení</h2>
+  <p class="field-help">
+    Přehled ukazuje dosavadní veřejné interakce aktuálně zveřejněných položek a nezávisí na filtru období nahoře.
+    Stažení lokálního souboru se započítá až po ověření jeho dostupnosti; externí hodnota měří otevření odkazu, ne dokončené stažení na cizím webu.
+    Návštěvy detailů položek jsou samostatně v bloku Výkon obsahu.
+  </p>
+  <p>
+    Stažení lokálních souborů: <strong><?= $fmt($totalDownloadCount) ?></strong>
+    · Otevření externích zdrojů: <strong><?= $fmt($totalExternalClickCount) ?></strong>
+    · Položek s alespoň jednou interakcí: <strong><?= $fmt($downloadInteractionItemsCount) ?></strong>
+  </p>
+
+  <?php if ($topDownloads === []): ?>
+    <p>Zatím nebyla zaznamenána žádná veřejná interakce se zdrojem ke stažení.</p>
+  <?php else: ?>
+    <div class="table-responsive">
+      <table aria-labelledby="sec-downloads-performance">
+        <caption class="sr-only">Nejpoužívanější zdroje aktuálně zveřejněných položek ke stažení</caption>
+        <thead>
+          <tr>
+            <th scope="col">Položka</th>
+            <th scope="col">Typ</th>
+            <th scope="col">Verze</th>
+            <th scope="col">Lokální stažení</th>
+            <th scope="col">Externí otevření</th>
+            <th scope="col">Interakce celkem</th>
+          </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($topDownloads as $downloadRow): ?>
+          <tr>
+            <td>
+              <a href="download_form.php?id=<?= (int)$downloadRow['id'] ?>"><?= h((string)$downloadRow['title']) ?></a>
+              <br><small><a href="<?= h(downloadPublicPath($downloadRow)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit veřejně<?= newWindowLinkSrOnlySuffix() ?></a></small>
+            </td>
+            <td><?= h((string)$downloadRow['download_type_label']) ?></td>
+            <td><?= (string)$downloadRow['version_label'] !== '' ? h((string)$downloadRow['version_label']) : '—' ?></td>
+            <td><?= $fmt((int)$downloadRow['download_count']) ?></td>
+            <td><?= $fmt((int)$downloadRow['external_click_count']) ?></td>
+            <td><?= $fmt((int)$downloadRow['source_interaction_count']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
+</section>
+<?php endif; ?>
+
+<!-- ── 5. Rezervace ────────────────────────────────────────────────────────── -->
 <?php if (isModuleEnabled('reservations') && (!empty($resMonthly) || !empty($resStatus) || !empty($resTopRes))): ?>
 <section aria-labelledby="sec-reservations">
   <h2 id="sec-reservations">Rezervace</h2>

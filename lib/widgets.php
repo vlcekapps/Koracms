@@ -873,7 +873,7 @@ function renderWidget_latest_downloads(array $widget, array $settings, string $z
     $stmt = $pdo->prepare(
         "SELECT d.id, d.title, d.slug, d.download_type, d.excerpt, d.description, d.image_file,
                 d.version_label, d.platform_label, d.release_date, d.filename, d.original_name, d.file_size,
-                d.external_url, d.is_featured, d.download_count
+                d.external_url, d.is_featured, d.download_count, d.external_click_count
          FROM cms_downloads d
          WHERE d.status = 'published' AND d.is_published = 1
          ORDER BY d.is_featured DESC, COALESCE(d.release_date, DATE(d.created_at)) DESC, d.created_at DESC, d.id DESC

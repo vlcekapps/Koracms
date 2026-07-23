@@ -5,7 +5,7 @@ Stav: interní draft podle VPAT 2.5Rev WCAG edition. Tento dokument není právn
 ## Product Information
 
 - Product: Kora CMS
-- Version evaluated: 5.0.0-beta.1
+- Version evaluated: 5.0.0-beta.2
 - Report type: WCAG 2.2 A/AA product accessibility conformance draft
 - Report date: 2026-07-13
 - Evaluation methods: source inspection, automated guardrails, runtime audits, HTTP integration scenarios, theme view audit, the 55-criterion and change-aware `accessibility_conformance_audit.php`, its negative selftest, author-content checklist and manual protocol prepared in `manual-test-protocol.md`

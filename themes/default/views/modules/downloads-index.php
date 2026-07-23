@@ -202,7 +202,7 @@ $pageKicker = (string)($pageKicker ?? 'Dokumenty, software a materiály');
                            download="<?= h((string)$download['original_name']) ?>">Stáhnout soubor <span aria-hidden="true">→</span></a>
                       <?php endif; ?>
                       <?php if ($download['has_external_url']): ?>
-                        <a class="section-link" href="<?= h((string)$download['external_url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít externí odkaz<?= newWindowLinkSrOnlySuffix() ?> <span aria-hidden="true">→</span></a>
+                        <a class="section-link" href="<?= h(downloadExternalOpenPath($download)) ?>" target="_blank" rel="nofollow noopener noreferrer">Otevřít externí odkaz na <?= h((string)$download['external_host_label']) ?><?= newWindowLinkSrOnlySuffix() ?> <span aria-hidden="true">→</span></a>
                       <?php endif; ?>
                     </div>
                   </div>

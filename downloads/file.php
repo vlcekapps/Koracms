@@ -42,6 +42,11 @@ if ($storedName === '') {
     sendFileDownloadNotFound();
 }
 
+$storedPath = __DIR__ . '/../uploads/downloads/' . basename($storedName);
+if (!is_file($storedPath) || !is_readable($storedPath)) {
+    sendFileDownloadNotFound();
+}
+
 $downloadName = safeDownloadName((string)$file['original_name'], (string)$file['title']);
 if ($downloadName === trim((string)$file['title'])) {
     $extension = pathinfo($storedName, PATHINFO_EXTENSION);
@@ -62,4 +67,4 @@ if (!$allowPrivateAccess && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'HEAD') {
     }
 }
 
-sendStoredFileDownload(__DIR__ . '/../uploads/downloads/' . basename($storedName), $downloadName);
+sendStoredFileDownload($storedPath, $downloadName);
