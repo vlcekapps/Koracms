@@ -297,6 +297,35 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('appmarket')) {
+        try {
+            foreach ($ftSearch(
+                $pdo,
+                $q,
+                $like,
+                "SELECT a.id, a.name AS title, a.slug, a.short_description AS perex,
+                        COALESCE(a.published_at, a.updated_at, a.created_at) AS created_at,
+                        'appmarket_app' AS type",
+                "FROM cms_appmarket_apps a
+                 WHERE " . appmarketAppPublicVisibilitySql('a') . "
+                   AND EXISTS (
+                       SELECT 1
+                       FROM cms_appmarket_releases r
+                       WHERE r.app_id = a.id
+                         AND " . appmarketReleasePublicVisibilitySql('r') . "
+                   )",
+                'a.name, a.short_description, a.description, a.package_id',
+                [],
+                'a.is_featured DESC, a.sort_order, a.name',
+                10
+            ) as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+            searchLogSourceError('appmarket', $e);
+        }
+    }
+
     if (isModuleEnabled('places')) {
         try {
             foreach ($ftSearch(
@@ -380,6 +409,7 @@ function resultUrl(array $result): string
         'gallery_album' => galleryAlbumPublicPath($result),
         'gallery_photo' => galleryPhotoPublicPath($result),
         'download' => downloadPublicPath($result),
+        'appmarket_app' => appmarketAppPath($result),
         'place' => placePublicPath($result),
         'board' => boardPublicPath($result),
         'poll' => pollPublicPath($result),

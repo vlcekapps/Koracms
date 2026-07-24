@@ -347,6 +347,38 @@ function statsContentResolve(PDO $pdo, string $pageType, int $pageRefId, string 
                 }
                 break;
 
+            case 'appmarket_app':
+                $stmt = $pdo->prepare("SELECT id, name, slug FROM cms_appmarket_apps WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = [
+                        'title' => trim((string)$row['name']),
+                        'path' => appmarketAppPath($row),
+                    ];
+                    return $cache[$cacheKey];
+                }
+                break;
+
+            case 'appmarket_release':
+                $stmt = $pdo->prepare(
+                    "SELECT r.id, r.version_name, r.version_code, a.name, a.slug
+                     FROM cms_appmarket_releases r
+                     INNER JOIN cms_appmarket_apps a ON a.id = r.app_id
+                     WHERE r.id = ?
+                     LIMIT 1"
+                );
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = [
+                        'title' => trim((string)$row['name'] . ' ' . (string)$row['version_name']),
+                        'path' => appmarketReleasePath($row, (int)$row['version_code']),
+                    ];
+                    return $cache[$cacheKey];
+                }
+                break;
+
             case 'food_card':
                 $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_food_cards WHERE id = ? LIMIT 1");
                 $stmt->execute([$pageRefId]);

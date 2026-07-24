@@ -48,6 +48,11 @@ $createdDownloadIds = [];
 $createdDownloadCategoryIds = [];
 $createdDownloadSeriesIds = [];
 $createdDownloadStoredFiles = [];
+$createdAppmarketAppIds = [];
+$createdAppmarketReleaseIds = [];
+$createdAppmarketCertificateIds = [];
+$createdAppmarketTokenIds = [];
+$createdAppmarketStoredFiles = [];
 $createdFoodIds = [];
 $createdFoodSectionIds = [];
 $createdFoodItemIds = [];
@@ -19300,6 +19305,408 @@ try {
 
     httpIntegrationPrintResult('media_admin_http', $mediaIssues, $failures);
 
+    $appmarketIssues = [];
+    $appmarketOriginalModule = getSetting('module_appmarket', '0');
+    saveSetting('module_appmarket', '1');
+    clearSettingsCache();
+
+    $appmarketToken = bin2hex(random_bytes(6));
+    $appmarketSlug = 'http-appmarket-' . $appmarketToken;
+    $appmarketPackageId = 'cz.koracms.http.app' . $appmarketToken;
+    $appmarketName = 'HTTP Appmarket ' . $appmarketToken;
+    $pdo->prepare(
+        "INSERT INTO cms_appmarket_apps
+         (name, slug, package_id, short_description, description, status, created_by_user_id)
+         VALUES (?,?,?,?,?,'draft',?)"
+    )->execute([
+        $appmarketName,
+        $appmarketSlug,
+        $appmarketPackageId,
+        'Testovací aplikace pro veřejný Appmarket.',
+        'Podrobný popis testovací aplikace.',
+        $adminUserId,
+    ]);
+    $appmarketAppId = (int)$pdo->lastInsertId();
+    $createdAppmarketAppIds[] = $appmarketAppId;
+    $appmarketApp = appmarketFindApp($pdo, $appmarketAppId);
+    if ($appmarketApp === null) {
+        $appmarketIssues[] = 'testovací aplikaci se nepodařilo načíst helperem';
+    } else {
+        $fakeApkBytes = "PK\x03\x04KORA-APPMARKET-HTTP-" . $appmarketToken;
+        $fakeApkPath = httpIntegrationCreateTempFile(
+            'kora-appmarket-',
+            $fakeApkBytes,
+            $createdTempFiles
+        );
+        $fakeApkHash = hash('sha256', $fakeApkBytes);
+        $certificateHash = hash('sha256', 'kora-appmarket-certificate-' . $appmarketToken);
+        $analysisMetadata = [
+            'package_id' => $appmarketPackageId,
+            'version_name' => '1.0.0',
+            'version_code' => 100,
+            'min_sdk' => 26,
+            'target_sdk' => 35,
+            'certificate_sha256' => $certificateHash,
+            'certificate_subject' => 'CN=Kora HTTP integration',
+            'certificate_serial' => 'HTTP-' . $appmarketToken,
+            'certificate_valid_from' => '2026-01-01 00:00:00',
+            'certificate_valid_to' => '2036-01-01 00:00:00',
+            'debuggable' => false,
+            'build_type' => 'release',
+            'permissions' => ['android.permission.INTERNET'],
+            'apk_sha256' => $fakeApkHash,
+            'apk_size' => strlen($fakeApkBytes),
+        ];
+        $analysisJson = appmarketNormalizeJsonMetadata([
+            'schema_version' => 1,
+            'tool_verified' => true,
+            'metadata' => $analysisMetadata,
+        ]);
+        $appmarketReleaseId = 0;
+        $appmarketCertificateId = 0;
+        $draftResult = appmarketCreateReleaseDraft(
+            $pdo,
+            $appmarketApp,
+            [
+                'apk_path' => $fakeApkPath,
+                'apk_original_name' => $appmarketSlug . '-1.0.0.apk',
+                'source_is_upload' => false,
+                'cleanup_paths' => [],
+                'analysis' => [
+                    'metadata' => $analysisMetadata,
+                    'metadata_source' => 'apk',
+                    'tool_verified' => true,
+                    'analysis_json' => $analysisJson,
+                ],
+            ],
+            'První bezpečné testovací vydání.',
+            $adminUserId
+        );
+        if (!$draftResult['ok'] || $draftResult['release_id'] <= 0) {
+            $appmarketIssues[] = 'helper nevytvořil platný koncept vydání: ' . implode(' ', $draftResult['errors']);
+        } else {
+            $appmarketReleaseId = (int)$draftResult['release_id'];
+            $createdAppmarketReleaseIds[] = $appmarketReleaseId;
+            $appmarketRelease = appmarketFindRelease($pdo, $appmarketReleaseId);
+            if ($appmarketRelease === null) {
+                $appmarketIssues[] = 'vytvořený koncept vydání se nepodařilo načíst';
+            } else {
+                $appmarketCertificateId = (int)$appmarketRelease['certificate_id'];
+                $createdAppmarketCertificateIds[] = $appmarketCertificateId;
+                $createdAppmarketStoredFiles[] = (string)$appmarketRelease['apk_storage_name'];
+                $pdo->prepare(
+                    'UPDATE cms_appmarket_certificates SET is_active = 1 WHERE id = ? AND app_id = ?'
+                )->execute([$appmarketCertificateId, $appmarketAppId]);
+                // The fixture is intentionally not a real APK. Production publication is
+                // covered statically and must independently rerun Android SDK analysis.
+                $pdo->prepare(
+                    "UPDATE cms_appmarket_releases
+                     SET status = 'published', published_at = NOW(), published_by_user_id = ?
+                     WHERE id = ? AND app_id = ?"
+                )->execute([$adminUserId, $appmarketReleaseId, $appmarketAppId]);
+                $pdo->prepare(
+                    "UPDATE cms_appmarket_apps SET status = 'published' WHERE id = ?"
+                )->execute([$appmarketAppId]);
+            }
+        }
+
+        if ($appmarketReleaseId > 0 && $appmarketCertificateId > 0) {
+            $publishToken = appmarketGeneratePublishToken();
+            $pdo->prepare(
+                "INSERT INTO cms_appmarket_publish_tokens
+                 (app_id, name, token_prefix, token_hash, scopes, created_by_user_id)
+                 VALUES (?,?,?,?,?,?)"
+            )->execute([
+                $appmarketAppId,
+                'HTTP integration publisher',
+                $publishToken['prefix'],
+                $publishToken['hash'],
+                appmarketTokenScopesValue('release:create'),
+                $adminUserId,
+            ]);
+            $createdAppmarketTokenIds[] = (int)$pdo->lastInsertId();
+
+            $appmarketCatalogResponse = fetchUrl($baseUrl . BASE_URL . '/aplikace', '', 0);
+            if (httpIntegrationStatusCode($appmarketCatalogResponse) !== 200
+                || !str_contains($appmarketCatalogResponse['body'], $appmarketName)
+                || !str_contains($appmarketCatalogResponse['body'], 'role="search"')
+                || !str_contains($appmarketCatalogResponse['body'], 'aria-labelledby="appmarket-search-legend"')) {
+                $appmarketIssues[] = 'veřejný katalog nezobrazil publikovanou aplikaci a pojmenovaný search landmark';
+            }
+
+        $appmarketDetailResponse = fetchUrl(
+            $baseUrl . appmarketAppPath($appmarketSlug),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketDetailResponse) !== 200
+            || !str_contains($appmarketDetailResponse['body'], 'O aplikaci')
+            || !str_contains($appmarketDetailResponse['body'], 'Verze 1.0.0')
+            || !str_contains($appmarketDetailResponse['body'], 'Stáhnout verzi 1.0.0')
+            || !str_contains($appmarketDetailResponse['body'], 'aria-labelledby="appmarket-releases-heading"')) {
+            $appmarketIssues[] = 'detail aplikace nezobrazil popis, vydání a přístupnou sekci';
+        }
+
+        $appmarketReleaseResponse = fetchUrl(
+            $baseUrl . appmarketReleasePath($appmarketSlug, 100),
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketReleaseResponse) !== 200
+            || !str_contains($appmarketReleaseResponse['body'], 'První bezpečné testovací vydání.')
+            || !str_contains($appmarketReleaseResponse['body'], $fakeApkHash)
+            || !str_contains($appmarketReleaseResponse['body'], $certificateHash)
+            || !str_contains($appmarketReleaseResponse['body'], 'aria-labelledby="appmarket-release-security-heading"')) {
+            $appmarketIssues[] = 'detail vydání nezobrazil changelog, kontrolní součty a bezpečnostní sekci';
+        }
+
+        $updateResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v1/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=1',
+            '',
+            0
+        );
+        $updatePayload = json_decode($updateResponse['body'], true);
+        if (httpIntegrationStatusCode($updateResponse) !== 200
+            || !is_array($updatePayload)
+            || ($updatePayload['update_available'] ?? null) !== true
+            || (int)($updatePayload['latest']['version_code'] ?? 0) !== 100
+            || !str_contains((string)($updatePayload['latest']['download_url'] ?? ''), '/aplikace/' . $appmarketSlug . '/stahnout/100')
+            || str_contains($updateResponse['body'], 'apk_storage_name')
+            || str_contains($updateResponse['body'], 'token')
+            || httpIntegrationHeaderValue($updateResponse, 'Set-Cookie') !== '') {
+            $appmarketIssues[] = 'update API nevrátilo bezpečný veřejný kontrakt pro novější verzi';
+        }
+        $currentUpdateResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v1/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=100',
+            '',
+            0
+        );
+        $currentUpdatePayload = json_decode($currentUpdateResponse['body'], true);
+        if (httpIntegrationStatusCode($currentUpdateResponse) !== 200
+            || !is_array($currentUpdatePayload)
+            || ($currentUpdatePayload['update_available'] ?? null) !== false
+            || !array_key_exists('latest', $currentUpdatePayload)
+            || $currentUpdatePayload['latest'] !== null) {
+            $appmarketIssues[] = 'update API nenahlásilo aktuální verzi bez dostupné aktualizace';
+        }
+
+        $downloadUrl = $baseUrl . appmarketDownloadPath($appmarketSlug, 100);
+        $downloadHeadResponse = requestRawUrl('HEAD', $downloadUrl, '', 'text/plain', '', 0);
+        if (httpIntegrationStatusCode($downloadHeadResponse) !== 200
+            || $downloadHeadResponse['body'] !== ''
+            || !httpIntegrationHeaderContains($downloadHeadResponse, 'Accept-Ranges', 'bytes')
+            || !httpIntegrationHeaderContains($downloadHeadResponse, 'Content-Type', 'application/vnd.android.package-archive')
+            || !httpIntegrationHeaderContains($downloadHeadResponse, 'Cache-Control', 'no-cache')
+            || httpIntegrationHeaderContains($downloadHeadResponse, 'Cache-Control', 'immutable')
+            || httpIntegrationHeaderValue($downloadHeadResponse, 'Set-Cookie') !== '') {
+            $appmarketIssues[] = 'HEAD download APK nevrátil bezpečné hlavičky bez těla';
+        }
+        $downloadRangeResponse = fetchUrlWithHeaders(
+            $downloadUrl,
+            ['Range: bytes=0-3'],
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($downloadRangeResponse) !== 206
+            || $downloadRangeResponse['body'] !== substr($fakeApkBytes, 0, 4)
+            || !httpIntegrationHeaderContains($downloadRangeResponse, 'Content-Range', 'bytes 0-3/' . strlen($fakeApkBytes))) {
+            $appmarketIssues[] = 'range download APK nevrátil 206 s požadovanými prvními čtyřmi bajty';
+        }
+        $downloadInvalidRangeResponse = fetchUrlWithHeaders(
+            $downloadUrl,
+            ['Range: bytes=99999-100000'],
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($downloadInvalidRangeResponse) !== 416
+            || !httpIntegrationHeaderContains($downloadInvalidRangeResponse, 'Content-Range', 'bytes */' . strlen($fakeApkBytes))) {
+            $appmarketIssues[] = 'neplatný range download APK nevrátil 416 s velikostí souboru';
+        }
+
+        $appmarketSearchResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/search.php?q=' . rawurlencode($appmarketToken),
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketSearchResponse) !== 200
+            || !str_contains($appmarketSearchResponse['body'], $appmarketName)
+            || !str_contains($appmarketSearchResponse['body'], appmarketAppPath($appmarketSlug))) {
+            $appmarketIssues[] = 'globální hledání nenašlo publikovanou aplikaci';
+        }
+        $appmarketSitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.xml', '', 0);
+        if (httpIntegrationStatusCode($appmarketSitemapResponse) !== 200
+            || !str_contains($appmarketSitemapResponse['body'], '/aplikace/' . $appmarketSlug)
+            || !str_contains($appmarketSitemapResponse['body'], '/aplikace/' . $appmarketSlug . '/verze/100')) {
+            $appmarketIssues[] = 'sitemap neobsahuje publikovanou aplikaci a vydání';
+        }
+
+        $appmarketAdminResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket.php?app_id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketAdminResponse) !== 200
+            || !str_contains($appmarketAdminResponse['body'], '<caption>Aplikace spravované Appmarketem</caption>')
+            || !str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="withdraw"')
+            || str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="publish"')) {
+            $appmarketIssues[] = 'administrace Appmarketu nezobrazila tabulku a potvrzení stažení vydání';
+        }
+        $appmarketReviewResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_release_review.php?release_id=' . $appmarketReleaseId,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketReviewResponse) !== 200
+            || !str_contains($appmarketReviewResponse['body'], 'Kontrola vydání Appmarketu')
+            || !str_contains($appmarketReviewResponse['body'], 'Oprávnění APK')
+            || !str_contains($appmarketReviewResponse['body'], $fakeApkHash)
+            || !str_contains($appmarketReviewResponse['body'], $certificateHash)) {
+            $appmarketIssues[] = 'samostatná kontrola vydání nezobrazila ověřovaná metadata a oprávnění';
+        }
+        $appmarketCertificateResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_certificates.php?app_id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        $appmarketTokenResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_tokens.php?app_id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketCertificateResponse) !== 200
+            || !str_contains($appmarketCertificateResponse['body'], '<legend>Otisk a stav</legend>')
+            || !str_contains($appmarketCertificateResponse['body'], 'name="confirm_deactivate"')
+            || httpIntegrationStatusCode($appmarketTokenResponse) !== 200
+            || !str_contains($appmarketTokenResponse['body'], '<legend>Identifikace a platnost</legend>')
+            || !str_contains($appmarketTokenResponse['body'], 'name="confirm_revoke"')) {
+            $appmarketIssues[] = 'správa certifikátů nebo tokenů nemá očekávanou přístupnou a bezpečnou sémantiku';
+        }
+
+        $appmarketExportResponse = httpIntegrationFetchConfirmedJsonExport(
+            $baseUrl,
+            $adminSession,
+            $appmarketIssues,
+            'Appmarket JSON export'
+        );
+        $appmarketExportPayload = json_decode($appmarketExportResponse['body'], true);
+        $exportedAppmarketApps = is_array($appmarketExportPayload['appmarket_apps'] ?? null)
+            ? $appmarketExportPayload['appmarket_apps']
+            : [];
+        $exportedAppmarketReleases = is_array($appmarketExportPayload['appmarket_releases'] ?? null)
+            ? $appmarketExportPayload['appmarket_releases']
+            : [];
+        $exportedAppFound = false;
+        foreach ($exportedAppmarketApps as $exportedAppmarketApp) {
+            if (is_array($exportedAppmarketApp)
+                && (string)($exportedAppmarketApp['package_id'] ?? '') === $appmarketPackageId
+            ) {
+                $exportedAppFound = true;
+                break;
+            }
+        }
+        $exportedReleaseFound = false;
+        foreach ($exportedAppmarketReleases as $exportedAppmarketRelease) {
+            if (is_array($exportedAppmarketRelease)
+                && (int)($exportedAppmarketRelease['app_id'] ?? 0) === $appmarketAppId
+                && (int)($exportedAppmarketRelease['version_code'] ?? 0) === 100
+            ) {
+                $exportedReleaseFound = true;
+                break;
+            }
+        }
+        if (!$exportedAppFound
+            || !$exportedReleaseFound
+            || array_key_exists('appmarket_publish_tokens', is_array($appmarketExportPayload) ? $appmarketExportPayload : [])
+            || str_contains($appmarketExportResponse['body'], $publishToken['hash'])
+            || str_contains($appmarketExportResponse['body'], $publishToken['token'])) {
+            $appmarketIssues[] = 'JSON export neobsahuje metadata Appmarketu nebo zveřejnil publikační token';
+        }
+
+        $publisherGetResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v1/releases',
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($publisherGetResponse) !== 405
+            || !httpIntegrationHeaderContains($publisherGetResponse, 'Allow', 'POST')
+            || !httpIntegrationHeaderContains($publisherGetResponse, 'Cache-Control', 'no-store')) {
+            $appmarketIssues[] = 'publisher API neodmítlo GET bezpečnou 405 odpovědí';
+        }
+        $publisherUnauthenticatedResponse = postMultipartUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v1/releases',
+            [],
+            [],
+            '',
+            0
+        );
+        $publisherUnauthenticatedPayload = json_decode($publisherUnauthenticatedResponse['body'], true);
+        if (httpIntegrationStatusCode($publisherUnauthenticatedResponse) !== 401
+            || !is_array($publisherUnauthenticatedPayload)
+            || ($publisherUnauthenticatedPayload['error'] ?? '') !== 'invalid_token'
+            || !httpIntegrationHeaderContains($publisherUnauthenticatedResponse, 'Cache-Control', 'no-store')
+            || !httpIntegrationHeaderContains($publisherUnauthenticatedResponse, 'X-Robots-Tag', 'noindex')) {
+            $appmarketIssues[] = 'publisher API neodmítlo anonymní POST bezpečným JSON stavem';
+        }
+
+        // The confirmed export above rotates the session CSRF token.
+        $appmarketCertificateResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_certificates.php?app_id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        $certificateCsrf = extractHiddenInputValue($appmarketCertificateResponse['body'], 'csrf_token');
+        $certificateDeactivateResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_certificates.php?app_id=' . $appmarketAppId,
+            [
+                'csrf_token' => $certificateCsrf,
+                'app_id' => (string)$appmarketAppId,
+                'certificate_id' => (string)$appmarketCertificateId,
+                'action' => 'toggle',
+                'confirm_deactivate' => '1',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $revokedReleaseStatus = (string)$pdo->query(
+            'SELECT status FROM cms_appmarket_releases WHERE id = ' . $appmarketReleaseId
+        )->fetchColumn();
+        $revokedAppStatus = (string)$pdo->query(
+            'SELECT status FROM cms_appmarket_apps WHERE id = ' . $appmarketAppId
+        )->fetchColumn();
+        $revokedPublicResponse = fetchUrl(
+            $baseUrl . appmarketReleasePath($appmarketSlug, 100),
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($certificateDeactivateResponse) !== 302
+            || $revokedReleaseStatus !== 'withdrawn'
+            || $revokedAppStatus !== 'draft'
+            || httpIntegrationStatusCode($revokedPublicResponse) !== 404) {
+            $appmarketIssues[] = 'zneplatnění certifikátu nestáhlo vydání a neodstranilo je z veřejného katalogu';
+        }
+
+            saveSetting('module_appmarket', '0');
+            clearSettingsCache();
+            $disabledCatalogResponse = fetchUrl($baseUrl . BASE_URL . '/aplikace', '', 0);
+            $disabledUpdateResponse = fetchUrl(
+                $baseUrl . BASE_URL . '/api/appmarket/v1/update?package_id='
+                    . rawurlencode($appmarketPackageId) . '&version_code=1',
+                '',
+                0
+            );
+            if (httpIntegrationStatusCode($disabledCatalogResponse) !== 302
+                || httpIntegrationStatusCode($disabledUpdateResponse) !== 404
+                || str_contains($disabledUpdateResponse['body'], $appmarketPackageId)) {
+                $appmarketIssues[] = 'vypnutý Appmarket nezablokoval veřejný katalog nebo update API';
+            }
+            saveSetting('module_appmarket', $appmarketOriginalModule);
+            clearSettingsCache();
+        }
+    }
+    httpIntegrationPrintResult('appmarket_catalog_update_http', $appmarketIssues, $failures);
+
     $publicFormIssues = [];
     $publicFormSlug = uniqueFormSlug($pdo, 'http-integration-form-' . bin2hex(random_bytes(4)));
     $pdo->prepare(
@@ -19870,6 +20277,34 @@ try {
 } finally {
     if (isset($originalSettings) && is_array($originalSettings)) {
         httpIntegrationRestoreSettings($originalSettings);
+    }
+
+    foreach ($createdAppmarketTokenIds as $appmarketTokenIdToDelete) {
+        $pdo->prepare('DELETE FROM cms_appmarket_publish_tokens WHERE id = ?')->execute([$appmarketTokenIdToDelete]);
+    }
+    foreach ($createdAppmarketReleaseIds as $appmarketReleaseIdToDelete) {
+        $releaseStorageStmt = $pdo->prepare(
+            'SELECT apk_storage_name FROM cms_appmarket_releases WHERE id = ? LIMIT 1'
+        );
+        $releaseStorageStmt->execute([$appmarketReleaseIdToDelete]);
+        $releaseStorageName = (string)($releaseStorageStmt->fetchColumn() ?: '');
+        $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE id = ?')->execute([$appmarketReleaseIdToDelete]);
+        if ($releaseStorageName !== '') {
+            appmarketDeletePrivateApkIfUnused($pdo, $releaseStorageName);
+        }
+    }
+    foreach ($createdAppmarketStoredFiles as $appmarketStoredFileToDelete) {
+        appmarketDeletePrivateApkIfUnused($pdo, (string)$appmarketStoredFileToDelete);
+    }
+    foreach ($createdAppmarketCertificateIds as $appmarketCertificateIdToDelete) {
+        $pdo->prepare('DELETE FROM cms_appmarket_certificates WHERE id = ?')->execute([$appmarketCertificateIdToDelete]);
+    }
+    foreach ($createdAppmarketAppIds as $appmarketAppIdToDelete) {
+        $pdo->prepare('DELETE FROM cms_appmarket_screenshots WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
+        $pdo->prepare('DELETE FROM cms_appmarket_publish_tokens WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
+        $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
+        $pdo->prepare('DELETE FROM cms_appmarket_certificates WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
+        $pdo->prepare('DELETE FROM cms_appmarket_apps WHERE id = ?')->execute([$appmarketAppIdToDelete]);
     }
 
     foreach ($createdWidgetIds as $widgetIdToDelete) {

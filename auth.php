@@ -522,6 +522,7 @@ function roleDefinitions(): array
                 'messages_manage',
                 'bookings_manage',
                 'newsletter_manage',
+                'appmarket_manage',
                 'settings_manage',
                 'users_manage',
                 'statistics_view',
@@ -728,6 +729,10 @@ function adminRouteCapability(?string $scriptPath = null): ?string
         return 'import_export_manage';
     }
 
+    if (str_starts_with($file, 'appmarket')) {
+        return 'appmarket_manage';
+    }
+
     if (in_array($file, ['blog.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php', 'blog_bulk.php', 'blog_series.php', 'blog_preview_token.php'], true)) {
         return 'blog_manage_own';
     }
@@ -846,6 +851,20 @@ function adminRouteModuleRequirements(): array
         'downloads' => [
             'message' => adminRouteModuleDisabledMessage('downloads'),
             'files' => ['downloads.php', 'download_form.php', 'download_save.php', 'download_delete.php', 'dl_cats.php', 'dl_cat_delete.php', 'download_series.php'],
+        ],
+        'appmarket' => [
+            'message' => adminRouteModuleDisabledMessage('appmarket'),
+            'files' => [
+                'appmarket.php',
+                'appmarket_form.php',
+                'appmarket_save.php',
+                'appmarket_release_form.php',
+                'appmarket_release_save.php',
+                'appmarket_release_review.php',
+                'appmarket_release_action.php',
+                'appmarket_certificates.php',
+                'appmarket_tokens.php',
+            ],
         ],
         'food' => [
             'message' => adminRouteModuleDisabledMessage('food'),

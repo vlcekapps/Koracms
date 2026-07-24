@@ -69,6 +69,22 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 - Nový admin soubor musí být zahrnutý do některého `composer analyse:strict*` a `composer format:check*` skriptu; modulový audit to u souborů z `adminRouteModuleRequirements()` hlídá automaticky, takže nový formulářový, detailový nebo stav měnící endpoint nemůže zůstat mimo PHPStan a PSR-12 smoke check.
 - Pokud modul přidá nový helper se samostatnými pravidly, přidejte unit test a runtime guardrail proti návratu k ruční duplicitní logice.
 
+## Appmarket publisher a update API
+
+Appmarket je referenční vzor pro modul, který kombinuje privátní binární artefakty, veřejné stahování a strojové API. Jeho kontrakt je záměrně přísnější než běžný upload:
+
+- APK patří do `KORA_STORAGE_DIR` mimo webroot, nikdy do veřejného `uploads/`; veřejný download používá sdílený range helper, podporuje jen `GET`/`HEAD` a jeden byte range, při každém požadavku znovu ověřuje velikost i SHA-256 a nesmí použít dlouhodobou `immutable` cache.
+- Publikační endpoint `/api/appmarket/v1/releases` je pouze `POST`, přijímá Bearer token, ukládá jen jeho hash a po přijetí artefaktu vytváří výhradně koncept. Token nesmí být v query stringu, argumentu procesu, logu ani JSON exportu.
+- Lokální `tools/appmarket-publish.ps1` musí ověřit čistý Git strom, release variantu, podpis, package ID, verzi, SHA-256 a odmítnout debug/QA/androidTest, nepodepsané či nezarovnané APK. Privátní keystore ani zdrojový repozitář se na server neposílají.
+- Server musí mít vlastní `apkanalyzer` a `apksigner`. Při uploadu i před publikací načte metadata přímo z APK; metadata publisheru smí pouze porovnat a při chybějících nástrojích nebo neúplné analýze musí operaci odmítnout.
+- Publikace probíhá přes samostatnou kontrolní obrazovku s package ID, verzí, hashem, certifikátem, oprávněními a bezpečně vykresleným Markdown seznamem změn. Přijetí přes API samo o sobě nesmí změnit veřejný stav.
+- Zneplatnění certifikátu musí v jedné transakci stáhnout všechna jeho veřejná vydání. Veřejné SQL podmínky zároveň vyžadují stále aktivní odpovídající certifikát, aby ani souběžný požadavek nevydal revokovaný APK.
+- Anonymní read-only endpoint `/api/appmarket/v1/update` přijímá pouze `package_id` a aktuální `version_code`. Nevyžaduje ani neukládá device ID, reklamní identifikátor, e-mail nebo jiný identifikátor instalace.
+- Stabilní update odpověď oznamuje, zda je aktualizace dostupná, a u veřejného vydání vrací verzi, poznámky, SHA-256 a canonical download URL. Neexistující, vypnutá nebo neveřejná aplikace nesmí prozradit koncepty ani fyzické cesty.
+- Metadata aplikací a vydání mohou být součástí JSON exportu, APK a tokenová tajemství nikoli. Import musí zachovat bezpečný stav `draft`/neaktivní a nesmí vytvořit automaticky publikovatelný artefakt bez lokálního APK.
+
+Při změně tohoto kontraktu aktualizujte zároveň `docs/accessibility/modules/appmarket.md`, runtime guardraily, HTTP integrační scénáře a tento dokument. Změny JSON polí považujte za API změnu a zachovejte zpětnou kompatibilitu produkčních klientů.
+
 ## Definition of done
 
 Nový modul je připravený až tehdy, když má databázovou migraci i čistou instalaci, oprávnění, veřejné i administrační workflow, vypnutí přes moduly, dokumentaci, changelog, přístupnostní vazby, bezpečné hlavičky, regresní testy a zelený základní CI běh. Součástí hotovo je i kontrola dopadu na accessibility conformance report: buď aktualizovaná WCAG matice/backlog/protokol, nebo výslovné rozhodnutí v `a11y-impact-decisions.md`, že modul nemění stav ani nevytváří nové riziko. Pokud některá část záměrně chybí, musí být v dokumentaci modulu uvedeno proč.

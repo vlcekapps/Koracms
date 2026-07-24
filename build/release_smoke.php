@@ -473,6 +473,7 @@ try {
         'assets/error.css',
         'themes/default/theme.json',
         'themes/default/assets/public.css',
+        'tools/appmarket-publish.ps1',
         'docs/admin-guide.md',
         'uploads/.htaccess',
     ] as $requiredEntry) {

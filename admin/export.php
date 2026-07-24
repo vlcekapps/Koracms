@@ -70,7 +70,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 8,
+    'version'     => 9,
 ];
 
 $tables = [
@@ -139,6 +139,21 @@ $tables = [
                                alt_text, caption, description, credit, license_label, license_url,
                                visibility, uploaded_by, created_at, updated_at
                         FROM cms_media",
+    'appmarket_apps' => "SELECT id, name, slug, package_id, short_description, description, icon_media_id,
+                                website_url, support_url, privacy_url, license_label, status, is_featured,
+                                sort_order, created_at, updated_at
+                         FROM cms_appmarket_apps",
+    'appmarket_certificates' => "SELECT id, app_id, fingerprint_sha256, subject_dn, serial_number,
+                                        valid_from, valid_to, is_active, notes, created_at, updated_at
+                                 FROM cms_appmarket_certificates",
+    'appmarket_releases' => "SELECT id, app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
+                                    package_id_snapshot, apk_original_name, apk_size, apk_sha256,
+                                    certificate_id, certificate_fingerprint_sha256, permissions_json,
+                                    analysis_json, metadata_source, status, download_count, published_at,
+                                    created_at, updated_at
+                             FROM cms_appmarket_releases",
+    'appmarket_screenshots' => "SELECT id, app_id, media_id, alt_text, caption, sort_order, created_at, updated_at
+                               FROM cms_appmarket_screenshots",
     'dl_categories' => "SELECT id, name, slug, description, meta_title, meta_description, created_at, updated_at FROM cms_dl_categories",
     'download_series' => "SELECT id, title, slug, description, is_active, sort_order, created_at, updated_at FROM cms_download_series",
     'downloads'     => "SELECT id, title, slug, download_type, dl_category_id, excerpt, description,

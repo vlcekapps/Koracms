@@ -136,6 +136,7 @@ if (!is_file($releaseSmokePath)) {
         "'migrate.php',",
         "'assets/error.css',",
         "'themes/default/assets/public.css',",
+        "'tools/appmarket-publish.ps1',",
         "str_starts_with(\$entry, 'uploads/') && \$entry !== 'uploads/' && \$entry !== 'uploads/.htaccess'",
         "str_starts_with(\$entry, 'vendor/')",
         "str_starts_with(\$entry, 'node_modules/')",

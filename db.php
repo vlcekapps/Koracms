@@ -175,6 +175,7 @@ function resetAutoIncrementIfEmpty(PDO $pdo, string $tableName): void
 // ──────────────────────────── Moduly (lib/) ────────────────────────────────
 // Funkce rozděleny do tematických souborů pro lepší přehlednost a údržbu.
 require_once __DIR__ . '/lib/definitions.php';
+require_once __DIR__ . '/lib/appmarket.php';
 require_once __DIR__ . '/lib/uploads.php';
 require_once __DIR__ . '/lib/comments.php';
 require_once __DIR__ . '/lib/messages.php';

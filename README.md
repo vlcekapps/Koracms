@@ -249,6 +249,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Podcasty** | Více pořadů, hledání a kategoriové filtrování, epizody a sezóny, odkazy na poslechové platformy, hosté a tvůrci, přepisy, kapitoly Podcasting 2.0, stabilní RSS GUID, kontrola feedu a revize |
 | **Zajímavá místa** | Adresář s typem místa, adresou, GPS a otevírací dobou |
 | **Ke stažení** | Katalog dokumentů a software s kategoriemi, landing stránkami, sériemi verzí, kompatibilitou, historií změn, veřejnými filtry a oddělenými statistikami lokálních i externích zdrojů |
+| **Appmarket** | Vlastní katalog Android aplikací s historií vydání, soukromým úložištěm APK, kontrolou podpisu, anonymním update API a bezpečným publikačním workflow |
 | **Jídelní lístek** | Karty jídel a nápojů s platností, denními nabídkami, strukturovanými položkami, cenami, alergeny, nutričními údaji, obrázky, veřejnými filtry, objednávkovými poptávkami, archivem, hledáním a revizemi |
 | **Ankety** | Jedno- i vícevýběrové hlasování s plánováním, řízenou viditelností výsledků, CSV exportem, fulltextem, slug URL, SEO fallbacky a revizemi |
 | **Znalostní báze** | FAQ s veřejnými kategoriemi, hledáním, stránkováním, SEO, zpětnou vazbou a FAQPage strukturovanými daty |
@@ -263,6 +264,8 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
 Modul **Ke stažení** pokrývá praktičtější katalogový scénář: doporučené položky, datum vydání, domovskou stránku projektu, požadavky a kompatibilitu, SHA-256 checksum, oddělené počítání lokálních stažení a otevření externích zdrojů, historii revizí a veřejné filtrování podle kategorie, typu, platformy a zdroje. Položka může být lokální soubor, externí odkaz například na GitHub Releases, nebo obojí zároveň, takže vlastní software není nutné duplikovat do CMS; externí URL lze zadat jako `http://`/`https://` adresu nebo doménu bez schématu, kterou CMS uloží jako `https://`. Veřejné externí odkazy procházejí bezpečným přesměrováním, jehož cíl se vždy načte z uložené položky; čítač vyjadřuje otevření externího zdroje, nikoli potvrzené dokončení downloadu na cizím webu. Kategorie mají čisté landing URL `/downloads/kategorie/{slug}`, volitelný popis a SEO metadata. Sériová vydání se spravují přes samostatné série/verze s URL `/downloads/serie/{slug}`; detail starší položky umí upozornit na aktuální verzi a starý `series_key` zůstává kompatibilní pro importy i starší data. Smazání kategorie nebo série nejdřív ukáže dopad na navázané položky a vyžaduje potvrzení; položky zůstanou zachované, jen se zruší dané zařazení.
+
+Modul **Appmarket** je specializovaný na distribuci produkčních Android APK a aktualizace aplikací. Není omezený na konkrétní projekty ani počet aplikací: každá aplikace má stabilní `applicationId`, automaticky generovatelný slug, veřejnou stránku `/aplikace/{slug}`, historii vydání a anonymní endpoint `/api/appmarket/v1/update`, kterému klient posílá jen package ID a svůj `versionCode`. APK se ukládají do privátního úložiště mimo webroot a stahují se přes serverový endpoint, který při každém požadavku znovu ověří velikost i SHA-256 a podporuje `GET`/`HEAD` a jeden HTTP Range bez dlouhodobé neměnné cache. Obecný lokální publisher `tools/appmarket-publish.ps1` je součástí release ZIPu a umí v libovolném čistém Android Git projektu najít produkční release APK, ověřit jej nástroji `apkanalyzer` a `apksigner` a odeslat koncept na `/api/appmarket/v1/releases`. Stejné nástroje musí být dostupné také na serveru: CMS metadata publisheru pouze porovnává, nikdy jim nedůvěřuje jako náhradě za vlastní analýzu APK. Token přijímá pouze z procesní proměnné `KORA_APPMARKET_TOKEN`; soukromý zdrojový repozitář ani privátní podpisový klíč se do CMS neposílají. Server žádné vydání nepublikuje automaticky: správce nejprve schválí podpisový certifikát a na samostatné kontrolní obrazovce porovná identitu, podpis, oprávnění, hash a bezpečně vykreslený seznam změn. Zneplatnění certifikátu okamžitě stáhne všechna jeho veřejná vydání.
 
 Modul **Události** podporuje spravované typy akcí s veřejnou adresou `/events/typ/{slug}`, popisem a SEO poli. Událost lze volitelně navázat na veřejné místo z modulu **Zajímavá místa** a detail pak zobrazí kartu místa, odkaz na detail i mapu, pokud jsou dostupné. Při vytváření nové události lze jednorázově vygenerovat opakované denní, týdenní nebo měsíční termíny; CMS z nich vytvoří samostatné události se společnou skupinou opakování, takže pozdější úprava jednoho termínu se automaticky nepropíše do ostatních.
 
@@ -871,6 +874,18 @@ server {
     location ~* ^/uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp)$ { deny all; }
 
     # Čisté URL – moduly
+    location = /api/appmarket/v1/update { rewrite ^ /appmarket/update.php last; }
+    location = /api/appmarket/v1/releases { rewrite ^ /appmarket/publish.php last; }
+    location = /aplikace { rewrite ^ /appmarket/index.php last; }
+    location ~ ^/aplikace/([a-z0-9\-]+)/stahnout/([0-9]+)/?$ {
+        rewrite ^/aplikace/(.+?)/stahnout/([0-9]+)/?$ /appmarket/download.php?slug=$1&version_code=$2 last;
+    }
+    location ~ ^/aplikace/([a-z0-9\-]+)/verze/([0-9]+)/?$ {
+        rewrite ^/aplikace/(.+?)/verze/([0-9]+)/?$ /appmarket/release.php?slug=$1&version_code=$2 last;
+    }
+    location ~ ^/aplikace/([a-z0-9\-]+)/?$ {
+        rewrite ^/aplikace/(.+?)/?$ /appmarket/app.php?slug=$1 last;
+    }
     location ~ ^/authors/?$ { rewrite ^ /authors/index.php last; }
     location ~ ^/author/([a-z0-9\-]+)/?$ { rewrite ^/author/(.+?)/?$ /author.php?slug=$1 last; }
     location ~ ^/blog/([a-z0-9\-]+)/?$ { rewrite ^/blog/(.+?)/?$ /blog/article.php?slug=$1 last; }

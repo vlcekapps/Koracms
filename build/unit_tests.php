@@ -212,9 +212,13 @@ assert_admin_route_module_requirement('/ADMIN/NEWS_SAVE.PHP', 'news', 'Novinky',
 assert_admin_route_module_requirement('C:\\laragon\\www\\admin\\gallery_photo_reorder.php', 'gallery', 'Galerie', 'windows path separators are normalized');
 assert_admin_route_module_requirement('/admin/newsletter_send.php', 'newsletter', 'Newsletter', 'newsletter send route is guarded');
 assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservations', 'Rezervace', 'reservation save route is guarded');
+assert_admin_route_module_requirement('/admin/appmarket.php', 'appmarket', 'Appmarket', 'Appmarket admin route is guarded');
 assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
 assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
 assert_equals('content_manage_shared', adminRouteCapability('/admin/convert_content.php'), 'content conversion requires shared content management');
+assert_equals('appmarket_manage', adminRouteCapability('/admin/appmarket.php'), 'Appmarket uses its dedicated capability');
+assert_true(roleHasCapability('admin', 'appmarket_manage'), 'admin role can manage Appmarket');
+assert_false(roleHasCapability('collaborator', 'appmarket_manage'), 'legacy collaborator cannot manage Appmarket');
 
 test_section('module public entrypoints');
 
@@ -234,9 +238,13 @@ assert_true(in_array('/subscribe.php', $modulePublicEntryPoints['newsletter'] ??
 assert_true(in_array('/forms/index.php', $modulePublicEntryPoints['forms'] ?? [], true), 'forms public route is declared even without main navigation');
 assert_true(in_array('/reservations/calendar.php', $modulePublicEntryPoints['reservations'] ?? [], true), 'reservation calendar route is declared as a public module entrypoint');
 assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
+assert_true(in_array('/appmarket/index.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket catalog is declared as a public module entrypoint');
+assert_true(in_array('/appmarket/update.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket update API is declared as a public module entrypoint');
+assert_true(in_array('/appmarket/publish.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket publisher API is declared as a guarded public module entrypoint');
 assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
 assert_equals('board', $modulePublicPathMap['/board/subscribe.php'] ?? null, 'board subscribe public path maps to board module');
 assert_equals('newsletter', $modulePublicPathMap['/subscribe.php'] ?? null, 'newsletter subscribe public path maps to newsletter module');
+assert_equals('appmarket', $modulePublicPathMap['/appmarket/download.php'] ?? null, 'Appmarket download path maps to Appmarket module');
 
 test_section('module admin entrypoints');
 
@@ -245,6 +253,7 @@ $moduleAdminPathMap = moduleAdminPathModuleMap();
 assert_true(in_array('/admin/blogs.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog overview is declared as an admin module entrypoint');
 assert_true(in_array('/admin/blog_series.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog series admin is declared as an admin module entrypoint');
 assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
+assert_true(in_array('/admin/appmarket.php', $moduleAdminEntryPoints['appmarket'] ?? [], true), 'Appmarket overview is declared as an admin module entrypoint');
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
 assert_equals('/admin/blog.php', modulePrimaryAdminPath('blog'), 'blog primary admin path comes from first manifest admin path');
@@ -252,6 +261,7 @@ assert_equals('/admin/statistics.php', modulePrimaryAdminPath('statistics'), 'st
 assert_equals('', modulePrimaryAdminPath('unknown_module'), 'unknown module has no primary admin path');
 assert_equals('blog_manage_own', moduleAdminCapability('blog'), 'blog admin capability comes from module manifest');
 assert_equals('bookings_manage', moduleAdminCapability('reservations'), 'reservation admin capability comes from module manifest');
+assert_equals('appmarket_manage', moduleAdminCapability('appmarket'), 'Appmarket admin capability comes from module manifest');
 assert_equals('admin_access', moduleAdminCapability('unknown_module'), 'unknown module admin capability falls back safely');
 
 test_section('admin command helpers');
@@ -300,6 +310,7 @@ assert_equals('blog', $searchResultTypeMap['blog'] ?? null, 'blog search result 
 assert_equals('gallery', $searchResultTypeMap['gallery_album'] ?? null, 'gallery album search result type maps to gallery module');
 assert_equals('podcast', $searchResultTypeMap['podcast_episode'] ?? null, 'podcast episode search result type maps to podcast module');
 assert_equals('reservations', $searchResultTypeMap['reservation_resource'] ?? null, 'reservation resource search result type maps to reservations module');
+assert_equals('appmarket', $searchResultTypeMap['appmarket_app'] ?? null, 'Appmarket search result type maps to Appmarket module');
 assert_false(isset($searchResultTypes['statistics']), 'statistics module has no public search result type');
 
 test_section('module sitemap sections');
@@ -318,6 +329,8 @@ assert_equals('board', $sitemapSectionMap['board_categories'] ?? null, 'board ca
 assert_equals('gallery', $sitemapSectionMap['gallery_photos'] ?? null, 'gallery photos sitemap section maps to gallery module');
 assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcast episodes sitemap section maps to podcast module');
 assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
+assert_equals('appmarket', $sitemapSectionMap['appmarket_apps'] ?? null, 'Appmarket application sitemap section maps to Appmarket module');
+assert_equals('appmarket', $sitemapSectionMap['appmarket_releases'] ?? null, 'Appmarket release sitemap section maps to Appmarket module');
 assert_false(isset($sitemapSections['statistics']), 'statistics module has no sitemap section');
 
 test_section('module stats page types');
@@ -330,6 +343,8 @@ assert_equals('gallery', $statsPageTypeMap['gallery_photo'] ?? null, 'gallery ph
 assert_equals('podcast', $statsPageTypeMap['podcast_episode'] ?? null, 'podcast episode stats page type maps to podcast module');
 assert_equals('food', $statsPageTypeMap['food_card'] ?? null, 'food card stats page type maps to food module');
 assert_equals('forms', $statsPageTypeMap['form'] ?? null, 'form stats page type maps to forms module');
+assert_equals('appmarket', $statsPageTypeMap['appmarket_app'] ?? null, 'Appmarket application stats type maps to Appmarket module');
+assert_equals('appmarket', $statsPageTypeMap['appmarket_release'] ?? null, 'Appmarket release stats type maps to Appmarket module');
 assert_false(isset($statsPageTypes['statistics']), 'statistics module has no measured public content type');
 
 test_section('module database tables');
@@ -339,10 +354,130 @@ $moduleDatabaseTableMap = moduleDatabaseTableModuleMap();
 assert_true(in_array('cms_articles', $moduleDatabaseTables['blog'] ?? [], true), 'blog database tables come from manifest');
 assert_true(in_array('cms_board_publication_events', $moduleDatabaseTables['board'] ?? [], true), 'board supporting table comes from manifest');
 assert_true(in_array('cms_res_booking_events', $moduleDatabaseTables['reservations'] ?? [], true), 'reservation history table comes from manifest');
+assert_true(in_array('cms_appmarket_publish_tokens', $moduleDatabaseTables['appmarket'] ?? [], true), 'Appmarket token table comes from manifest');
 assert_equals('blog', $moduleDatabaseTableMap['cms_blog_series'] ?? null, 'blog series table maps to blog module');
 assert_equals('food', $moduleDatabaseTableMap['cms_food_order_items'] ?? null, 'food order item table maps to food module');
 assert_equals('statistics', $moduleDatabaseTableMap['cms_stats_content_daily'] ?? null, 'content statistics table maps to statistics module');
+assert_equals('appmarket', $moduleDatabaseTableMap['cms_appmarket_releases'] ?? null, 'Appmarket release table maps to Appmarket module');
 assert_false(isset($moduleDatabaseTableMap['cms_users']), 'shared core user table has no module owner');
+
+test_section('Appmarket helpers');
+
+assert_equals('cz.vlcekapps.minirec', appmarketNormalizePackageId(' cz.vlcekapps.minirec '), 'Appmarket accepts a valid Android package ID');
+assert_equals('', appmarketNormalizePackageId('minirec'), 'Appmarket rejects package IDs without a namespace');
+assert_equals('', appmarketNormalizePackageId('cz.vlcek-apps.minirec'), 'Appmarket rejects invalid package ID characters');
+assert_equals('', appmarketNormalizePackageId('cz.' . str_repeat('a', 253)), 'Appmarket rejects oversized package IDs');
+assert_equals('1.2.3', appmarketNormalizeVersionName(' 1.2.3 '), 'Appmarket trims a valid version name');
+assert_equals('', appmarketNormalizeVersionName("1.2\n3"), 'Appmarket rejects control characters in version names');
+assert_equals(42, appmarketNormalizeVersionCode('42'), 'Appmarket accepts a positive version code');
+assert_equals(null, appmarketNormalizeVersionCode('0'), 'Appmarket rejects a zero version code');
+assert_equals(35, appmarketNormalizeSdkLevel('35'), 'Appmarket accepts an Android SDK level');
+assert_equals(null, appmarketNormalizeSdkLevel('invalid'), 'Appmarket rejects an invalid SDK level');
+$appmarketHash = str_repeat('a1', 32);
+assert_equals($appmarketHash, appmarketNormalizeSha256(strtoupper($appmarketHash)), 'Appmarket normalizes SHA-256 to lowercase');
+assert_equals('', appmarketNormalizeSha256('abc'), 'Appmarket rejects incomplete SHA-256 values');
+assert_equals($appmarketHash . '.apk', appmarketApkStorageName($appmarketHash), 'Appmarket derives a safe content-addressed APK filename');
+assert_equals('', appmarketPrivateApkPath('../outside.apk'), 'Appmarket rejects a traversing private APK storage name');
+assert_true(appmarketReleaseVersionIsNewer(2, 1), 'Appmarket accepts a greater version code');
+assert_false(appmarketReleaseVersionIsNewer(1, 1), 'Appmarket rejects a duplicate version code');
+assert_equals([], appmarketNormalizeTokenScopes('unknown'), 'Appmarket rejects unknown publisher token scopes');
+assert_equals(
+    ['release:create'],
+    appmarketNormalizeTokenScopes('release:create,release:create'),
+    'Appmarket accepts and deduplicates the supported publisher scope'
+);
+assert_true(
+    appmarketReleaseNotesValid(str_repeat('a', appmarketReleaseNotesMaxLength())),
+    'Appmarket accepts release notes at the configured limit'
+);
+assert_false(
+    appmarketReleaseNotesValid(str_repeat('a', appmarketReleaseNotesMaxLength() + 1)),
+    'Appmarket rejects release notes above the configured limit'
+);
+$appmarketToken = appmarketGeneratePublishToken();
+assert_true(str_starts_with($appmarketToken['token'], 'kam_'), 'Appmarket publish token has a recognizable prefix');
+assert_equals(substr($appmarketToken['token'], 0, 12), $appmarketToken['prefix'], 'Appmarket stores only a display-safe token prefix');
+assert_equals(appmarketHashPublishToken($appmarketToken['token']), $appmarketToken['hash'], 'Appmarket stores a one-way token hash');
+assert_equals('/aplikace/moje-aplikace', appmarketAppPath('Moje aplikace'), 'Appmarket app path uses a canonical slug');
+assert_equals('/aplikace/moje-aplikace/verze/42', appmarketReleasePath('Moje aplikace', 42), 'Appmarket release path includes versionCode');
+assert_equals('/aplikace/moje-aplikace/stahnout/42', appmarketDownloadPath('Moje aplikace', 42), 'Appmarket download path includes versionCode');
+assert_equals('https://example.cz/aplikace', appmarketNormalizeHttpUrl(' https://example.cz/aplikace '), 'Appmarket accepts an HTTPS project URL');
+assert_equals('', appmarketNormalizeHttpUrl('//example.cz/aplikace'), 'Appmarket rejects protocol-relative URLs');
+assert_equals('', appmarketNormalizeHttpUrl('javascript:alert(1)'), 'Appmarket rejects non-HTTP URLs');
+$appmarketMetadata = appmarketNormalizeReleaseMetadata([
+    'package_id' => 'cz.vlcekapps.minirec',
+    'version_name' => '2.0.0',
+    'version_code' => 200,
+    'min_sdk' => 26,
+    'target_sdk' => 35,
+    'certificate_sha256' => $appmarketHash,
+    'debuggable' => false,
+    'build_type' => 'release',
+    'permissions' => ['android.permission.INTERNET', 'android.permission.INTERNET'],
+    'apk_sha256' => $appmarketHash,
+]);
+assert_equals(200, $appmarketMetadata['version_code'], 'Appmarket normalizes release versionCode metadata');
+assert_equals(['android.permission.INTERNET'], $appmarketMetadata['permissions'], 'Appmarket deduplicates release permissions');
+assert_false($appmarketMetadata['debuggable'], 'Appmarket keeps a production release non-debuggable');
+$manyAppmarketPermissions = [];
+for ($permissionIndex = 0; $permissionIndex < appmarketMaxPermissions() + 20; $permissionIndex++) {
+    $manyAppmarketPermissions[] = 'cz.koracms.permission.P' . $permissionIndex;
+}
+$limitedAppmarketMetadata = appmarketNormalizeReleaseMetadata(['permissions' => $manyAppmarketPermissions]);
+assert_equals(
+    appmarketMaxPermissions(),
+    count($limitedAppmarketMetadata['permissions']),
+    'Appmarket caps normalized permission metadata'
+);
+$appmarketDebugMetadata = appmarketNormalizeReleaseMetadata([
+    'package_id' => 'cz.vlcekapps.minirec',
+    'version_name' => '2.0.0-debug',
+    'version_code' => 201,
+    'certificate_sha256' => $appmarketHash,
+    'debuggable' => true,
+    'build_type' => 'debug',
+]);
+assert_true($appmarketDebugMetadata['debuggable'], 'Appmarket recognizes debug metadata for later rejection');
+$noUpdatePayload = appmarketUpdatePayload(
+    ['slug' => 'minirec', 'package_id' => 'cz.vlcekapps.minirec'],
+    null,
+    200
+);
+assert_false((bool)$noUpdatePayload['update_available'], 'Appmarket update payload reports no newer release');
+$updatePayload = appmarketUpdatePayload(
+    ['slug' => 'minirec', 'package_id' => 'cz.vlcekapps.minirec'],
+    [
+        'version_name' => '2.1.0',
+        'version_code' => 210,
+        'release_notes' => 'Bezpečnostní opravy.',
+        'published_at' => '2026-07-23 10:00:00',
+        'min_sdk' => 26,
+        'target_sdk' => 35,
+        'apk_size' => 1024,
+        'apk_sha256' => $appmarketHash,
+        'certificate_fingerprint_sha256' => $appmarketHash,
+    ],
+    200
+);
+assert_true((bool)$updatePayload['update_available'], 'Appmarket update payload announces a newer release');
+assert_equals(210, $updatePayload['latest']['version_code'] ?? null, 'Appmarket update payload exposes the latest versionCode');
+assert_equals(
+    ['start' => 0, 'end' => 99],
+    storedFileParseSingleRange('bytes=0-99', 1000),
+    'single range parser accepts a bounded byte range'
+);
+assert_equals(
+    ['start' => 900, 'end' => 999],
+    storedFileParseSingleRange('bytes=-100', 1000),
+    'single range parser accepts a suffix byte range'
+);
+assert_equals(
+    ['start' => 900, 'end' => 999],
+    storedFileParseSingleRange('bytes=900-', 1000),
+    'single range parser accepts an open-ended byte range'
+);
+assert_equals(false, storedFileParseSingleRange('bytes=0-1,4-5', 1000), 'single range parser rejects multiple ranges');
+assert_equals(false, storedFileParseSingleRange('bytes=1000-', 1000), 'single range parser rejects an unsatisfiable range');
 
 test_section('blog taxonomy landing links');
 

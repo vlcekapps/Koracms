@@ -38,6 +38,7 @@ Options -Indexes
     SetEnvIfNoCase Request_URI "(^|/)media/preview\.php$" KORA_MEDIA_PREVIEW=1
     SetEnvIfNoCase User-Agent "(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|pinterest|vkshare|skypeuripreview|embedly|quora link preview|outbrain|applebot)" KORA_SOCIAL_CRAWLER=1
     SetEnvIfNoCase Request_URI "(^|/)(csp-report|health|confirm_email|subscribe_confirm|unsubscribe|newsletter_widget_subscribe|reset_password|public_logout)\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
+    SetEnvIfNoCase Request_URI "(^|/)appmarket/publish\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
     SetEnvIfNoCase Request_URI "(^|/)reservations/calendar\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
     SetEnvIfNoCase Request_URI "(^|/)reservations/cancel_booking\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
     SetEnvIfNoCase Request_URI "(^|/)admin/logout\.php($|\?)" KORA_NO_STORE_NO_INDEX=1 !KORA_SOCIAL_CRAWLER
@@ -95,6 +96,12 @@ Options -Indexes
     RewriteRule ^authors/?$ authors/index.php [L,QSA,NC]
     RewriteRule ^changelog/?$ changelog.php [L,QSA,NC]
     RewriteRule ^author/([a-z0-9\-]+)/?$ author.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^api/appmarket/v1/update/?$ appmarket/update.php [L,QSA,NC]
+    RewriteRule ^api/appmarket/v1/releases/?$ appmarket/publish.php [L,QSA,NC]
+    RewriteRule ^aplikace/?$ appmarket/index.php [L,QSA,NC]
+    RewriteRule ^aplikace/([a-z0-9\-]+)/stahnout/([0-9]+)/?$ appmarket/download.php?slug=$1&version_code=$2 [L,QSA,NC]
+    RewriteRule ^aplikace/([a-z0-9\-]+)/verze/([0-9]+)/?$ appmarket/release.php?slug=$1&version_code=$2 [L,QSA,NC]
+    RewriteRule ^aplikace/([a-z0-9\-]+)/?$ appmarket/app.php?slug=$1 [L,QSA,NC]
     RewriteRule ^blog/([a-z0-9\-]+)/?$ blog/article.php?slug=$1 [L,QSA,NC]
     RewriteRule ^board/kategorie/([a-z0-9\-]+)/?$ board/index.php?category_slug=$1 [L,QSA,NC]
     RewriteRule ^board/([a-z0-9\-]+)/?$ board/document.php?slug=$1 [L,QSA,NC]

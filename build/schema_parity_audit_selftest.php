@@ -332,6 +332,51 @@ CREATE TABLE IF NOT EXISTS cms_downloads (
   is_current_version TINYINT(1),
   external_click_count INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_apps (
+  id INT,
+  slug VARCHAR(150),
+  package_id VARCHAR(255),
+  short_description VARCHAR(500),
+  icon_media_id INT,
+  status VARCHAR(20)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_certificates (
+  id INT,
+  app_id INT,
+  fingerprint_sha256 CHAR(64),
+  is_active TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
+  id INT,
+  app_id INT,
+  version_name VARCHAR(100),
+  version_code BIGINT,
+  package_id_snapshot VARCHAR(255),
+  apk_storage_name VARCHAR(255),
+  apk_size BIGINT,
+  apk_sha256 CHAR(64),
+  certificate_id INT,
+  certificate_fingerprint_sha256 CHAR(64),
+  permissions_json LONGTEXT,
+  analysis_json LONGTEXT,
+  metadata_source VARCHAR(20),
+  download_count BIGINT,
+  status VARCHAR(20)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_screenshots (
+  id INT,
+  app_id INT,
+  media_id INT,
+  alt_text VARCHAR(255)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_publish_tokens (
+  id INT,
+  app_id INT,
+  token_hash CHAR(64),
+  scopes VARCHAR(255),
+  expires_at DATETIME,
+  revoked_at DATETIME
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_faq_categories (
   id INT,
   name VARCHAR(255),
@@ -581,6 +626,22 @@ PHP,
 // cms_downloads.is_current_version
 // cms_downloads.external_click_count
 // idx_cms_downloads_series_current
+// cms_appmarket_apps
+// uq_appmarket_apps_slug
+// uq_appmarket_apps_package
+// idx_appmarket_apps_public
+// cms_appmarket_certificates
+// uq_appmarket_certificate_fingerprint
+// idx_appmarket_certificates_active
+// cms_appmarket_releases
+// uq_appmarket_release_version
+// idx_appmarket_releases_public
+// cms_appmarket_screenshots
+// uq_appmarket_screenshot_media
+// idx_appmarket_screenshots_order
+// cms_appmarket_publish_tokens
+// uq_appmarket_publish_token_hash
+// idx_appmarket_publish_tokens_active
 // cms_faq_categories.slug
 // uq_cms_faq_categories_slug
 // cms_faq_categories.description

@@ -377,6 +377,65 @@ if (isModuleEnabled('downloads')) {
     }
 }
 
+if (isModuleEnabled('appmarket')) {
+    sitemapWriteUrl(siteUrl('/aplikace'), 'weekly', '0.6');
+
+    try {
+        $appmarketApps = $pdo->query(
+            "SELECT a.id, a.slug, COALESCE(a.updated_at, a.published_at, a.created_at) AS sitemap_lastmod
+             FROM cms_appmarket_apps a
+             WHERE " . appmarketAppPublicVisibilitySql('a') . "
+               AND EXISTS (
+                   SELECT 1
+                   FROM cms_appmarket_releases r
+                   WHERE r.app_id = a.id
+                     AND " . appmarketReleasePublicVisibilitySql('r') . "
+               )
+             ORDER BY a.is_featured DESC, a.sort_order, a.name"
+        )->fetchAll();
+        foreach ($appmarketApps as $appmarketApp) {
+            sitemapWriteUrl(
+                appmarketAppUrl($appmarketApp),
+                'weekly',
+                '0.6',
+                sitemapLastmod((string)($appmarketApp['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('appmarket_apps', $e);
+    }
+
+    try {
+        $appmarketReleases = $pdo->query(
+            "SELECT r.version_code,
+                    a.slug,
+                    COALESCE(r.updated_at, r.published_at, r.created_at) AS sitemap_lastmod
+             FROM cms_appmarket_releases r
+             INNER JOIN cms_appmarket_apps a ON a.id = r.app_id
+             WHERE " . appmarketAppPublicVisibilitySql('a') . "
+               AND " . appmarketReleasePublicVisibilitySql('r') . "
+             ORDER BY r.published_at DESC, r.id DESC"
+        )->fetchAll();
+        foreach ($appmarketReleases as $appmarketRelease) {
+            sitemapWriteUrl(
+                siteUrl(str_replace(
+                    BASE_URL,
+                    '',
+                    appmarketReleasePath(
+                        (string)$appmarketRelease['slug'],
+                        (int)$appmarketRelease['version_code']
+                    )
+                )),
+                'monthly',
+                '0.5',
+                sitemapLastmod((string)($appmarketRelease['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('appmarket_releases', $e);
+    }
+}
+
 if (isModuleEnabled('faq')) {
     sitemapWriteUrl(siteUrl('/faq/'), 'weekly', '0.6');
 

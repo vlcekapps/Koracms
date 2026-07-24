@@ -299,3 +299,154 @@ function sendStoredFileInline(string $path, string $downloadName, string $mimeTy
 {
     sendStoredFileResponse($path, $downloadName, 'inline', $mimeTypeOverride);
 }
+
+/**
+ * @return array{start:int,end:int}|false|null
+ */
+function storedFileParseSingleRange(string $rangeHeader, int $fileSize): array|false|null
+{
+    $rangeHeader = trim($rangeHeader);
+    if ($rangeHeader === '') {
+        return null;
+    }
+    if ($fileSize <= 0
+        || preg_match('/\Abytes=(\d*)-(\d*)\z/', $rangeHeader, $match) !== 1
+        || ($match[1] === '' && $match[2] === '')
+    ) {
+        return false;
+    }
+
+    if ($match[1] === '') {
+        $suffixLength = (int)$match[2];
+        if ($suffixLength <= 0) {
+            return false;
+        }
+        $suffixLength = min($suffixLength, $fileSize);
+        return [
+            'start' => $fileSize - $suffixLength,
+            'end' => $fileSize - 1,
+        ];
+    }
+
+    $start = (int)$match[1];
+    $end = $match[2] === '' ? $fileSize - 1 : (int)$match[2];
+    if ($start < 0 || $start >= $fileSize || $end < $start) {
+        return false;
+    }
+
+    return [
+        'start' => $start,
+        'end' => min($end, $fileSize - 1),
+    ];
+}
+
+function streamStoredFileRange(string $path, int $start, int $length, int $chunkSize = 1048576): void
+{
+    $handle = fopen($path, 'rb');
+    if ($handle === false || fseek($handle, $start) !== 0) {
+        if (is_resource($handle)) {
+            fclose($handle);
+        }
+        storedFileLogFailure('range_open', $path);
+        return;
+    }
+
+    $remaining = max(0, $length);
+    while ($remaining > 0 && !feof($handle)) {
+        $chunk = fread($handle, min($chunkSize, $remaining));
+        if ($chunk === false || $chunk === '') {
+            if ($chunk === false) {
+                storedFileLogFailure('range_read', $path);
+            }
+            break;
+        }
+        echo $chunk;
+        $remaining -= strlen($chunk);
+        if (function_exists('flush')) {
+            flush();
+        }
+    }
+
+    fclose($handle);
+}
+
+function sendStoredFileRangeDownload(
+    string $path,
+    string $downloadName,
+    bool $isHeadRequest,
+    string $mimeTypeOverride = '',
+    string $sha256 = ''
+): void {
+    if (!is_file($path) || !is_readable($path)) {
+        sendFileDownloadNotFound('Soubor nebyl nalezen.', $isHeadRequest);
+    }
+
+    $fileSize = filesize($path);
+    $lastModified = filemtime($path);
+    if (!is_int($fileSize) || $fileSize <= 0) {
+        storedFileLogFailure('range_filesize', $path);
+        sendFileDownloadNotFound('Soubor nebyl nalezen.', $isHeadRequest);
+    }
+
+    $normalizedSha256 = strtolower(trim($sha256));
+    $etag = preg_match('/\A[a-f0-9]{64}\z/', $normalizedSha256) === 1
+        ? '"' . $normalizedSha256 . '"'
+        : storedFileEtag($path, $fileSize, is_int($lastModified) ? $lastModified : 0);
+    $rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
+    $ifRange = trim((string)($_SERVER['HTTP_IF_RANGE'] ?? ''));
+    if ($ifRange !== '' && $ifRange !== $etag) {
+        $rangeHeader = '';
+    }
+
+    if ($rangeHeader === '' && storedFileRequestValidatorsMatch($etag, is_int($lastModified) ? $lastModified : null)) {
+        http_response_code(304);
+        header('Cache-Control: public, no-cache, must-revalidate');
+        header('ETag: ' . $etag);
+        header('Accept-Ranges: bytes');
+        sendNoSniffHeader();
+        exit;
+    }
+
+    $range = storedFileParseSingleRange($rangeHeader, $fileSize);
+    if ($range === false) {
+        http_response_code(416);
+        header('Content-Range: bytes */' . $fileSize);
+        header('Accept-Ranges: bytes');
+        header('Cache-Control: no-store, max-age=0');
+        sendNoSniffHeader();
+        exit;
+    }
+
+    $start = is_array($range) ? $range['start'] : 0;
+    $end = is_array($range) ? $range['end'] : $fileSize - 1;
+    $length = $end - $start + 1;
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    if (is_array($range)) {
+        http_response_code(206);
+        header('Content-Range: bytes ' . $start . '-' . $end . '/' . $fileSize);
+    }
+    header('Content-Type: ' . storedFileMimeType($path, $mimeTypeOverride));
+    header('Content-Length: ' . $length);
+    header('Content-Disposition: ' . storedFileContentDisposition(
+        'attachment',
+        safeDownloadName($downloadName, 'app-release.apk')
+    ));
+    header('Accept-Ranges: bytes');
+    header('Cache-Control: public, no-cache, must-revalidate');
+    header('ETag: ' . $etag);
+    if (is_int($lastModified)) {
+        header('Last-Modified: ' . storedFileHttpDate($lastModified));
+    }
+    sendNoSniffHeader();
+
+    if ($isHeadRequest) {
+        exit;
+    }
+
+    streamStoredFileRange($path, $start, $length);
+    exit;
+}

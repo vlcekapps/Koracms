@@ -922,6 +922,236 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Knihovna médií importována.';
                 }
 
+                // Appmarket – katalogová metadata bez APK, tokenů a automatické důvěry certifikátům
+                $appmarketAppIdMap = [];
+                if (!empty($data['appmarket_apps']) && is_array($data['appmarket_apps'])) {
+                    $findAppmarketAppStmt = $pdo->prepare(
+                        'SELECT id FROM cms_appmarket_apps WHERE package_id = ? LIMIT 1'
+                    );
+                    $mediaExistsStmt = $pdo->prepare('SELECT id FROM cms_media WHERE id = ? LIMIT 1');
+                    $insertAppmarketAppStmt = $pdo->prepare(
+                        "INSERT INTO cms_appmarket_apps
+                         (name, slug, package_id, short_description, description, icon_media_id,
+                          website_url, support_url, privacy_url, license_label, status, is_featured,
+                          sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,'draft',?,?,?,?)"
+                    );
+
+                    foreach ($data['appmarket_apps'] as $row) {
+                        $sourceId = max(0, (int)($row['id'] ?? 0));
+                        $name = trim((string)($row['name'] ?? ''));
+                        $packageId = appmarketNormalizePackageId((string)($row['package_id'] ?? ''));
+                        if ($name === '' || $packageId === '') {
+                            continue;
+                        }
+
+                        $findAppmarketAppStmt->execute([$packageId]);
+                        $existingAppId = $findAppmarketAppStmt->fetchColumn();
+                        if ($existingAppId !== false) {
+                            if ($sourceId > 0) {
+                                $appmarketAppIdMap[$sourceId] = (int)$existingAppId;
+                            }
+                            continue;
+                        }
+
+                        $iconMediaId = !empty($row['icon_media_id']) ? (int)$row['icon_media_id'] : 0;
+                        if ($iconMediaId > 0) {
+                            $mediaExistsStmt->execute([$iconMediaId]);
+                            if (!$mediaExistsStmt->fetch()) {
+                                $iconMediaId = 0;
+                            }
+                        }
+
+                        $createdAt = appmarketNormalizeDateTime((string)($row['created_at'] ?? ''))
+                            ?? date('Y-m-d H:i:s');
+                        $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
+                            ?? $createdAt;
+                        $slugCandidate = trim((string)($row['slug'] ?? ''));
+                        $slug = uniqueAppmarketAppSlug($pdo, $slugCandidate !== '' ? $slugCandidate : $name);
+
+                        $insertAppmarketAppStmt->execute([
+                            mb_substr($name, 0, 255, 'UTF-8'),
+                            $slug,
+                            $packageId,
+                            mb_substr(trim((string)($row['short_description'] ?? '')), 0, 500, 'UTF-8'),
+                            (string)($row['description'] ?? ''),
+                            $iconMediaId > 0 ? $iconMediaId : null,
+                            normalizeHttpExternalUrl((string)($row['website_url'] ?? '')),
+                            normalizeHttpExternalUrl((string)($row['support_url'] ?? '')),
+                            normalizeHttpExternalUrl((string)($row['privacy_url'] ?? '')),
+                            mb_substr(trim((string)($row['license_label'] ?? '')), 0, 100, 'UTF-8'),
+                            !empty($row['is_featured']) ? 1 : 0,
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                        if ($sourceId > 0) {
+                            $appmarketAppIdMap[$sourceId] = (int)$pdo->lastInsertId();
+                        }
+                    }
+                    $summary[] = 'Appmarket – aplikace importovány jako koncepty.';
+                }
+
+                $appmarketCertificateIdMap = [];
+                if (!empty($data['appmarket_certificates']) && is_array($data['appmarket_certificates'])) {
+                    $findAppmarketCertificateStmt = $pdo->prepare(
+                        'SELECT id FROM cms_appmarket_certificates WHERE app_id = ? AND fingerprint_sha256 = ? LIMIT 1'
+                    );
+                    $insertAppmarketCertificateStmt = $pdo->prepare(
+                        "INSERT INTO cms_appmarket_certificates
+                         (app_id, fingerprint_sha256, subject_dn, serial_number, valid_from, valid_to,
+                          is_active, notes, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,0,?,?,?)"
+                    );
+
+                    foreach ($data['appmarket_certificates'] as $row) {
+                        $sourceId = max(0, (int)($row['id'] ?? 0));
+                        $sourceAppId = max(0, (int)($row['app_id'] ?? 0));
+                        $appId = $appmarketAppIdMap[$sourceAppId] ?? null;
+                        $fingerprint = appmarketNormalizeCertificateFingerprint(
+                            (string)($row['fingerprint_sha256'] ?? '')
+                        );
+                        if ($appId === null || $fingerprint === '') {
+                            continue;
+                        }
+
+                        $findAppmarketCertificateStmt->execute([$appId, $fingerprint]);
+                        $existingCertificateId = $findAppmarketCertificateStmt->fetchColumn();
+                        if ($existingCertificateId !== false) {
+                            if ($sourceId > 0) {
+                                $appmarketCertificateIdMap[$sourceId] = (int)$existingCertificateId;
+                            }
+                            continue;
+                        }
+
+                        $createdAt = appmarketNormalizeDateTime((string)($row['created_at'] ?? ''))
+                            ?? date('Y-m-d H:i:s');
+                        $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
+                            ?? $createdAt;
+                        $insertAppmarketCertificateStmt->execute([
+                            $appId,
+                            $fingerprint,
+                            (string)($row['subject_dn'] ?? ''),
+                            mb_substr(trim((string)($row['serial_number'] ?? '')), 0, 255, 'UTF-8'),
+                            appmarketNormalizeDateTime((string)($row['valid_from'] ?? '')),
+                            appmarketNormalizeDateTime((string)($row['valid_to'] ?? '')),
+                            (string)($row['notes'] ?? ''),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                        if ($sourceId > 0) {
+                            $appmarketCertificateIdMap[$sourceId] = (int)$pdo->lastInsertId();
+                        }
+                    }
+                    $summary[] = 'Appmarket – podpisové certifikáty importovány jako neaktivní.';
+                }
+
+                if (!empty($data['appmarket_releases']) && is_array($data['appmarket_releases'])) {
+                    $findAppmarketReleaseStmt = $pdo->prepare(
+                        'SELECT id FROM cms_appmarket_releases WHERE app_id = ? AND version_code = ? LIMIT 1'
+                    );
+                    $findAppmarketPackageStmt = $pdo->prepare(
+                        'SELECT package_id FROM cms_appmarket_apps WHERE id = ? LIMIT 1'
+                    );
+                    $insertAppmarketReleaseStmt = $pdo->prepare(
+                        "INSERT INTO cms_appmarket_releases
+                         (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
+                          package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
+                          certificate_id, certificate_fingerprint_sha256, permissions_json, analysis_json,
+                          metadata_source, status, download_count, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,'draft',0,?,?)"
+                    );
+
+                    foreach ($data['appmarket_releases'] as $row) {
+                        $sourceAppId = max(0, (int)($row['app_id'] ?? 0));
+                        $appId = $appmarketAppIdMap[$sourceAppId] ?? null;
+                        $versionName = appmarketNormalizeVersionName((string)($row['version_name'] ?? ''));
+                        $versionCode = appmarketNormalizeVersionCode($row['version_code'] ?? null);
+                        if ($appId === null || $versionName === '' || $versionCode === null) {
+                            continue;
+                        }
+
+                        $findAppmarketReleaseStmt->execute([$appId, $versionCode]);
+                        if ($findAppmarketReleaseStmt->fetch()) {
+                            continue;
+                        }
+
+                        $findAppmarketPackageStmt->execute([$appId]);
+                        $packageId = appmarketNormalizePackageId((string)$findAppmarketPackageStmt->fetchColumn());
+                        if ($packageId === '') {
+                            continue;
+                        }
+
+                        $sourceCertificateId = max(0, (int)($row['certificate_id'] ?? 0));
+                        $certificateId = $appmarketCertificateIdMap[$sourceCertificateId] ?? null;
+                        $fingerprint = appmarketNormalizeCertificateFingerprint(
+                            (string)($row['certificate_fingerprint_sha256'] ?? '')
+                        );
+                        $createdAt = appmarketNormalizeDateTime((string)($row['created_at'] ?? ''))
+                            ?? date('Y-m-d H:i:s');
+                        $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
+                            ?? $createdAt;
+
+                        $insertAppmarketReleaseStmt->execute([
+                            $appId,
+                            $versionName,
+                            $versionCode,
+                            (string)($row['release_notes'] ?? ''),
+                            appmarketNormalizeSdkLevel($row['min_sdk'] ?? null),
+                            appmarketNormalizeSdkLevel($row['target_sdk'] ?? null),
+                            $packageId,
+                            basename((string)($row['apk_original_name'] ?? '')),
+                            appmarketNormalizeSha256((string)($row['apk_sha256'] ?? '')),
+                            $certificateId,
+                            $fingerprint,
+                            appmarketNormalizeJsonMetadata($row['permissions_json'] ?? []),
+                            appmarketNormalizeJsonMetadata($row['analysis_json'] ?? []),
+                            'apk',
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Appmarket – metadata vydání importována jako koncepty bez APK.';
+                }
+
+                if (!empty($data['appmarket_screenshots']) && is_array($data['appmarket_screenshots'])) {
+                    $mediaExistsStmt = $pdo->prepare(
+                        "SELECT id FROM cms_media WHERE id = ? AND visibility = 'public' LIMIT 1"
+                    );
+                    $insertAppmarketScreenshotStmt = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_appmarket_screenshots
+                         (app_id, media_id, alt_text, caption, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['appmarket_screenshots'] as $row) {
+                        $sourceAppId = max(0, (int)($row['app_id'] ?? 0));
+                        $appId = $appmarketAppIdMap[$sourceAppId] ?? null;
+                        $mediaId = max(0, (int)($row['media_id'] ?? 0));
+                        if ($appId === null || $mediaId < 1) {
+                            continue;
+                        }
+                        $mediaExistsStmt->execute([$mediaId]);
+                        if (!$mediaExistsStmt->fetch()) {
+                            continue;
+                        }
+
+                        $createdAt = appmarketNormalizeDateTime((string)($row['created_at'] ?? ''))
+                            ?? date('Y-m-d H:i:s');
+                        $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
+                            ?? $createdAt;
+                        $insertAppmarketScreenshotStmt->execute([
+                            $appId,
+                            $mediaId,
+                            mb_substr(trim((string)($row['alt_text'] ?? '')), 0, 255, 'UTF-8'),
+                            (string)($row['caption'] ?? ''),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Appmarket – screenshoty importovány.';
+                }
+
                 // Kategorie ke stažení
                 if (!empty($data['dl_categories']) && is_array($data['dl_categories'])) {
                     $ins = $pdo->prepare(
