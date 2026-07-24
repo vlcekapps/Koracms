@@ -712,7 +712,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             certificate_fingerprint_sha256 CHAR(64) NOT NULL DEFAULT '',
             permissions_json   LONGTEXT,
             analysis_json      LONGTEXT,
-            metadata_source    ENUM('apk') NOT NULL DEFAULT 'apk',
+            metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk',
+            publisher_token_id INT          NULL DEFAULT NULL,
             status             ENUM('draft','published','withdrawn') NOT NULL DEFAULT 'draft',
             download_count     BIGINT UNSIGNED NOT NULL DEFAULT 0,
             published_at       DATETIME     NULL DEFAULT NULL,
@@ -722,7 +723,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uq_appmarket_release_version (app_id, version_code),
             KEY idx_appmarket_releases_public (app_id, status, version_code),
-            KEY idx_appmarket_releases_certificate (certificate_id)
+            KEY idx_appmarket_releases_certificate (certificate_id),
+            KEY idx_appmarket_releases_publisher_token (publisher_token_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_appmarket_screenshots (
@@ -745,13 +747,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             token_prefix       VARCHAR(20)  NOT NULL,
             token_hash         CHAR(64)     NOT NULL,
             scopes             VARCHAR(255) NOT NULL DEFAULT 'release:create',
+            attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256',
+            attestation_public_key TEXT,
+            attestation_key_fingerprint CHAR(64) NOT NULL DEFAULT '',
             expires_at         DATETIME     NULL DEFAULT NULL,
             revoked_at         DATETIME     NULL DEFAULT NULL,
             last_used_at       DATETIME     NULL DEFAULT NULL,
             created_by_user_id INT          NULL DEFAULT NULL,
             created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE KEY uq_appmarket_publish_token_hash (token_hash),
-            KEY idx_appmarket_publish_tokens_active (app_id, revoked_at, expires_at)
+            KEY idx_appmarket_publish_tokens_active (app_id, revoked_at, expires_at),
+            KEY idx_appmarket_publish_tokens_attestation (app_id, attestation_key_fingerprint, revoked_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_places (

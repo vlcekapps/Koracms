@@ -153,7 +153,7 @@ adminHeader('Appmarket');
                   </td>
                   <td>
                     <?= h(formatFileSize((int)$release['apk_size'])) ?>
-                    <small><?= h((string)$release['metadata_source'] === 'apk' ? 'ověřeno Android nástroji' : 'publisher manifest') ?></small>
+                    <small><?= h((string)$release['metadata_source'] === 'apk' ? 'ověřeno Android nástroji' : 'ověřeno podepsaným publisherem') ?></small>
                   </td>
                   <td>
                     <?php if (isSuperAdmin()): ?>
@@ -206,7 +206,9 @@ adminHeader('Appmarket');
     <h2 id="appmarket-foundation-heading">Bezpečnost publikačního toku</h2>
     <p>
       APK se ukládají mimo veřejný webroot pod názvem odvozeným ze SHA-256. Publikační token
-      smí pouze založit koncept; zveřejnění vyžaduje superadmina a schválený podpisový certifikát.
+      je svázaný se samostatným veřejným RSA klíčem a smí pouze založit koncept. Android SDK
+      stačí na důvěryhodném lokálním počítači; hosting ověří podpis manifestu, velikost a SHA-256.
+      Zveřejnění vyžaduje superadmina a schválený podpisový certifikát aplikace.
     </p>
   </section>
 <?php endif; ?>

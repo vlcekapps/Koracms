@@ -15,33 +15,48 @@ if ($app === null) {
 $error = '';
 $nameInput = '';
 $expiresAtInput = '';
+$publicKeyInput = '';
 $nameError = '';
 $expiresAtError = '';
+$publicKeyError = '';
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     verifyCsrf();
     $action = trim((string)($_POST['action'] ?? ''));
     if ($action === 'create') {
         $nameInput = mb_substr(trim((string)($_POST['name'] ?? '')), 0, 150);
         $expiresAtInput = trim((string)($_POST['expires_at'] ?? ''));
+        $publicKeyInput = trim((string)($_POST['attestation_public_key'] ?? ''));
         $expiresAt = appmarketNormalizeDateTime($expiresAtInput);
+        $publicKey = appmarketNormalizeAttestationPublicKey($publicKeyInput);
+        $keyFingerprint = appmarketAttestationKeyFingerprint($publicKey);
         if ($nameInput === '') {
             $error = 'Doplňte název tokenu, například MiniRec production publisher.';
             $nameError = $error;
         } elseif ($expiresAtInput !== '' && $expiresAt === null) {
             $error = 'Zadejte platné datum a čas expirace.';
             $expiresAtError = $error;
+        } elseif (!appmarketAttestationOpenSslAvailable()) {
+            $error = 'Server nemá PHP rozšíření OpenSSL potřebné k ověření publisher podpisů.';
+            $publicKeyError = $error;
+        } elseif ($publicKey === '' || $keyFingerprint === '') {
+            $error = 'Vložte platný veřejný RSA klíč o velikosti alespoň 3072 bitů.';
+            $publicKeyError = $error;
         } else {
             $token = appmarketGeneratePublishToken();
             $pdo->prepare(
                 "INSERT INTO cms_appmarket_publish_tokens
-                 (app_id, name, token_prefix, token_hash, scopes, expires_at, created_by_user_id)
-                 VALUES (?,?,?,?,?,?,?)"
+                 (app_id, name, token_prefix, token_hash, scopes, attestation_algorithm,
+                  attestation_public_key, attestation_key_fingerprint, expires_at, created_by_user_id)
+                 VALUES (?,?,?,?,?,?,?,?,?,?)"
             )->execute([
                 (int)$app['id'],
                 $nameInput,
                 $token['prefix'],
                 $token['hash'],
                 appmarketTokenScopesValue('release:create'),
+                appmarketAttestationAlgorithm(),
+                $publicKey,
+                $keyFingerprint,
                 $expiresAt,
                 currentUserId(),
             ]);
@@ -72,11 +87,24 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute([(int)$app['id']]);
 $tokens = $stmt->fetchAll();
+$legacyTokenExists = false;
+foreach ($tokens as $existingToken) {
+    if (appmarketNormalizeSha256((string)($existingToken['attestation_key_fingerprint'] ?? '')) === '') {
+        $legacyTokenExists = true;
+        break;
+    }
+}
 
 adminHeader('Publikační tokeny');
 ?>
 <p><a href="appmarket.php?app_id=<?= (int)$app['id'] ?>"><span aria-hidden="true">←</span> Zpět na aplikaci <?= h((string)$app['name']) ?></a></p>
-<p class="admin-description">Token smí pouze nahrát nové vydání jako koncept. Nemůže vydání zveřejnit ani získat podpisový klíč.</p>
+<p class="admin-description">Token smí pouze nahrát nové vydání jako koncept. Je svázaný s veřejným publisher klíčem; odpovídající privátní klíč zůstává pouze na důvěryhodném lokálním počítači.</p>
+<?php if ($legacyTokenExists): ?>
+  <p class="warning" role="status">
+    Starší token bez ověřovacího klíče už nové vydání nepřijme. Vygenerujte publisher klíč,
+    vytvořte nový token a starý token potom odvolejte.
+  </p>
+<?php endif; ?>
 
 <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
 <?php if ($newToken !== ''): ?>
@@ -94,7 +122,7 @@ adminHeader('Publikační tokeny');
     <input type="hidden" name="app_id" value="<?= (int)$app['id'] ?>">
     <input type="hidden" name="action" value="create">
     <fieldset>
-      <legend>Identifikace a platnost</legend>
+      <legend>Identifikace, ověřovací klíč a platnost</legend>
       <label for="token-name">Název <span aria-hidden="true">*</span></label>
       <input type="text" id="token-name" name="name" required aria-required="true" maxlength="150"
              value="<?= h($nameInput) ?>"
@@ -103,6 +131,21 @@ adminHeader('Publikační tokeny');
       <small id="appmarket-token-name-help" class="field-help">Použijte název aplikace, zařízení nebo CI prostředí, abyste později poznali účel tokenu.</small>
       <?php if ($nameError !== ''): ?>
         <small id="appmarket-token-name-error" class="field-help field-error"><?= h($nameError) ?></small>
+      <?php endif; ?>
+
+      <label for="token-attestation-public-key">Veřejný publisher klíč <span aria-hidden="true">*</span></label>
+      <textarea id="token-attestation-public-key" name="attestation_public_key" rows="8" required
+                aria-required="true" maxlength="<?= appmarketAttestationPublicKeyMaxBytes() ?>"
+                aria-describedby="appmarket-token-public-key-help<?= $publicKeyError !== '' ? ' appmarket-token-public-key-error' : '' ?>"
+                <?= $publicKeyError !== '' ? 'aria-invalid="true"' : '' ?>><?= h($publicKeyInput) ?></textarea>
+      <small id="appmarket-token-public-key-help" class="field-help">
+        Vygenerujte samostatný klíč příkazem
+        <code>php tools/appmarket-attest.php generate publisher-private.pem publisher-public.pem</code>
+        mimo repozitář aplikace a vložte obsah souboru <code>publisher-public.pem</code>.
+        Privátní klíč ani Android podpisový klíč do CMS nikdy nevkládejte.
+      </small>
+      <?php if ($publicKeyError !== ''): ?>
+        <small id="appmarket-token-public-key-error" class="field-help field-error"><?= h($publicKeyError) ?></small>
       <?php endif; ?>
 
       <label for="token-expires-at">Expirace</label>
@@ -126,7 +169,7 @@ adminHeader('Publikační tokeny');
     <div class="table-wrap">
       <table>
         <caption>Publikační tokeny aplikace <?= h((string)$app['name']) ?></caption>
-        <thead><tr><th scope="col">Název</th><th scope="col">Prefix</th><th scope="col">Platnost</th><th scope="col">Poslední použití</th><th scope="col">Akce</th></tr></thead>
+        <thead><tr><th scope="col">Název</th><th scope="col">Prefix</th><th scope="col">Ověřovací klíč</th><th scope="col">Platnost</th><th scope="col">Poslední použití</th><th scope="col">Akce</th></tr></thead>
         <tbody>
           <?php foreach ($tokens as $token): ?>
             <?php
@@ -138,6 +181,14 @@ adminHeader('Publikační tokeny');
             <tr>
               <td><?= h((string)$token['name']) ?></td>
               <td><code><?= h((string)$token['token_prefix']) ?>…</code></td>
+              <td>
+                <?php if (appmarketNormalizeSha256((string)($token['attestation_key_fingerprint'] ?? '')) !== ''): ?>
+                  <span>RSA-SHA256</span><br>
+                  <code class="break-long-token"><?= h((string)$token['attestation_key_fingerprint']) ?></code>
+                <?php else: ?>
+                  <span>Chybí, token nelze použít pro nový upload</span>
+                <?php endif; ?>
+              </td>
               <td><?= $revoked ? 'Odvolaný' : ($expired ? 'Expirovaný' : (trim((string)$token['expires_at']) !== '' ? formatCzechDate((string)$token['expires_at']) : 'Bez expirace')) ?></td>
               <td><?= trim((string)$token['last_used_at']) !== '' ? formatCzechDate((string)$token['last_used_at']) : 'Dosud nepoužit' ?></td>
               <td>

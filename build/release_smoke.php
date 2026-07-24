@@ -474,6 +474,7 @@ try {
         'themes/default/theme.json',
         'themes/default/assets/public.css',
         'tools/appmarket-publish.ps1',
+        'tools/appmarket-attest.php',
         'docs/admin-guide.md',
         'uploads/.htaccess',
     ] as $requiredEntry) {

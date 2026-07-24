@@ -360,6 +360,7 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
   permissions_json LONGTEXT,
   analysis_json LONGTEXT,
   metadata_source VARCHAR(20),
+  publisher_token_id INT,
   download_count BIGINT,
   status VARCHAR(20)
 ) ENGINE=InnoDB;
@@ -374,6 +375,9 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_publish_tokens (
   app_id INT,
   token_hash CHAR(64),
   scopes VARCHAR(255),
+  attestation_algorithm VARCHAR(32),
+  attestation_public_key TEXT,
+  attestation_key_fingerprint CHAR(64),
   expires_at DATETIME,
   revoked_at DATETIME
 ) ENGINE=InnoDB;
@@ -636,12 +640,14 @@ PHP,
 // cms_appmarket_releases
 // uq_appmarket_release_version
 // idx_appmarket_releases_public
+// idx_appmarket_releases_publisher_token
 // cms_appmarket_screenshots
 // uq_appmarket_screenshot_media
 // idx_appmarket_screenshots_order
 // cms_appmarket_publish_tokens
 // uq_appmarket_publish_token_hash
 // idx_appmarket_publish_tokens_active
+// idx_appmarket_publish_tokens_attestation
 // cms_faq_categories.slug
 // uq_cms_faq_categories_slug
 // cms_faq_categories.description

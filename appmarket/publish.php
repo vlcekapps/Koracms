@@ -27,9 +27,11 @@ if ($app === null) {
     appmarketSendJson(404, ['error' => 'app_not_found']);
 }
 
-$metadataJson = trim((string)($_POST['metadata'] ?? ''));
-$releaseNotes = (string)($_POST['release_notes'] ?? '');
+$metadataJson = (string)($_POST['metadata'] ?? '');
+$attestationSignature = trim((string)($_POST['attestation_signature'] ?? ''));
+$releaseNotes = appmarketNormalizeReleaseNotes((string)($_POST['release_notes'] ?? ''));
 if (strlen($metadataJson) > appmarketMetadataMaxBytes()
+    || strlen($attestationSignature) > appmarketAttestationSignatureMaxBytes() * 2
     || !appmarketReleaseNotesValid($releaseNotes)
 ) {
     appmarketSendJson(422, [
@@ -37,9 +39,20 @@ if (strlen($metadataJson) > appmarketMetadataMaxBytes()
         'messages' => ['Metadata mohou mít nejvýše 64 KiB a seznam změn nejvýše 50 000 znaků.'],
     ]);
 }
+if (trim($metadataJson) === '' || $attestationSignature === '') {
+    appmarketSendJson(422, [
+        'error' => 'attestation_required',
+        'messages' => ['Publisher musí odeslat podepsaný manifest vydání.'],
+    ]);
+}
 $upload = appmarketInspectReleaseUpload(
+    $pdo,
+    $app,
     is_array($_FILES['apk'] ?? null) ? $_FILES['apk'] : [],
-    $metadataJson
+    $releaseNotes,
+    $metadataJson,
+    $attestationSignature,
+    (int)$token['id']
 );
 if (empty($upload['ok'])) {
     appmarketSendJson(422, [

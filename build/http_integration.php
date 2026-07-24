@@ -19412,19 +19412,50 @@ try {
 
         if ($appmarketReleaseId > 0 && $appmarketCertificateId > 0) {
             $publishToken = appmarketGeneratePublishToken();
+            $appmarketHttpOpenSslConfig = dirname(PHP_BINARY) . DIRECTORY_SEPARATOR
+                . 'extras' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'openssl.cnf';
+            $appmarketPublisherKeyOptions = [
+                'private_key_bits' => 3072,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            ];
+            if (is_file($appmarketHttpOpenSslConfig)) {
+                $appmarketPublisherKeyOptions['config'] = $appmarketHttpOpenSslConfig;
+            }
+            $appmarketPublisherPrivateKey = openssl_pkey_new($appmarketPublisherKeyOptions);
+            $appmarketPublisherKeyDetails = $appmarketPublisherPrivateKey !== false
+                ? openssl_pkey_get_details($appmarketPublisherPrivateKey)
+                : false;
+            $appmarketPublisherPublicKey = is_array($appmarketPublisherKeyDetails)
+                && is_string($appmarketPublisherKeyDetails['key'] ?? null)
+                ? appmarketNormalizeAttestationPublicKey($appmarketPublisherKeyDetails['key'])
+                : '';
+            $appmarketPublisherKeyFingerprint = appmarketAttestationKeyFingerprint(
+                $appmarketPublisherPublicKey
+            );
+            if ($appmarketPublisherPrivateKey === false
+                || $appmarketPublisherPublicKey === ''
+                || $appmarketPublisherKeyFingerprint === ''
+            ) {
+                $appmarketIssues[] = 'integrační test nedokázal připravit publisher RSA klíč';
+            }
             $pdo->prepare(
                 "INSERT INTO cms_appmarket_publish_tokens
-                 (app_id, name, token_prefix, token_hash, scopes, created_by_user_id)
-                 VALUES (?,?,?,?,?,?)"
+                 (app_id, name, token_prefix, token_hash, scopes, attestation_algorithm,
+                  attestation_public_key, attestation_key_fingerprint, created_by_user_id)
+                 VALUES (?,?,?,?,?,?,?,?,?)"
             )->execute([
                 $appmarketAppId,
                 'HTTP integration publisher',
                 $publishToken['prefix'],
                 $publishToken['hash'],
                 appmarketTokenScopesValue('release:create'),
+                appmarketAttestationAlgorithm(),
+                $appmarketPublisherPublicKey,
+                $appmarketPublisherKeyFingerprint,
                 $adminUserId,
             ]);
-            $createdAppmarketTokenIds[] = (int)$pdo->lastInsertId();
+            $appmarketPublisherTokenId = (int)$pdo->lastInsertId();
+            $createdAppmarketTokenIds[] = $appmarketPublisherTokenId;
 
             $appmarketCatalogResponse = fetchUrl($baseUrl . BASE_URL . '/aplikace', '', 0);
             if (httpIntegrationStatusCode($appmarketCatalogResponse) !== 200
@@ -19590,7 +19621,9 @@ try {
             || !str_contains($appmarketCertificateResponse['body'], '<legend>Otisk a stav</legend>')
             || !str_contains($appmarketCertificateResponse['body'], 'name="confirm_deactivate"')
             || httpIntegrationStatusCode($appmarketTokenResponse) !== 200
-            || !str_contains($appmarketTokenResponse['body'], '<legend>Identifikace a platnost</legend>')
+            || !str_contains($appmarketTokenResponse['body'], '<legend>Identifikace, ověřovací klíč a platnost</legend>')
+            || !str_contains($appmarketTokenResponse['body'], 'name="attestation_public_key"')
+            || !str_contains($appmarketTokenResponse['body'], $appmarketPublisherKeyFingerprint)
             || !str_contains($appmarketTokenResponse['body'], 'name="confirm_revoke"')) {
             $appmarketIssues[] = 'správa certifikátů nebo tokenů nemá očekávanou přístupnou a bezpečnou sémantiku';
         }
@@ -19659,6 +19692,143 @@ try {
             || !httpIntegrationHeaderContains($publisherUnauthenticatedResponse, 'Cache-Control', 'no-store')
             || !httpIntegrationHeaderContains($publisherUnauthenticatedResponse, 'X-Robots-Tag', 'noindex')) {
             $appmarketIssues[] = 'publisher API neodmítlo anonymní POST bezpečným JSON stavem';
+        }
+        if ($appmarketPublisherPrivateKey !== false
+            && $appmarketPublisherKeyFingerprint !== ''
+        ) {
+            $signedReleaseNotes = "Podepsané vydání pro hosting bez Android SDK.\r\n";
+            $signedApkBytes = "PK\x03\x04KORA-APPMARKET-SIGNED-" . $appmarketToken;
+            $signedApkPath = httpIntegrationCreateTempFile(
+                'kora-appmarket-signed-',
+                $signedApkBytes,
+                $createdTempFiles
+            );
+            $signedManifest = [
+                'schema_version' => 2,
+                'attestation_type' => 'kora-appmarket-release',
+                'attestation_algorithm' => appmarketAttestationAlgorithm(),
+                'key_fingerprint_sha256' => $appmarketPublisherKeyFingerprint,
+                'issued_at' => gmdate('Y-m-d\TH:i:s\Z'),
+                'nonce' => bin2hex(random_bytes(16)),
+                'source_commit' => str_repeat('a', 40),
+                'release_notes_sha256' => appmarketReleaseNotesSha256($signedReleaseNotes),
+                'package_id' => $appmarketPackageId,
+                'version_name' => '1.1.0',
+                'version_code' => 110,
+                'min_sdk' => 26,
+                'target_sdk' => 35,
+                'certificate_sha256' => $certificateHash,
+                'certificate_subject' => 'CN=Kora HTTP integration',
+                'certificate_serial' => 'HTTP-SIGNED-' . $appmarketToken,
+                'certificate_valid_from' => '2026-01-01 00:00:00',
+                'certificate_valid_to' => '2036-01-01 00:00:00',
+                'debuggable' => false,
+                'build_type' => 'release',
+                'permissions' => ['android.permission.INTERNET'],
+                'apk_sha256' => hash('sha256', $signedApkBytes),
+                'apk_size' => strlen($signedApkBytes),
+            ];
+            $signedManifestJson = json_encode(
+                $signedManifest,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+            $signedManifestSignature = '';
+            $signedManifestReady = is_string($signedManifestJson)
+                && openssl_sign(
+                    appmarketAttestationMessage($signedManifestJson),
+                    $signedManifestSignature,
+                    $appmarketPublisherPrivateKey,
+                    OPENSSL_ALGO_SHA256
+                );
+            if (!$signedManifestReady) {
+                $appmarketIssues[] = 'integrační test nedokázal podepsat publisher manifest';
+            } else {
+                $publisherSignedResponse = postMultipartUrl(
+                    $baseUrl . BASE_URL . '/api/appmarket/v1/releases',
+                    [
+                        'metadata' => $signedManifestJson,
+                        'attestation_signature' => base64_encode($signedManifestSignature),
+                        'release_notes' => $signedReleaseNotes,
+                    ],
+                    [
+                        'apk' => [
+                            'path' => $signedApkPath,
+                            'filename' => $appmarketSlug . '-1.1.0.apk',
+                            'type' => 'application/vnd.android.package-archive',
+                        ],
+                    ],
+                    '',
+                    0,
+                    ['Authorization: Bearer ' . $publishToken['token']]
+                );
+                $publisherSignedPayload = json_decode($publisherSignedResponse['body'], true);
+                $signedReleaseId = is_array($publisherSignedPayload)
+                    ? (int)($publisherSignedPayload['release_id'] ?? 0)
+                    : 0;
+                $signedRelease = $signedReleaseId > 0
+                    ? appmarketFindRelease($pdo, $signedReleaseId)
+                    : null;
+                if (httpIntegrationStatusCode($publisherSignedResponse) !== 201
+                    || !is_array($publisherSignedPayload)
+                    || ($publisherSignedPayload['status'] ?? '') !== 'draft'
+                    || $signedRelease === null
+                    || (string)$signedRelease['metadata_source'] !== 'publisher_attestation'
+                    || (int)$signedRelease['publisher_token_id'] !== $appmarketPublisherTokenId
+                ) {
+                    $appmarketIssues[] = sprintf(
+                        'podepsaný publisher upload nevytvořil ověřený koncept bez Android SDK'
+                        . ' (HTTP %d, odpověď: %s)',
+                        httpIntegrationStatusCode($publisherSignedResponse),
+                        mb_substr(trim($publisherSignedResponse['body']), 0, 500)
+                    );
+                } else {
+                    $createdAppmarketReleaseIds[] = $signedReleaseId;
+                    $createdAppmarketStoredFiles[] = (string)$signedRelease['apk_storage_name'];
+                }
+
+                $tamperedManifestResult = appmarketVerifyPublisherAttestation(
+                    $pdo,
+                    $appmarketAppId,
+                    $signedManifestJson . ' ',
+                    base64_encode($signedManifestSignature),
+                    $signedReleaseNotes,
+                    $signedApkPath,
+                    $appmarketPublisherTokenId
+                );
+                if ($tamperedManifestResult['ok']
+                    || !in_array(
+                        'Kryptografický podpis publisher manifestu není platný.',
+                        $tamperedManifestResult['errors'],
+                        true
+                    )
+                ) {
+                    $appmarketIssues[] = 'publisher attestation přijala pozměněný podepsaný manifest';
+                }
+
+                $tamperedApkPath = httpIntegrationCreateTempFile(
+                    'kora-appmarket-tampered-',
+                    $signedApkBytes . '-tampered',
+                    $createdTempFiles
+                );
+                $tamperedApkResult = appmarketVerifyPublisherAttestation(
+                    $pdo,
+                    $appmarketAppId,
+                    $signedManifestJson,
+                    base64_encode($signedManifestSignature),
+                    $signedReleaseNotes,
+                    $tamperedApkPath,
+                    $appmarketPublisherTokenId
+                );
+                if ($tamperedApkResult['ok']
+                    || !in_array(
+                        'Nahrané APK neodpovídá velikosti nebo SHA-256 v podepsaném manifestu.',
+                        $tamperedApkResult['errors'],
+                        true
+                    )
+                ) {
+                    $appmarketIssues[] = 'publisher attestation přijala jiné APK než podepsaný manifest';
+                }
+            }
         }
 
         // The confirmed export above rotates the session CSRF token.

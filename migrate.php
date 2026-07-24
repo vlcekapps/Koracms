@@ -715,7 +715,8 @@ $tables = [
         certificate_fingerprint_sha256 CHAR(64) NOT NULL DEFAULT '',
         permissions_json   LONGTEXT,
         analysis_json      LONGTEXT,
-        metadata_source    ENUM('apk') NOT NULL DEFAULT 'apk',
+        metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk',
+        publisher_token_id INT          NULL DEFAULT NULL,
         status             ENUM('draft','published','withdrawn') NOT NULL DEFAULT 'draft',
         download_count     BIGINT UNSIGNED NOT NULL DEFAULT 0,
         published_at       DATETIME     NULL DEFAULT NULL,
@@ -725,7 +726,8 @@ $tables = [
         updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_appmarket_release_version (app_id, version_code),
         KEY idx_appmarket_releases_public (app_id, status, version_code),
-        KEY idx_appmarket_releases_certificate (certificate_id)
+        KEY idx_appmarket_releases_certificate (certificate_id),
+        KEY idx_appmarket_releases_publisher_token (publisher_token_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_appmarket_screenshots' => "CREATE TABLE IF NOT EXISTS cms_appmarket_screenshots (
@@ -748,13 +750,17 @@ $tables = [
         token_prefix       VARCHAR(20)  NOT NULL,
         token_hash         CHAR(64)     NOT NULL,
         scopes             VARCHAR(255) NOT NULL DEFAULT 'release:create',
+        attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256',
+        attestation_public_key TEXT,
+        attestation_key_fingerprint CHAR(64) NOT NULL DEFAULT '',
         expires_at         DATETIME     NULL DEFAULT NULL,
         revoked_at         DATETIME     NULL DEFAULT NULL,
         last_used_at       DATETIME     NULL DEFAULT NULL,
         created_by_user_id INT          NULL DEFAULT NULL,
         created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_appmarket_publish_token_hash (token_hash),
-        KEY idx_appmarket_publish_tokens_active (app_id, revoked_at, expires_at)
+        KEY idx_appmarket_publish_tokens_active (app_id, revoked_at, expires_at),
+        KEY idx_appmarket_publish_tokens_attestation (app_id, attestation_key_fingerprint, revoked_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_gallery_albums' => "CREATE TABLE IF NOT EXISTS cms_gallery_albums (
@@ -1636,6 +1642,11 @@ $addColumns = [
     'cms_downloads.external_click_count' => "ALTER TABLE cms_downloads ADD COLUMN external_click_count INT NOT NULL DEFAULT 0 AFTER download_count",
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER external_click_count",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    // cms_appmarket
+    'cms_appmarket_releases.publisher_token_id' => "ALTER TABLE cms_appmarket_releases ADD COLUMN publisher_token_id INT NULL DEFAULT NULL AFTER metadata_source",
+    'cms_appmarket_publish_tokens.attestation_algorithm' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256' AFTER scopes",
+    'cms_appmarket_publish_tokens.attestation_public_key' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_public_key TEXT AFTER attestation_algorithm",
+    'cms_appmarket_publish_tokens.attestation_key_fingerprint' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_key_fingerprint CHAR(64) NOT NULL DEFAULT '' AFTER attestation_public_key",
     // cms_podcasts
     'cms_podcasts.transcript'        => "ALTER TABLE cms_podcasts ADD COLUMN transcript TEXT AFTER description",
     // cms_media
@@ -1829,6 +1840,41 @@ foreach ($addColumns as $tableCol => $sql) {
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
     }
+}
+
+try {
+    if ($columnExists('cms_appmarket_releases', 'metadata_source')) {
+        $pdo->exec(
+            "ALTER TABLE cms_appmarket_releases
+             MODIFY COLUMN metadata_source
+             ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk'"
+        );
+        $log[] = '✓ Appmarket podporuje serverové ověření i podepsanou publisher attestation – OK';
+    }
+    foreach ([
+        'idx_appmarket_releases_publisher_token' => [
+            'table' => 'cms_appmarket_releases',
+            'sql' => 'ALTER TABLE cms_appmarket_releases ADD KEY idx_appmarket_releases_publisher_token (publisher_token_id)',
+        ],
+        'idx_appmarket_publish_tokens_attestation' => [
+            'table' => 'cms_appmarket_publish_tokens',
+            'sql' => 'ALTER TABLE cms_appmarket_publish_tokens ADD KEY idx_appmarket_publish_tokens_attestation (app_id, attestation_key_fingerprint, revoked_at)',
+        ],
+    ] as $indexName => $indexDefinition) {
+        $indexStmt = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?"
+        );
+        $indexStmt->execute([$indexDefinition['table'], $indexName]);
+        if ((int)$indexStmt->fetchColumn() === 0) {
+            $pdo->exec($indexDefinition['sql']);
+            $log[] = "✓ Index <code>{$indexName}</code> přidán – OK";
+        } else {
+            $log[] = "· Index <code>{$indexName}</code> již existuje – přeskočeno";
+        }
+    }
+} catch (\PDOException $e) {
+    $log[] = '✗ Appmarket publisher attestation – CHYBA: ' . h($e->getMessage());
 }
 
 // Podcastové GUID jsou trvalé identifikátory RSS. Nesmí se měnit se slugem ani veřejnou URL.

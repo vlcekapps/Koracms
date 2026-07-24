@@ -25,8 +25,10 @@ if (!appmarketReleaseNotesValid($releaseNotes)) {
     exit;
 }
 $upload = appmarketInspectReleaseUpload(
+    $pdo,
+    $app,
     is_array($_FILES['release_file'] ?? null) ? $_FILES['release_file'] : [],
-    ''
+    $releaseNotes
 );
 if (empty($upload['ok'])) {
     $_SESSION['appmarket_release_flash'] = [

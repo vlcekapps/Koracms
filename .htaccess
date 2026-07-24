@@ -70,6 +70,10 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Zachovat Bearer token i pod Apache/FastCGI, které jej jinak nemusí předat PHP.
+    RewriteCond %{HTTP:Authorization} ^(.+)$
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%1]
+
     # Přílohy formulářů se stahují jen přes chráněný admin endpoint
     RewriteRule ^uploads/forms/ - [F,L,NC]
     # Staré databázové zálohy nesmí být přímo dostupné z webu

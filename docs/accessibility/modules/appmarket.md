@@ -22,7 +22,7 @@
 - přehled aplikací a vydání,
 - založení a editace aplikace,
 - výběr ikony a snímků z veřejných médií,
-- nahrání APK nebo publisher ZIPu a zobrazení výsledku analýzy,
+- nahrání APK na serveru s Android SDK nebo podepsaného vydání lokálním publisherem a zobrazení výsledku ověření,
 - samostatná kontrolní obrazovka vydání s identitou, podpisem, oprávněními a seznamem změn,
 - schválení a zneplatnění podpisového certifikátu,
 - vytvoření, jednorázové zobrazení a odvolání publikačního tokenu,
@@ -65,10 +65,10 @@
 | 3.2.2 Při vstupu | Supports | Změna pole nebo checkboxu sama neodesílá formulář ani nemění kontext. |
 | 3.2.3 Konzistentní navigace | Supports | Appmarket se registruje přes společný modulový manifest a sdílené navigace. |
 | 3.2.4 Konzistentní identifikace | Supports | Akce `Upravit`, `Zveřejnit`, `Stáhnout vydání`, `Smazat koncept` a `Odvolat` mají konzistentní význam. |
-| 3.3.1 Identifikace chyb | Supports | Souhrn používá `role="alert"` a chyby názvu, slugu, applicationId, URL, média, stavu aplikace, release notes, otisku i tokenu jsou navázané přímo na pole přes `aria-describedby`. |
+| 3.3.1 Identifikace chyb | Supports | Souhrn používá `role="alert"` a chyby názvu, slugu, applicationId, URL, média, stavu aplikace, release notes, otisku, publisher veřejného klíče i tokenu jsou navázané přímo na pole přes `aria-describedby`. |
 | 3.3.2 Popisky nebo instrukce | Supports | Povinná pole jsou označená textem a doprovázená konkrétní nápovědou k applicationId, produkčnímu APK, certifikátu a expiraci tokenu. Volitelný slug výslovně oznamuje automatické vytvoření z názvu. |
 | 3.3.3 Návrh při chybě | Supports | Chyby vysvětlují očekávaný formát nebo bezpečný další krok a formuláře zachovávají zadané hodnoty, kromě souborového pole daného prohlížečem. |
-| 3.3.4 Prevence chyb | Supports | Publikace má samostatnou kontrolní obrazovku a vyžaduje výslovné potvrzení identity, podpisu, oprávnění i seznamu změn. Server těsně před publikací znovu analyzuje uložené APK a porovná package ID, `versionName`, `versionCode`, velikost, hash i certifikát. Stažení vydání, smazání konceptu, zneplatnění certifikátu a odvolání tokenu mají vlastní potvrzení; zneplatnění certifikátu zároveň stáhne všechna jeho veřejná vydání. |
+| 3.3.4 Prevence chyb | Supports | Publikace má samostatnou kontrolní obrazovku a vyžaduje výslovné potvrzení identity, podpisu, oprávnění i seznamu změn. Server těsně před publikací znovu ověří velikost a SHA-256 uloženého APK a buď zopakuje vlastní Android analýzu, nebo kryptograficky ověří přesný manifest podepsaný klíčem svázaným s tokenem. Stažení vydání, smazání konceptu, zneplatnění certifikátu a odvolání tokenu mají vlastní potvrzení; zneplatnění certifikátu zároveň stáhne všechna jeho veřejná vydání. |
 | 3.3.7 Redundantní zadávání | Supports | Metadata APK načítá server nebo lokální publisher; správce je nemusí ručně přepisovat. |
 | 3.3.8 Přístupné ověřování | Supports | Modul nepoužívá kognitivní test ani captchu. Token a podpis se ověřují strojově. |
 | 4.1.2 Název, funkce, hodnota | Supports | Nativní prvky mají popisky; pojmenované regiony odkazují jen na existující nadpisy a legendy. |
@@ -78,29 +78,29 @@
 
 - APK jsou uložené mimo webroot s omezenými oprávněními a veřejně se vydávají pouze přes kontrolovaný endpoint. Endpoint při každém požadavku ověřuje velikost i SHA-256 a používá revalidovatelnou cache, aby stažené vydání nebo zneplatněný certifikát nezůstaly dostupné z neměnné roční cache.
 - Update API nevyžaduje zařízení identifikovat, nepoužívá captchu ani přihlášení, přijímá `GET`/`HEAD` a po načtení konfigurace neupravuje session ani neposílá session cookie.
-- Publisher API přijímá jen `POST`, nepoužívá session cookie, má rate limit a bearer token uložený v databázi pouze jako SHA-256 hash.
-- Token smí vytvořit jen koncept a neznámý nebo prázdný scope se vyhodnotí jako bez oprávnění. Publikace vyžaduje superadmina, schválený podpisový certifikát, shodný applicationId a SHA-256.
-- Server musí nezávisle spustit `apkanalyzer` a `apksigner`; deklarovaná metadata publisheru nikdy neslouží jako fallback a databáze eviduje jen zdroj `apk`. Nástroje mají časový i výstupní limit a chybějící či neúplná analýza operaci bezpečně zablokuje.
+- Publisher API přijímá jen `POST`, nepoužívá session cookie, má rate limit a bearer token uložený v databázi pouze jako SHA-256 hash. Každý nový token je zároveň svázaný s veřejným RSA-3072 publisher klíčem; Apache `.htaccess` a dokumentovaný Nginx FastCGI parametr zachovávají `Authorization` bez převodu tokenu do URL.
+- Token smí vytvořit jen koncept a neznámý nebo prázdný scope se vyhodnotí jako bez oprávnění. Publikace vyžaduje superadmina, schválený podpisový certifikát APK, shodný applicationId a SHA-256.
+- Lokální publisher musí spustit `apkanalyzer` a `apksigner`, potom přes PHP OpenSSL podepíše přesný manifest samostatným privátním klíčem mimo zdrojový repozitář. Hosting bez Android SDK přijme pouze čerstvý manifest s platným RSA-SHA256 podpisem odpovídajícím tokenu a s přesnou vazbou na release notes, velikost a SHA-256 nahraného APK. Server s Android SDK provede navíc vlastní analýzu; nepodepsaná metadata se jako fallback nikdy nepřijímají.
 - Release notes se na veřejném i kontrolním detailu vykreslují omezeným projektovým Markdown rendererem, nikoli obecným HTML obsahem.
-- Lokální publisher odmítá nečistý Git, debug/QA/unsigned sestavení a token nepřijímá jako argument příkazové řádky.
+- Lokální publisher odmítá nečistý Git, debug/QA/unsigned sestavení a token ani cestu k privátnímu publisher klíči nepřijímá jako argument příkazové řádky.
 - Chybové odpovědi API mají stabilní JSON tvar; vizuální rozhraní není podmínkou pro aktualizaci aplikace.
 
 ## Odpovědnost CMS
 
-Kora CMS odpovídá za sémantiku formulářů a tabulek, focus, chybové stavy, zachování formulářových hodnot, bezpečné názvy souborů, kontrolu viditelnosti, automatické načtení APK metadat a strojově čitelný update kontrakt. CMS poskytuje pole a nápovědy potřebné pro alternativní texty, popisy, poznámky k vydání, podporu a ochranu soukromí; každý veřejný snímek obrazovky má navíc pojmenovaný `figure` navázaný na viditelný nebo čtečkový popisek.
+Kora CMS odpovídá za sémantiku formulářů a tabulek, focus, chybové stavy, zachování formulářových hodnot, bezpečné názvy souborů, kontrolu viditelnosti, kryptografické ověření publisher manifestu, kontrolu souboru a strojově čitelný update kontrakt. CMS poskytuje pole a nápovědy potřebné pro alternativní texty, popisy, poznámky k vydání, podporu a ochranu soukromí; každý veřejný snímek obrazovky má navíc pojmenovaný `figure` navázaný na viditelný nebo čtečkový popisek.
 
 ## Odpovědnost správce obsahu
 
-Správce odpovídá za srozumitelný název a popis aplikace, výstižné alt texty snímků v knihovně médií, čitelný seznam změn, aktuální odkazy na podporu a soukromí a pravdivé licenční údaje. Soukromý podpisový klíč nesmí nahrávat do CMS; schvaluje pouze ověřený SHA-256 otisk veřejného certifikátu.
+Správce odpovídá za srozumitelný název a popis aplikace, výstižné alt texty snímků v knihovně médií, čitelný seznam změn, aktuální odkazy na podporu a soukromí a pravdivé licenční údaje. Android keystore ani privátní publisher klíč nesmí nahrávat do CMS; v administraci schvaluje pouze fingerprint certifikátu APK a vkládá veřejnou část odděleného publisher klíče.
 
 ## Automatizovaný důkaz
 
-- `build/unit_tests.php`: normalizace package ID, verzí, SDK, hashů, fail-closed token scopes, limity release notes a oprávnění, canonical URL, update payload a HTTP Range.
+- `build/unit_tests.php`: normalizace package ID, verzí, SDK, hashů a release notes, čerstvost attestation, RSA podpis přesných bajtů manifestu, fail-closed token scopes, limity oprávnění, canonical URL, update payload a HTTP Range.
 - `build/schema_parity_audit.php`: pět Appmarket tabulek, úplný bezpečnostně důležitý sloupcový kontrakt a indexy v `install.php` i `migrate.php`.
-- `build/runtime_audit.php`: modulový manifest, capability, privátní storage a oprávnění souborů, povinná serverová analýza bez fallbacku, porovnání verze a velikosti, časové limity, kontrolní obrazovka, revokace certifikátu s POST/Redirect/GET ochranou proti opakovanému odeslání, revalidovatelná cache, sessionless API, routy, formuláře a export/import bez tokenů.
+- `build/runtime_audit.php`: modulový manifest, capability, privátní storage a oprávnění souborů, dvojí bezpečný režim ověření, RSA/OpenSSL kontrakt, porovnání verze, velikosti a hashů, časové limity, kontrolní obrazovka, revokace certifikátu, revalidovatelná cache, sessionless API, routy, formuláře a export/import bez tokenů.
 - `build/theme_view_audit.php`: veřejné screenshoty používají `figure` pojmenovaný existujícím `figcaption`.
-- `build/http_integration.php`: veřejný katalog a detail, API bez session cookie, částečné stažení a cache hlavičky, skutečné načtení editoru aplikace včetně popsané HTML nápovědy, kontrolní obrazovka, zneplatnění certifikátu, vypnutý modul, veřejná viditelnost a administrativní workflow.
-- `build/release_smoke.php`: instalační ZIP musí obsahovat lokální publisher, aby dokumentované ovládání nebylo závislé na vývojovém repozitáři.
+- `build/http_integration.php`: veřejný katalog a detail, API bez session cookie, podepsaný upload bez serverového Android SDK, odmítnutí pozměněného manifestu i APK, částečné stažení a cache hlavičky, administrační editory, kontrolní obrazovka, zneplatnění certifikátu, vypnutý modul a veřejná viditelnost.
+- `build/release_smoke.php`: instalační ZIP musí obsahovat lokální publisher i PHP attestation helper, aby dokumentované ovládání nebylo závislé na vývojovém repozitáři.
 - `build/accessibility_conformance_audit.php`: změny rozhraní jsou provázané s tímto ACR dokumentem a automatizovanými důkazy.
 - `composer analyse:strict:appmarket` a `composer format:check:appmarket`: statická analýza a jednotný styl celého modulu.
 
@@ -108,7 +108,7 @@ Správce odpovídá za srozumitelný název a popis aplikace, výstižné alt te
 
 Před stabilním vydáním projít:
 
-1. Pouze klávesnicí vytvořit aplikaci i s prázdným automaticky generovaným slugem, vybrat média, nahrát vydání, schválit certifikát, projít kontrolní obrazovku a zveřejnit koncept.
+1. Pouze klávesnicí vytvořit aplikaci i s prázdným automaticky generovaným slugem, vybrat média, vložit veřejný publisher klíč, vytvořit token, přijmout podepsané vydání, schválit certifikát, projít kontrolní obrazovku a zveřejnit koncept.
 2. S NVDA a Firefoxem ověřit souhrn i vazbu chyb na pole, tabulky aplikací/vydání/tokenů, kontrolní metadata a potvrzení nevratných akcí.
 3. Ověřit katalog, detail aplikace a vydání při zoomu 200 % a 400 %.
 4. Ověřit veřejné i administrační obrazovky při šířce 320 CSS px bez ztráty obsahu nebo ovládání.
@@ -120,6 +120,6 @@ Před stabilním vydáním projít:
 
 - Plná kompatibilita konkrétní vlastní šablony je odpovědností jejího autora; tento report pokrývá defaultní šablonu Kora CMS.
 - Kvalitu alternativních textů a release notes nelze automaticky rozhodnout. Audit kontroluje dostupnost polí a upozornění, nikoli významovou správnost textu.
-- Server bez Android SDK nástrojů `apkanalyzer` a `apksigner` nemůže přijímat ani publikovat vydání. Jde o záměrné bezpečné selhání, nikoli o podporovaný fallback workflow.
+- Server bez Android SDK nástrojů `apkanalyzer` a `apksigner` podporuje vydání přes podepsaný lokální publisher, pokud má PHP OpenSSL. Bez Android SDK i OpenSSL se upload bezpečně odmítne.
 - Lokální publisher je konzolový nástroj bez grafického rozhraní. Chyby jsou čistý text a lze je číst odečítačem terminálu; jeho konkrétní přístupnost závisí také na použitém terminálu.
 - Ruční NVDA, zoom a mobilní scénáře zůstávají release checklistem. Automatizované kontroly nesmějí být vydávány za náhradu těchto testů.

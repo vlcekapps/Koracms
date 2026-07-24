@@ -132,6 +132,7 @@ $appmarketIndexViewSource = is_file(__DIR__ . '/../themes/default/views/modules/
 $appmarketAppViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') : '';
 $appmarketReleaseViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-release.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-release.php') : '';
 $appmarketPublisherSource = is_file(__DIR__ . '/../tools/appmarket-publish.ps1') ? (string) file_get_contents(__DIR__ . '/../tools/appmarket-publish.ps1') : '';
+$appmarketAttestToolSource = is_file(__DIR__ . '/../tools/appmarket-attest.php') ? (string) file_get_contents(__DIR__ . '/../tools/appmarket-attest.php') : '';
 $phpstanBootstrapSource = is_file(__DIR__ . '/phpstan_bootstrap.php') ? (string) file_get_contents(__DIR__ . '/phpstan_bootstrap.php') : '';
 $ciWorkflowSource = is_file(__DIR__ . '/../.github/workflows/ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/ci.yml') : '';
 $fullCiWorkflowSource = is_file(__DIR__ . '/../.github/workflows/full-ci.yml') ? (string) file_get_contents(__DIR__ . '/../.github/workflows/full-ci.yml') : '';
@@ -22913,9 +22914,19 @@ foreach ([
     ) !== 1) {
         $appmarketIssues[] = $schemaLabel . ' must create Appmarket signing certificates as inactive by default';
     }
-    if (!str_contains($schemaSource, "metadata_source    ENUM('apk') NOT NULL DEFAULT 'apk'")
-        || str_contains($schemaSource, "ENUM('apk','bundle_manifest')")) {
-        $appmarketIssues[] = $schemaLabel . ' must persist only independently verified APK metadata';
+    foreach ([
+        "metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk'",
+        'publisher_token_id INT',
+        "attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256'",
+        'attestation_public_key TEXT',
+        'attestation_key_fingerprint CHAR(64)',
+        'idx_appmarket_releases_publisher_token',
+        'idx_appmarket_publish_tokens_attestation',
+    ] as $appmarketSchemaFragment) {
+        if (!str_contains($schemaSource, $appmarketSchemaFragment)) {
+            $appmarketIssues[] = $schemaLabel . ' is missing signed publisher schema fragment: '
+                . $appmarketSchemaFragment;
+        }
     }
 }
 if (!roleHasCapability('admin', 'appmarket_manage')
@@ -22935,6 +22946,15 @@ foreach ([
     'function appmarketPrivateApkPath',
     'function appmarketGeneratePublishToken',
     "return hash('sha256', \$token);",
+    'function appmarketBearerToken',
+    'function appmarketNormalizeReleaseNotes',
+    'function appmarketNormalizeAttestationPublicKey',
+    'function appmarketAttestationKeyFingerprint',
+    'function appmarketAttestationMessage',
+    'function appmarketVerifyPublisherAttestation',
+    'openssl_verify(',
+    "metadata_source' => 'publisher_attestation'",
+    'publisher_token_id',
     'function appmarketAuthenticatePublishToken',
     'function appmarketRunAndroidTool',
     'proc_open(',
@@ -22952,10 +22972,13 @@ foreach ([
     'appmarketMaxArchiveEntries()',
     'chmod($targetPath, 0640)',
     'Server nemá dostupné nástroje apkanalyzer a apksigner; APK nelze nezávisle ověřit.',
+    'Server nemá Android SDK nástroje. Nahrajte vydání přes lokální publisher s platně podepsaným manifestem.',
+    'Kryptografický podpis publisher manifestu není platný.',
+    'Nahrané APK neodpovídá velikosti nebo SHA-256 v podepsaném manifestu.',
     'Appmarket přijímá jen produkční release APK; debug a QA sestavení jsou zakázaná.',
     'Velikost uloženého APK nesouhlasí.',
     'Kontrolní součet uloženého APK nesouhlasí.',
-    'Opakovaná kontrola APK zjistila jiný versionName.',
+    "\$comparisonIssues[] = \$prefix . ' zjistila jiný údaj: ' . \$definition['label'] . '.';",
     'Podpisový certifikát vydání není schválený.',
 ] as $appmarketHelperFragment) {
     if (!str_contains($appmarketHelperSource, $appmarketHelperFragment)) {
@@ -22995,7 +23018,10 @@ if (!str_contains($adminAppmarketFormSource, '<fieldset>')
 }
 if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Produkční balíček</legend>')
     || !str_contains($adminAppmarketReleaseFormSource, 'aria-invalid="true"')
-    || !str_contains($adminAppmarketReleaseFormSource, 'Server nemá oba Android nástroje.')
+    || !str_contains(
+        $adminAppmarketReleaseFormSource,
+        'Server nemá oba Android nástroje, ale podporuje kryptograficky podepsaná vydání'
+    )
     || !str_contains($adminAppmarketReleaseFormSource, 'maxlength="<?= appmarketReleaseNotesMaxLength() ?>"')
     || !str_contains($adminAppmarketReleaseActionSource, "requireHttpMethods(['POST'])")
     || !str_contains($adminAppmarketReleaseActionSource, 'verifyCsrf();')
@@ -23020,6 +23046,10 @@ if (!str_contains($adminAppmarketCertificatesSource, 'requireSuperAdmin();')
     || !str_contains($adminAppmarketTokensSource, 'requireSuperAdmin();')
     || !str_contains($adminAppmarketTokensSource, 'id="appmarket-token-name-error"')
     || !str_contains($adminAppmarketTokensSource, 'id="appmarket-token-expiry-error"')
+    || !str_contains($adminAppmarketTokensSource, 'id="appmarket-token-public-key-error"')
+    || !str_contains($adminAppmarketTokensSource, 'name="attestation_public_key"')
+    || !str_contains($adminAppmarketTokensSource, 'appmarketNormalizeAttestationPublicKey(')
+    || !str_contains($adminAppmarketTokensSource, '<legend>Identifikace, ověřovací klíč a platnost</legend>')
     || !str_contains($adminAppmarketTokensSource, 'name="confirm_revoke"')) {
     $appmarketIssues[] = 'Appmarket certificate and token forms must expose field errors, confirmations and POST/Redirect/GET safety';
 }
@@ -23029,6 +23059,8 @@ if (!str_contains($appmarketPublishSource, "requireHttpMethods(['POST'])")
     || !str_contains($appmarketPublishSource, 'appmarketAuthenticatePublishToken(')
     || !str_contains($appmarketPublishSource, 'appmarketCreateReleaseDraft(')
     || !str_contains($appmarketPublishSource, 'appmarketMetadataMaxBytes()')
+    || !str_contains($appmarketPublishSource, "'attestation_signature'")
+    || !str_contains($appmarketPublishSource, 'attestation_required')
     || !str_contains($appmarketPublishSource, 'appmarketReleaseNotesValid(')
     || !str_contains($appmarketPublishSource, "'status' => 'draft'")
     || str_contains($appmarketPublishSource, 'appmarketPublishRelease(')) {
@@ -23074,6 +23106,8 @@ if ($appmarketUpdateRoutePosition === false
     || $appmarketPublishRoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketCatalogRoutePosition > $appmarketBlogCatchAllPosition
     || !str_contains($htaccessSource, 'appmarket/publish\.php')
+    || !str_contains($htaccessSource, 'E=HTTP_AUTHORIZATION:%1')
+    || !str_contains($readmeSource, 'fastcgi_param HTTP_AUTHORIZATION $http_authorization;')
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')) {
     $appmarketIssues[] = 'Appmarket routes and publisher privacy headers must precede blog catch-all routes';
 }
@@ -23102,7 +23136,9 @@ if (!str_contains($appmarketIndexSource, 'appmarketAppPublicVisibilitySql(')
 }
 foreach ([
     "GetEnvironmentVariable('KORA_APPMARKET_TOKEN', 'Process')",
+    "GetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', 'Process')",
     "SetEnvironmentVariable('KORA_APPMARKET_TOKEN', \$null, 'Process')",
+    "SetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', \$null, 'Process')",
     'Assert-CleanRepository',
     "Find-AndroidSdkTool -Name 'apkanalyzer'",
     "Find-AndroidSdkTool -Name 'apksigner'",
@@ -23113,10 +23149,37 @@ foreach ([
     '$ReleaseNotes.Length -gt 50000',
     'Soubor s poznámkami k vydání musí ležet uvnitř ověřovaného Git repozitáře.',
     'GetByteCount($metadataJson) -gt 65536',
+    "attestation_type = 'kora-appmarket-release'",
+    "attestation_algorithm = 'rsa-sha256'",
+    'release_notes_sha256 = Get-TextSha256',
+    "'sign',",
+    "'attestation_signature'",
     "\$payload.status -eq 'draft'",
 ] as $appmarketPublisherFragment) {
     if (!str_contains($appmarketPublisherSource, $appmarketPublisherFragment)) {
         $appmarketIssues[] = 'Local Appmarket publisher is missing safety fragment: ' . $appmarketPublisherFragment;
+    }
+}
+foreach ([
+    'KORA-APPMARKET-ATTESTATION-V1',
+    'KORA_APPMARKET_RSA_BITS = 3072',
+    'openssl_pkey_new(',
+    'openssl_pkey_export($privateKey, $privatePem, null, $keyOptions)',
+    'openssl_sign(',
+    'OPENSSL_ALGO_SHA256',
+    "PHP_SAPI !== 'cli'",
+] as $appmarketAttestToolFragment) {
+    if (!str_contains($appmarketAttestToolSource, $appmarketAttestToolFragment)) {
+        $appmarketIssues[] = 'Local Appmarket attestation tool is missing security fragment: '
+            . $appmarketAttestToolFragment;
+    }
+}
+foreach ([
+    $releasePackageAuditSource,
+    $releaseSmokeSource,
+] as $appmarketPackageGuardSource) {
+    if (!str_contains($appmarketPackageGuardSource, 'tools/appmarket-attest.php')) {
+        $appmarketIssues[] = 'Appmarket attestation helper must be required in release packages';
     }
 }
 if (!str_contains($dbSource, "require_once __DIR__ . '/lib/appmarket.php';")) {
@@ -23156,6 +23219,8 @@ foreach ([
     'Odpovědnost správce obsahu',
     'Automatizovaný důkaz',
     'Ruční ověření',
+    'OpenSSL',
+    'podepsan',
 ] as $appmarketAccessibilityFragment) {
     if (!str_contains($appmarketAccessibilitySource, $appmarketAccessibilityFragment)) {
         $appmarketIssues[] = 'Appmarket accessibility report is missing fragment: ' . $appmarketAccessibilityFragment;

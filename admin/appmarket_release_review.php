@@ -19,7 +19,7 @@ $permissions = json_decode((string)($release['permissions_json'] ?? ''), true);
 $permissions = is_array($permissions)
     ? array_values(array_filter(array_map('strval', $permissions), static fn (string $value): bool => $value !== ''))
     : [];
-$publicationIssues = appmarketReleasePublicationIssues($release);
+$publicationIssues = appmarketReleasePublicationIssues($pdo, $release);
 $noticeError = trim((string)($_SESSION['appmarket_notice_error'] ?? ''));
 unset($_SESSION['appmarket_notice_error']);
 
@@ -51,12 +51,21 @@ adminHeader('Kontrola vydání Appmarketu');
     <div>
       <dt>Zdroj metadat</dt>
       <dd>
-        <?= (string)$release['metadata_source'] === 'apk'
-            && !empty($analysis['tool_verified'])
-              ? 'Nezávisle ověřeno serverovými Android nástroji'
-              : 'Neověřený zdroj, publikace je blokovaná' ?>
+        <?php if ((string)$release['metadata_source'] === 'apk' && !empty($analysis['tool_verified'])): ?>
+          Nezávisle ověřeno serverovými Android nástroji
+        <?php elseif ((string)$release['metadata_source'] === 'publisher_attestation' && !empty($analysis['attestation_verified'])): ?>
+          Ověřeno kryptograficky podepsaným lokálním publisherem
+        <?php else: ?>
+          Neověřený zdroj, publikace je blokovaná
+        <?php endif; ?>
       </dd>
     </div>
+    <?php if ((string)$release['metadata_source'] === 'publisher_attestation'): ?>
+      <div>
+        <dt>Publisher klíč</dt>
+        <dd><code class="break-long-token"><?= h((string)($analysis['attestation_key_fingerprint'] ?? 'neuveden')) ?></code></dd>
+      </div>
+    <?php endif; ?>
     <?php if ($release['min_sdk'] !== null): ?><div><dt>Minimální SDK</dt><dd><?= (int)$release['min_sdk'] ?></dd></div><?php endif; ?>
     <?php if ($release['target_sdk'] !== null): ?><div><dt>Cílové SDK</dt><dd><?= (int)$release['target_sdk'] ?></dd></div><?php endif; ?>
   </dl>

@@ -56,9 +56,29 @@ function appmarketMaxArchiveEntries(): int
     return 32;
 }
 
+function appmarketAttestationSignatureMaxBytes(): int
+{
+    return 2048;
+}
+
+function appmarketAttestationPublicKeyMaxBytes(): int
+{
+    return 4096;
+}
+
+function appmarketAttestationMaxAgeSeconds(): int
+{
+    return 86400;
+}
+
 function appmarketReleaseNotesValid(string $releaseNotes): bool
 {
-    return mb_strlen($releaseNotes) <= appmarketReleaseNotesMaxLength();
+    return mb_strlen(appmarketNormalizeReleaseNotes($releaseNotes)) <= appmarketReleaseNotesMaxLength();
+}
+
+function appmarketNormalizeReleaseNotes(string $releaseNotes): string
+{
+    return trim(str_replace(["\r\n", "\r"], "\n", $releaseNotes));
 }
 
 function appmarketNormalizePackageId(?string $packageId): string
@@ -258,6 +278,101 @@ function appmarketGeneratePublishToken(): array
         'prefix' => substr($token, 0, 12),
         'hash' => appmarketHashPublishToken($token),
     ];
+}
+
+function appmarketAttestationAlgorithm(): string
+{
+    return 'rsa-sha256';
+}
+
+function appmarketAttestationOpenSslAvailable(): bool
+{
+    return function_exists('openssl_pkey_get_public')
+        && function_exists('openssl_pkey_get_details')
+        && function_exists('openssl_verify')
+        && defined('OPENSSL_ALGO_SHA256')
+        && defined('OPENSSL_KEYTYPE_RSA');
+}
+
+function appmarketNormalizeAttestationPublicKey(?string $publicKey): string
+{
+    $normalized = trim((string)$publicKey);
+    if ($normalized === ''
+        || strlen($normalized) > appmarketAttestationPublicKeyMaxBytes()
+        || !appmarketAttestationOpenSslAvailable()
+    ) {
+        return '';
+    }
+
+    $key = openssl_pkey_get_public($normalized);
+    if ($key === false) {
+        return '';
+    }
+    $details = openssl_pkey_get_details($key);
+    if (!is_array($details)
+        || (int)($details['type'] ?? -1) !== OPENSSL_KEYTYPE_RSA
+        || (int)($details['bits'] ?? 0) < 3072
+        || !is_string($details['key'] ?? null)
+    ) {
+        return '';
+    }
+
+    return trim($details['key']) . "\n";
+}
+
+function appmarketAttestationKeyFingerprint(?string $publicKey): string
+{
+    $normalized = appmarketNormalizeAttestationPublicKey($publicKey);
+    if ($normalized === '') {
+        return '';
+    }
+
+    $base64 = preg_replace(
+        '/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s+/',
+        '',
+        $normalized
+    );
+    $der = is_string($base64) ? base64_decode($base64, true) : false;
+
+    return is_string($der) && $der !== '' ? hash('sha256', $der) : '';
+}
+
+function appmarketNormalizeAttestationSignature(?string $signature): string
+{
+    $normalized = preg_replace('/\s+/', '', trim((string)$signature));
+    if (!is_string($normalized) || $normalized === '') {
+        return '';
+    }
+    $decoded = base64_decode($normalized, true);
+    if (!is_string($decoded)
+        || $decoded === ''
+        || strlen($decoded) > appmarketAttestationSignatureMaxBytes()
+    ) {
+        return '';
+    }
+
+    return base64_encode($decoded);
+}
+
+function appmarketAttestationMessage(string $manifestJson): string
+{
+    return "KORA-APPMARKET-ATTESTATION-V1\n" . $manifestJson;
+}
+
+function appmarketReleaseNotesSha256(string $releaseNotes): string
+{
+    return hash('sha256', appmarketNormalizeReleaseNotes($releaseNotes));
+}
+
+function appmarketAttestationIssuedAtValid(?string $issuedAt, ?int $now = null): bool
+{
+    $timestamp = strtotime(trim((string)$issuedAt));
+    $currentTime = $now ?? time();
+    if ($timestamp === false || $timestamp > $currentTime + 300) {
+        return false;
+    }
+
+    return $timestamp >= $currentTime - appmarketAttestationMaxAgeSeconds();
 }
 
 /**
@@ -598,7 +713,7 @@ function appmarketFindPublicRelease(PDO $pdo, int $appId, int $versionCode): ?ar
  * @param array<string,mixed> $release
  * @return list<string>
  */
-function appmarketReleasePublicationIssues(array $release): array
+function appmarketReleasePublicationIssues(PDO $pdo, array $release): array
 {
     $issues = [];
     if (appmarketNormalizePackageId((string)($release['package_id_snapshot'] ?? '')) === ''
@@ -610,51 +725,113 @@ function appmarketReleasePublicationIssues(array $release): array
         $issues[] = 'Vydání nemá platný versionCode.';
     }
     $path = appmarketPrivateApkPath((string)($release['apk_storage_name'] ?? ''));
+    $fileReady = true;
     if ($path === '' || !is_file($path) || !is_readable($path)) {
         $issues[] = 'Soukromě uložený APK soubor není dostupný.';
+        $fileReady = false;
     } elseif (filesize($path) !== (int)($release['apk_size'] ?? 0)) {
         $issues[] = 'Velikost uloženého APK nesouhlasí.';
+        $fileReady = false;
     } elseif (appmarketNormalizeSha256((string)hash_file('sha256', $path))
         !== appmarketNormalizeSha256((string)($release['apk_sha256'] ?? ''))
     ) {
         $issues[] = 'Kontrolní součet uloženého APK nesouhlasí.';
-    } else {
-        $verifiedAnalysis = appmarketAnalyzeApk($path);
-        if (!$verifiedAnalysis['ok']) {
-            foreach ($verifiedAnalysis['errors'] as $analysisError) {
-                $issues[] = 'Opakovaná kontrola APK: ' . $analysisError;
-            }
-        } else {
-            $verifiedMetadata = $verifiedAnalysis['metadata'];
-            if ((string)($verifiedMetadata['package_id'] ?? '')
-                !== (string)($release['package_id_snapshot'] ?? '')
-            ) {
-                $issues[] = 'Opakovaná kontrola APK zjistila jiné applicationId.';
-            }
-            if ((int)($verifiedMetadata['version_code'] ?? 0)
-                !== (int)($release['version_code'] ?? 0)
-            ) {
-                $issues[] = 'Opakovaná kontrola APK zjistila jiný versionCode.';
-            }
-            if ((string)($verifiedMetadata['version_name'] ?? '')
-                !== (string)($release['version_name'] ?? '')
-            ) {
-                $issues[] = 'Opakovaná kontrola APK zjistila jiný versionName.';
-            }
-            if ((string)($verifiedMetadata['certificate_sha256'] ?? '')
-                !== (string)($release['certificate_fingerprint_sha256'] ?? '')
-            ) {
-                $issues[] = 'Opakovaná kontrola APK zjistila jiný podpisový certifikát.';
+        $fileReady = false;
+    }
+
+    $storedAnalysis = json_decode((string)($release['analysis_json'] ?? ''), true);
+    $metadataSource = (string)($release['metadata_source'] ?? '');
+    $compareMetadata = static function (array $metadata, string $prefix) use ($release): array {
+        $comparisonIssues = [];
+        foreach ([
+            'package_id' => ['release_key' => 'package_id_snapshot', 'label' => 'applicationId', 'integer' => false],
+            'version_code' => ['release_key' => 'version_code', 'label' => 'versionCode', 'integer' => true],
+            'version_name' => ['release_key' => 'version_name', 'label' => 'versionName', 'integer' => false],
+            'certificate_sha256' => [
+                'release_key' => 'certificate_fingerprint_sha256',
+                'label' => 'podpisový certifikát',
+                'integer' => false,
+            ],
+            'apk_sha256' => ['release_key' => 'apk_sha256', 'label' => 'SHA-256 APK', 'integer' => false],
+        ] as $metadataKey => $definition) {
+            $actual = !empty($definition['integer'])
+                ? (int)($metadata[$metadataKey] ?? 0)
+                : (string)($metadata[$metadataKey] ?? '');
+            $expected = !empty($definition['integer'])
+                ? (int)($release[$definition['release_key']] ?? 0)
+                : (string)($release[$definition['release_key']] ?? '');
+            if ($actual !== $expected) {
+                $comparisonIssues[] = $prefix . ' zjistila jiný údaj: ' . $definition['label'] . '.';
             }
         }
+
+        return $comparisonIssues;
+    };
+
+    if ($metadataSource === 'apk') {
+        if (!is_array($storedAnalysis) || empty($storedAnalysis['tool_verified'])) {
+            $issues[] = 'Vydání nemá úplný záznam nezávislého serverového ověření APK.';
+        }
+        if ($fileReady) {
+            $verifiedAnalysis = appmarketAnalyzeApk($path);
+            if (!$verifiedAnalysis['ok']) {
+                foreach ($verifiedAnalysis['errors'] as $analysisError) {
+                    $issues[] = 'Opakovaná kontrola APK: ' . $analysisError;
+                }
+            } else {
+                $issues = array_merge(
+                    $issues,
+                    $compareMetadata($verifiedAnalysis['metadata'], 'Opakovaná kontrola APK')
+                );
+            }
+        }
+    } elseif ($metadataSource === 'publisher_attestation') {
+        $publisherTokenId = (int)($release['publisher_token_id'] ?? 0);
+        if (!is_array($storedAnalysis)
+            || empty($storedAnalysis['attestation_verified'])
+            || $publisherTokenId <= 0
+        ) {
+            $issues[] = 'Vydání nemá úplný záznam kryptograficky ověřené publisher attestation.';
+        } elseif ($fileReady) {
+            $attestation = appmarketVerifyPublisherAttestation(
+                $pdo,
+                (int)($release['app_id'] ?? 0),
+                (string)($storedAnalysis['manifest_json'] ?? ''),
+                (string)($storedAnalysis['signature'] ?? ''),
+                (string)($release['release_notes'] ?? ''),
+                $path,
+                $publisherTokenId,
+                false
+            );
+            if (!$attestation['ok']) {
+                foreach ($attestation['errors'] as $attestationError) {
+                    $issues[] = 'Opakovaná kontrola publisher podpisu: ' . $attestationError;
+                }
+            } else {
+                $issues = array_merge(
+                    $issues,
+                    $compareMetadata($attestation['metadata'], 'Podepsaný publisher manifest')
+                );
+            }
+
+            if (appmarketAndroidToolsAvailable()) {
+                $verifiedAnalysis = appmarketAnalyzeApk($path);
+                if (!$verifiedAnalysis['ok']) {
+                    foreach ($verifiedAnalysis['errors'] as $analysisError) {
+                        $issues[] = 'Volitelná serverová kontrola APK: ' . $analysisError;
+                    }
+                } else {
+                    $issues = array_merge(
+                        $issues,
+                        $compareMetadata($verifiedAnalysis['metadata'], 'Volitelná serverová kontrola APK')
+                    );
+                }
+            }
+        }
+    } else {
+        $issues[] = 'Vydání nemá podporovaný zdroj ověřených metadat.';
     }
-    $storedAnalysis = json_decode((string)($release['analysis_json'] ?? ''), true);
-    if ((string)($release['metadata_source'] ?? '') !== 'apk'
-        || !is_array($storedAnalysis)
-        || empty($storedAnalysis['tool_verified'])
-    ) {
-        $issues[] = 'Vydání nemá úplný záznam nezávislého serverového ověření APK.';
-    }
+
     if ((int)($release['certificate_id'] ?? 0) <= 0
         || (int)($release['certificate_is_active'] ?? 0) !== 1
         || appmarketNormalizeCertificateFingerprint((string)($release['certificate_fingerprint_sha256'] ?? '')) === ''
@@ -805,6 +982,12 @@ function appmarketFindAndroidTool(string $tool): string
 
     $cache[$normalizedTool] = '';
     return '';
+}
+
+function appmarketAndroidToolsAvailable(): bool
+{
+    return appmarketFindAndroidTool('apkanalyzer') !== ''
+        && appmarketFindAndroidTool('apksigner') !== '';
 }
 
 /**
@@ -1104,6 +1287,7 @@ function appmarketFileHasZipSignature(string $path): bool
 }
 
 /**
+ * @param array<string,mixed> $app
  * @param array<string,mixed> $file
  * @return array{
  *     ok:bool,
@@ -1112,11 +1296,20 @@ function appmarketFileHasZipSignature(string $path): bool
  *     apk_original_name:string,
  *     source_is_upload:bool,
  *     cleanup_paths:list<string>,
- *     analysis:array<string,mixed>
+ *     analysis:array<string,mixed>,
+ *     publisher_token_id:int
  * }
  */
-function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): array
-{
+function appmarketInspectReleaseUpload(
+    PDO $pdo,
+    array $app,
+    array $file,
+    string $releaseNotes,
+    string $metadataJson = '',
+    string $attestationSignature = '',
+    ?int $expectedPublisherTokenId = null
+): array {
+    $releaseNotes = appmarketNormalizeReleaseNotes($releaseNotes);
     $emptyResult = [
         'ok' => false,
         'errors' => [],
@@ -1125,9 +1318,18 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
         'source_is_upload' => false,
         'cleanup_paths' => [],
         'analysis' => [],
+        'publisher_token_id' => 0,
     ];
     if (strlen($metadataJson) > appmarketMetadataMaxBytes()) {
         $emptyResult['errors'][] = 'Metadata vydání překračují bezpečný limit 64 KiB.';
+        return $emptyResult;
+    }
+    if ((int)($app['id'] ?? 0) <= 0 || !appmarketReleaseNotesValid($releaseNotes)) {
+        $emptyResult['errors'][] = 'Aplikace nebo seznam změn nejsou platné.';
+        return $emptyResult;
+    }
+    if (strlen($attestationSignature) > appmarketAttestationSignatureMaxBytes() * 2) {
+        $emptyResult['errors'][] = 'Publisher podpis překračuje bezpečný limit.';
         return $emptyResult;
     }
 
@@ -1183,6 +1385,7 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
         }
 
         $manifestIndex = $archive->locateName('release.json', ZipArchive::FL_NOCASE);
+        $signatureIndex = $archive->locateName('release.sig', ZipArchive::FL_NOCASE);
         $apkIndex = false;
         for ($index = 0; $index < $archive->numFiles; $index++) {
             $entryName = (string)$archive->getNameIndex($index);
@@ -1207,6 +1410,7 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
 
         $archiveApkName = (string)$archive->getNameIndex((int)$apkIndex);
         $manifestStat = $archive->statIndex((int)$manifestIndex);
+        $signatureStat = $signatureIndex !== false ? $archive->statIndex((int)$signatureIndex) : null;
         $apkStat = $archive->statIndex((int)$apkIndex);
         if (!is_array($manifestStat)
             || !is_array($apkStat)
@@ -1217,6 +1421,15 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
         ) {
             $archive->close();
             $emptyResult['errors'][] = 'Publisher balíček obsahuje neplatně velký manifest nebo APK.';
+            return $emptyResult;
+        }
+        if ($signatureIndex !== false
+            && (!is_array($signatureStat)
+                || $signatureStat['size'] <= 0
+                || $signatureStat['size'] > appmarketAttestationSignatureMaxBytes() * 2)
+        ) {
+            $archive->close();
+            $emptyResult['errors'][] = 'Publisher balíček obsahuje neplatně velký podpis.';
             return $emptyResult;
         }
 
@@ -1232,10 +1445,20 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
                 throw new JsonException('Manifest must be an object.');
             }
             $fallbackMetadata = $decoded;
+            $metadataJson = $manifestJson;
         } catch (JsonException $e) {
             $archive->close();
             $emptyResult['errors'][] = 'release.json v publisher balíčku není platný JSON.';
             return $emptyResult;
+        }
+        if ($signatureIndex !== false) {
+            $bundleSignature = $archive->getFromIndex((int)$signatureIndex);
+            if (!is_string($bundleSignature)) {
+                $archive->close();
+                $emptyResult['errors'][] = 'Podpis publisher balíčku se nepodařilo načíst.';
+                return $emptyResult;
+            }
+            $attestationSignature = trim($bundleSignature);
         }
 
         if (!appmarketPrivateStorageIsSafe()
@@ -1278,7 +1501,73 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
         );
     }
 
-    $analysis = appmarketAnalyzeApk($apkPath, $fallbackMetadata);
+    $attestation = null;
+    if (trim($metadataJson) !== '' || trim($attestationSignature) !== '') {
+        if (trim($metadataJson) === '' || trim($attestationSignature) === '') {
+            foreach ($cleanupPaths as $cleanupPath) {
+                if (is_file($cleanupPath)) {
+                    unlink($cleanupPath);
+                }
+            }
+            $emptyResult['errors'][] = 'Podepsaný publisher upload musí obsahovat manifest i jeho podpis.';
+            return $emptyResult;
+        }
+        $attestation = appmarketVerifyPublisherAttestation(
+            $pdo,
+            (int)$app['id'],
+            $metadataJson,
+            $attestationSignature,
+            $releaseNotes,
+            $apkPath,
+            $expectedPublisherTokenId
+        );
+        if (!$attestation['ok']) {
+            foreach ($cleanupPaths as $cleanupPath) {
+                if (is_file($cleanupPath)) {
+                    unlink($cleanupPath);
+                }
+            }
+            $emptyResult['errors'] = $attestation['errors'];
+            return $emptyResult;
+        }
+        $fallbackMetadata = $attestation['metadata'];
+    }
+
+    if (appmarketAndroidToolsAvailable()) {
+        $analysis = appmarketAnalyzeApk($apkPath, $fallbackMetadata);
+        if (!empty($analysis['ok']) && is_array($attestation)) {
+            $storedAnalysis = json_decode($analysis['analysis_json'], true);
+            if (!is_array($storedAnalysis)) {
+                $storedAnalysis = [];
+            }
+            $storedAnalysis['attestation_verified'] = true;
+            $storedAnalysis['attestation_algorithm'] = appmarketAttestationAlgorithm();
+            $storedAnalysis['attestation_key_fingerprint'] = $attestation['key_fingerprint'];
+            $storedAnalysis['publisher_token_id'] = $attestation['publisher_token_id'];
+            $storedAnalysis['manifest_json'] = $attestation['manifest_json'];
+            $storedAnalysis['signature'] = $attestation['signature'];
+            $analysis['analysis_json'] = appmarketNormalizeJsonMetadata($storedAnalysis);
+            $analysis['attestation_verified'] = true;
+        }
+    } elseif (is_array($attestation)) {
+        $analysis = [
+            'ok' => true,
+            'errors' => [],
+            'metadata' => $attestation['metadata'],
+            'metadata_source' => 'publisher_attestation',
+            'tool_verified' => false,
+            'attestation_verified' => true,
+            'analysis_json' => $attestation['analysis_json'],
+        ];
+    } else {
+        $analysis = [
+            'ok' => false,
+            'errors' => [
+                'Server nemá Android SDK nástroje. Nahrajte vydání přes lokální publisher s platně podepsaným manifestem.',
+            ],
+        ];
+    }
+
     if (empty($analysis['ok'])) {
         foreach ($cleanupPaths as $cleanupPath) {
             if (is_file($cleanupPath)) {
@@ -1297,6 +1586,7 @@ function appmarketInspectReleaseUpload(array $file, string $metadataJson = ''): 
         'source_is_upload' => $sourceIsUpload,
         'cleanup_paths' => $cleanupPaths,
         'analysis' => $analysis,
+        'publisher_token_id' => is_array($attestation) ? (int)$attestation['publisher_token_id'] : 0,
     ];
 }
 
@@ -1419,11 +1709,201 @@ function appmarketAuthenticatePublishToken(PDO $pdo, string $token): ?array
     if (!is_array($row)
         || !hash_equals((string)$row['token_hash'], $hash)
         || !in_array('release:create', appmarketNormalizeTokenScopes((string)$row['scopes']), true)
+        || (string)($row['attestation_algorithm'] ?? '') !== appmarketAttestationAlgorithm()
+        || appmarketNormalizeAttestationPublicKey((string)($row['attestation_public_key'] ?? '')) === ''
+        || !hash_equals(
+            appmarketAttestationKeyFingerprint((string)($row['attestation_public_key'] ?? '')),
+            appmarketNormalizeSha256((string)($row['attestation_key_fingerprint'] ?? ''))
+        )
     ) {
         return null;
     }
 
     return $row;
+}
+
+/**
+ * @return array{
+ *     ok:bool,
+ *     errors:list<string>,
+ *     metadata:array<string,mixed>,
+ *     publisher_token_id:int,
+ *     key_fingerprint:string,
+ *     manifest_json:string,
+ *     signature:string,
+ *     analysis_json:string
+ * }
+ */
+function appmarketVerifyPublisherAttestation(
+    PDO $pdo,
+    int $appId,
+    string $manifestJson,
+    string $signature,
+    string $releaseNotes,
+    string $apkPath,
+    ?int $expectedTokenId = null,
+    bool $enforceFreshness = true
+): array {
+    $result = [
+        'ok' => false,
+        'errors' => [],
+        'metadata' => [],
+        'publisher_token_id' => 0,
+        'key_fingerprint' => '',
+        'manifest_json' => '',
+        'signature' => '',
+        'analysis_json' => '[]',
+    ];
+    $normalizedSignature = appmarketNormalizeAttestationSignature($signature);
+    if (!appmarketAttestationOpenSslAvailable()) {
+        $result['errors'][] = 'Server nemá PHP rozšíření OpenSSL potřebné k ověření publisher podpisu.';
+        return $result;
+    }
+    if ($appId <= 0
+        || trim($manifestJson) === ''
+        || strlen($manifestJson) > appmarketMetadataMaxBytes()
+        || $normalizedSignature === ''
+    ) {
+        $result['errors'][] = 'Publisher attestation nemá platný manifest nebo podpis.';
+        return $result;
+    }
+    if (!is_file($apkPath) || !is_readable($apkPath)) {
+        $result['errors'][] = 'APK soubor není čitelný pro ověření publisher attestation.';
+        return $result;
+    }
+
+    try {
+        $decoded = json_decode($manifestJson, true, 32, JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
+        $result['errors'][] = 'Podepsaný publisher manifest není platný JSON.';
+        return $result;
+    }
+    if (!is_array($decoded)) {
+        $result['errors'][] = 'Podepsaný publisher manifest musí být JSON objekt.';
+        return $result;
+    }
+
+    $fingerprint = appmarketNormalizeSha256((string)($decoded['key_fingerprint_sha256'] ?? ''));
+    $algorithm = strtolower(trim((string)($decoded['attestation_algorithm'] ?? '')));
+    $nonce = strtolower(trim((string)($decoded['nonce'] ?? '')));
+    $releaseNotesHash = appmarketNormalizeSha256((string)($decoded['release_notes_sha256'] ?? ''));
+    if ((int)($decoded['schema_version'] ?? 0) !== 2
+        || (string)($decoded['attestation_type'] ?? '') !== 'kora-appmarket-release'
+        || $algorithm !== appmarketAttestationAlgorithm()
+        || $fingerprint === ''
+        || preg_match('/\A[a-f0-9]{32,128}\z/', $nonce) !== 1
+        || ($enforceFreshness && !appmarketAttestationIssuedAtValid((string)($decoded['issued_at'] ?? '')))
+        || (!$enforceFreshness && strtotime((string)($decoded['issued_at'] ?? '')) === false)
+        || $releaseNotesHash === ''
+        || !hash_equals($releaseNotesHash, appmarketReleaseNotesSha256($releaseNotes))
+    ) {
+        $result['errors'][] = 'Publisher manifest nemá platné schéma, čas, nonce nebo vazbu na seznam změn.';
+        return $result;
+    }
+    $sourceCommit = trim((string)($decoded['source_commit'] ?? ''));
+    if ($sourceCommit !== '' && preg_match('/\A[a-f0-9]{40,64}\z/i', $sourceCommit) !== 1) {
+        $result['errors'][] = 'Publisher manifest obsahuje neplatný identifikátor zdrojového commitu.';
+        return $result;
+    }
+
+    $sql = "SELECT *
+            FROM cms_appmarket_publish_tokens
+            WHERE app_id = ?
+              AND attestation_key_fingerprint = ?
+              AND attestation_algorithm = ?
+              AND revoked_at IS NULL";
+    if ($enforceFreshness) {
+        $sql .= ' AND (expires_at IS NULL OR expires_at > NOW())';
+    }
+    $params = [$appId, $fingerprint, appmarketAttestationAlgorithm()];
+    if ($expectedTokenId !== null) {
+        $sql .= ' AND id = ?';
+        $params[] = $expectedTokenId;
+    }
+    $sql .= ' ORDER BY id DESC LIMIT 1';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $token = $stmt->fetch();
+    if (!is_array($token)
+        || !in_array('release:create', appmarketNormalizeTokenScopes((string)($token['scopes'] ?? '')), true)
+    ) {
+        $result['errors'][] = 'Publisher podpis neodpovídá aktivnímu publikačnímu tokenu této aplikace.';
+        return $result;
+    }
+
+    $publicKey = appmarketNormalizeAttestationPublicKey((string)($token['attestation_public_key'] ?? ''));
+    if ($publicKey === ''
+        || !hash_equals($fingerprint, appmarketAttestationKeyFingerprint($publicKey))
+    ) {
+        $result['errors'][] = 'Veřejný publisher klíč není platný nebo neodpovídá uloženému otisku.';
+        return $result;
+    }
+    $signatureBytes = base64_decode($normalizedSignature, true);
+    $verified = is_string($signatureBytes)
+        && openssl_verify(
+            appmarketAttestationMessage($manifestJson),
+            $signatureBytes,
+            $publicKey,
+            OPENSSL_ALGO_SHA256
+        ) === 1;
+    if (!$verified) {
+        $result['errors'][] = 'Kryptografický podpis publisher manifestu není platný.';
+        return $result;
+    }
+
+    $fileSize = filesize($apkPath);
+    $fileHash = hash_file('sha256', $apkPath);
+    $declaredSize = filter_var(
+        $decoded['apk_size'] ?? null,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    $declaredHash = appmarketNormalizeSha256((string)($decoded['apk_sha256'] ?? ''));
+    if (!is_int($fileSize)
+        || !is_string($fileHash)
+        || !is_int($declaredSize)
+        || $fileSize !== $declaredSize
+        || $declaredHash === ''
+        || !hash_equals($declaredHash, appmarketNormalizeSha256($fileHash))
+    ) {
+        $result['errors'][] = 'Nahrané APK neodpovídá velikosti nebo SHA-256 v podepsaném manifestu.';
+        return $result;
+    }
+
+    $metadata = appmarketNormalizeReleaseMetadata($decoded);
+    $metadata['apk_sha256'] = $declaredHash;
+    $metadata['apk_size'] = $fileSize;
+    if ($metadata['package_id'] === ''
+        || $metadata['version_name'] === ''
+        || $metadata['version_code'] === null
+        || $metadata['certificate_sha256'] === ''
+        || $metadata['debuggable']
+        || $metadata['build_type'] !== 'release'
+    ) {
+        $result['errors'][] = 'Podepsaný manifest nepopisuje platné produkční release APK.';
+        return $result;
+    }
+
+    $analysis = [
+        'schema_version' => 2,
+        'tool_verified' => false,
+        'attestation_verified' => true,
+        'attestation_algorithm' => appmarketAttestationAlgorithm(),
+        'attestation_key_fingerprint' => $fingerprint,
+        'publisher_token_id' => (int)$token['id'],
+        'manifest_json' => $manifestJson,
+        'signature' => $normalizedSignature,
+        'metadata' => $metadata,
+    ];
+    $result['ok'] = true;
+    $result['metadata'] = $metadata;
+    $result['publisher_token_id'] = (int)$token['id'];
+    $result['key_fingerprint'] = $fingerprint;
+    $result['manifest_json'] = $manifestJson;
+    $result['signature'] = $normalizedSignature;
+    $result['analysis_json'] = appmarketNormalizeJsonMetadata($analysis);
+
+    return $result;
 }
 
 /**
@@ -1516,6 +1996,7 @@ function appmarketCreateReleaseDraft(
     string $releaseNotes,
     ?int $createdByUserId = null
 ): array {
+    $releaseNotes = appmarketNormalizeReleaseNotes($releaseNotes);
     $errors = [];
     $appId = (int)($app['id'] ?? 0);
     $analysis = is_array($upload['analysis'] ?? null) ? $upload['analysis'] : [];
@@ -1527,11 +2008,15 @@ function appmarketCreateReleaseDraft(
         (string)($metadata['certificate_sha256'] ?? '')
     );
     $sha256 = appmarketNormalizeSha256((string)($metadata['apk_sha256'] ?? ''));
+    $metadataSource = (string)($analysis['metadata_source'] ?? '');
+    $publisherTokenId = (int)($upload['publisher_token_id'] ?? 0);
 
-    if (empty($analysis['tool_verified'])
-        || (string)($analysis['metadata_source'] ?? '') !== 'apk'
+    if (!(($metadataSource === 'apk' && !empty($analysis['tool_verified']))
+        || ($metadataSource === 'publisher_attestation'
+            && !empty($analysis['attestation_verified'])
+            && $publisherTokenId > 0))
     ) {
-        $errors[] = 'APK nebylo nezávisle ověřeno serverovými Android nástroji.';
+        $errors[] = 'APK nebylo ověřeno serverovými Android nástroji ani platnou publisher attestation.';
     }
     if (!appmarketReleaseNotesValid($releaseNotes)) {
         $errors[] = 'Seznam změn může mít nejvýše 50 000 znaků.';
@@ -1598,13 +2083,13 @@ function appmarketCreateReleaseDraft(
              (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
               package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
               certificate_id, certificate_fingerprint_sha256, permissions_json, analysis_json,
-              metadata_source, status, created_by_user_id)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?)"
+              metadata_source, publisher_token_id, status, created_by_user_id)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?)"
         )->execute([
             $appId,
             $versionName,
             $versionCode,
-            trim($releaseNotes),
+            $releaseNotes,
             $metadata['min_sdk'] ?? null,
             $metadata['target_sdk'] ?? null,
             $packageId,
@@ -1616,7 +2101,8 @@ function appmarketCreateReleaseDraft(
             $fingerprint,
             $permissionsJson,
             (string)($analysis['analysis_json'] ?? '[]'),
-            'apk',
+            $metadataSource,
+            $publisherTokenId > 0 ? $publisherTokenId : null,
             $createdByUserId,
         ]);
         $releaseId = (int)$pdo->lastInsertId();
@@ -1652,7 +2138,7 @@ function appmarketPublishRelease(PDO $pdo, int $releaseId, int $userId): array
         return ['ok' => false, 'errors' => ['Zveřejnit lze jen existující koncept vydání.']];
     }
 
-    $issues = appmarketReleasePublicationIssues($release);
+    $issues = appmarketReleasePublicationIssues($pdo, $release);
     $latestPublished = appmarketLatestVersionCode($pdo, (int)$release['app_id'], true);
     if (!appmarketReleaseVersionIsNewer((int)$release['version_code'], $latestPublished)) {
         $issues[] = 'versionCode musí být vyšší než u aktuálně zveřejněného vydání.';

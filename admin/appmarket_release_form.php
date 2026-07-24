@@ -19,6 +19,7 @@ $releaseNotes = (string)($flash['release_notes'] ?? '');
 $releaseNotesError = trim((string)($flash['release_notes_error'] ?? ''));
 $apkanalyzerAvailable = appmarketFindAndroidTool('apkanalyzer') !== '';
 $apksignerAvailable = appmarketFindAndroidTool('apksigner') !== '';
+$attestationAvailable = appmarketAttestationOpenSslAvailable();
 
 adminHeader('Nové vydání aplikace');
 ?>
@@ -43,11 +44,16 @@ adminHeader('Nové vydání aplikace');
   <h2 id="appmarket-analysis-heading">Kontrola APK</h2>
   <?php if ($apkanalyzerAvailable && $apksignerAvailable): ?>
     <p class="success" role="status">Server má dostupný <code>apkanalyzer</code> i <code>apksigner</code> a ověří APK přímo.</p>
+  <?php elseif ($attestationAvailable): ?>
+    <p class="success" role="status">
+      Server nemá oba Android nástroje, ale podporuje kryptograficky podepsaná vydání z lokálního
+      publisheru. Úplnou Android kontrolu provede váš počítač a doména nezávisle ověří podpis
+      manifestu, velikost a SHA-256 APK.
+    </p>
   <?php else: ?>
     <p class="error" role="alert">
-      Server nemá oba Android nástroje. Appmarket z bezpečnostních důvodů nepřevezme metadata
-      pouze od publisheru; před nahráváním zpřístupněte <code>apkanalyzer</code> i
-      <code>apksigner</code> v <code>PATH</code>, <code>ANDROID_SDK_ROOT</code> nebo <code>ANDROID_HOME</code>.
+      Server nemá Android nástroje ani PHP rozšíření OpenSSL. Bez alespoň jednoho bezpečného
+      ověřovacího režimu nelze vydání přijmout.
     </p>
   <?php endif; ?>
   <p>Každé vydání vznikne jako koncept. Zveřejnit ho může až superadmin po schválení podpisového certifikátu.</p>
@@ -68,6 +74,9 @@ adminHeader('Nové vydání aplikace');
            <?= $errors !== [] ? 'aria-invalid="true"' : '' ?>>
     <small id="appmarket-release-file-help" class="field-help">
       Limit je <?= h(koraUploadMaxSizeLabel()) ?> a současně nesmí být nižší PHP limity hostingu.
+      Samostatné APK vyžaduje Android nástroje na serveru. Na hostingu bez nich použijte
+      <code>tools/appmarket-publish.ps1</code>, případně nahrajte <code>.kora-app-release.zip</code>
+      s přesně podepsanými soubory <code>release.json</code> a <code>release.sig</code>.
       Debug a QA APK, duplicitní nebo nižší versionCode a cizí applicationId se odmítnou.
     </small>
     <?php if ($errors !== []): ?>

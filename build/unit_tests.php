@@ -386,6 +386,83 @@ assert_equals(
     appmarketNormalizeTokenScopes('release:create,release:create'),
     'Appmarket accepts and deduplicates the supported publisher scope'
 );
+assert_equals(
+    "První řádek\nDruhý řádek",
+    appmarketNormalizeReleaseNotes(" \r\nPrvní řádek\r\nDruhý řádek\r\n "),
+    'Appmarket canonicalizes release-note line endings before signing'
+);
+assert_equals(
+    hash('sha256', "První řádek\nDruhý řádek"),
+    appmarketReleaseNotesSha256("První řádek\r\nDruhý řádek\r\n"),
+    'Appmarket binds publisher attestations to canonical release notes'
+);
+assert_true(
+    appmarketAttestationIssuedAtValid(gmdate('Y-m-d\TH:i:s\Z')),
+    'Appmarket accepts a fresh publisher attestation timestamp'
+);
+assert_false(
+    appmarketAttestationIssuedAtValid(
+        gmdate('Y-m-d\TH:i:s\Z', time() - appmarketAttestationMaxAgeSeconds() - 60)
+    ),
+    'Appmarket rejects an expired publisher attestation timestamp'
+);
+assert_true(appmarketAttestationOpenSslAvailable(), 'Appmarket publisher attestation requires PHP OpenSSL');
+$appmarketUnitOpenSslConfig = dirname(PHP_BINARY) . DIRECTORY_SEPARATOR
+    . 'extras' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'openssl.cnf';
+$appmarketPublisherKeyOptions = [
+    'private_key_bits' => 3072,
+    'private_key_type' => OPENSSL_KEYTYPE_RSA,
+];
+if (is_file($appmarketUnitOpenSslConfig)) {
+    $appmarketPublisherKeyOptions['config'] = $appmarketUnitOpenSslConfig;
+}
+$appmarketPublisherKey = openssl_pkey_new($appmarketPublisherKeyOptions);
+assert_true($appmarketPublisherKey !== false, 'Appmarket test can generate an RSA publisher key');
+if ($appmarketPublisherKey !== false) {
+    $appmarketPublisherKeyDetails = openssl_pkey_get_details($appmarketPublisherKey);
+    assert_true(is_array($appmarketPublisherKeyDetails), 'Appmarket reads publisher public-key details');
+    if (is_array($appmarketPublisherKeyDetails)) {
+        $appmarketPublisherPublicKey = appmarketNormalizeAttestationPublicKey(
+            is_string($appmarketPublisherKeyDetails['key'] ?? null)
+                ? $appmarketPublisherKeyDetails['key']
+                : ''
+        );
+        $appmarketPublisherFingerprint = appmarketAttestationKeyFingerprint($appmarketPublisherPublicKey);
+        assert_true(
+            preg_match('/\A[a-f0-9]{64}\z/', $appmarketPublisherFingerprint) === 1,
+            'Appmarket derives a stable SHA-256 fingerprint from an RSA publisher key'
+        );
+        $appmarketSignedManifest = '{"schema_version":2}';
+        $appmarketPublisherSignature = '';
+        $appmarketPublisherSigned = openssl_sign(
+            appmarketAttestationMessage($appmarketSignedManifest),
+            $appmarketPublisherSignature,
+            $appmarketPublisherKey,
+            OPENSSL_ALGO_SHA256
+        );
+        assert_true($appmarketPublisherSigned, 'Appmarket test signs the exact publisher manifest');
+        assert_equals(
+            1,
+            openssl_verify(
+                appmarketAttestationMessage($appmarketSignedManifest),
+                $appmarketPublisherSignature,
+                $appmarketPublisherPublicKey,
+                OPENSSL_ALGO_SHA256
+            ),
+            'Appmarket verifies an unchanged publisher manifest'
+        );
+        assert_equals(
+            0,
+            openssl_verify(
+                appmarketAttestationMessage($appmarketSignedManifest . ' '),
+                $appmarketPublisherSignature,
+                $appmarketPublisherPublicKey,
+                OPENSSL_ALGO_SHA256
+            ),
+            'Appmarket rejects any publisher manifest byte change'
+        );
+    }
+}
 assert_true(
     appmarketReleaseNotesValid(str_repeat('a', appmarketReleaseNotesMaxLength())),
     'Appmarket accepts release notes at the configured limit'
@@ -398,6 +475,22 @@ $appmarketToken = appmarketGeneratePublishToken();
 assert_true(str_starts_with($appmarketToken['token'], 'kam_'), 'Appmarket publish token has a recognizable prefix');
 assert_equals(substr($appmarketToken['token'], 0, 12), $appmarketToken['prefix'], 'Appmarket stores only a display-safe token prefix');
 assert_equals(appmarketHashPublishToken($appmarketToken['token']), $appmarketToken['hash'], 'Appmarket stores a one-way token hash');
+$appmarketOriginalServer = $_SERVER;
+$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $appmarketToken['token'];
+unset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+assert_equals(
+    $appmarketToken['token'],
+    appmarketBearerToken(),
+    'Appmarket reads a direct Authorization bearer token'
+);
+unset($_SERVER['HTTP_AUTHORIZATION']);
+$_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = 'Bearer ' . $appmarketToken['token'];
+assert_equals(
+    $appmarketToken['token'],
+    appmarketBearerToken(),
+    'Appmarket reads an Apache/FastCGI forwarded bearer token'
+);
+$_SERVER = $appmarketOriginalServer;
 assert_equals('/aplikace/moje-aplikace', appmarketAppPath('Moje aplikace'), 'Appmarket app path uses a canonical slug');
 assert_equals('/aplikace/moje-aplikace/verze/42', appmarketReleasePath('Moje aplikace', 42), 'Appmarket release path includes versionCode');
 assert_equals('/aplikace/moje-aplikace/stahnout/42', appmarketDownloadPath('Moje aplikace', 42), 'Appmarket download path includes versionCode');

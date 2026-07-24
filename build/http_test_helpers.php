@@ -182,10 +182,17 @@ if (!function_exists('postMultipartUrl')) {
     /**
      * @param array<string,string> $fields
      * @param array<string,array{path:string,filename:string,type?:string}> $files
+     * @param list<string> $extraHeaders
      * @return array{status:string,headers:array<int,string>,body:string}
      */
-    function postMultipartUrl(string $url, array $fields, array $files, string $cookie = '', int $maxRedirects = 20): array
-    {
+    function postMultipartUrl(
+        string $url,
+        array $fields,
+        array $files,
+        string $cookie = '',
+        int $maxRedirects = 20,
+        array $extraHeaders = []
+    ): array {
         $fields = refreshPostFieldsCsrfToken($fields, $cookie);
         $boundary = '----KoraHttpIntegration' . bin2hex(random_bytes(8));
         $eol = "\r\n";
@@ -213,6 +220,11 @@ if (!function_exists('postMultipartUrl')) {
         ];
         if ($cookie !== '') {
             $headers[] = 'Cookie: ' . $cookie;
+        }
+        foreach ($extraHeaders as $extraHeader) {
+            if ($extraHeader !== '' && !str_contains($extraHeader, "\r") && !str_contains($extraHeader, "\n")) {
+                $headers[] = $extraHeader;
+            }
         }
 
         $context = stream_context_create([

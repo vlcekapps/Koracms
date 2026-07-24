@@ -997,29 +997,41 @@ Appmarket slouží k bezpečné distribuci produkčních Android APK a k poskyto
 ### Základní workflow
 
 1. V **Obecných nastaveních → Správa modulů** zapněte `Appmarket`.
-2. Na serveru zpřístupněte Android SDK nástroje `apkanalyzer` a `apksigner` přes `PATH`, `ANDROID_SDK_ROOT` nebo `ANDROID_HOME`. Bez obou nástrojů Appmarket APK nepřijme ani nezveřejní.
+2. Na počítači, ze kterého budete publikovat, zpřístupněte Android SDK nástroje `apkanalyzer` a `apksigner` přes `PATH`, `ANDROID_SDK_ROOT` nebo `ANDROID_HOME`. Na hostingu tyto nástroje být nemusí; server potřebuje PHP rozšíření OpenSSL.
 3. V administraci Appmarketu vytvořte aplikaci. Slug můžete nechat prázdný, CMS jej vytvoří z názvu. `Application ID`, například `cz.example.mojeaplikace`, musí odpovídat produkčnímu Android balíčku. Po prvním vydání už jej nelze změnit. Screenshot lze vybrat jen z veřejného obrázku s doplněným alt textem v knihovně médií.
-4. Nahrajte produkční release APK ručně, nebo pro aplikaci vytvořte publikační token a použijte lokální publisher.
-5. Nově zjištěný podpisový certifikát nejprve zkontrolujte a aktivujte. CMS ukládá jen veřejný SHA-256 fingerprint certifikátu; privátní podpisový klíč ani heslo ke keystoru do CMS nepatří.
+4. Vygenerujte samostatný publisher klíč, vytvořte publikační token svázaný s jeho veřejnou částí a použijte lokální publisher. Samostatné ruční APK lze nahrát jen na serveru, který Android SDK nástroje má.
+5. Nově zjištěný podpisový certifikát APK nejprve zkontrolujte a aktivujte. CMS ukládá jen jeho veřejný SHA-256 fingerprint; Android keystore, privátní publisher klíč ani jejich hesla do CMS nepatří.
 6. Otevřete samostatnou kontrolu konceptu a porovnejte package ID, `versionName`, `versionCode`, SDK, SHA-256 APK, oprávnění, bezpečně vykreslené poznámky k vydání a podpisový certifikát.
-7. Vydání publikujte vědomou potvrzenou akcí. Před uložením CMS APK znovu analyzuje serverovými nástroji. Teprve potom se vydání objeví ve veřejném katalogu a update API.
+7. Vydání publikujte vědomou potvrzenou akcí. CMS znovu ověří uložený soubor a buď serverovou Android analýzu, nebo kryptografický podpis lokálního publisheru. Teprve potom se vydání objeví ve veřejném katalogu a update API.
 
 APK se ukládají do privátního `KORA_STORAGE_DIR`, nikoli do veřejného webrootu. Veřejné stažení vede přes serverový endpoint, který podporuje `GET`, `HEAD` a jeden HTTP Range, při každém požadavku ověřuje velikost i SHA-256 uloženého souboru, nevytváří session cookie a nepoužívá neměnnou roční cache. Fyzickou cestu neposílá do odpovědi ani logu. Zneplatnění podpisového certifikátu automaticky stáhne všechna jeho zveřejněná vydání a aplikaci skryje, pokud už nemá jiné veřejné vydání.
 
 ### Lokální publisher
 
-Publisher je obecný PowerShell skript pro libovolný Android Git projekt a je součástí instalačního ZIPu. Vyžaduje čistý pracovní strom, produkční release APK a nástroje Android SDK `apkanalyzer` a `apksigner`. Odmítne debug/QA/androidTest, nepodepsané, nezarovnané nebo debug certifikátem podepsané artefakty. APK i případný soubor s poznámkami k vydání musí ležet uvnitř ověřovaného repozitáře. Token se z bezpečnostních důvodů nepředává parametrem ani se nevypisuje:
+Publisher je obecný PowerShell skript pro libovolný Android Git projekt a je součástí instalačního ZIPu spolu s podpisovým helperem `tools/appmarket-attest.php`. Vyžaduje lokální PHP s OpenSSL, čistý pracovní strom, produkční release APK a Android SDK nástroje `apkanalyzer` a `apksigner`. Odmítne debug/QA/androidTest, nepodepsané, nezarovnané nebo debug certifikátem podepsané artefakty. APK i případný soubor s poznámkami k vydání musí ležet uvnitř ověřovaného repozitáře.
+
+Nejprve mimo zdrojový repozitář aplikace vytvořte samostatný RSA publisher klíč:
+
+```powershell
+php .\tools\appmarket-attest.php generate `
+    'C:\bezpecne-klice\publisher-private.pem' `
+    'C:\bezpecne-klice\publisher-public.pem'
+```
+
+V administraci **Publikační tokeny** vložte obsah `publisher-public.pem`. CMS ukáže bearer token pouze jednou. Obě lokální hodnoty pak předejte jen procesními proměnnými:
 
 ```powershell
 $env:KORA_APPMARKET_TOKEN = 'token-zobrazeny-pri-vytvoreni'
+$env:KORA_APPMARKET_SIGNING_KEY = 'C:\bezpecne-klice\publisher-private.pem'
 .\tools\appmarket-publish.ps1 `
     -ProjectPath 'C:\cesta\k\android-projektu' `
     -PublishApiUrl 'https://vas-web.cz/api/appmarket/v1/releases' `
     -ReleaseNotesPath 'CHANGELOG.md'
 Remove-Item Env:KORA_APPMARKET_TOKEN
+Remove-Item Env:KORA_APPMARKET_SIGNING_KEY
 ```
 
-Publisher odešle APK, kontrolní metadata a poznámky k vydání, ale na serveru vždy vznikne pouze `Koncept`. Server metadata znovu načte přímo z APK a hodnoty publisheru používá jen pro porovnání, nikoli jako důvěryhodný fallback. Nemůže-li server spustit `apkanalyzer` a `apksigner`, upload bezpečně odmítne. Publisher nemůže sám schválit certifikát ani vydání zveřejnit. Token je po vytvoření zobrazený jen jednou, v databázi se ukládá pouze jeho hash a správce jej může kdykoli odvolat. Zdrojový Git repozitář může zůstat soukromý; uživatelé získají výsledné APK, nikoli zdrojové kódy.
+Publisher odešle APK, přesně podepsaný manifest a poznámky k vydání, ale na serveru vždy vznikne pouze `Koncept`. Hosting bez Android SDK ověří přes PHP OpenSSL, že manifest podepsal klíč svázaný s použitým tokenem, že není starší než 24 hodin a že velikost, SHA-256 i seznam změn odpovídají uploadu. Pokud má server Android SDK, provede navíc vlastní analýzu APK. Přibalený Apache `.htaccess` zachovává Bearer hlavičku i pod FastCGI; u Nginx musí PHP location předávat `fastcgi_param HTTP_AUTHORIZATION $http_authorization`. Publisher nemůže sám schválit certifikát ani vydání zveřejnit. Token je po vytvoření zobrazený jen jednou, v databázi se ukládá pouze jeho hash a správce jej může kdykoli odvolat. Starší tokeny vytvořené před zavedením publisher klíčů je nutné nahradit. Zdrojový Git repozitář může zůstat soukromý; uživatelé získají výsledné APK, nikoli zdrojové kódy.
 
 ### Update API
 
@@ -1033,7 +1045,7 @@ Odpověď nevyžaduje účet ani identifikátor zařízení. Vrací stabilní JS
 
 ### Přenos dat a přístupnost
 
-JSON export/import přenáší konfiguraci aplikací, metadata vydání a veřejné fingerprinty certifikátů. Nepřenáší APK, publikační tokeny ani jejich hashe; importované aplikace a vydání zůstávají bezpečně neaktivní nebo jako koncepty, dokud je správce nezkontroluje.
+JSON export/import přenáší konfiguraci aplikací, metadata vydání a veřejné fingerprinty certifikátů. Nepřenáší APK, publikační tokeny, veřejné publisher klíče ani jejich vazby; importované aplikace a vydání zůstávají bezpečně neaktivní nebo jako koncepty bez APK, dokud je správce nezkontroluje.
 
 Veřejný katalog i administrace používají skutečné nadpisy, pojmenované oblasti, tabulkové popisky, field-level chyby a serverově ověřená potvrzení rizikových akcí. Seznam změn podporuje bezpečný Markdown, ale vložené HTML se nevykonává. CMS zajišťuje strukturu a technické popisky, správce obsahu odpovídá za srozumitelný název aplikace, popis, poznámky k vydání a případné odkazy. Podrobný modulový report je v [docs/accessibility/modules/appmarket.md](accessibility/modules/appmarket.md).
 

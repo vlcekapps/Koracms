@@ -137,6 +137,7 @@ if (!is_file($releaseSmokePath)) {
         "'assets/error.css',",
         "'themes/default/assets/public.css',",
         "'tools/appmarket-publish.ps1',",
+        "'tools/appmarket-attest.php',",
         "str_starts_with(\$entry, 'uploads/') && \$entry !== 'uploads/' && \$entry !== 'uploads/.htaccess'",
         "str_starts_with(\$entry, 'vendor/')",
         "str_starts_with(\$entry, 'node_modules/')",

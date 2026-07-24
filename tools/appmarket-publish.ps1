@@ -361,15 +361,36 @@ function Get-ResponsePayload {
     }
 }
 
+function Get-TextSha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $Text
+    )
+
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [Text.UTF8Encoding]::new($false).GetBytes($Text)
+        ([BitConverter]::ToString($sha256.ComputeHash($bytes)) -replace '-', '').ToLowerInvariant()
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
 $tokenText = [Environment]::GetEnvironmentVariable('KORA_APPMARKET_TOKEN', 'Process')
 if ([string]::IsNullOrWhiteSpace($tokenText)) {
     throw 'Chybí env KORA_APPMARKET_TOKEN. Token se z bezpečnostních důvodů nepřijímá jako parametr.'
 }
+$signingKeyPath = [Environment]::GetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', 'Process')
+if ([string]::IsNullOrWhiteSpace($signingKeyPath)) {
+    throw 'Chybí env KORA_APPMARKET_SIGNING_KEY s cestou k privátnímu publisher klíči.'
+}
 $tokenSecure = ConvertTo-SecureString -String $tokenText -AsPlainText -Force
 $tokenText = $null
 
-# Child procesy s Android nástroji token nepotřebují a nesmějí jej zdědit.
+# Child procesy s Android nástroji token ani cestu ke klíči nepotřebují a nesmějí je zdědit.
 [Environment]::SetEnvironmentVariable('KORA_APPMARKET_TOKEN', $null, 'Process')
+[Environment]::SetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', $null, 'Process')
 
 try {
     if (-not $PublishApiUrl.IsAbsoluteUri) {
@@ -391,6 +412,34 @@ try {
     }
     $repositoryRoot = Get-RepositoryRoot -Path $resolvedProject
     Assert-CleanRepository -RepositoryRoot $repositoryRoot
+    $resolvedSigningKey = Get-ResolvedPath -Path $signingKeyPath
+    if (Test-PathWithin -Path $resolvedSigningKey -Root $repositoryRoot) {
+        throw 'Privátní publisher klíč musí ležet mimo zdrojový Git repozitář aplikace.'
+    }
+    $php = Get-Command -Name php -CommandType Application -ErrorAction SilentlyContinue
+    if ($null -eq $php) {
+        throw 'PHP CLI nebylo nalezeno v PATH a publisher proto nemůže podepsat manifest.'
+    }
+    $attestationTool = Join-Path -Path $PSScriptRoot -ChildPath 'appmarket-attest.php'
+    if (-not (Test-Path -LiteralPath $attestationTool -PathType Leaf)) {
+        throw 'Vedle publisheru chybí nástroj tools/appmarket-attest.php.'
+    }
+    $fingerprintResult = Invoke-NativeTool -FilePath $php.Source -Arguments @(
+        $attestationTool,
+        'fingerprint',
+        $resolvedSigningKey
+    )
+    $fingerprintPayload = Get-ResponsePayload -Json $fingerprintResult.Output
+    if (($fingerprintResult.ExitCode -ne 0) -or
+        ($null -eq $fingerprintPayload) -or
+        ($null -eq $fingerprintPayload.PSObject.Properties['key_fingerprint_sha256'])
+    ) {
+        throw 'Privátní publisher klíč se nepodařilo ověřit.'
+    }
+    $attestationKeyFingerprint = ([string] $fingerprintPayload.key_fingerprint_sha256).ToLowerInvariant()
+    if ($attestationKeyFingerprint -notmatch '^[a-f0-9]{64}$') {
+        throw 'Privátní publisher klíč nevrátil platný SHA-256 otisk.'
+    }
 
     $resolvedApk = Get-ReleaseApk -RepositoryRoot $repositoryRoot -RequestedPath $ApkPath
     if (-not (Test-Path -LiteralPath $resolvedApk -PathType Leaf)) {
@@ -516,12 +565,35 @@ try {
         }
         $ReleaseNotes = Get-Content -LiteralPath $resolvedNotesPath -Raw -Encoding UTF8
     }
+    $ReleaseNotes = (($ReleaseNotes -replace "`r`n", "`n") -replace "`r", "`n").Trim()
     if ($ReleaseNotes.Length -gt 50000) {
         throw 'Poznámky k vydání překračují bezpečný limit 50 000 znaků.'
     }
 
+    $git = Get-Command -Name git -CommandType Application -ErrorAction Stop
+    $commitResult = Invoke-NativeTool -FilePath $git.Source -Arguments @(
+        '-C',
+        $repositoryRoot,
+        'rev-parse',
+        'HEAD'
+    )
+    $sourceCommit = $commitResult.Output.Trim().ToLowerInvariant()
+    if ($commitResult.ExitCode -ne 0 -or $sourceCommit -notmatch '^[a-f0-9]{40,64}$') {
+        throw 'Git nedokázal určit zdrojový commit vydání.'
+    }
+
     $metadata = [ordered] @{
-        schema_version = 1
+        schema_version = 2
+        attestation_type = 'kora-appmarket-release'
+        attestation_algorithm = 'rsa-sha256'
+        key_fingerprint_sha256 = $attestationKeyFingerprint
+        issued_at = [DateTime]::UtcNow.ToString(
+            'yyyy-MM-ddTHH:mm:ssZ',
+            [Globalization.CultureInfo]::InvariantCulture
+        )
+        nonce = [Guid]::NewGuid().ToString('N')
+        source_commit = $sourceCommit
+        release_notes_sha256 = Get-TextSha256 -Text $ReleaseNotes
         package_id = $packageId
         version_name = $versionName
         version_code = $versionCode
@@ -541,6 +613,41 @@ try {
     $metadataJson = $metadata | ConvertTo-Json -Depth 5 -Compress
     if ([Text.Encoding]::UTF8.GetByteCount($metadataJson) -gt 65536) {
         throw 'Metadata vydání překračují bezpečný limit 64 KiB.'
+    }
+
+    $manifestPath = [IO.Path]::GetTempFileName()
+    try {
+        [IO.File]::WriteAllText(
+            $manifestPath,
+            $metadataJson,
+            [Text.UTF8Encoding]::new($false)
+        )
+        $signatureResult = Invoke-NativeTool -FilePath $php.Source -Arguments @(
+            $attestationTool,
+            'sign',
+            $resolvedSigningKey,
+            $manifestPath
+        )
+        $signaturePayload = Get-ResponsePayload -Json $signatureResult.Output
+        if (($signatureResult.ExitCode -ne 0) -or
+            ($null -eq $signaturePayload) -or
+            ($null -eq $signaturePayload.PSObject.Properties['signature_base64']) -or
+            ($null -eq $signaturePayload.PSObject.Properties['key_fingerprint_sha256'])
+        ) {
+            throw 'Publisher manifest se nepodařilo podepsat.'
+        }
+        $returnedFingerprint = ([string] $signaturePayload.key_fingerprint_sha256).ToLowerInvariant()
+        $attestationSignature = [string] $signaturePayload.signature_base64
+        if (($returnedFingerprint -ne $attestationKeyFingerprint) -or
+            ($attestationSignature -notmatch '^[A-Za-z0-9+/]+={0,2}$') -or
+            ($attestationSignature.Length -gt 4096)
+        ) {
+            throw 'Podpis publisher manifestu neodpovídá očekávanému klíči.'
+        }
+    } finally {
+        if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+            Remove-Item -LiteralPath $manifestPath -Force
+        }
     }
 
     Add-Type -AssemblyName System.Net.Http
@@ -579,6 +686,14 @@ try {
         $multipart.Add(
             [Net.Http.StringContent]::new($metadataJson, [Text.Encoding]::UTF8, 'application/json'),
             'metadata'
+        )
+        $multipart.Add(
+            [Net.Http.StringContent]::new(
+                $attestationSignature,
+                [Text.Encoding]::UTF8,
+                'text/plain'
+            ),
+            'attestation_signature'
         )
         $multipart.Add(
             [Net.Http.StringContent]::new($ReleaseNotes, [Text.Encoding]::UTF8, 'text/plain'),
@@ -665,4 +780,5 @@ try {
             $tokenSecure.Dispose()
         }
     }
+    [Environment]::SetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', $signingKeyPath, 'Process')
 }
