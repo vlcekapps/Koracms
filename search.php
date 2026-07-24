@@ -255,6 +255,29 @@ if ($q !== '' && mb_strlen($q) >= 2) {
         }
     }
 
+    if (isModuleEnabled('recipes')) {
+        try {
+            foreach ($ftSearch(
+                $pdo,
+                $q,
+                $like,
+                "SELECT r.id, r.title, r.slug, r.summary AS perex,
+                        COALESCE(r.publish_at, r.updated_at, r.created_at) AS created_at, 'recipe' AS type",
+                "FROM cms_recipes r
+                 INNER JOIN cms_recipe_categories c ON c.id = r.category_id AND c.is_active = 1
+                 WHERE " . recipePublicVisibilitySql('r'),
+                'r.title, r.summary, r.notes',
+                [],
+                'COALESCE(r.publish_at, r.created_at) DESC, r.id DESC',
+                10
+            ) as $row) {
+                $results[] = $row;
+            }
+        } catch (\PDOException $e) {
+            searchLogSourceError('recipes', $e);
+        }
+    }
+
     if (isModuleEnabled('board')) {
         try {
             foreach ($ftSearch(
@@ -406,6 +429,7 @@ function resultUrl(array $result): string
         'podcast_episode' => podcastEpisodePublicPath($result),
         'faq' => faqPublicPath($result),
         'food_card' => foodCardPublicPath($result),
+        'recipe' => recipePublicPath($result),
         'gallery_album' => galleryAlbumPublicPath($result),
         'gallery_photo' => galleryPhotoPublicPath($result),
         'download' => downloadPublicPath($result),

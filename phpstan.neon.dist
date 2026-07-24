@@ -19,6 +19,7 @@ parameters:
         - lib/mail.php
         - lib/media_library.php
         - lib/messages.php
+        - lib/recipes.php
         - lib/presentation.php
         - lib/revisions.php
         - lib/stats.php
@@ -73,6 +74,7 @@ parameters:
         - lib/mail.php
         - lib/media_library.php
         - lib/messages.php
+        - lib/recipes.php
         - lib/pagination.php
         - lib/presentation.php
         - lib/revisions.php

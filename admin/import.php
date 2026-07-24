@@ -1429,6 +1429,258 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Položky jídelních lístků importovány.';
                 }
 
+                // Recepty – kategorie, recepty a jejich strukturovaný obsah.
+                $recipeCategoryIdMap = [];
+                if (!empty($data['recipe_categories']) && is_array($data['recipe_categories'])) {
+                    $findRecipeCategoryStmt = $pdo->prepare(
+                        'SELECT id FROM cms_recipe_categories WHERE slug = ? LIMIT 1'
+                    );
+                    $insertRecipeCategoryStmt = $pdo->prepare(
+                        'INSERT INTO cms_recipe_categories
+                         (name, slug, description, meta_title, meta_description, sort_order, is_active, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?)'
+                    );
+                    foreach ($data['recipe_categories'] as $row) {
+                        $sourceId = max(0, (int)($row['id'] ?? 0));
+                        $name = trim((string)($row['name'] ?? ''));
+                        if ($sourceId < 1 || $name === '') {
+                            continue;
+                        }
+                        $slugCandidate = trim((string)($row['slug'] ?? ''));
+                        $slug = recipeCategorySlug($slugCandidate !== '' ? $slugCandidate : $name);
+                        if ($slug === '') {
+                            $slug = 'kategorie';
+                        }
+                        $findRecipeCategoryStmt->execute([$slug]);
+                        $existingId = $findRecipeCategoryStmt->fetchColumn();
+                        if ($existingId !== false) {
+                            $recipeCategoryIdMap[$sourceId] = (int)$existingId;
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $insertRecipeCategoryStmt->execute([
+                            $name,
+                            uniqueRecipeCategorySlug($pdo, $slug),
+                            (string)($row['description'] ?? ''),
+                            mb_substr(trim((string)($row['meta_title'] ?? '')), 0, 160, 'UTF-8'),
+                            (string)($row['meta_description'] ?? ''),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            (int)($row['is_active'] ?? 1) === 1 ? 1 : 0,
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                        $recipeCategoryIdMap[$sourceId] = (int)$pdo->lastInsertId();
+                    }
+                    $summary[] = 'Kategorie receptů importovány.';
+                }
+
+                $recipeIdMap = [];
+                $newRecipeSourceIds = [];
+                if (!empty($data['recipes']) && is_array($data['recipes'])) {
+                    $findRecipeStmt = $pdo->prepare('SELECT id FROM cms_recipes WHERE slug = ? LIMIT 1');
+                    $userExistsStmt = $pdo->prepare('SELECT id FROM cms_users WHERE id = ? LIMIT 1');
+                    $recipeMediaExistsStmt = $pdo->prepare(
+                        "SELECT id FROM cms_media
+                         WHERE id = ? AND visibility = 'public'
+                           AND mime_type LIKE 'image/%' AND mime_type <> 'image/svg+xml'
+                         LIMIT 1"
+                    );
+                    $insertRecipeStmt = $pdo->prepare(
+                        'INSERT INTO cms_recipes
+                         (category_id, author_id, title, slug, summary, notes, servings,
+                          prep_minutes, cook_minutes, difficulty, dietary_flags, allergens, calories_kcal,
+                          media_id, image_alt_text, source_name, source_url, meta_title, meta_description,
+                          status, publish_at, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                    );
+                    foreach ($data['recipes'] as $row) {
+                        $sourceId = max(0, (int)($row['id'] ?? 0));
+                        $sourceCategoryId = max(0, (int)($row['category_id'] ?? 0));
+                        $categoryId = $recipeCategoryIdMap[$sourceCategoryId] ?? null;
+                        $title = trim((string)($row['title'] ?? ''));
+                        if ($sourceId < 1 || $categoryId === null || $title === '') {
+                            continue;
+                        }
+                        $slugCandidate = trim((string)($row['slug'] ?? ''));
+                        $slug = recipeSlug($slugCandidate !== '' ? $slugCandidate : $title);
+                        if ($slug === '') {
+                            $slug = 'recept';
+                        }
+                        $findRecipeStmt->execute([$slug]);
+                        $existingId = $findRecipeStmt->fetchColumn();
+                        if ($existingId !== false) {
+                            $recipeIdMap[$sourceId] = (int)$existingId;
+                            continue;
+                        }
+
+                        $authorId = max(0, (int)($row['author_id'] ?? 0));
+                        if ($authorId > 0) {
+                            $userExistsStmt->execute([$authorId]);
+                            if (!$userExistsStmt->fetchColumn()) {
+                                $authorId = 0;
+                            }
+                        }
+                        $mediaId = max(0, (int)($row['media_id'] ?? 0));
+                        if ($mediaId > 0) {
+                            $recipeMediaExistsStmt->execute([$mediaId]);
+                            if (!$recipeMediaExistsStmt->fetchColumn()) {
+                                $mediaId = 0;
+                            }
+                        }
+                        $difficulty = trim((string)($row['difficulty'] ?? ''));
+                        if (!isset(recipeDifficultyDefinitions()[$difficulty])) {
+                            $difficulty = '';
+                        }
+                        $status = (string)($row['status'] ?? 'draft');
+                        if (!in_array($status, ['draft', 'pending', 'published'], true)) {
+                            $status = 'draft';
+                        }
+                        $sourceUrl = normalizeHttpExternalUrl((string)($row['source_url'] ?? ''), false);
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $insertRecipeStmt->execute([
+                            $categoryId,
+                            $authorId > 0 ? $authorId : null,
+                            $title,
+                            uniqueRecipeSlug($pdo, $slug),
+                            (string)($row['summary'] ?? ''),
+                            (string)($row['notes'] ?? ''),
+                            recipeNullablePositiveInt($row['servings'] ?? null),
+                            recipeNullablePositiveInt($row['prep_minutes'] ?? null),
+                            recipeNullablePositiveInt($row['cook_minutes'] ?? null),
+                            $difficulty !== '' ? $difficulty : null,
+                            implode(',', normalizeRecipeSelection($row['dietary_flags'] ?? '', recipeDietaryFlagDefinitions())),
+                            implode(',', normalizeRecipeSelection($row['allergens'] ?? '', recipeAllergenDefinitions())),
+                            recipeNullablePositiveInt($row['calories_kcal'] ?? null),
+                            $mediaId > 0 ? $mediaId : null,
+                            mb_substr(trim((string)($row['image_alt_text'] ?? '')), 0, 255, 'UTF-8'),
+                            mb_substr(trim((string)($row['source_name'] ?? '')), 0, 255, 'UTF-8'),
+                            $sourceUrl,
+                            mb_substr(trim((string)($row['meta_title'] ?? '')), 0, 160, 'UTF-8'),
+                            (string)($row['meta_description'] ?? ''),
+                            $status,
+                            !empty($row['publish_at']) ? (string)$row['publish_at'] : null,
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                        $recipeIdMap[$sourceId] = (int)$pdo->lastInsertId();
+                        $newRecipeSourceIds[$sourceId] = true;
+                    }
+                    $summary[] = 'Recepty importovány.';
+                }
+
+                $recipeGroupIdMap = [];
+                if (!empty($data['recipe_ingredient_groups']) && is_array($data['recipe_ingredient_groups'])) {
+                    $insertRecipeGroupStmt = $pdo->prepare(
+                        'INSERT INTO cms_recipe_ingredient_groups
+                         (recipe_id, title, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?)'
+                    );
+                    foreach ($data['recipe_ingredient_groups'] as $row) {
+                        $sourceId = max(0, (int)($row['id'] ?? 0));
+                        $sourceRecipeId = max(0, (int)($row['recipe_id'] ?? 0));
+                        $recipeId = $recipeIdMap[$sourceRecipeId] ?? null;
+                        if ($sourceId < 1 || $recipeId === null || !isset($newRecipeSourceIds[$sourceRecipeId])) {
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $insertRecipeGroupStmt->execute([
+                            $recipeId,
+                            mb_substr(trim((string)($row['title'] ?? '')), 0, 255, 'UTF-8'),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                        $recipeGroupIdMap[$sourceId] = [
+                            'id' => (int)$pdo->lastInsertId(),
+                            'recipe_id' => $recipeId,
+                        ];
+                    }
+                    $summary[] = 'Skupiny ingrediencí receptů importovány.';
+                }
+
+                if (!empty($data['recipe_ingredients']) && is_array($data['recipe_ingredients'])) {
+                    $insertRecipeIngredientStmt = $pdo->prepare(
+                        'INSERT INTO cms_recipe_ingredients
+                         (recipe_id, group_id, amount, unit, name, note, is_optional, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)'
+                    );
+                    foreach ($data['recipe_ingredients'] as $row) {
+                        $sourceRecipeId = max(0, (int)($row['recipe_id'] ?? 0));
+                        $sourceGroupId = max(0, (int)($row['group_id'] ?? 0));
+                        $recipeId = $recipeIdMap[$sourceRecipeId] ?? null;
+                        $group = $recipeGroupIdMap[$sourceGroupId] ?? null;
+                        $name = trim((string)($row['name'] ?? ''));
+                        if (
+                            $recipeId === null
+                            || !is_array($group)
+                            || (int)$group['recipe_id'] !== $recipeId
+                            || $name === ''
+                        ) {
+                            continue;
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $insertRecipeIngredientStmt->execute([
+                            $recipeId,
+                            (int)$group['id'],
+                            mb_substr(trim((string)($row['amount'] ?? '')), 0, 40, 'UTF-8'),
+                            mb_substr(trim((string)($row['unit'] ?? '')), 0, 40, 'UTF-8'),
+                            mb_substr($name, 0, 255, 'UTF-8'),
+                            mb_substr(trim((string)($row['note'] ?? '')), 0, 255, 'UTF-8'),
+                            (int)($row['is_optional'] ?? 0) === 1 ? 1 : 0,
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Ingredience receptů importovány.';
+                }
+
+                if (!empty($data['recipe_steps']) && is_array($data['recipe_steps'])) {
+                    $recipeStepMediaExistsStmt = $pdo->prepare(
+                        "SELECT id FROM cms_media
+                         WHERE id = ? AND visibility = 'public'
+                           AND mime_type LIKE 'image/%' AND mime_type <> 'image/svg+xml'
+                         LIMIT 1"
+                    );
+                    $insertRecipeStepStmt = $pdo->prepare(
+                        'INSERT INTO cms_recipe_steps
+                         (recipe_id, title, instruction, media_id, image_alt_text, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?)'
+                    );
+                    foreach ($data['recipe_steps'] as $row) {
+                        $sourceRecipeId = max(0, (int)($row['recipe_id'] ?? 0));
+                        $recipeId = $recipeIdMap[$sourceRecipeId] ?? null;
+                        $instruction = trim((string)($row['instruction'] ?? ''));
+                        if ($recipeId === null || !isset($newRecipeSourceIds[$sourceRecipeId]) || $instruction === '') {
+                            continue;
+                        }
+                        $mediaId = max(0, (int)($row['media_id'] ?? 0));
+                        if ($mediaId > 0) {
+                            $recipeStepMediaExistsStmt->execute([$mediaId]);
+                            if (!$recipeStepMediaExistsStmt->fetchColumn()) {
+                                $mediaId = 0;
+                            }
+                        }
+                        $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
+                        $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $insertRecipeStepStmt->execute([
+                            $recipeId,
+                            mb_substr(trim((string)($row['title'] ?? '')), 0, 255, 'UTF-8'),
+                            $instruction,
+                            $mediaId > 0 ? $mediaId : null,
+                            mb_substr(trim((string)($row['image_alt_text'] ?? '')), 0, 255, 'UTF-8'),
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Postupy receptů importovány.';
+                }
+
                 // Rezervace – importuje se jen konfigurace, ne osobní rezervace ani historie.
                 if (!empty($data['res_categories']) && is_array($data['res_categories'])) {
                     $ins = $pdo->prepare(

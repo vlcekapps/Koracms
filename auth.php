@@ -870,6 +870,13 @@ function adminRouteModuleRequirements(): array
             'message' => adminRouteModuleDisabledMessage('food'),
             'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php', 'food_items.php', 'food_orders.php', 'food_order.php'],
         ],
+        'recipes' => [
+            'message' => adminRouteModuleDisabledMessage('recipes'),
+            'files' => [
+                'recipes.php', 'recipe_form.php', 'recipe_save.php', 'recipe_action.php',
+                'recipe_content.php', 'recipe_categories.php',
+            ],
+        ],
         'polls' => [
             'message' => adminRouteModuleDisabledMessage('polls'),
             'files' => ['polls.php', 'polls_form.php', 'polls_save.php', 'polls_delete.php', 'polls_results_export.php'],

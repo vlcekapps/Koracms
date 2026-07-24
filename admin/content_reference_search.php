@@ -51,6 +51,7 @@ function contentReferenceTypeLabel(string $type): string
         'podcast_show' => 'Podcast',
         'podcast_episode' => 'Epizoda podcastu',
         'download' => 'Položka ke stažení',
+        'recipe' => 'Recept',
         'form' => 'Formulář',
         'media_image' => 'Obrázek z knihovny médií',
         'media_audio' => 'Audio z knihovny médií',
@@ -78,6 +79,7 @@ function contentReferenceTitle(array $row): string
         'podcast_show',
         'podcast_episode',
         'download',
+        'recipe',
         'form',
         'place',
         'board',
@@ -111,6 +113,7 @@ function contentReferenceExcerpt(array $row, int $limit = 180): string
         'podcast_show' => mb_strimwidth(normalizePlainText((string)($row['description'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'podcast_episode' => podcastEpisodeExcerpt($row, $limit),
         'download' => downloadExcerpt($row, $limit),
+        'recipe' => mb_strimwidth(normalizePlainText((string)($row['summary'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'form' => mb_strimwidth(normalizePlainText((string)($row['description'] ?? '')), 0, $limit, '…', 'UTF-8'),
         'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferenceExcerpt($row, $limit),
         'place' => placeExcerpt($row, $limit),
@@ -213,6 +216,7 @@ function contentReferencePublicPath(array $row): string
         'podcast_show' => podcastShowPublicPath($row),
         'podcast_episode' => podcastEpisodePublicPath($row),
         'download' => downloadPublicPath($row),
+        'recipe' => recipePublicPath($row),
         'form' => formPublicPath($row),
         'media_image', 'media_audio', 'media_video', 'media_file' => mediaReferencePublicPath($row),
         'place' => placePublicPath($row),
@@ -372,6 +376,17 @@ function contentReferenceThumbnailUrl(array $row): string
     }
     if ($type === 'download') {
         return downloadImageUrl($row);
+    }
+    if ($type === 'recipe') {
+        $media = [
+            'filename' => $row['media_filename'] ?? '',
+            'folder' => $row['media_folder'] ?? 'media',
+            'original_name' => $row['media_original_name'] ?? '',
+            'alt_text' => $row['media_alt_text'] ?? '',
+            'mime_type' => $row['media_mime_type'] ?? '',
+            'visibility' => $row['media_visibility'] ?? '',
+        ];
+        return mediaIsPublic($media) && mediaCanPreviewImage($media) ? mediaThumbUrl($media) : '';
     }
     if ($type === 'place') {
         return placeImageUrl($row);
@@ -724,6 +739,17 @@ function contentReferenceInsertActions(array $row): array
                 contentReferenceSimpleEntityShortcode('board', $slug)
             );
         }
+    } elseif ($type === 'recipe') {
+        $slug = recipeSlug((string)($row['slug'] ?? ''));
+        if ($slug !== '') {
+            $actions[] = contentReferenceBuildAction(
+                'shortcode',
+                'Vložit recept',
+                'Do textu byl vložen recept.',
+                true,
+                contentReferenceSimpleEntityShortcode('recipe', $slug)
+            );
+        }
     } elseif ($type === 'gallery_photo') {
         $galleryPhotoAction = contentReferenceGalleryPhotoImageAction($row);
         if ($galleryPhotoAction !== null) {
@@ -946,6 +972,31 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('download', $e);
+    }
+}
+
+if (($requestedType === 'all' || $requestedType === 'recipe') && isModuleEnabled('recipes')) {
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT r.id, r.title, r.slug, r.summary, r.created_at,
+                    m.filename AS media_filename, m.folder AS media_folder,
+                    m.original_name AS media_original_name, m.alt_text AS media_alt_text,
+                    m.mime_type AS media_mime_type, m.visibility AS media_visibility,
+                    'recipe' AS type
+             FROM cms_recipes r
+             INNER JOIN cms_recipe_categories c ON c.id = r.category_id AND c.is_active = 1
+             LEFT JOIN cms_media m ON m.id = r.media_id
+             WHERE " . recipePublicVisibilitySql('r') . "
+               AND (r.title LIKE ? OR r.summary LIKE ? OR r.notes LIKE ? OR r.slug LIKE ?)
+             ORDER BY COALESCE(r.publish_at, r.created_at) DESC, r.id DESC
+             LIMIT 10"
+        );
+        $stmt->execute([$like, $like, $like, $like]);
+        foreach ($stmt->fetchAll() as $row) {
+            $results[] = contentReferenceResult($row);
+        }
+    } catch (\PDOException $e) {
+        contentReferenceLogSourceError('recipes', $e);
     }
 }
 

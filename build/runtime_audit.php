@@ -46,6 +46,8 @@ $commentsSource = (string) file_get_contents(__DIR__ . '/../lib/comments.php');
 $contentSource = (string) file_get_contents(__DIR__ . '/../lib/content.php');
 $authSource = (string) file_get_contents(__DIR__ . '/../auth.php');
 $dbSource = (string) file_get_contents(__DIR__ . '/../db.php');
+$installSource = (string) file_get_contents(__DIR__ . '/../install.php');
+$migrateSource = (string) file_get_contents(__DIR__ . '/../migrate.php');
 $errorPageCssSource = is_file(__DIR__ . '/../assets/error.css') ? (string) file_get_contents(__DIR__ . '/../assets/error.css') : '';
 $publicCoreCssSource = is_file(__DIR__ . '/../themes/default/assets/public-core.css') ? (string) file_get_contents(__DIR__ . '/../themes/default/assets/public-core.css') : '';
 $adminLayoutStylesheetSource = is_file(__DIR__ . '/../admin/assets/layout.css') ? (string) file_get_contents(__DIR__ . '/../admin/assets/layout.css') : '';
@@ -113,6 +115,19 @@ $licenseSource = is_file(__DIR__ . '/../LICENSE') ? (string) file_get_contents(_
 $noticeSource = is_file(__DIR__ . '/../NOTICE.md') ? (string) file_get_contents(__DIR__ . '/../NOTICE.md') : '';
 $adminGuideSource = is_file(__DIR__ . '/../docs/admin-guide.md') ? (string) file_get_contents(__DIR__ . '/../docs/admin-guide.md') : '';
 $appmarketAccessibilitySource = is_file(__DIR__ . '/../docs/accessibility/modules/appmarket.md') ? (string) file_get_contents(__DIR__ . '/../docs/accessibility/modules/appmarket.md') : '';
+$recipesAccessibilitySource = is_file(__DIR__ . '/../docs/accessibility/modules/recipes.md') ? (string) file_get_contents(__DIR__ . '/../docs/accessibility/modules/recipes.md') : '';
+$recipesHelperSource = is_file(__DIR__ . '/../lib/recipes.php') ? (string) file_get_contents(__DIR__ . '/../lib/recipes.php') : '';
+$adminRecipesSource = is_file(__DIR__ . '/../admin/recipes.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipes.php') : '';
+$adminRecipeFormSource = is_file(__DIR__ . '/../admin/recipe_form.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_form.php') : '';
+$adminRecipeSaveSource = is_file(__DIR__ . '/../admin/recipe_save.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_save.php') : '';
+$adminRecipeActionSource = is_file(__DIR__ . '/../admin/recipe_action.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_action.php') : '';
+$adminRecipeContentSource = is_file(__DIR__ . '/../admin/recipe_content.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_content.php') : '';
+$adminRecipeCategoriesSource = is_file(__DIR__ . '/../admin/recipe_categories.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_categories.php') : '';
+$recipesIndexSource = is_file(__DIR__ . '/../recipes/index.php') ? (string) file_get_contents(__DIR__ . '/../recipes/index.php') : '';
+$recipeDetailSource = is_file(__DIR__ . '/../recipes/recipe.php') ? (string) file_get_contents(__DIR__ . '/../recipes/recipe.php') : '';
+$recipeCookbookSource = is_file(__DIR__ . '/../recipes/cookbook.php') ? (string) file_get_contents(__DIR__ . '/../recipes/cookbook.php') : '';
+$recipesIndexViewSource = is_file(__DIR__ . '/../themes/default/views/modules/recipes-index.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/recipes-index.php') : '';
+$recipeDetailViewSource = is_file(__DIR__ . '/../themes/default/views/modules/recipes-recipe.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/recipes-recipe.php') : '';
 $appmarketHelperSource = is_file(__DIR__ . '/../lib/appmarket.php') ? (string) file_get_contents(__DIR__ . '/../lib/appmarket.php') : '';
 $adminAppmarketSource = is_file(__DIR__ . '/../admin/appmarket.php') ? (string) file_get_contents(__DIR__ . '/../admin/appmarket.php') : '';
 $adminAppmarketFormSource = is_file(__DIR__ . '/../admin/appmarket_form.php') ? (string) file_get_contents(__DIR__ . '/../admin/appmarket_form.php') : '';
@@ -221,6 +236,7 @@ $runtimeAuditOriginalModuleSettings = [
     'module_events' => getSetting('module_events', '0'),
     'module_faq' => getSetting('module_faq', '0'),
     'module_food' => getSetting('module_food', '0'),
+    'module_recipes' => getSetting('module_recipes', '0'),
     'module_gallery' => getSetting('module_gallery', '0'),
     'module_podcast' => getSetting('module_podcast', '0'),
     'module_places' => getSetting('module_places', '0'),
@@ -23317,6 +23333,183 @@ if ($adminHelpIssues === []) {
     $failures++;
     foreach ($adminHelpIssues as $adminHelpIssue) {
         echo '- ' . $adminHelpIssue . "\n";
+    }
+}
+
+echo "=== recipes_module_guardrails ===\n";
+$recipeIssues = [];
+foreach ([
+    'cms_recipe_categories',
+    'cms_recipes',
+    'cms_recipe_ingredient_groups',
+    'cms_recipe_ingredients',
+    'cms_recipe_steps',
+] as $recipeTable) {
+    if (!str_contains($installSource, 'CREATE TABLE IF NOT EXISTS ' . $recipeTable)
+        || !str_contains($migrateSource, "'{$recipeTable}' => \"CREATE TABLE IF NOT EXISTS {$recipeTable}")) {
+        $recipeIssues[] = 'Recipe schema is missing from install.php or migrate.php: ' . $recipeTable;
+    }
+}
+foreach ([
+    'uq_recipe_categories_slug',
+    'idx_recipe_categories_public',
+    'uq_recipes_slug',
+    'idx_recipes_public',
+    'idx_recipes_category',
+    'idx_recipe_ingredient_groups_order',
+    'idx_recipe_ingredients_order',
+    'idx_recipe_steps_order',
+] as $recipeSchemaFragment) {
+    if (!str_contains($installSource, $recipeSchemaFragment) || !str_contains($migrateSource, $recipeSchemaFragment)) {
+        $recipeIssues[] = 'Recipe schema is missing index: ' . $recipeSchemaFragment;
+    }
+}
+if (!str_contains($dbSource, "require_once __DIR__ . '/lib/recipes.php';")
+    || !str_contains($definitionsSource, "'recipes' => [")
+    || !str_contains($definitionsSource, "'database_tables' => [")
+    || !str_contains($authSource, "'recipes' => [")) {
+    $recipeIssues[] = 'Recipes must use the central helper, module manifest and admin route guard';
+}
+$recipeHtaccessStart = strpos($htaccessSource, 'RewriteRule ^recipes/?$');
+$recipeHtaccessCatchAll = strpos($htaccessSource, '# Multi-blog catch-all');
+$recipeRouterStart = strpos($httpServerRouterSource, "#^recipes/kucharka\\.epub");
+$recipeRouterCatchAll = strpos($httpServerRouterSource, "#^([a-z0-9-]+)/archiv/");
+if ($recipeHtaccessStart === false
+    || $recipeHtaccessCatchAll === false
+    || $recipeHtaccessStart >= $recipeHtaccessCatchAll
+    || $recipeRouterStart === false
+    || $recipeRouterCatchAll === false
+    || $recipeRouterStart >= $recipeRouterCatchAll) {
+    $recipeIssues[] = 'Recipe clean URLs must stay before the multi-blog catch-all routes';
+}
+foreach ([
+    $adminRecipesSource,
+    $adminRecipeFormSource,
+    $adminRecipeSaveSource,
+    $adminRecipeActionSource,
+    $adminRecipeContentSource,
+    $adminRecipeCategoriesSource,
+] as $recipeAdminSource) {
+    if (!str_contains($recipeAdminSource, "requireCapability('content_manage_shared'")) {
+        $recipeIssues[] = 'Every recipe admin endpoint must require content_manage_shared';
+    }
+}
+foreach ([
+    $adminRecipeSaveSource,
+    $adminRecipeActionSource,
+    $adminRecipeContentSource,
+    $adminRecipeCategoriesSource,
+] as $recipeWriteSource) {
+    if (!str_contains($recipeWriteSource, 'verifyCsrf()')) {
+        $recipeIssues[] = 'Every recipe write endpoint must verify CSRF';
+    }
+}
+if (!str_contains($adminRecipeFormSource, '<fieldset>')
+    || !str_contains($adminRecipeFormSource, '<legend>Základní údaje receptu</legend>')
+    || !str_contains($adminRecipeFormSource, 'adminFieldAttributes(')
+    || !str_contains($adminRecipeFormSource, 'adminRenderFieldError(')
+    || !str_contains($adminRecipeContentSource, "'Přidat ingredienci'")
+    || !str_contains($adminRecipeContentSource, "'Přidat krok'")
+    || !str_contains($adminRecipeContentSource, 'name="confirm_action"')
+    || !str_contains($adminRecipeContentSource, 'required aria-required="true"')) {
+    $recipeIssues[] = 'Recipe admin forms must keep fieldsets, field-level errors and explicit delete confirmation';
+}
+if (!str_contains($adminRecipeSaveSource, 'recipeHasPublishableStructure(')
+    || !str_contains($adminRecipeSaveSource, 'normalizeHttpExternalUrl(')
+    || !str_contains($adminRecipeSaveSource, 'uniqueRecipeSlug(')
+    || !str_contains($adminRecipeSaveSource, 'upsertPathRedirect(')) {
+    $recipeIssues[] = 'Recipe save must validate structure, source URL, slug and canonical redirects';
+}
+if (!str_contains($recipesIndexSource, "recipePublicVisibilitySql('r')")
+    || !str_contains($recipeDetailSource, 'recipeFindPublicBySlug(')
+    || !str_contains($recipeDetailSource, "trackPageView('recipe'")
+    || !str_contains($sitemapSource, "if (isModuleEnabled('recipes'))")
+    || !str_contains($searchSource, "if (isModuleEnabled('recipes'))")) {
+    $recipeIssues[] = 'Recipes must share public visibility across catalog, detail, search, sitemap and statistics';
+}
+foreach ([
+    'public detail' => $recipesHelperSource,
+    'public catalog' => $recipesIndexSource,
+    'global search' => $searchSource,
+    'content reference search' => $adminContentReferenceSearchSource,
+    'sitemap' => $sitemapSource,
+] as $recipePublicSurface => $recipePublicSource) {
+    if (!str_contains($recipePublicSource, 'cms_recipe_categories')
+        || !str_contains($recipePublicSource, 'c.is_active = 1')) {
+        $recipeIssues[] = 'Recipe ' . $recipePublicSurface . ' must reject content from inactive categories';
+    }
+}
+if (!str_contains($recipesIndexViewSource, 'role="search"')
+    || !str_contains($recipesIndexViewSource, 'aria-labelledby="recipe-filter-legend"')
+    || !str_contains($recipesIndexViewSource, 'id="recipe-filter-legend"')
+    || !str_contains($recipesIndexViewSource, '<fieldset')
+    || !str_contains($recipesIndexViewSource, 'aria-labelledby=')
+    || !str_contains($recipesIndexViewSource, "implode(', ', \$recipeMetadata)")
+    || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-overview-title"')
+    || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-ingredients-title"')
+    || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-steps-title"')) {
+    $recipeIssues[] = 'Recipe public views must keep named search, text-separated metadata and heading-backed content regions';
+}
+foreach ([
+    'application/epub+zip',
+    'epub:type="toc"',
+    'schema:accessMode',
+    'schema:accessibilityFeature',
+    'schema:accessibilitySummary',
+] as $recipeEpubFragment) {
+    if (!str_contains($recipesHelperSource, $recipeEpubFragment)) {
+        $recipeIssues[] = 'Accessible EPUB cookbook is missing fragment: ' . $recipeEpubFragment;
+    }
+}
+if (!str_contains($recipeCookbookSource, 'sendStoredFileResponse(')
+    || !str_contains($recipeCookbookSource, "header('Cache-Control: no-store')")
+    || !str_contains($recipesHelperSource, 'recipeDurationLabel(')
+    || str_contains($recipesHelperSource, 'odhad')) {
+    $recipeIssues[] = 'Recipe cookbook must use the safe download response and exact author-provided values';
+}
+foreach ([
+    "'recipe_categories'",
+    "'recipes'",
+    "'recipe_ingredient_groups'",
+    "'recipe_ingredients'",
+    "'recipe_steps'",
+] as $recipeExportFragment) {
+    if (!str_contains($adminExportSource, $recipeExportFragment)) {
+        $recipeIssues[] = 'JSON export is missing recipe structure: ' . $recipeExportFragment;
+    }
+}
+foreach ([
+    'Kategorie receptů importovány.',
+    'Recepty importovány.',
+    'Skupiny ingrediencí receptů importovány.',
+    'Ingredience receptů importovány.',
+    'Postupy receptů importovány.',
+] as $recipeImportFragment) {
+    if (!str_contains($adminImportSource, $recipeImportFragment)) {
+        $recipeIssues[] = 'JSON import is missing recipe structure: ' . $recipeImportFragment;
+    }
+}
+foreach ([
+    '# Recepty: Accessibility Conformance Report',
+    'WCAG 2.2 AA',
+    'Veřejný katalog',
+    'Administrace',
+    'EPUB',
+    'Odpovědnost CMS',
+    'Odpovědnost správce obsahu',
+    'Automatizovaný důkaz',
+    'Ruční ověření',
+] as $recipeAccessibilityFragment) {
+    if (!str_contains($recipesAccessibilitySource, $recipeAccessibilityFragment)) {
+        $recipeIssues[] = 'Recipes accessibility report is missing fragment: ' . $recipeAccessibilityFragment;
+    }
+}
+if ($recipeIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($recipeIssues as $recipeIssue) {
+        echo '- ' . $recipeIssue . "\n";
     }
 }
 

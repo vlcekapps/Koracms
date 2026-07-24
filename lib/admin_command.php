@@ -76,6 +76,8 @@ function adminCommandBaseRegistry(): array
         ['screen', 'downloads.series', 'Série ke stažení', 'Správa verzovacích řad a aktuálních vydání.', $base . 'download_series.php', 'downloads', '', 'content_manage_shared'],
         ['screen', 'food', 'Jídelní a nápojové lístky', 'Lístky, strukturované položky, denní nabídky a výživové údaje.', $base . 'food.php', 'food', '', 'content_manage_shared'],
         ['screen', 'food.orders', 'Objednávkové poptávky', 'Nezávazné poptávky odeslané z jídelních a nápojových lístků.', $base . 'food_orders.php', 'food', '', 'content_manage_shared'],
+        ['screen', 'recipes', 'Recepty', 'Recepty, ingredience, postupy a veřejná kuchařka.', $base . 'recipes.php', 'recipes', '', 'content_manage_shared'],
+        ['screen', 'recipes.categories', 'Kategorie receptů', 'Kategorie, pořadí a SEO metadata receptů.', $base . 'recipe_categories.php', 'recipes', '', 'content_manage_shared'],
         ['screen', 'reservations', 'Rezervace', 'Rezervace, zdroje a lokality.', $base . 'res_bookings.php', 'reservations', '', 'bookings_manage'],
         ['screen', 'newsletter', 'Newsletter', 'Odběratelé, rozesílky a historie newsletteru.', $base . 'newsletter.php', 'newsletter', '', 'newsletter_manage'],
         ['screen', 'contact.messages', 'Kontaktní zprávy', 'Zprávy z kontaktního formuláře, stav a odpovědi.', $base . 'contact.php', 'contact', '', 'messages_manage'],
@@ -92,6 +94,7 @@ function adminCommandBaseRegistry(): array
         ['action', 'upload.media', 'Nahrát média', 'Otevřít knihovnu médií a nahrát soubory.', $base . 'media.php', '', 'Akce', 'content_manage_shared'],
         ['action', 'new.form', 'Nový formulář', 'Vytvořit formulář ručně nebo ze šablony.', $base . 'form_form.php', 'forms', 'Akce', 'content_manage_shared'],
         ['action', 'new.event', 'Nová událost', 'Založit novou akci nebo termín.', $base . 'event_form.php', 'events', 'Akce', 'content_manage_shared'],
+        ['action', 'new.recipe', 'Nový recept', 'Založit nový recept a doplnit jeho ingredience a postup.', $base . 'recipe_form.php', 'recipes', 'Akce', 'content_manage_shared'],
         ['action', 'new.booking', 'Nová rezervace', 'Přidat rezervaci z administrace.', $base . 'res_booking_add.php', 'reservations', 'Akce', 'bookings_manage'],
     ];
 
@@ -264,6 +267,7 @@ function adminCommandContentItem(string $entityType, array $row): array
         'event' => adminCommandItem('content', 'event:' . $id, $title, 'Událost' . adminCommandSuffix($row), $base . 'event_form.php?id=' . $id, 'events', 'Událost'),
         'form' => adminCommandItem('content', 'form:' . $id, $title, 'Formulář' . adminCommandSuffix($row), $base . 'form_form.php?id=' . $id, 'forms', 'Formulář'),
         'media' => adminCommandItem('content', 'media:' . $id, $title, 'Médium v knihovně' . adminCommandSuffix($row), $base . 'media.php?edit=' . $id, '', 'Médium'),
+        'recipe' => adminCommandItem('content', 'recipe:' . $id, $title, 'Recept' . adminCommandSuffix($row), $base . 'recipe_form.php?id=' . $id, 'recipes', 'Recept'),
         default => adminCommandItem('content', $entityType . ':' . $id, $title, 'Obsah webu' . adminCommandSuffix($row), $base . 'index.php', '', 'Obsah'),
     };
 }
@@ -333,6 +337,11 @@ function adminCommandSearchContent(PDO $pdo, string $query, int $limit): array
             'enabled' => adminCommandCanUseItem('content_manage_shared'),
             'sql' => "SELECT id, COALESCE(NULLIF(original_name, ''), filename) AS title, created_at FROM cms_media WHERE filename LIKE ? OR original_name LIKE ? OR alt_text LIKE ? OR caption LIKE ? OR credit LIKE ? ORDER BY created_at DESC, id DESC LIMIT ?",
             'params' => [$like, $like, $like, $like, $like],
+        ],
+        'recipe' => [
+            'enabled' => adminCommandCanUseItem('content_manage_shared', 'recipes'),
+            'sql' => "SELECT id, title, status, created_at FROM cms_recipes WHERE deleted_at IS NULL AND (title LIKE ? OR slug LIKE ? OR summary LIKE ? OR notes LIKE ?) ORDER BY updated_at DESC, id DESC LIMIT ?",
+            'params' => [$like, $like, $like, $like],
         ],
     ];
 
@@ -454,6 +463,7 @@ function adminCommandResolveContentItem(PDO $pdo, string $itemKey): ?array
         'event' => ['enabled' => adminCommandCanUseItem('content_manage_shared', 'events'), 'sql' => 'SELECT id, title, status, created_at FROM cms_events WHERE id = ? AND deleted_at IS NULL'],
         'form' => ['enabled' => adminCommandCanUseItem('content_manage_shared', 'forms'), 'sql' => 'SELECT id, title, created_at FROM cms_forms WHERE id = ?'],
         'media' => ['enabled' => adminCommandCanUseItem('content_manage_shared'), 'sql' => "SELECT id, COALESCE(NULLIF(original_name, ''), filename) AS title, created_at FROM cms_media WHERE id = ?"],
+        'recipe' => ['enabled' => adminCommandCanUseItem('content_manage_shared', 'recipes'), 'sql' => 'SELECT id, title, status, created_at FROM cms_recipes WHERE id = ? AND deleted_at IS NULL'],
     ];
 
     if (!isset($sources[$entityType]) || !$sources[$entityType]['enabled']) {

@@ -18,6 +18,7 @@ function adminContentReferencePickerTypes(): array
         'gallery',
         'podcast',
         'downloads',
+        'recipes',
         'forms',
         'places',
         'board',
@@ -36,7 +37,7 @@ function adminContentReferencePickerTypes(): array
 
     $appendModuleTypes('blog');
     $types['page'] = 'Statické stránky';
-    foreach (['news', 'events', 'faq', 'gallery', 'podcast', 'downloads'] as $moduleKey) {
+    foreach (['news', 'events', 'faq', 'gallery', 'podcast', 'downloads', 'recipes'] as $moduleKey) {
         $appendModuleTypes($moduleKey);
     }
     $types['media'] = 'Knihovna médií';
@@ -84,6 +85,9 @@ function adminHtmlSnippetSupportMarkup(): string
     }
     if (isModuleEnabled('board')) {
         $snippets[] = '<code>[board]slug-oznameni[/board]</code>';
+    }
+    if (isModuleEnabled('recipes')) {
+        $snippets[] = '<code>[recipe]slug-receptu[/recipe]</code>';
     }
 
     $last = (string) array_pop($snippets);

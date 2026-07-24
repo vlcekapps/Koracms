@@ -911,6 +911,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INDEX idx_food_order_items_item (item_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_categories (
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name             VARCHAR(255) NOT NULL,
+            slug             VARCHAR(150) NOT NULL,
+            description      TEXT,
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            sort_order       INT          NOT NULL DEFAULT 0,
+            is_active        TINYINT(1)   NOT NULL DEFAULT 1,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_recipe_categories_slug (slug),
+            INDEX idx_recipe_categories_public (is_active, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipes (
+            id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            category_id      INT          NOT NULL,
+            author_id        INT          NULL DEFAULT NULL,
+            title            VARCHAR(255) NOT NULL,
+            slug             VARCHAR(150) NOT NULL,
+            summary          TEXT,
+            notes            MEDIUMTEXT,
+            servings         INT          NULL DEFAULT NULL,
+            prep_minutes     INT          NULL DEFAULT NULL,
+            cook_minutes     INT          NULL DEFAULT NULL,
+            difficulty       ENUM('easy','medium','hard') NULL DEFAULT NULL,
+            dietary_flags    VARCHAR(255) NOT NULL DEFAULT '',
+            allergens        VARCHAR(100) NOT NULL DEFAULT '',
+            calories_kcal    INT          NULL DEFAULT NULL,
+            media_id         INT          NULL DEFAULT NULL,
+            image_alt_text   VARCHAR(255) NOT NULL DEFAULT '',
+            source_name      VARCHAR(255) NOT NULL DEFAULT '',
+            source_url       VARCHAR(500) NOT NULL DEFAULT '',
+            meta_title       VARCHAR(160) NOT NULL DEFAULT '',
+            meta_description TEXT,
+            status           ENUM('draft','pending','published') NOT NULL DEFAULT 'draft',
+            publish_at       DATETIME     NULL DEFAULT NULL,
+            deleted_at       DATETIME     NULL DEFAULT NULL,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_recipes_slug (slug),
+            INDEX idx_recipes_public (status, deleted_at, publish_at),
+            INDEX idx_recipes_category (category_id, status, deleted_at),
+            INDEX idx_recipes_author (author_id),
+            INDEX idx_recipes_media (media_id),
+            FULLTEXT INDEX ft_recipes_search (title, summary, notes)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_ingredient_groups (
+            id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            recipe_id  INT          NOT NULL,
+            title      VARCHAR(255) NOT NULL DEFAULT '',
+            sort_order INT          NOT NULL DEFAULT 0,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_recipe_ingredient_groups_order (recipe_id, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_ingredients (
+            id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            recipe_id   INT          NOT NULL,
+            group_id    INT          NOT NULL,
+            amount      VARCHAR(40)  NOT NULL DEFAULT '',
+            unit        VARCHAR(40)  NOT NULL DEFAULT '',
+            name        VARCHAR(255) NOT NULL,
+            note        VARCHAR(255) NOT NULL DEFAULT '',
+            is_optional TINYINT(1)   NOT NULL DEFAULT 0,
+            sort_order  INT          NOT NULL DEFAULT 0,
+            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_recipe_ingredients_order (recipe_id, group_id, sort_order, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_steps (
+            id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            recipe_id      INT          NOT NULL,
+            title          VARCHAR(255) NOT NULL DEFAULT '',
+            instruction    TEXT         NOT NULL,
+            media_id       INT          NULL DEFAULT NULL,
+            image_alt_text VARCHAR(255) NOT NULL DEFAULT '',
+            sort_order     INT          NOT NULL DEFAULT 0,
+            created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_recipe_steps_order (recipe_id, sort_order, id),
+            INDEX idx_recipe_steps_media (media_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        seedRecipeCategories($pdo);
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_polls (
             id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             question    VARCHAR(500) NOT NULL,

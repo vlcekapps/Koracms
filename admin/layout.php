@@ -317,6 +317,17 @@ function adminHeader(string $pageTitle): void
         if (isModuleEnabled('food')) {
             $contentItems[] = ['url' => $baseUrl . '/admin/food.php', 'label' => 'Jídelní lístek'];
         }
+        if (isModuleEnabled('recipes')) {
+            $contentItems[] = [
+                'type' => 'details',
+                'label' => 'Recepty',
+                'label_plain' => 'Recepty',
+                'items' => [
+                    ['url' => $baseUrl . '/admin/recipes.php', 'label' => 'Přehled receptů'],
+                    ['url' => $baseUrl . '/admin/recipe_categories.php', 'label' => 'Kategorie'],
+                ],
+            ];
+        }
         if (isModuleEnabled('polls')) {
             $contentItems[] = ['url' => $baseUrl . '/admin/polls.php', 'label' => 'Ankety'];
         }

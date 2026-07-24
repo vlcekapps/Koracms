@@ -70,7 +70,7 @@ $pdo = db_connect();
 $data = [
     'exported_at' => date('c'),
     'site'        => 'cms',
-    'version'     => 9,
+    'version'     => 10,
 ];
 
 $tables = [
@@ -171,6 +171,23 @@ $tables = [
                                price_note, portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                                media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
                         FROM cms_food_items",
+    'recipe_categories' => "SELECT id, name, slug, description, meta_title, meta_description,
+                                   sort_order, is_active, created_at, updated_at
+                            FROM cms_recipe_categories",
+    'recipes' => "SELECT id, category_id, author_id, title, slug, summary, notes, servings,
+                         prep_minutes, cook_minutes, difficulty, dietary_flags, allergens, calories_kcal,
+                         media_id, image_alt_text, source_name, source_url, meta_title, meta_description,
+                         status, publish_at, created_at, updated_at
+                  FROM cms_recipes
+                  WHERE deleted_at IS NULL",
+    'recipe_ingredient_groups' => "SELECT id, recipe_id, title, sort_order, created_at, updated_at
+                                   FROM cms_recipe_ingredient_groups",
+    'recipe_ingredients' => "SELECT id, recipe_id, group_id, amount, unit, name, note,
+                                    is_optional, sort_order, created_at, updated_at
+                             FROM cms_recipe_ingredients",
+    'recipe_steps' => "SELECT id, recipe_id, title, instruction, media_id, image_alt_text,
+                              sort_order, created_at, updated_at
+                       FROM cms_recipe_steps",
     'res_categories' => "SELECT id, name, sort_order, created_at FROM cms_res_categories",
     'res_resources' => "SELECT id, category_id, name, slug, description, capacity, slot_mode, slot_duration_min,
                                min_advance_hours, max_advance_days, cancellation_hours, requires_approval, allow_guests,

@@ -213,6 +213,7 @@ assert_admin_route_module_requirement('C:\\laragon\\www\\admin\\gallery_photo_re
 assert_admin_route_module_requirement('/admin/newsletter_send.php', 'newsletter', 'Newsletter', 'newsletter send route is guarded');
 assert_admin_route_module_requirement('/admin/res_booking_save.php', 'reservations', 'Rezervace', 'reservation save route is guarded');
 assert_admin_route_module_requirement('/admin/appmarket.php', 'appmarket', 'Appmarket', 'Appmarket admin route is guarded');
+assert_admin_route_module_requirement('/admin/recipe_save.php', 'recipes', 'Recepty', 'recipe save route is guarded');
 assert_equals(null, adminRouteModuleRequirement('/admin/index.php'), 'admin dashboard is not tied to a module');
 assert_equals(null, adminRouteModuleRequirement('/forms/index.php'), 'public module path is ignored');
 assert_equals('content_manage_shared', adminRouteCapability('/admin/convert_content.php'), 'content conversion requires shared content management');
@@ -241,6 +242,7 @@ assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics ha
 assert_true(in_array('/appmarket/index.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket catalog is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/update.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket update API is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/publish.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket publisher API is declared as a guarded public module entrypoint');
+assert_true(in_array('/recipes/cookbook.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe cookbook is declared as a public module entrypoint');
 assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
 assert_equals('board', $modulePublicPathMap['/board/subscribe.php'] ?? null, 'board subscribe public path maps to board module');
 assert_equals('newsletter', $modulePublicPathMap['/subscribe.php'] ?? null, 'newsletter subscribe public path maps to newsletter module');
@@ -254,6 +256,7 @@ assert_true(in_array('/admin/blogs.php', $moduleAdminEntryPoints['blog'] ?? [], 
 assert_true(in_array('/admin/blog_series.php', $moduleAdminEntryPoints['blog'] ?? [], true), 'blog series admin is declared as an admin module entrypoint');
 assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
 assert_true(in_array('/admin/appmarket.php', $moduleAdminEntryPoints['appmarket'] ?? [], true), 'Appmarket overview is declared as an admin module entrypoint');
+assert_true(in_array('/admin/recipe_content.php', $moduleAdminEntryPoints['recipes'] ?? [], true), 'recipe content editor is declared as an admin module entrypoint');
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
 assert_equals('/admin/blog.php', modulePrimaryAdminPath('blog'), 'blog primary admin path comes from first manifest admin path');
@@ -299,6 +302,7 @@ assert_equals('blog', $contentReferenceTypeMap['blog'] ?? null, 'blog picker typ
 assert_equals('events', $contentReferenceTypeMap['event'] ?? null, 'event picker type maps to events module');
 assert_equals('downloads', $contentReferenceTypeMap['download'] ?? null, 'download picker type maps to downloads module');
 assert_equals('forms', $contentReferenceTypeMap['forms'] ?? null, 'forms picker type maps to forms module');
+assert_equals('recipes', $contentReferenceTypeMap['recipe'] ?? null, 'recipe picker type maps to recipes module');
 assert_false(isset($contentReferenceTypes['statistics']), 'statistics module has no content picker source');
 
 test_section('module search result types');
@@ -311,6 +315,7 @@ assert_equals('gallery', $searchResultTypeMap['gallery_album'] ?? null, 'gallery
 assert_equals('podcast', $searchResultTypeMap['podcast_episode'] ?? null, 'podcast episode search result type maps to podcast module');
 assert_equals('reservations', $searchResultTypeMap['reservation_resource'] ?? null, 'reservation resource search result type maps to reservations module');
 assert_equals('appmarket', $searchResultTypeMap['appmarket_app'] ?? null, 'Appmarket search result type maps to Appmarket module');
+assert_equals('recipes', $searchResultTypeMap['recipe'] ?? null, 'recipe search result type maps to recipes module');
 assert_false(isset($searchResultTypes['statistics']), 'statistics module has no public search result type');
 
 test_section('module sitemap sections');
@@ -331,6 +336,7 @@ assert_equals('podcast', $sitemapSectionMap['podcast_episodes'] ?? null, 'podcas
 assert_equals('forms', $sitemapSectionMap['forms'] ?? null, 'forms sitemap section maps to forms module');
 assert_equals('appmarket', $sitemapSectionMap['appmarket_apps'] ?? null, 'Appmarket application sitemap section maps to Appmarket module');
 assert_equals('appmarket', $sitemapSectionMap['appmarket_releases'] ?? null, 'Appmarket release sitemap section maps to Appmarket module');
+assert_equals('recipes', $sitemapSectionMap['recipe_categories'] ?? null, 'recipe category sitemap section maps to recipes module');
 assert_false(isset($sitemapSections['statistics']), 'statistics module has no sitemap section');
 
 test_section('module stats page types');
@@ -345,6 +351,7 @@ assert_equals('food', $statsPageTypeMap['food_card'] ?? null, 'food card stats p
 assert_equals('forms', $statsPageTypeMap['form'] ?? null, 'form stats page type maps to forms module');
 assert_equals('appmarket', $statsPageTypeMap['appmarket_app'] ?? null, 'Appmarket application stats type maps to Appmarket module');
 assert_equals('appmarket', $statsPageTypeMap['appmarket_release'] ?? null, 'Appmarket release stats type maps to Appmarket module');
+assert_equals('recipes', $statsPageTypeMap['recipe'] ?? null, 'recipe stats type maps to recipes module');
 assert_false(isset($statsPageTypes['statistics']), 'statistics module has no measured public content type');
 
 test_section('module database tables');
@@ -355,10 +362,12 @@ assert_true(in_array('cms_articles', $moduleDatabaseTables['blog'] ?? [], true),
 assert_true(in_array('cms_board_publication_events', $moduleDatabaseTables['board'] ?? [], true), 'board supporting table comes from manifest');
 assert_true(in_array('cms_res_booking_events', $moduleDatabaseTables['reservations'] ?? [], true), 'reservation history table comes from manifest');
 assert_true(in_array('cms_appmarket_publish_tokens', $moduleDatabaseTables['appmarket'] ?? [], true), 'Appmarket token table comes from manifest');
+assert_true(in_array('cms_recipe_steps', $moduleDatabaseTables['recipes'] ?? [], true), 'recipe supporting tables come from manifest');
 assert_equals('blog', $moduleDatabaseTableMap['cms_blog_series'] ?? null, 'blog series table maps to blog module');
 assert_equals('food', $moduleDatabaseTableMap['cms_food_order_items'] ?? null, 'food order item table maps to food module');
 assert_equals('statistics', $moduleDatabaseTableMap['cms_stats_content_daily'] ?? null, 'content statistics table maps to statistics module');
 assert_equals('appmarket', $moduleDatabaseTableMap['cms_appmarket_releases'] ?? null, 'Appmarket release table maps to Appmarket module');
+assert_equals('recipes', $moduleDatabaseTableMap['cms_recipe_ingredients'] ?? null, 'recipe ingredient table maps to recipes module');
 assert_false(isset($moduleDatabaseTableMap['cms_users']), 'shared core user table has no module owner');
 
 test_section('Appmarket helpers');
@@ -1755,6 +1764,171 @@ $structuredDataHtml = structuredDataScript([
 assert_contains('<script type="application/ld+json" nonce="', $structuredDataHtml, 'structuredDataScript renders CSP nonce');
 assert_contains('"@type":"Thing"', $structuredDataHtml, 'structuredDataScript renders JSON-LD payload');
 assert_false(str_contains($structuredDataHtml, '<script type="application/ld+json">'), 'structuredDataScript does not render raw non-nonced script');
+
+test_section('recipe catalog and EPUB helpers');
+
+assert_equals(
+    ['vegan', 'gluten_free'],
+    normalizeRecipeSelection(['vegan', 'unknown', 'gluten_free', 'vegan'], recipeDietaryFlagDefinitions()),
+    'recipe dietary selections keep only known unique values'
+);
+assert_equals(
+    ['1', '7'],
+    normalizeRecipeSelection(['1', '15', '7', '1'], recipeAllergenDefinitions()),
+    'recipe allergen selections keep valid numeric keys as strings'
+);
+assert_equals(12, recipeNullablePositiveInt('12'), 'recipe positive integer accepts exact whole number');
+assert_equals(null, recipeNullablePositiveInt('0'), 'recipe positive integer rejects zero');
+assert_equals(null, recipeNullablePositiveInt('12,5'), 'recipe positive integer rejects decimal estimates');
+assert_equals('hlavni-jidlo', recipeSlug('Hlavní jídlo'), 'recipe slug normalizes Czech title');
+assert_equals('/recipes/testovaci-recept', recipePublicRequestPath('testovaci-recept'), 'recipe request path is canonical');
+assert_equals('/recipes/kategorie/polevky', recipeCategoryPublicPath('polevky'), 'recipe category path is canonical');
+assert_equals('/recipes/kucharka.epub', recipeCookbookPublicPath(), 'complete recipe cookbook path is canonical');
+assert_equals(
+    '/recipes/kucharka/polevky.epub',
+    recipeCookbookPublicPath('polevky'),
+    'category recipe cookbook path is canonical'
+);
+assert_equals('', recipeDurationLabel(null), 'missing recipe duration stays empty');
+assert_equals('45 min', recipeDurationLabel(45), 'recipe duration keeps exact minutes');
+assert_equals('1 h', recipeDurationLabel(60), 'recipe duration formats exact hour');
+assert_equals('1 h 35 min', recipeDurationLabel(95), 'recipe duration formats exact hour and minutes');
+assert_equals(55, recipeTotalMinutes(['prep_minutes' => 15, 'cook_minutes' => 40]), 'recipe total sums exact times');
+assert_equals(null, recipeTotalMinutes(['prep_minutes' => null, 'cook_minutes' => null]), 'recipe total omits unknown times');
+assert_equals(
+    'Hotový pokrm na talíři',
+    recipeImageAlt(
+        ['title' => 'Polévka', 'image_alt_text' => 'Hotový pokrm na talíři'],
+        ['alt_text' => 'Alt média']
+    ),
+    'recipe-specific image alt has priority'
+);
+assert_equals(
+    'Alt média',
+    recipeImageAlt(['title' => 'Polévka'], ['alt_text' => 'Alt média']),
+    'recipe image alt falls back to media metadata'
+);
+assert_equals('Polévka', recipeImageAlt(['title' => 'Polévka']), 'recipe image alt falls back to recipe title');
+
+$recipeVisibilityNow = new DateTimeImmutable('2026-07-24 12:00:00 UTC');
+assert_true(recipeIsPubliclyVisible([
+    'status' => 'published',
+    'publish_at' => '2026-07-24 11:00:00',
+    'deleted_at' => null,
+], $recipeVisibilityNow), 'published recipe in the past is public');
+assert_false(recipeIsPubliclyVisible([
+    'status' => 'published',
+    'publish_at' => '2026-07-24 13:00:00',
+    'deleted_at' => null,
+], $recipeVisibilityNow), 'future recipe is not public');
+assert_false(recipeIsPubliclyVisible([
+    'status' => 'draft',
+    'publish_at' => null,
+    'deleted_at' => null,
+], $recipeVisibilityNow), 'draft recipe is not public');
+assert_false(recipeIsPubliclyVisible([
+    'status' => 'published',
+    'publish_at' => null,
+    'deleted_at' => '2026-07-24 11:00:00',
+], $recipeVisibilityNow), 'deleted recipe is not public');
+
+$recipeStructureFixture = [
+    'groups' => [[
+        'title' => 'Těsto',
+        'ingredients' => [[
+            'amount' => '250',
+            'unit' => 'g',
+            'name' => 'mouka',
+            'note' => 'hladká',
+            'is_optional' => 0,
+        ]],
+    ]],
+    'steps' => [[
+        'title' => 'Promíchání',
+        'instruction' => 'Ingredience důkladně promíchejte.',
+    ]],
+    'ingredient_count' => 1,
+    'step_count' => 1,
+];
+$recipeStructuredData = recipeStructuredData([
+    'title' => 'Testovací recept',
+    'slug' => 'testovaci-recept',
+    'summary' => 'Přesně popsaný recept.',
+    'prep_minutes' => 15,
+    'cook_minutes' => 40,
+    'servings' => 4,
+    'calories_kcal' => 520,
+    'category_name' => 'Hlavní jídla',
+], $recipeStructureFixture);
+assert_equals('PT15M', $recipeStructuredData['prepTime'] ?? null, 'recipe structured data keeps exact preparation time');
+assert_equals('PT40M', $recipeStructuredData['cookTime'] ?? null, 'recipe structured data keeps exact cooking time');
+assert_equals('PT55M', $recipeStructuredData['totalTime'] ?? null, 'recipe structured data derives exact total');
+assert_equals(['250 g mouka hladká'], $recipeStructuredData['recipeIngredient'] ?? null, 'recipe structured data keeps ingredient text');
+assert_equals(
+    'Ingredience důkladně promíchejte.',
+    $recipeStructuredData['recipeInstructions'][0]['text'] ?? null,
+    'recipe structured data keeps instruction text'
+);
+assert_equals('520 kcal', $recipeStructuredData['nutrition']['calories'] ?? null, 'recipe structured data keeps entered calories');
+
+$recipeDefaultCategories = recipeDefaultCategories();
+assert_true(count($recipeDefaultCategories) >= 8, 'recipe module provides practical default categories');
+assert_equals(
+    count($recipeDefaultCategories),
+    count(array_unique(array_column($recipeDefaultCategories, 'slug'))),
+    'recipe default category slugs are unique'
+);
+assert_true(
+    in_array('Polévky', array_column($recipeDefaultCategories, 'name'), true),
+    'recipe default categories include soups'
+);
+assert_true(
+    in_array('Dezerty', array_column($recipeDefaultCategories, 'name'), true),
+    'recipe default categories include desserts'
+);
+
+if (class_exists(ZipArchive::class)) {
+    $recipeEpubPath = buildRecipeCookbookEpub([[
+        'title' => 'Testovací recept',
+        'slug' => 'testovaci-recept',
+        'summary' => 'Přesně popsaný recept.',
+        'category_name' => 'Hlavní jídla',
+        'servings' => 4,
+        'prep_minutes' => 15,
+        'cook_minutes' => 40,
+        'structure' => $recipeStructureFixture,
+    ]], 'Testovací kuchařka');
+    assert_true(is_string($recipeEpubPath) && is_file($recipeEpubPath), 'recipe EPUB builder creates a file');
+    if (is_string($recipeEpubPath) && is_file($recipeEpubPath)) {
+        $recipeEpubZip = new ZipArchive();
+        $recipeEpubOpened = $recipeEpubZip->open($recipeEpubPath);
+        assert_true($recipeEpubOpened === true, 'recipe EPUB opens as ZIP archive');
+        if ($recipeEpubOpened === true) {
+            assert_equals(
+                'application/epub+zip',
+                $recipeEpubZip->getFromName('mimetype'),
+                'recipe EPUB has required mimetype'
+            );
+            $recipeEpubPackage = (string)$recipeEpubZip->getFromName('OEBPS/content.opf');
+            $recipeEpubNavigation = (string)$recipeEpubZip->getFromName('OEBPS/nav.xhtml');
+            $recipeEpubContent = (string)$recipeEpubZip->getFromName('OEBPS/cookbook.xhtml');
+            assert_contains('<dc:language>cs</dc:language>', $recipeEpubPackage, 'recipe EPUB declares Czech language');
+            assert_contains('schema:accessMode">textual', $recipeEpubPackage, 'recipe EPUB declares textual access mode');
+            assert_contains('schema:accessibilityFeature">structuralNavigation', $recipeEpubPackage, 'recipe EPUB declares structural navigation');
+            assert_contains('cookbook.xhtml#recipe-testovaci-recept', $recipeEpubNavigation, 'recipe EPUB navigation links to each recipe');
+            assert_contains('<ol>', $recipeEpubContent, 'recipe EPUB renders instructions as an ordered list');
+            assert_contains('<ul>', $recipeEpubContent, 'recipe EPUB renders ingredients as a list');
+            $recipeEpubZip->close();
+        }
+        @unlink($recipeEpubPath);
+    }
+} else {
+    assert_equals(
+        null,
+        buildRecipeCookbookEpub([], 'Testovací kuchařka'),
+        'recipe EPUB builder fails safely without ZipArchive'
+    );
+}
 
 test_section('food structured menu helpers');
 

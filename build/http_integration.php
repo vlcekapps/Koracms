@@ -57,6 +57,8 @@ $createdFoodIds = [];
 $createdFoodSectionIds = [];
 $createdFoodItemIds = [];
 $createdFoodOrderIds = [];
+$createdRecipeCategoryIds = [];
+$createdRecipeIds = [];
 $createdFaqIds = [];
 $createdFaqCategoryIds = [];
 $createdPollIds = [];
@@ -15059,6 +15061,234 @@ try {
     httpIntegrationPrintResult('generic_bulk_delete_error_prevention_http', $genericBulkDeleteIssues, $failures);
     httpIntegrationPrintResult('faq_categories_feedback_http', $faqIssues, $failures);
 
+    $recipeIssues = [];
+    saveSetting('module_recipes', '1');
+    clearSettingsCache();
+
+    $recipeToken = bin2hex(random_bytes(4));
+    $recipeCategorySlug = uniqueRecipeCategorySlug($pdo, 'http-hlavni-jidla-' . $recipeToken);
+    $recipeCategoryName = 'HTTP Hlavní jídla ' . $recipeToken;
+    $pdo->prepare(
+        "INSERT INTO cms_recipe_categories
+            (name, slug, description, meta_title, meta_description, sort_order, is_active)
+         VALUES (?, ?, ?, ?, ?, 900, 1)"
+    )->execute([
+        $recipeCategoryName,
+        $recipeCategorySlug,
+        'HTTP popis veřejné kategorie receptů.',
+        'HTTP SEO kategorie receptů',
+        'HTTP meta popis kategorie receptů.',
+    ]);
+    $recipeCategoryId = (int)$pdo->lastInsertId();
+    $createdRecipeCategoryIds[] = $recipeCategoryId;
+
+    $recipeInactiveCategorySlug = uniqueRecipeCategorySlug($pdo, 'http-neaktivni-recepty-' . $recipeToken);
+    $pdo->prepare(
+        "INSERT INTO cms_recipe_categories
+            (name, slug, description, sort_order, is_active)
+         VALUES (?, ?, 'Kategorie nesmí být veřejná.', 910, 0)"
+    )->execute(['HTTP Neaktivní recepty ' . $recipeToken, $recipeInactiveCategorySlug]);
+    $recipeInactiveCategoryId = (int)$pdo->lastInsertId();
+    $createdRecipeCategoryIds[] = $recipeInactiveCategoryId;
+
+    $recipeSlug = uniqueRecipeSlug($pdo, 'http-presny-recept-' . $recipeToken);
+    $recipeTitle = 'HTTP Přesný recept ' . $recipeToken;
+    $recipeIngredientNeedle = 'ingredience' . $recipeToken;
+    $pdo->prepare(
+        "INSERT INTO cms_recipes
+            (category_id, author_id, title, slug, summary, notes, servings, prep_minutes,
+             cook_minutes, difficulty, dietary_flags, allergens, calories_kcal,
+             meta_title, meta_description, status, publish_at)
+         VALUES (?, ?, ?, ?, ?, ?, 4, 15, 40, 'medium', 'vegetarian,gluten_free',
+                 '1,7', 520, ?, ?, 'published', DATE_SUB(NOW(), INTERVAL 1 HOUR))"
+    )->execute([
+        $recipeCategoryId,
+        $adminUserId,
+        $recipeTitle,
+        $recipeSlug,
+        'HTTP veřejný recept s přesnými údaji.',
+        'HTTP poznámka k receptu.',
+        'HTTP SEO detail receptu',
+        'HTTP meta popis detailu receptu.',
+    ]);
+    $recipeId = (int)$pdo->lastInsertId();
+    $createdRecipeIds[] = $recipeId;
+
+    $pdo->prepare(
+        "INSERT INTO cms_recipe_ingredient_groups (recipe_id, title, sort_order)
+         VALUES (?, 'Těsto', 10)"
+    )->execute([$recipeId]);
+    $recipeGroupId = (int)$pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO cms_recipe_ingredients
+            (recipe_id, group_id, amount, unit, name, note, is_optional, sort_order)
+         VALUES (?, ?, '250', 'g', ?, 'přesně odvážená', 0, 10)"
+    )->execute([$recipeId, $recipeGroupId, $recipeIngredientNeedle]);
+    $pdo->prepare(
+        "INSERT INTO cms_recipe_steps
+            (recipe_id, title, instruction, sort_order)
+         VALUES (?, 'Promíchání', 'Ingredience důkladně promíchejte.', 10)"
+    )->execute([$recipeId]);
+
+    $recipeDraftSlug = uniqueRecipeSlug($pdo, 'http-koncept-receptu-' . $recipeToken);
+    $pdo->prepare(
+        "INSERT INTO cms_recipes
+            (category_id, author_id, title, slug, summary, status)
+         VALUES (?, ?, ?, ?, 'Tento koncept nesmí být veřejný.', 'draft')"
+    )->execute([
+        $recipeCategoryId,
+        $adminUserId,
+        'HTTP Koncept receptu ' . $recipeToken,
+        $recipeDraftSlug,
+    ]);
+    $recipeDraftId = (int)$pdo->lastInsertId();
+    $createdRecipeIds[] = $recipeDraftId;
+
+    $recipeFutureSlug = uniqueRecipeSlug($pdo, 'http-budouci-recept-' . $recipeToken);
+    $pdo->prepare(
+        "INSERT INTO cms_recipes
+            (category_id, author_id, title, slug, summary, status, publish_at)
+         VALUES (?, ?, ?, ?, 'Tento budoucí recept nesmí být veřejný.', 'published',
+                 DATE_ADD(NOW(), INTERVAL 1 DAY))"
+    )->execute([
+        $recipeCategoryId,
+        $adminUserId,
+        'HTTP Budoucí recept ' . $recipeToken,
+        $recipeFutureSlug,
+    ]);
+    $recipeFutureId = (int)$pdo->lastInsertId();
+    $createdRecipeIds[] = $recipeFutureId;
+
+    $recipeInactiveSlug = uniqueRecipeSlug($pdo, 'http-recept-neaktivni-kategorie-' . $recipeToken);
+    $pdo->prepare(
+        "INSERT INTO cms_recipes
+            (category_id, author_id, title, slug, summary, status, publish_at)
+         VALUES (?, ?, ?, ?, 'Recept neaktivní kategorie nesmí být veřejný.', 'published',
+                 DATE_SUB(NOW(), INTERVAL 1 HOUR))"
+    )->execute([
+        $recipeInactiveCategoryId,
+        $adminUserId,
+        'HTTP Recept neaktivní kategorie ' . $recipeToken,
+        $recipeInactiveSlug,
+    ]);
+    $recipeInactiveId = (int)$pdo->lastInsertId();
+    $createdRecipeIds[] = $recipeInactiveId;
+
+    $recipeIndexResponse = fetchUrl($baseUrl . BASE_URL . '/recipes/', '', 0);
+    if (httpIntegrationStatusCode($recipeIndexResponse) !== 200
+        || !str_contains($recipeIndexResponse['body'], 'id="recipes-title"')
+        || !str_contains($recipeIndexResponse['body'], 'aria-labelledby="recipes-title"')
+        || !str_contains($recipeIndexResponse['body'], 'Filtrovat recepty')
+        || !str_contains($recipeIndexResponse['body'], 'Stáhnout kuchařku EPUB')
+        || !str_contains($recipeIndexResponse['body'], $recipeTitle)
+        || str_contains($recipeIndexResponse['body'], 'HTTP Koncept receptu ' . $recipeToken)
+        || str_contains($recipeIndexResponse['body'], 'HTTP Budoucí recept ' . $recipeToken)
+        || str_contains($recipeIndexResponse['body'], 'HTTP Recept neaktivní kategorie ' . $recipeToken)) {
+        $recipeIssues[] = 'veřejný katalog receptů nemá očekávanou sémantiku nebo správnou viditelnost';
+    }
+
+    $recipeCategoryResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/kategorie/' . rawurlencode($recipeCategorySlug),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeCategoryResponse) !== 200
+        || !str_contains($recipeCategoryResponse['body'], $recipeCategoryName)
+        || !str_contains($recipeCategoryResponse['body'], 'HTTP popis veřejné kategorie receptů.')
+        || !str_contains($recipeCategoryResponse['body'], 'HTTP meta popis kategorie receptů.')
+        || !str_contains($recipeCategoryResponse['body'], $recipeTitle)) {
+        $recipeIssues[] = 'landing stránka kategorie receptů nevrátila nadpis, popis, metadata nebo veřejný recept';
+    }
+
+    $recipeIngredientSearchResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/index.php?q=' . rawurlencode($recipeIngredientNeedle),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeIngredientSearchResponse) !== 200
+        || !str_contains($recipeIngredientSearchResponse['body'], $recipeTitle)) {
+        $recipeIssues[] = 'hledání receptů nenašlo recept podle názvu ingredience';
+    }
+
+    $recipeDetailResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/' . rawurlencode($recipeSlug),
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeDetailResponse) !== 200
+        || !str_contains($recipeDetailResponse['body'], 'aria-labelledby="recipe-title"')
+        || !str_contains($recipeDetailResponse['body'], 'id="recipe-ingredients-title"')
+        || !str_contains($recipeDetailResponse['body'], 'id="recipe-steps-title"')
+        || !str_contains($recipeDetailResponse['body'], $recipeIngredientNeedle)
+        || !str_contains($recipeDetailResponse['body'], '250 g')
+        || !str_contains($recipeDetailResponse['body'], 'Ingredience důkladně promíchejte.')
+        || !str_contains($recipeDetailResponse['body'], 'Celkový čas')
+        || !str_contains($recipeDetailResponse['body'], '55 min')
+        || !str_contains($recipeDetailResponse['body'], '"@type":"Recipe"')) {
+        $recipeIssues[] = 'detail receptu neobsahuje přístupné sekce, přesné údaje nebo Recipe structured data';
+    }
+
+    foreach ([$recipeDraftSlug, $recipeFutureSlug, $recipeInactiveSlug] as $hiddenRecipeSlug) {
+        $hiddenRecipeResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/recipes/' . rawurlencode($hiddenRecipeSlug),
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($hiddenRecipeResponse) !== 404) {
+            $recipeIssues[] = 'neveřejný recept ' . $hiddenRecipeSlug . ' nevrátil 404';
+        }
+    }
+
+    $recipeAdminFormResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/recipe_form.php?id=' . $recipeId,
+        $adminSession['cookie'],
+        0
+    );
+    $recipeAdminContentResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/admin/recipe_content.php?id=' . $recipeId,
+        $adminSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($recipeAdminFormResponse) !== 200
+        || !str_contains($recipeAdminFormResponse['body'], '<legend>Základní údaje receptu</legend>')
+        || !str_contains($recipeAdminFormResponse['body'], '<legend>Dietní vlastnosti a alergeny</legend>')
+        || !str_contains($recipeAdminFormResponse['body'], 'CMS je nebude odhadovat ani dopočítávat.')
+        || substr_count($recipeAdminFormResponse['body'], 'id="recipe-status-help"') !== 1
+        || httpIntegrationStatusCode($recipeAdminContentResponse) !== 200
+        || !str_contains($recipeAdminContentResponse['body'], 'Skupiny ingrediencí')
+        || !str_contains($recipeAdminContentResponse['body'], 'id="recipe-steps-title">Postup</h2>')) {
+        $recipeIssues[] = 'administrační editory receptu nemají očekávané fieldsety, nápovědy nebo správu struktury';
+    }
+
+    $recipeCookbookResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/kucharka/' . rawurlencode($recipeCategorySlug) . '.epub',
+        '',
+        0
+    );
+    if (class_exists(ZipArchive::class)) {
+        if (httpIntegrationStatusCode($recipeCookbookResponse) !== 200
+            || !httpIntegrationHeaderContains($recipeCookbookResponse, 'Content-Type', 'application/epub+zip')
+            || !httpIntegrationHeaderContains($recipeCookbookResponse, 'Content-Disposition', '.epub')
+            || !str_starts_with($recipeCookbookResponse['body'], 'PK')) {
+            $recipeIssues[] = 'kategoriová kuchařka nevrátila platný EPUB download';
+        }
+    } elseif (httpIntegrationStatusCode($recipeCookbookResponse) !== 503
+        || !str_contains($recipeCookbookResponse['body'], 'Kuchařku se nyní nepodařilo vytvořit.')) {
+        $recipeIssues[] = 'kuchařka bez ZipArchive neselhala s bezpečnou a srozumitelnou odpovědí';
+    }
+
+    $recipeSitemapResponse = fetchUrl($baseUrl . BASE_URL . '/sitemap.php', '', 0);
+    if (httpIntegrationStatusCode($recipeSitemapResponse) !== 200
+        || !str_contains($recipeSitemapResponse['body'], '/recipes/' . $recipeSlug)
+        || !str_contains($recipeSitemapResponse['body'], '/recipes/kategorie/' . $recipeCategorySlug)
+        || str_contains($recipeSitemapResponse['body'], '/recipes/' . $recipeDraftSlug)
+        || str_contains($recipeSitemapResponse['body'], '/recipes/' . $recipeFutureSlug)
+        || str_contains($recipeSitemapResponse['body'], '/recipes/' . $recipeInactiveSlug)) {
+        $recipeIssues[] = 'sitemap receptů neobsahuje jen veřejné recepty a aktivní kategorie';
+    }
+
+    httpIntegrationPrintResult('recipes_catalog_cookbook_http', $recipeIssues, $failures);
+
     $foodStructuredIssues = [];
     foreach ([
         'required' => [
@@ -20708,6 +20938,18 @@ try {
         $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$foodIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$foodIdToDelete]);
         $pdo->prepare("DELETE FROM cms_food_cards WHERE id = ?")->execute([$foodIdToDelete]);
+    }
+    foreach ($createdRecipeIds as $recipeIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_page_views WHERE page_type = 'recipe' AND page_ref_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_stats_content_daily WHERE page_type = 'recipe' AND page_ref_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_recipe_steps WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_recipe_ingredients WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_recipes WHERE id = ?")->execute([$recipeIdToDelete]);
+    }
+    foreach ($createdRecipeCategoryIds as $recipeCategoryIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_recipe_categories WHERE id = ?")->execute([$recipeCategoryIdToDelete]);
     }
     foreach ($createdFaqIds as $faqIdToDelete) {
         $pdo->prepare("DELETE FROM cms_faq_feedback WHERE faq_id = ?")->execute([$faqIdToDelete]);

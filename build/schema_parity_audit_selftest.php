@@ -462,6 +462,37 @@ CREATE TABLE IF NOT EXISTS cms_food_order_items (
   item_title VARCHAR(255),
   quantity INT
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipe_categories (
+  id INT,
+  slug VARCHAR(180),
+  meta_title VARCHAR(160),
+  is_active TINYINT(1)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipes (
+  id INT,
+  category_id INT,
+  slug VARCHAR(180),
+  dietary_flags VARCHAR(255),
+  allergens VARCHAR(255),
+  media_id INT,
+  status VARCHAR(20)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipe_ingredient_groups (
+  id INT,
+  recipe_id INT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipe_ingredients (
+  id INT,
+  recipe_id INT,
+  group_id INT,
+  name VARCHAR(255)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipe_steps (
+  id INT,
+  recipe_id INT,
+  instruction TEXT,
+  media_id INT
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_res_resources (
   id INT,
   reminders_enabled TINYINT(1),
@@ -697,6 +728,22 @@ PHP,
 // cms_food_order_items
 // idx_food_order_items_order
 // idx_food_order_items_item
+// cms_recipe_categories
+// uq_recipe_categories_slug
+// idx_recipe_categories_public
+// cms_recipes
+// uq_recipes_slug
+// idx_recipes_public
+// idx_recipes_category
+// idx_recipes_media
+// ft_recipes_search
+// cms_recipe_ingredient_groups
+// idx_recipe_ingredient_groups_order
+// cms_recipe_ingredients
+// idx_recipe_ingredients_order
+// cms_recipe_steps
+// idx_recipe_steps_order
+// idx_recipe_steps_media
 // cms_res_resources.reminders_enabled
 // cms_res_resources.reminder_hours_before
 // cms_res_resources.reminder_message
@@ -840,6 +887,18 @@ assertSchemaParityAuditFails(
     'Fresh install column guard',
     $missingInstallColumnFiles,
     'install.php fresh schema is missing critical column cms_pages.slug_scope_id.'
+);
+
+$missingRecipeInstallColumnFiles = $validFiles;
+$missingRecipeInstallColumnFiles['install.php'] = str_replace(
+    "  dietary_flags VARCHAR(255),\n",
+    '',
+    $missingRecipeInstallColumnFiles['install.php']
+);
+assertSchemaParityAuditFails(
+    'Recipe fresh install column guard',
+    $missingRecipeInstallColumnFiles,
+    'install.php fresh schema is missing critical column cms_recipes.dietary_flags.'
 );
 
 $missingMigrationSnippetFiles = $validFiles;

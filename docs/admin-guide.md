@@ -658,6 +658,69 @@ Detail lístku nově:
 
 ---
 
+## Recepty
+
+Modul **Recepty** je volitelný a po migraci zůstává vypnutý, dokud jej správce nezapne v **Obecných nastaveních → Správa modulů**. Veřejná část potom používá katalog `/recipes`, čisté adresy kategorií `/recipes/kategorie/{slug}` a detail `/recipes/{slug}`.
+
+### Kategorie receptů
+
+Správa kategorií obsahuje praktické výchozí položky, například `Předkrmy`, `Polévky`, `Hlavní jídla`, `Dezerty`, `Saláty`, `Přílohy`, `Pečivo`, `Nápoje` a `Snídaně a svačiny`. Každá kategorie může mít:
+
+- název a automaticky nebo ručně zadaný unikátní slug,
+- veřejný popis,
+- `meta title` a `meta description`,
+- pořadí,
+- aktivní nebo neaktivní stav.
+
+Aktivní kategorii s publikovanými recepty nelze deaktivovat. Nejdřív recepty přesuňte do jiné kategorie nebo je převeďte na koncept; veřejné katalogy, hledání, content picker a sitemapa tím nemohou omylem ukázat recept z neaktivní kategorie.
+
+### Založení a publikace receptu
+
+Správa receptu je rozdělená do dvou kroků, aby dlouhý formulář zůstal přehledný:
+
+1. Uložte základní údaje. Nový recept vždy vznikne jako koncept.
+2. Otevřete `Ingredience a postup`, vytvořte skupiny ingrediencí a doplňte řazené kroky.
+
+Základní údaje zahrnují kategorii, název, slug, krátké shrnutí, poznámky, počet porcí, čas přípravy, čas tepelné úpravy, náročnost, dietní vlastnosti, alergeny, volitelnou energii na porci, hlavní obrázek, alt text, zdroj a SEO metadata. Vyplňujte jen ověřené hodnoty. Kora CMS neodhaduje čas, porce, kalorie, množství ani alergeny.
+
+Publikovaný stav lze uložit jen tehdy, když má recept aktivní kategorii, alespoň jednu ingredienci a alespoň jeden krok. Naplánovaný čas v budoucnosti recept do té doby nezpřístupní. Změna slugu veřejného receptu uloží trvalý redirect ze staré adresy na nový canonical tvar.
+
+### Ingredience a postup
+
+Ingredience lze členit do skupin, například `Těsto`, `Náplň` nebo `Na dokončení`. Každá ingredience má samostatné množství, jednotku, název, poznámku a příznak `Volitelné`. Text zůstává přesně takový, jaký správce zadá; modul jednotky nepřevádí ani množství nepřepočítává.
+
+Každý krok má volitelný krátký nadpis, povinnou instrukci a volitelný veřejný obrázek z knihovny médií s vlastním alt textem. Skupiny, ingredience i kroky se řadí přístupnými tlačítky nahoru a dolů, nikoli ovládáním závislým na myši. Smazání je serverově chráněné CSRF a výslovným potvrzením dopadu.
+
+### Veřejný katalog a vložení do obsahu
+
+Veřejný katalog umí hledat podle názvu, popisu, poznámek, kategorie, skupiny i ingredience a filtrovat podle kategorie, náročnosti a více současně platných dietních vlastností. Detail zobrazuje:
+
+- přehled přesně zadaných hodnot,
+- textové dietní vlastnosti a alergeny,
+- ingredience v logických skupinách,
+- číslovaný pracovní postup,
+- poznámky a bezpečný externí zdroj,
+- Recipe JSON-LD,
+- akci `Vytisknout recept`.
+
+Recept lze vložit do jiného podporovaného obsahu přes content picker nebo shortcode `[recipe]slug-receptu[/recipe]`. Nabízí se pouze skutečně veřejný recept z aktivní kategorie.
+
+### Kuchařka EPUB
+
+Odkaz `Stáhnout kuchařku EPUB` vytvoří z aktuálně veřejných receptů textově zaměřený EPUB 3. Celá kuchařka používá `/recipes/kucharka.epub`; kategoriová varianta `/recipes/kucharka/{slug}.epub`. Export vyžaduje PHP rozšíření `zip`, které patří mezi požadavky Kora CMS.
+
+EPUB deklaruje češtinu, obsahuje navigaci na kategorie i jednotlivé recepty, sémantické nadpisy, seznamy ingrediencí, číslovaný postup a přístupnostní metadata. Obrázky se do exportu nevkládají, takže kuchařka nezávisí na vzdálených souborech ani na vizuální informaci. Výsledek je potřeba před vydáním konkrétní kuchařky ručně projít v používaných EPUB čtečkách; jejich podpora metadat se liší.
+
+Veřejný tisk lze uložit jako PDF funkcí prohlížeče, ale takový soubor Kora CMS bez samostatné kontroly neoznačuje za přístupné tagované PDF.
+
+### Export, import a accessibility
+
+Hlavní JSON export přenáší kategorie, recepty, skupiny, ingredience a kroky, ale ne provozní statistiky. Import mapuje vazby podle skutečně vytvořených cílových ID a starší export bez Receptů zůstává kompatibilní.
+
+Modulová příloha [accessibility/modules/recipes.md](accessibility/modules/recipes.md) rozlišuje odpovědnost CMS a správce obsahu, automatizované důkazy i ruční scénáře pro klávesnici, NVDA, zoom, mobilní šířku a EPUB čtečky.
+
+---
+
 ## Galerie
 
 Modul galerie je vhodný pro fotoalba, kroniky, dokumentaci akcí i menší obrazové archivy. Nově je dotažený jak po redakční stránce, tak po stránce veřejné viditelnosti a bezpečnosti souborů.

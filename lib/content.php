@@ -1141,6 +1141,56 @@ function renderContentBoardShortcode(string $slug): string
     ]);
 }
 
+function renderContentRecipeShortcode(string $slug): string
+{
+    $normalizedSlug = recipeSlug($slug);
+    if ($normalizedSlug === '' || !isModuleEnabled('recipes')) {
+        return '';
+    }
+
+    try {
+        $recipe = recipeFindPublicBySlug(db_connect(), $normalizedSlug);
+    } catch (\PDOException) {
+        return '';
+    }
+    if ($recipe === null) {
+        return '';
+    }
+
+    $media = [
+        'filename' => $recipe['media_filename'] ?? '',
+        'folder' => $recipe['media_folder'] ?? 'media',
+        'original_name' => $recipe['media_original_name'] ?? '',
+        'alt_text' => $recipe['media_alt_text'] ?? '',
+        'mime_type' => $recipe['media_mime_type'] ?? '',
+        'visibility' => $recipe['media_visibility'] ?? '',
+    ];
+    $metaItems = [];
+    if ((int)($recipe['servings'] ?? 0) > 0) {
+        $metaItems[] = (int)$recipe['servings'] . ' porcí';
+    }
+    $totalMinutes = recipeTotalMinutes($recipe);
+    if ($totalMinutes !== null) {
+        $metaItems[] = 'Celkem ' . recipeDurationLabel($totalMinutes);
+    }
+    $difficulty = recipeDifficultyDefinitions()[(string)($recipe['difficulty'] ?? '')] ?? '';
+    if ($difficulty !== '') {
+        $metaItems[] = $difficulty;
+    }
+
+    return renderContentEmbedCard([
+        'eyebrow' => 'Recept',
+        'title' => (string)$recipe['title'],
+        'excerpt' => normalizePlainText((string)($recipe['summary'] ?? '')),
+        'url' => recipePublicPath($recipe),
+        'media_url' => mediaIsPublic($media) && mediaCanPreviewImage($media) ? mediaFileUrl($media) : '',
+        'media_alt' => recipeImageAlt($recipe, $media),
+        'meta_items' => $metaItems,
+        'cta_label' => 'Zobrazit recept',
+        'modifier' => 'recipe',
+    ]);
+}
+
 function renderContentShortcodes(string $text): string
 {
     if (!str_contains($text, '[')) {
@@ -1358,6 +1408,20 @@ function renderContentShortcodes(string $text): string
             }
 
             return renderContentBoardShortcode($slug);
+        },
+        $text
+    ) ?? $text;
+
+    $text = preg_replace_callback(
+        '/\[recipe(?:\s+([^\]]*))?\](.*?)\[\/recipe\]/is',
+        static function (array $matches): string {
+            $attributes = parseContentShortcodeAttributes(trim((string)$matches[1]));
+            $slug = contentShortcodeResolvedValue($attributes, (string)$matches[2], ['slug']);
+            if (recipeSlug($slug) === '') {
+                return $matches[0];
+            }
+
+            return renderContentRecipeShortcode($slug);
         },
         $text
     ) ?? $text;

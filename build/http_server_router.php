@@ -110,6 +110,8 @@ if ($routePath === '') {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('authors/index.php');
 } elseif (preg_match('#^changelog/?$#i', $routePath) === 1) {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('changelog.php');
+} elseif (preg_match('#^recipes/?$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('recipes/index.php');
 } else {
     $routeMap = [
         '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],
@@ -135,6 +137,10 @@ if ($routePath === '') {
         '#^places/([a-z0-9-]+)/?$#i' => ['places/place.php', ['slug']],
         '#^podcast/([a-z0-9-]+)/([a-z0-9-]+)/?$#i' => ['podcast/episode.php', ['show', 'slug']],
         '#^podcast/([a-z0-9-]+)/?$#i' => ['podcast/show.php', ['slug']],
+        '#^recipes/kucharka\.epub$#i' => ['recipes/cookbook.php', []],
+        '#^recipes/kucharka/([a-z0-9-]+)\.epub$#i' => ['recipes/cookbook.php', ['category_slug']],
+        '#^recipes/kategorie/([a-z0-9-]+)/?$#i' => ['recipes/index.php', ['category_slug']],
+        '#^recipes/([a-z0-9-]+)/?$#i' => ['recipes/recipe.php', ['slug']],
         '#^([a-z0-9-]+)/archiv/([0-9]{4})/(0[1-9]|1[0-2])/?$#i' => ['blog_router.php', ['blog_slug', 'archive_year', 'archive_month']],
         '#^([a-z0-9-]+)/kategorie/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'category_slug']],
         '#^([a-z0-9-]+)/stitky/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'tag_slug']],

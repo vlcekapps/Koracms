@@ -499,6 +499,53 @@ if (isModuleEnabled('food')) {
     }
 }
 
+if (isModuleEnabled('recipes')) {
+    sitemapWriteUrl(siteUrl('/recipes/'), 'weekly', '0.6');
+
+    try {
+        $recipeCategories = $pdo->query(
+            "SELECT c.id, c.slug,
+                    GREATEST(COALESCE(c.updated_at, c.created_at), COALESCE(MAX(r.updated_at), MAX(r.created_at))) AS sitemap_lastmod
+             FROM cms_recipe_categories c
+             INNER JOIN cms_recipes r ON r.category_id = c.id
+                AND " . recipePublicVisibilitySql('r') . "
+             WHERE c.is_active = 1
+             GROUP BY c.id, c.slug, c.created_at, c.updated_at
+             ORDER BY c.sort_order, c.name"
+        )->fetchAll();
+        foreach ($recipeCategories as $category) {
+            sitemapWriteUrl(
+                siteUrl(str_replace(BASE_URL, '', recipeCategoryPublicPath($category))),
+                'weekly',
+                '0.5',
+                sitemapLastmod((string)($category['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('recipe_categories', $e);
+    }
+
+    try {
+        $recipeRows = $pdo->query(
+            "SELECT r.id, r.slug, COALESCE(r.updated_at, r.publish_at, r.created_at) AS sitemap_lastmod
+             FROM cms_recipes r
+             INNER JOIN cms_recipe_categories c ON c.id = r.category_id AND c.is_active = 1
+             WHERE " . recipePublicVisibilitySql('r') . "
+             ORDER BY COALESCE(r.publish_at, r.created_at) DESC, r.id DESC"
+        )->fetchAll();
+        foreach ($recipeRows as $recipe) {
+            sitemapWriteUrl(
+                siteUrl(str_replace(BASE_URL, '', recipePublicPath($recipe))),
+                'monthly',
+                '0.6',
+                sitemapLastmod((string)($recipe['sitemap_lastmod'] ?? ''))
+            );
+        }
+    } catch (\PDOException $e) {
+        sitemapLogSectionError('recipes', $e);
+    }
+}
+
 if (isModuleEnabled('reservations')) {
     sitemapWriteUrl(siteUrl('/reservations/'), 'weekly', '0.6');
 

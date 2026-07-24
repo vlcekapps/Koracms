@@ -106,6 +106,7 @@ function moduleContractAuditSelfTestModuleKeys(): array
         'newsletter',
         'downloads',
         'food',
+        'recipes',
         'polls',
         'faq',
         'board',
@@ -545,6 +546,18 @@ assertModuleContractAuditFails(
     'Missing manifest module key',
     $missingModuleFiles,
     'core module manifest is missing required built-in module key statistics.'
+);
+
+$missingRecipesModuleFiles = $validFiles;
+$missingRecipesModuleFiles['lib/definitions.php'] = str_replace(
+    "        'recipes' => ",
+    "        'recipes_missing' => ",
+    $missingRecipesModuleFiles['lib/definitions.php']
+);
+assertModuleContractAuditFails(
+    'Missing recipes manifest module key',
+    $missingRecipesModuleFiles,
+    'core module manifest is missing required built-in module key recipes.'
 );
 
 $legacySettingsFiles = $validFiles;

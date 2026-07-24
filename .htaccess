@@ -128,6 +128,11 @@ Options -Indexes
     RewriteRule ^places/([a-z0-9\-]+)/?$ places/place.php?slug=$1 [L,QSA,NC]
     RewriteRule ^podcast/([a-z0-9\-]+)/([a-z0-9\-]+)/?$ podcast/episode.php?show=$1&slug=$2 [L,QSA,NC]
     RewriteRule ^podcast/([a-z0-9\-]+)/?$ podcast/show.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^recipes/?$ recipes/index.php [L,QSA,NC]
+    RewriteRule ^recipes/kucharka\.epub$ recipes/cookbook.php [L,QSA,NC]
+    RewriteRule ^recipes/kucharka/([a-z0-9\-]+)\.epub$ recipes/cookbook.php?category_slug=$1 [L,QSA,NC]
+    RewriteRule ^recipes/kategorie/([a-z0-9\-]+)/?$ recipes/index.php?category_slug=$1 [L,QSA,NC]
+    RewriteRule ^recipes/([a-z0-9\-]+)/?$ recipes/recipe.php?slug=$1 [L,QSA,NC]
 
     # Multi-blog catch-all (MUSÍ být poslední – dynamické blog slugy)
     RewriteCond %{REQUEST_FILENAME} !-f

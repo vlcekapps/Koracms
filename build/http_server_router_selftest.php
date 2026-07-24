@@ -275,6 +275,9 @@ try {
         'faq/index.php' => 'faq-index',
         'forms/index.php' => 'form',
         'podcast/episode.php' => 'podcast-episode',
+        'recipes/index.php' => 'recipes-index',
+        'recipes/recipe.php' => 'recipe-detail',
+        'recipes/cookbook.php' => 'recipe-cookbook',
         'blog_router.php' => 'blog-router',
     ];
 
@@ -373,6 +376,23 @@ try {
     httpServerRouterSelfTestAssertRoute($podcastEpisodeRoute, 'podcast-episode', '/podcast/episode.php');
     httpServerRouterSelfTestAssert(($podcastEpisodeRoute['get']['show'] ?? '') === 'porad', 'Podcast show was not routed.');
     httpServerRouterSelfTestAssert(($podcastEpisodeRoute['get']['slug'] ?? '') === 'epizoda', 'Podcast episode slug was not routed.');
+
+    $recipesRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes?dieta=vegan');
+    httpServerRouterSelfTestAssertRoute($recipesRoute, 'recipes-index', '/recipes/index.php');
+    httpServerRouterSelfTestAssert(($recipesRoute['get']['dieta'] ?? '') === 'vegan', 'Recipes query string was not preserved.');
+
+    $recipeCategoryRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes/kategorie/polevky?strana=2');
+    httpServerRouterSelfTestAssertRoute($recipeCategoryRoute, 'recipes-index', '/recipes/index.php');
+    httpServerRouterSelfTestAssert(($recipeCategoryRoute['get']['category_slug'] ?? '') === 'polevky', 'Recipe category slug was not routed.');
+    httpServerRouterSelfTestAssert(($recipeCategoryRoute['get']['strana'] ?? '') === '2', 'Recipe category query string was not preserved.');
+
+    $recipeRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes/bramborova-polevka');
+    httpServerRouterSelfTestAssertRoute($recipeRoute, 'recipe-detail', '/recipes/recipe.php');
+    httpServerRouterSelfTestAssert(($recipeRoute['get']['slug'] ?? '') === 'bramborova-polevka', 'Recipe slug was not routed.');
+
+    $recipeCookbookRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes/kucharka/polevky.epub');
+    httpServerRouterSelfTestAssertRoute($recipeCookbookRoute, 'recipe-cookbook', '/recipes/cookbook.php');
+    httpServerRouterSelfTestAssert(($recipeCookbookRoute['get']['category_slug'] ?? '') === 'polevky', 'Recipe cookbook category slug was not routed.');
 
     $staticResponse = fetchUrl($baseUrl . '/assets/app.css', '', 0, 'KoraRouterSelfTest/1.0');
     httpServerRouterSelfTestAssert(str_contains($staticResponse['status'], '200'), 'Static file did not return 200.');

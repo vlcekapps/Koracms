@@ -150,6 +150,7 @@ require_once dirname(__DIR__) . '/lib/filedownloads.php';
 require_once dirname(__DIR__) . '/lib/uploads.php';
 require_once dirname(__DIR__) . '/lib/media_library.php';
 require_once dirname(__DIR__) . '/lib/presentation.php';
+require_once dirname(__DIR__) . '/lib/recipes.php';
 require_once dirname(__DIR__) . '/lib/content.php';
 require_once dirname(__DIR__) . '/lib/pagination.php';
 require_once dirname(__DIR__) . '/lib/backup.php';

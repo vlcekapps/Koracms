@@ -389,6 +389,16 @@ function statsContentResolve(PDO $pdo, string $pageType, int $pageRefId, string 
                 }
                 break;
 
+            case 'recipe':
+                $stmt = $pdo->prepare("SELECT id, title, slug FROM cms_recipes WHERE id = ? LIMIT 1");
+                $stmt->execute([$pageRefId]);
+                $row = $stmt->fetch();
+                if (is_array($row)) {
+                    $cache[$cacheKey] = ['title' => trim((string)$row['title']), 'path' => recipePublicPath($row)];
+                    return $cache[$cacheKey];
+                }
+                break;
+
             case 'gallery_album':
                 $stmt = $pdo->prepare("SELECT id, name, slug FROM cms_gallery_albums WHERE id = ? LIMIT 1");
                 $stmt->execute([$pageRefId]);

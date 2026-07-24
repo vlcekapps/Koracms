@@ -146,6 +146,7 @@ function moduleContractAuditApplicationPhpFiles(string $projectRoot): array
         'places',
         'podcast',
         'polls',
+        'recipes',
         'reservations',
         'themes',
     ] as $directoryName) {
@@ -1557,6 +1558,7 @@ function moduleContractAuditRequiredCoreModuleKeys(): array
         'downloads',
         'food',
         'polls',
+        'recipes',
         'faq',
         'board',
         'reservations',
