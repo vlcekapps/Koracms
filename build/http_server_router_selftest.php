@@ -278,6 +278,7 @@ try {
         'recipes/index.php' => 'recipes-index',
         'recipes/recipe.php' => 'recipe-detail',
         'recipes/cookbook.php' => 'recipe-cookbook',
+        'recipes/shopping.php' => 'recipe-shopping',
         'blog_router.php' => 'blog-router',
     ];
 
@@ -393,6 +394,9 @@ try {
     $recipeCookbookRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes/kucharka/polevky.epub');
     httpServerRouterSelfTestAssertRoute($recipeCookbookRoute, 'recipe-cookbook', '/recipes/cookbook.php');
     httpServerRouterSelfTestAssert(($recipeCookbookRoute['get']['category_slug'] ?? '') === 'polevky', 'Recipe cookbook category slug was not routed.');
+
+    $recipeShoppingRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/recipes/nakupni-seznam');
+    httpServerRouterSelfTestAssertRoute($recipeShoppingRoute, 'recipe-shopping', '/recipes/shopping.php');
 
     $staticResponse = fetchUrl($baseUrl . '/assets/app.css', '', 0, 'KoraRouterSelfTest/1.0');
     httpServerRouterSelfTestAssert(str_contains($staticResponse['status'], '200'), 'Static file did not return 200.');

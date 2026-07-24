@@ -49,6 +49,7 @@ if ($action === 'purge' && $recipe['deleted_at'] !== null) {
         $pdo->prepare('DELETE FROM cms_recipe_steps WHERE recipe_id = ?')->execute([$id]);
         $pdo->prepare('DELETE FROM cms_recipe_ingredients WHERE recipe_id = ?')->execute([$id]);
         $pdo->prepare('DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM cms_recipe_structure_snapshots WHERE recipe_id = ?')->execute([$id]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM cms_content_locks WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$id]);
         deleteRedirectsTargetingPath($pdo, recipePublicPath($recipe));

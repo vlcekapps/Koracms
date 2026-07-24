@@ -89,11 +89,15 @@ $structure = $id !== null ? recipeLoadStructure($pdo, $id) : [
     'step_count' => 0,
 ];
 $canApprove = currentUserHasCapability('content_approve_shared');
+$duplicatedMessage = trim((string)($_GET['msg'] ?? '')) === 'duplicated'
+    ? 'Kopie receptu byla vytvořena jako koncept. Můžete upravit její základní údaje i obsah.'
+    : '';
 
 adminHeader($id !== null ? 'Upravit recept' : 'Nový recept');
 ?>
 <p><a href="recipes.php"><span aria-hidden="true">←</span> Zpět na přehled receptů</a></p>
 
+<?php if ($duplicatedMessage !== ''): ?><p class="success" role="status"><?= h($duplicatedMessage) ?></p><?php endif; ?>
 <?php if ($contentLockWarning !== null): ?>
   <p class="warning" role="status">
     Tuto položku právě upravuje <?= h((string)$contentLockWarning['locked_by']) ?>.
@@ -120,6 +124,7 @@ adminHeader($id !== null ? 'Upravit recept' : 'Nový recept');
       <?= (int)$structure['step_count'] ?> kroků postupu.
       <a href="recipe_content.php?id=<?= $id ?>">Spravovat ingredience a postup</a>.
       <a href="revisions.php?type=recipe&amp;id=<?= $id ?>">Zobrazit historii změn</a>.
+      <a href="recipe_history.php?id=<?= $id ?>">Obnovit starší strukturu</a>.
     </p>
   </section>
 <?php else: ?>

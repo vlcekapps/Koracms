@@ -1604,8 +1604,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($data['recipe_ingredients']) && is_array($data['recipe_ingredients'])) {
                     $insertRecipeIngredientStmt = $pdo->prepare(
                         'INSERT INTO cms_recipe_ingredients
-                         (recipe_id, group_id, amount, unit, name, note, is_optional, sort_order, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?)'
+                         (recipe_id, group_id, amount, quantity_min, quantity_max, unit, name, note,
+                          is_optional, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
                     );
                     foreach ($data['recipe_ingredients'] as $row) {
                         $sourceRecipeId = max(0, (int)($row['recipe_id'] ?? 0));
@@ -1623,10 +1624,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $createdAt = !empty($row['created_at']) ? (string)$row['created_at'] : date('Y-m-d H:i:s');
                         $updatedAt = !empty($row['updated_at']) ? (string)$row['updated_at'] : $createdAt;
+                        $quantityMin = recipeNullableQuantity($row['quantity_min'] ?? null);
+                        $quantityMax = recipeNullableQuantity($row['quantity_max'] ?? null);
+                        if ($quantityMin === null || ($quantityMax !== null && (float)$quantityMax < (float)$quantityMin)) {
+                            $quantityMax = null;
+                        }
                         $insertRecipeIngredientStmt->execute([
                             $recipeId,
                             (int)$group['id'],
                             mb_substr(trim((string)($row['amount'] ?? '')), 0, 40, 'UTF-8'),
+                            $quantityMin,
+                            $quantityMax,
                             mb_substr(trim((string)($row['unit'] ?? '')), 0, 40, 'UTF-8'),
                             mb_substr($name, 0, 255, 'UTF-8'),
                             mb_substr(trim((string)($row['note'] ?? '')), 0, 255, 'UTF-8'),

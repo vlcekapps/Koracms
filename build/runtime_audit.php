@@ -121,13 +121,17 @@ $adminRecipesSource = is_file(__DIR__ . '/../admin/recipes.php') ? (string) file
 $adminRecipeFormSource = is_file(__DIR__ . '/../admin/recipe_form.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_form.php') : '';
 $adminRecipeSaveSource = is_file(__DIR__ . '/../admin/recipe_save.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_save.php') : '';
 $adminRecipeActionSource = is_file(__DIR__ . '/../admin/recipe_action.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_action.php') : '';
+$adminRecipeCloneSource = is_file(__DIR__ . '/../admin/recipe_clone.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_clone.php') : '';
 $adminRecipeContentSource = is_file(__DIR__ . '/../admin/recipe_content.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_content.php') : '';
+$adminRecipeHistorySource = is_file(__DIR__ . '/../admin/recipe_history.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_history.php') : '';
 $adminRecipeCategoriesSource = is_file(__DIR__ . '/../admin/recipe_categories.php') ? (string) file_get_contents(__DIR__ . '/../admin/recipe_categories.php') : '';
 $recipesIndexSource = is_file(__DIR__ . '/../recipes/index.php') ? (string) file_get_contents(__DIR__ . '/../recipes/index.php') : '';
 $recipeDetailSource = is_file(__DIR__ . '/../recipes/recipe.php') ? (string) file_get_contents(__DIR__ . '/../recipes/recipe.php') : '';
 $recipeCookbookSource = is_file(__DIR__ . '/../recipes/cookbook.php') ? (string) file_get_contents(__DIR__ . '/../recipes/cookbook.php') : '';
+$recipeShoppingSource = is_file(__DIR__ . '/../recipes/shopping.php') ? (string) file_get_contents(__DIR__ . '/../recipes/shopping.php') : '';
 $recipesIndexViewSource = is_file(__DIR__ . '/../themes/default/views/modules/recipes-index.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/recipes-index.php') : '';
 $recipeDetailViewSource = is_file(__DIR__ . '/../themes/default/views/modules/recipes-recipe.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/recipes-recipe.php') : '';
+$recipeShoppingViewSource = is_file(__DIR__ . '/../themes/default/views/modules/recipes-shopping.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/recipes-shopping.php') : '';
 $appmarketHelperSource = is_file(__DIR__ . '/../lib/appmarket.php') ? (string) file_get_contents(__DIR__ . '/../lib/appmarket.php') : '';
 $adminAppmarketSource = is_file(__DIR__ . '/../admin/appmarket.php') ? (string) file_get_contents(__DIR__ . '/../admin/appmarket.php') : '';
 $adminAppmarketFormSource = is_file(__DIR__ . '/../admin/appmarket_form.php') ? (string) file_get_contents(__DIR__ . '/../admin/appmarket_form.php') : '';
@@ -23344,6 +23348,7 @@ foreach ([
     'cms_recipe_ingredient_groups',
     'cms_recipe_ingredients',
     'cms_recipe_steps',
+    'cms_recipe_structure_snapshots',
 ] as $recipeTable) {
     if (!str_contains($installSource, 'CREATE TABLE IF NOT EXISTS ' . $recipeTable)
         || !str_contains($migrateSource, "'{$recipeTable}' => \"CREATE TABLE IF NOT EXISTS {$recipeTable}")) {
@@ -23359,6 +23364,7 @@ foreach ([
     'idx_recipe_ingredient_groups_order',
     'idx_recipe_ingredients_order',
     'idx_recipe_steps_order',
+    'idx_recipe_structure_snapshots_recipe',
 ] as $recipeSchemaFragment) {
     if (!str_contains($installSource, $recipeSchemaFragment) || !str_contains($migrateSource, $recipeSchemaFragment)) {
         $recipeIssues[] = 'Recipe schema is missing index: ' . $recipeSchemaFragment;
@@ -23387,7 +23393,9 @@ foreach ([
     $adminRecipeFormSource,
     $adminRecipeSaveSource,
     $adminRecipeActionSource,
+    $adminRecipeCloneSource,
     $adminRecipeContentSource,
+    $adminRecipeHistorySource,
     $adminRecipeCategoriesSource,
 ] as $recipeAdminSource) {
     if (!str_contains($recipeAdminSource, "requireCapability('content_manage_shared'")) {
@@ -23397,7 +23405,9 @@ foreach ([
 foreach ([
     $adminRecipeSaveSource,
     $adminRecipeActionSource,
+    $adminRecipeCloneSource,
     $adminRecipeContentSource,
+    $adminRecipeHistorySource,
     $adminRecipeCategoriesSource,
 ] as $recipeWriteSource) {
     if (!str_contains($recipeWriteSource, 'verifyCsrf()')) {
@@ -23414,6 +23424,26 @@ if (!str_contains($adminRecipeFormSource, '<fieldset>')
     || !str_contains($adminRecipeContentSource, 'required aria-required="true"')) {
     $recipeIssues[] = 'Recipe admin forms must keep fieldsets, field-level errors and explicit delete confirmation';
 }
+foreach ([
+    'quantity_min',
+    'quantity_max',
+    'recipeNullableQuantity(',
+    'recipeIngredientAmountLabel(',
+    'recipeSaveStructureSnapshot(',
+] as $recipeStructureFragment) {
+    if (!str_contains($adminRecipeContentSource . $recipesHelperSource, $recipeStructureFragment)) {
+        $recipeIssues[] = 'Recipe exact quantity or structure history is missing fragment: ' . $recipeStructureFragment;
+    }
+}
+if (!str_contains($adminRecipeHistorySource, 'recipeRestoreStructure(')
+    || !str_contains($adminRecipeHistorySource, 'name="confirm_action"')
+    || !str_contains($adminRecipeHistorySource, 'required aria-required="true"')
+    || !str_contains($adminRecipeHistorySource, 'recipeSaveStructureSnapshot(')
+    || !str_contains($adminRecipeHistorySource, "acquireContentLock('recipe'")
+    || !str_contains($adminRecipeCloneSource, 'recipeDuplicate(')
+    || !str_contains($adminRecipeCloneSource, 'verifyCsrf()')) {
+    $recipeIssues[] = 'Recipe structure restore and duplication must be reversible, lock-aware, confirmed and CSRF protected';
+}
 if (!str_contains($adminRecipeSaveSource, 'recipeHasPublishableStructure(')
     || !str_contains($adminRecipeSaveSource, 'normalizeHttpExternalUrl(')
     || !str_contains($adminRecipeSaveSource, 'uniqueRecipeSlug(')
@@ -23423,6 +23453,8 @@ if (!str_contains($adminRecipeSaveSource, 'recipeHasPublishableStructure(')
 if (!str_contains($recipesIndexSource, "recipePublicVisibilitySql('r')")
     || !str_contains($recipeDetailSource, 'recipeFindPublicBySlug(')
     || !str_contains($recipeDetailSource, "trackPageView('recipe'")
+    || !str_contains($recipesIndexSource, 'bez_alergenu')
+    || !str_contains($recipesIndexSource, 'recipeMaximumMinutes(')
     || !str_contains($sitemapSource, "if (isModuleEnabled('recipes'))")
     || !str_contains($searchSource, "if (isModuleEnabled('recipes'))")) {
     $recipeIssues[] = 'Recipes must share public visibility across catalog, detail, search, sitemap and statistics';
@@ -23447,8 +23479,19 @@ if (!str_contains($recipesIndexViewSource, 'role="search"')
     || !str_contains($recipesIndexViewSource, "implode(', ', \$recipeMetadata)")
     || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-overview-title"')
     || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-ingredients-title"')
-    || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-steps-title"')) {
+    || !str_contains($recipeDetailViewSource, 'aria-labelledby="recipe-steps-title"')
+    || !str_contains($recipeDetailViewSource, 'Přepočítat ingredience')
+    || !str_contains($recipeShoppingViewSource, 'aria-labelledby="recipe-shopping-title"')
+    || !str_contains($recipeShoppingViewSource, 'type="checkbox"')) {
     $recipeIssues[] = 'Recipe public views must keep named search, text-separated metadata and heading-backed content regions';
+}
+if (!str_contains($recipeShoppingSource, 'sendNoStoreNoIndexHeaders()')
+    || !str_contains($recipeShoppingSource, 'verifyCsrf()')
+    || !str_contains($recipeShoppingSource, 'recipeFindPublicById(')
+    || !str_contains($recipeShoppingSource, 'normalizeRecipeShoppingSelection(')
+    || !str_contains($htaccessSource, 'RewriteRule ^recipes/nakupni-seznam')
+    || !str_contains($httpServerRouterSource, "#^recipes/nakupni-seznam/?$#i")) {
+    $recipeIssues[] = 'Recipe shopping list must be private, CSRF protected, visibility checked and routed before detail';
 }
 foreach ([
     'application/epub+zip',
@@ -23478,6 +23521,12 @@ foreach ([
         $recipeIssues[] = 'JSON export is missing recipe structure: ' . $recipeExportFragment;
     }
 }
+if (!str_contains($adminExportSource, 'quantity_min')
+    || !str_contains($adminExportSource, 'quantity_max')
+    || !str_contains($adminImportSource, 'recipeNullableQuantity(')
+    || str_contains($adminExportSource, "'recipe_structure_snapshots'")) {
+    $recipeIssues[] = 'Recipe export must preserve exact quantities but exclude operational structure history';
+}
 foreach ([
     'Kategorie receptů importovány.',
     'Recepty importovány.',
@@ -23499,6 +23548,9 @@ foreach ([
     'Odpovědnost správce obsahu',
     'Automatizovaný důkaz',
     'Ruční ověření',
+    'Přepočet porcí',
+    'Nákupní seznam',
+    'Historie struktury',
 ] as $recipeAccessibilityFragment) {
     if (!str_contains($recipesAccessibilitySource, $recipeAccessibilityFragment)) {
         $recipeIssues[] = 'Recipes accessibility report is missing fragment: ' . $recipeAccessibilityFragment;

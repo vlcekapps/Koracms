@@ -25,6 +25,20 @@ if ($recipe === null) {
 
 $pdo = db_connect();
 $structure = recipeLoadStructure($pdo, (int)$recipe['id']);
+$baseServings = recipeNullablePositiveInt($recipe['servings'] ?? null);
+$requestedServings = recipeRequestedServings($_GET['porce'] ?? null, $baseServings);
+$hasScalableIngredients = false;
+foreach ($structure['groups'] as $group) {
+    foreach (($group['ingredients'] ?? []) as $ingredient) {
+        if (is_array($ingredient) && recipeIngredientIsScalable($ingredient)) {
+            $hasScalableIngredients = true;
+            break 2;
+        }
+    }
+}
+$scalingActive = $hasScalableIngredients
+    && $baseServings !== null
+    && $requestedServings !== $baseServings;
 $media = [
     'filename' => $recipe['media_filename'] ?? '',
     'folder' => $recipe['media_folder'] ?? 'media',
@@ -71,6 +85,11 @@ renderPublicPage([
         'recipe' => $recipe,
         'structure' => $structure,
         'difficultyLabel' => $difficultyLabel,
+        'baseServings' => $baseServings,
+        'requestedServings' => $requestedServings,
+        'hasScalableIngredients' => $hasScalableIngredients,
+        'scalingActive' => $scalingActive,
+        'shoppingUrl' => recipeShoppingPublicPath(),
     ],
     'current_nav' => 'recipes',
     'body_class' => 'page-recipe-detail',

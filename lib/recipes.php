@@ -74,6 +74,144 @@ function recipeNullablePositiveInt(mixed $value): ?int
     return $number > 0 ? $number : null;
 }
 
+function recipeNullableQuantity(mixed $value): ?string
+{
+    $normalized = str_replace(',', '.', trim((string)$value));
+    if ($normalized === '' || preg_match('/^\d{1,8}(?:\.\d{1,4})?$/', $normalized) !== 1) {
+        return null;
+    }
+
+    $number = (float)$normalized;
+    if ($number <= 0 || $number > 99999999.9999) {
+        return null;
+    }
+
+    return number_format($number, 4, '.', '');
+}
+
+function recipeQuantityInputValue(mixed $value): string
+{
+    $quantity = recipeNullableQuantity($value);
+    if ($quantity === null) {
+        return '';
+    }
+
+    return rtrim(rtrim($quantity, '0'), '.');
+}
+
+function recipeQuantityLabel(mixed $value): string
+{
+    if (is_int($value) || is_float($value)) {
+        $number = (float)$value;
+        if (!is_finite($number) || $number <= 0) {
+            return '';
+        }
+        $precision = $number >= 1 ? 4 : 8;
+        $formatted = rtrim(rtrim(number_format($number, $precision, '.', ''), '0'), '.');
+        return str_replace('.', ',', $formatted);
+    }
+
+    $inputValue = recipeQuantityInputValue($value);
+    return str_replace('.', ',', $inputValue);
+}
+
+/**
+ * @param array<string,mixed> $ingredient
+ */
+function recipeIngredientAmountLabel(
+    array $ingredient,
+    ?int $baseServings = null,
+    ?int $requestedServings = null
+): string {
+    $quantityMin = recipeNullableQuantity($ingredient['quantity_min'] ?? null);
+    $quantityMax = recipeNullableQuantity($ingredient['quantity_max'] ?? null);
+    $ratio = 1.0;
+    if (
+        $quantityMin !== null
+        && $baseServings !== null
+        && $baseServings > 0
+        && $requestedServings !== null
+        && $requestedServings > 0
+    ) {
+        $ratio = $requestedServings / $baseServings;
+    }
+
+    if ($quantityMin !== null) {
+        $minimum = recipeQuantityLabel((float)$quantityMin * $ratio);
+        $amount = $minimum;
+        if ($quantityMax !== null && (float)$quantityMax >= (float)$quantityMin) {
+            $maximum = recipeQuantityLabel((float)$quantityMax * $ratio);
+            if ($maximum !== $minimum) {
+                $amount .= '–' . $maximum;
+            }
+        }
+    } else {
+        $amount = trim((string)($ingredient['amount'] ?? ''));
+    }
+
+    $unit = trim((string)($ingredient['unit'] ?? ''));
+    return trim($amount . ($amount !== '' && $unit !== '' ? ' ' : '') . $unit);
+}
+
+/**
+ * @param array<string,mixed> $ingredient
+ */
+function recipeIngredientIsScalable(array $ingredient): bool
+{
+    return recipeNullableQuantity($ingredient['quantity_min'] ?? null) !== null;
+}
+
+function recipeRequestedServings(mixed $value, ?int $defaultServings): int
+{
+    $default = $defaultServings !== null && $defaultServings > 0
+        ? min(100, $defaultServings)
+        : 1;
+    $requested = recipeNullablePositiveInt($value);
+    if ($requested === null || $requested > 100) {
+        return $default;
+    }
+
+    return $requested;
+}
+
+function recipeMaximumMinutes(mixed $value): ?int
+{
+    $minutes = recipeNullablePositiveInt($value);
+    return $minutes !== null && $minutes <= 1440 ? $minutes : null;
+}
+
+function recipeShoppingPublicPath(): string
+{
+    return BASE_URL . '/recipes/nakupni-seznam';
+}
+
+/**
+ * @return array<int,int>
+ */
+function normalizeRecipeShoppingSelection(mixed $value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+
+    $selection = [];
+    foreach ($value as $recipeId => $servings) {
+        $normalizedRecipeId = filter_var($recipeId, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+        $normalizedServings = recipeNullablePositiveInt($servings);
+        if ($normalizedRecipeId === false || $normalizedServings === null || $normalizedServings > 100) {
+            continue;
+        }
+        $selection[(int)$normalizedRecipeId] = $normalizedServings;
+        if (count($selection) >= 50) {
+            break;
+        }
+    }
+
+    return $selection;
+}
+
 function recipeSlug(string $candidate): string
 {
     return slugify($candidate);
@@ -278,6 +416,24 @@ function recipeFindPublicBySlug(PDO $pdo, string $slug): ?array
 }
 
 /**
+ * @return array<string,mixed>|null
+ */
+function recipeFindPublicById(PDO $pdo, int $recipeId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT r.*, c.name AS category_name, c.slug AS category_slug,
+                c.is_active AS category_is_active
+         FROM cms_recipes r
+         INNER JOIN cms_recipe_categories c ON c.id = r.category_id AND c.is_active = 1
+         WHERE r.id = ? AND ' . recipePublicVisibilitySql('r') . '
+         LIMIT 1'
+    );
+    $stmt->execute([$recipeId]);
+    $row = $stmt->fetch();
+    return is_array($row) ? $row : null;
+}
+
+/**
  * @return array{
  *   groups:list<array<string,mixed>>,
  *   steps:list<array<string,mixed>>,
@@ -341,6 +497,305 @@ function recipeHasPublishableStructure(PDO $pdo, int $recipeId): bool
 }
 
 /**
+ * @return array{
+ *   version:int,
+ *   recipe_title:string,
+ *   groups:list<array{
+ *     title:string,
+ *     sort_order:int,
+ *     ingredients:list<array{
+ *       amount:string,
+ *       quantity_min:?string,
+ *       quantity_max:?string,
+ *       unit:string,
+ *       name:string,
+ *       note:string,
+ *       is_optional:int,
+ *       sort_order:int
+ *     }>
+ *   }>,
+ *   steps:list<array{
+ *     title:string,
+ *     instruction:string,
+ *     media_id:?int,
+ *     image_alt_text:string,
+ *     sort_order:int
+ *   }>
+ * }
+ */
+function recipeStructureSnapshot(PDO $pdo, int $recipeId): array
+{
+    $titleStmt = $pdo->prepare('SELECT title FROM cms_recipes WHERE id = ? LIMIT 1');
+    $titleStmt->execute([$recipeId]);
+    $recipeTitle = (string)($titleStmt->fetchColumn() ?: '');
+    $structure = recipeLoadStructure($pdo, $recipeId);
+    $groups = [];
+    foreach ($structure['groups'] as $group) {
+        $ingredients = [];
+        foreach (($group['ingredients'] ?? []) as $ingredient) {
+            if (!is_array($ingredient)) {
+                continue;
+            }
+            $ingredients[] = [
+                'amount' => (string)($ingredient['amount'] ?? ''),
+                'quantity_min' => recipeNullableQuantity($ingredient['quantity_min'] ?? null),
+                'quantity_max' => recipeNullableQuantity($ingredient['quantity_max'] ?? null),
+                'unit' => (string)($ingredient['unit'] ?? ''),
+                'name' => (string)($ingredient['name'] ?? ''),
+                'note' => (string)($ingredient['note'] ?? ''),
+                'is_optional' => (int)($ingredient['is_optional'] ?? 0) === 1 ? 1 : 0,
+                'sort_order' => (int)($ingredient['sort_order'] ?? 0),
+            ];
+        }
+        $groups[] = [
+            'title' => (string)($group['title'] ?? ''),
+            'sort_order' => (int)($group['sort_order'] ?? 0),
+            'ingredients' => $ingredients,
+        ];
+    }
+
+    $steps = [];
+    foreach ($structure['steps'] as $step) {
+        $mediaId = isset($step['media_id']) && (int)$step['media_id'] > 0
+            ? (int)$step['media_id']
+            : null;
+        $steps[] = [
+            'title' => (string)($step['title'] ?? ''),
+            'instruction' => (string)($step['instruction'] ?? ''),
+            'media_id' => $mediaId,
+            'image_alt_text' => (string)($step['image_alt_text'] ?? ''),
+            'sort_order' => (int)($step['sort_order'] ?? 0),
+        ];
+    }
+
+    return [
+        'version' => 1,
+        'recipe_title' => $recipeTitle,
+        'groups' => $groups,
+        'steps' => $steps,
+    ];
+}
+
+function recipeSaveStructureSnapshot(PDO $pdo, int $recipeId, string $actionLabel, ?int $userId): int
+{
+    $snapshot = recipeStructureSnapshot($pdo, $recipeId);
+    $ingredientCount = 0;
+    foreach ($snapshot['groups'] as $group) {
+        $ingredientCount += count($group['ingredients']);
+    }
+    $encoded = json_encode(
+        $snapshot,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    );
+    $stmt = $pdo->prepare(
+        'INSERT INTO cms_recipe_structure_snapshots
+         (recipe_id, action_label, snapshot_json, ingredient_count, step_count, user_id)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        $recipeId,
+        mb_substr(trim($actionLabel), 0, 255),
+        $encoded,
+        $ingredientCount,
+        count($snapshot['steps']),
+        $userId,
+    ]);
+
+    return (int)$pdo->lastInsertId();
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function recipeDecodeStructureSnapshot(string $snapshotJson): ?array
+{
+    try {
+        $snapshot = json_decode($snapshotJson, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException) {
+        return null;
+    }
+    if (
+        !is_array($snapshot)
+        || (int)($snapshot['version'] ?? 0) !== 1
+        || !is_array($snapshot['groups'] ?? null)
+        || !is_array($snapshot['steps'] ?? null)
+    ) {
+        return null;
+    }
+
+    return $snapshot;
+}
+
+/**
+ * @param array<string,mixed> $snapshot
+ */
+function recipeRestoreStructure(PDO $pdo, int $recipeId, array $snapshot): bool
+{
+    if (
+        (int)($snapshot['version'] ?? 0) !== 1
+        || !is_array($snapshot['groups'] ?? null)
+        || !is_array($snapshot['steps'] ?? null)
+    ) {
+        return false;
+    }
+
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) {
+        $pdo->beginTransaction();
+    }
+    try {
+        $pdo->prepare('DELETE FROM cms_recipe_steps WHERE recipe_id = ?')->execute([$recipeId]);
+        $pdo->prepare('DELETE FROM cms_recipe_ingredients WHERE recipe_id = ?')->execute([$recipeId]);
+        $pdo->prepare('DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ?')->execute([$recipeId]);
+
+        $insertGroup = $pdo->prepare(
+            'INSERT INTO cms_recipe_ingredient_groups (recipe_id, title, sort_order) VALUES (?, ?, ?)'
+        );
+        $insertIngredient = $pdo->prepare(
+            'INSERT INTO cms_recipe_ingredients
+             (recipe_id, group_id, amount, quantity_min, quantity_max, unit, name, note, is_optional, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        foreach ($snapshot['groups'] as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $insertGroup->execute([
+                $recipeId,
+                mb_substr(trim((string)($group['title'] ?? '')), 0, 255),
+                max(0, (int)($group['sort_order'] ?? 0)),
+            ]);
+            $groupId = (int)$pdo->lastInsertId();
+            $ingredients = is_array($group['ingredients'] ?? null) ? $group['ingredients'] : [];
+            foreach ($ingredients as $ingredient) {
+                if (!is_array($ingredient)) {
+                    continue;
+                }
+                $name = mb_substr(trim((string)($ingredient['name'] ?? '')), 0, 255);
+                if ($name === '') {
+                    continue;
+                }
+                $quantityMin = recipeNullableQuantity($ingredient['quantity_min'] ?? null);
+                $quantityMax = recipeNullableQuantity($ingredient['quantity_max'] ?? null);
+                if ($quantityMin === null || ($quantityMax !== null && (float)$quantityMax < (float)$quantityMin)) {
+                    $quantityMax = null;
+                }
+                $insertIngredient->execute([
+                    $recipeId,
+                    $groupId,
+                    mb_substr(trim((string)($ingredient['amount'] ?? '')), 0, 40),
+                    $quantityMin,
+                    $quantityMax,
+                    mb_substr(trim((string)($ingredient['unit'] ?? '')), 0, 40),
+                    $name,
+                    mb_substr(trim((string)($ingredient['note'] ?? '')), 0, 255),
+                    (int)($ingredient['is_optional'] ?? 0) === 1 ? 1 : 0,
+                    max(0, (int)($ingredient['sort_order'] ?? 0)),
+                ]);
+            }
+        }
+
+        $insertStep = $pdo->prepare(
+            'INSERT INTO cms_recipe_steps
+             (recipe_id, title, instruction, media_id, image_alt_text, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        foreach ($snapshot['steps'] as $step) {
+            if (!is_array($step)) {
+                continue;
+            }
+            $instruction = trim((string)($step['instruction'] ?? ''));
+            if ($instruction === '') {
+                continue;
+            }
+            $mediaId = isset($step['media_id']) && (int)$step['media_id'] > 0
+                ? (int)$step['media_id']
+                : null;
+            $insertStep->execute([
+                $recipeId,
+                mb_substr(trim((string)($step['title'] ?? '')), 0, 255),
+                $instruction,
+                $mediaId,
+                mb_substr(trim((string)($step['image_alt_text'] ?? '')), 0, 255),
+                max(0, (int)($step['sort_order'] ?? 0)),
+            ]);
+        }
+
+        if ($ownsTransaction) {
+            $pdo->commit();
+        }
+    } catch (Throwable $exception) {
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $exception;
+    }
+
+    return true;
+}
+
+function recipeDuplicate(PDO $pdo, int $sourceId, ?int $authorId): ?int
+{
+    $stmt = $pdo->prepare('SELECT * FROM cms_recipes WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $stmt->execute([$sourceId]);
+    $source = $stmt->fetch();
+    if (!is_array($source)) {
+        return null;
+    }
+
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) {
+        $pdo->beginTransaction();
+    }
+    try {
+        $title = mb_substr((string)$source['title'] . ' (kopie)', 0, 255);
+        $slug = uniqueRecipeSlug($pdo, recipeSlug((string)$source['slug'] . '-kopie'));
+        $pdo->prepare(
+            'INSERT INTO cms_recipes
+             (category_id, author_id, title, slug, summary, notes, servings, prep_minutes, cook_minutes,
+              difficulty, dietary_flags, allergens, calories_kcal, media_id, image_alt_text, source_name,
+              source_url, meta_title, meta_description, status, publish_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'draft\', NULL)'
+        )->execute([
+            (int)$source['category_id'],
+            $authorId !== null && $authorId > 0 ? $authorId : null,
+            $title,
+            $slug,
+            (string)($source['summary'] ?? ''),
+            (string)($source['notes'] ?? ''),
+            $source['servings'],
+            $source['prep_minutes'],
+            $source['cook_minutes'],
+            $source['difficulty'],
+            (string)($source['dietary_flags'] ?? ''),
+            (string)($source['allergens'] ?? ''),
+            $source['calories_kcal'],
+            $source['media_id'],
+            (string)($source['image_alt_text'] ?? ''),
+            (string)($source['source_name'] ?? ''),
+            (string)($source['source_url'] ?? ''),
+            (string)($source['meta_title'] ?? ''),
+            (string)($source['meta_description'] ?? ''),
+        ]);
+        $newId = (int)$pdo->lastInsertId();
+        $snapshot = recipeStructureSnapshot($pdo, $sourceId);
+        if (!recipeRestoreStructure($pdo, $newId, $snapshot)) {
+            throw new RuntimeException('Strukturu receptu se nepodařilo zkopírovat.');
+        }
+        if ($ownsTransaction) {
+            $pdo->commit();
+        }
+    } catch (Throwable $exception) {
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $exception;
+    }
+
+    return $newId;
+}
+
+/**
  * @param array<string,mixed> $recipe
  * @return array<string,string>
  */
@@ -390,8 +845,7 @@ function recipeStructuredData(array $recipe, array $structure): array
                 continue;
             }
             $parts = array_filter([
-                trim((string)($ingredient['amount'] ?? '')),
-                trim((string)($ingredient['unit'] ?? '')),
+                recipeIngredientAmountLabel($ingredient),
                 trim((string)($ingredient['name'] ?? '')),
                 trim((string)($ingredient['note'] ?? '')),
             ], static fn (string $part): bool => $part !== '');
@@ -562,8 +1016,7 @@ function buildRecipeCookbookEpub(array $recipes, string $title): ?string
                         continue;
                     }
                     $parts = array_filter([
-                        trim((string)($ingredient['amount'] ?? '')),
-                        trim((string)($ingredient['unit'] ?? '')),
+                        recipeIngredientAmountLabel($ingredient),
                         trim((string)($ingredient['name'] ?? '')),
                         trim((string)($ingredient['note'] ?? '')),
                     ], static fn (string $part): bool => $part !== '');

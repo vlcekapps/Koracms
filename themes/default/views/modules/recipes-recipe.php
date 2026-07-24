@@ -2,6 +2,11 @@
 $recipe = is_array($recipe ?? null) ? $recipe : [];
 $structure = is_array($structure ?? null) ? $structure : ['groups' => [], 'steps' => []];
 $difficultyLabel = (string)($difficultyLabel ?? '');
+$baseServings = isset($baseServings) && is_int($baseServings) ? $baseServings : null;
+$requestedServings = (int)($requestedServings ?? ($baseServings ?? 1));
+$hasScalableIngredients = (bool)($hasScalableIngredients ?? false);
+$scalingActive = (bool)($scalingActive ?? false);
+$shoppingUrl = (string)($shoppingUrl ?? recipeShoppingPublicPath());
 ?>
 <article class="article-shell" aria-labelledby="recipe-title">
   <header class="article-shell__header">
@@ -48,13 +53,29 @@ $difficultyLabel = (string)($difficultyLabel ?? '');
 
   <section aria-labelledby="recipe-ingredients-title">
     <h2 id="recipe-ingredients-title">Ingredience</h2>
+    <?php if ($hasScalableIngredients && $baseServings !== null): ?>
+      <form method="get" action="<?= h(recipePublicPath($recipe)) ?>" class="button-row button-row--start">
+        <div>
+          <label for="recipe-servings">Přepočítat na počet porcí</label>
+          <input type="number" id="recipe-servings" name="porce" min="1" max="100"
+                 value="<?= $requestedServings ?>" aria-describedby="recipe-serving-help">
+        </div>
+        <button type="submit" class="button-secondary">Přepočítat ingredience</button>
+      </form>
+      <p id="recipe-serving-help" class="field-help">
+        Přepočítají se pouze přesně číselně zadaná množství. Údaje jako „podle chuti“ zůstanou beze změny.
+      </p>
+      <?php if ($scalingActive): ?>
+        <p class="meta-row">Ingredience jsou přepočítané z <?= $baseServings ?> na <?= $requestedServings ?> porcí.</p>
+      <?php endif; ?>
+    <?php endif; ?>
     <?php foreach ($structure['groups'] as $group): ?>
       <?php $groupTitle = trim((string)($group['title'] ?? '')); ?>
       <?php if ($groupTitle !== ''): ?><h3><?= h($groupTitle) ?></h3><?php endif; ?>
       <ul class="recipe-ingredient-list">
       <?php foreach (($group['ingredients'] ?? []) as $ingredient): ?>
         <li>
-          <?php $amount = trim((string)($ingredient['amount'] ?? '') . ' ' . (string)($ingredient['unit'] ?? '')); ?>
+          <?php $amount = recipeIngredientAmountLabel($ingredient, $baseServings, $requestedServings); ?>
           <?php if ($amount !== ''): ?><strong><?= h($amount) ?></strong> <?php endif; ?>
           <?= h((string)$ingredient['name']) ?>
           <?php if (trim((string)$ingredient['note']) !== ''): ?>, <?= h((string)$ingredient['note']) ?><?php endif; ?>
@@ -63,6 +84,14 @@ $difficultyLabel = (string)($difficultyLabel ?? '');
       <?php endforeach; ?>
       </ul>
     <?php endforeach; ?>
+    <form method="post" action="<?= h($shoppingUrl) ?>" class="button-row button-row--start">
+      <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+      <input type="hidden" name="action" value="add">
+      <input type="hidden" name="recipe_id" value="<?= (int)$recipe['id'] ?>">
+      <input type="hidden" name="servings" value="<?= $requestedServings ?>">
+      <button type="submit" class="button-secondary">Přidat recept do nákupního seznamu</button>
+      <a href="<?= h($shoppingUrl) ?>">Zobrazit nákupní seznam</a>
+    </form>
   </section>
 
   <section aria-labelledby="recipe-steps-title">

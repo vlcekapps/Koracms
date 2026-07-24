@@ -960,6 +960,8 @@ $tables = [
         recipe_id   INT          NOT NULL,
         group_id    INT          NOT NULL,
         amount      VARCHAR(40)  NOT NULL DEFAULT '',
+        quantity_min DECIMAL(12,4) NULL DEFAULT NULL,
+        quantity_max DECIMAL(12,4) NULL DEFAULT NULL,
         unit        VARCHAR(40)  NOT NULL DEFAULT '',
         name        VARCHAR(255) NOT NULL,
         note        VARCHAR(255) NOT NULL DEFAULT '',
@@ -982,6 +984,18 @@ $tables = [
         updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_recipe_steps_order (recipe_id, sort_order, id),
         INDEX idx_recipe_steps_media (media_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+    'cms_recipe_structure_snapshots' => "CREATE TABLE IF NOT EXISTS cms_recipe_structure_snapshots (
+        id               BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        recipe_id        INT          NOT NULL,
+        action_label     VARCHAR(255) NOT NULL,
+        snapshot_json    LONGTEXT     NOT NULL,
+        ingredient_count INT          NOT NULL DEFAULT 0,
+        step_count       INT          NOT NULL DEFAULT 0,
+        user_id          INT          NULL DEFAULT NULL,
+        created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_recipe_structure_snapshots_recipe (recipe_id, created_at, id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_rate_limit' => "CREATE TABLE IF NOT EXISTS cms_rate_limit (
@@ -1916,6 +1930,8 @@ $addColumns = [
     'cms_food_items.salt_g'          => "ALTER TABLE cms_food_items ADD COLUMN salt_g DECIMAL(8,2) NULL DEFAULT NULL AFTER fat_g",
     'cms_food_items.media_id'        => "ALTER TABLE cms_food_items ADD COLUMN media_id INT NULL DEFAULT NULL AFTER salt_g",
     'cms_food_items.image_alt_text'  => "ALTER TABLE cms_food_items ADD COLUMN image_alt_text VARCHAR(255) NOT NULL DEFAULT '' AFTER media_id",
+    'cms_recipe_ingredients.quantity_min' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_min DECIMAL(12,4) NULL DEFAULT NULL AFTER amount",
+    'cms_recipe_ingredients.quantity_max' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_max DECIMAL(12,4) NULL DEFAULT NULL AFTER quantity_min",
 ];
 
 foreach ($addColumns as $tableCol => $sql) {
@@ -1935,6 +1951,22 @@ foreach ($addColumns as $tableCol => $sql) {
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
     }
+}
+
+try {
+    if ($columnExists('cms_recipe_ingredients', 'quantity_min')) {
+        $pdo->exec(
+            "UPDATE cms_recipe_ingredients
+             SET quantity_min = CAST(REPLACE(amount, ',', '.') AS DECIMAL(12,4)),
+                 amount = ''
+             WHERE quantity_min IS NULL
+               AND TRIM(amount) REGEXP '^[0-9]{1,8}([.,][0-9]{1,4})?$'
+               AND CAST(REPLACE(amount, ',', '.') AS DECIMAL(12,4)) > 0"
+        );
+        $log[] = '✓ Přesná číselná množství ingrediencí receptů převedena bez odhadů – OK';
+    }
+} catch (\PDOException $e) {
+    $log[] = '✗ Převod přesných množství receptů – CHYBA: ' . h($e->getMessage());
 }
 
 try {

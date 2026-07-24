@@ -15121,9 +15121,10 @@ try {
     $recipeGroupId = (int)$pdo->lastInsertId();
     $pdo->prepare(
         "INSERT INTO cms_recipe_ingredients
-            (recipe_id, group_id, amount, unit, name, note, is_optional, sort_order)
-         VALUES (?, ?, '250', 'g', ?, 'přesně odvážená', 0, 10)"
+            (recipe_id, group_id, amount, quantity_min, quantity_max, unit, name, note, is_optional, sort_order)
+         VALUES (?, ?, '', 250, NULL, 'g', ?, 'přesně odvážená', 0, 10)"
     )->execute([$recipeId, $recipeGroupId, $recipeIngredientNeedle]);
+    $recipeIngredientId = (int)$pdo->lastInsertId();
     $pdo->prepare(
         "INSERT INTO cms_recipe_steps
             (recipe_id, title, instruction, sort_order)
@@ -15179,6 +15180,8 @@ try {
         || !str_contains($recipeIndexResponse['body'], 'id="recipes-title"')
         || !str_contains($recipeIndexResponse['body'], 'aria-labelledby="recipes-title"')
         || !str_contains($recipeIndexResponse['body'], 'Filtrovat recepty')
+        || !str_contains($recipeIndexResponse['body'], 'Vyloučit recepty obsahující alergeny')
+        || !str_contains($recipeIndexResponse['body'], 'Celkový čas nejvýše, minuty')
         || !str_contains($recipeIndexResponse['body'], 'Stáhnout kuchařku EPUB')
         || !str_contains($recipeIndexResponse['body'], $recipeTitle)
         || str_contains($recipeIndexResponse['body'], 'HTTP Koncept receptu ' . $recipeToken)
@@ -15210,6 +15213,28 @@ try {
         $recipeIssues[] = 'hledání receptů nenašlo recept podle názvu ingredience';
     }
 
+    $recipeTimeFilterResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/index.php?cas_max=50',
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeTimeFilterResponse) !== 200
+        || str_contains($recipeTimeFilterResponse['body'], $recipeTitle)
+        || !str_contains($recipeTimeFilterResponse['body'], 'celkový čas nejvýše 50 min')) {
+        $recipeIssues[] = 'filtr maximálního času nevyřadil delší recept nebo nepopsal aktivní filtr';
+    }
+
+    $recipeAllergenFilterResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/index.php?bez_alergenu%5B%5D=1',
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeAllergenFilterResponse) !== 200
+        || str_contains($recipeAllergenFilterResponse['body'], $recipeTitle)
+        || !str_contains($recipeAllergenFilterResponse['body'], 'bez alergenu 1')) {
+        $recipeIssues[] = 'filtr vyloučeného alergenu nezatajil recept, který alergen obsahuje';
+    }
+
     $recipeDetailResponse = fetchUrl(
         $baseUrl . BASE_URL . '/recipes/' . rawurlencode($recipeSlug),
         '',
@@ -15226,6 +15251,49 @@ try {
         || !str_contains($recipeDetailResponse['body'], '55 min')
         || !str_contains($recipeDetailResponse['body'], '"@type":"Recipe"')) {
         $recipeIssues[] = 'detail receptu neobsahuje přístupné sekce, přesné údaje nebo Recipe structured data';
+    }
+
+    $recipeScaledDetailResponse = fetchUrl(
+        $baseUrl . BASE_URL . '/recipes/' . rawurlencode($recipeSlug) . '?porce=6',
+        '',
+        0
+    );
+    if (httpIntegrationStatusCode($recipeScaledDetailResponse) !== 200
+        || !str_contains($recipeScaledDetailResponse['body'], '375 g')
+        || !str_contains($recipeScaledDetailResponse['body'], 'Ingredience jsou přepočítané z 4 na 6 porcí.')
+        || !str_contains($recipeScaledDetailResponse['body'], 'Přidat recept do nákupního seznamu')) {
+        $recipeIssues[] = 'detail receptu nepřepočítal přesné množství nebo nenabídl nákupní seznam';
+    }
+
+    $recipePublicSession = koraPrimeTestSession([]);
+    $recipeShoppingResponse = postUrl(
+        $baseUrl . recipeShoppingPublicPath(),
+        [
+            'csrf_token' => $recipePublicSession['csrf'],
+            'action' => 'add',
+            'recipe_id' => (string)$recipeId,
+            'servings' => '6',
+        ],
+        $recipePublicSession['cookie'],
+        0
+    );
+    $recipeShoppingPage = fetchUrl(
+        $baseUrl . recipeShoppingPublicPath(),
+        $recipePublicSession['cookie'],
+        0
+    );
+    if (httpIntegrationStatusCode($recipeShoppingResponse) !== 302
+        || !responseHasLocationHeader(
+            $recipeShoppingResponse['headers'],
+            recipeShoppingPublicPath() . '?msg=added',
+            $baseUrl
+        )
+        || httpIntegrationStatusCode($recipeShoppingPage) !== 200
+        || !str_contains($recipeShoppingPage['body'], 'id="recipe-shopping-title"')
+        || !str_contains($recipeShoppingPage['body'], $recipeTitle)
+        || !str_contains($recipeShoppingPage['body'], '375 g')
+        || !httpIntegrationHeaderContains($recipeShoppingPage, 'Cache-Control', 'no-store')) {
+        $recipeIssues[] = 'session nákupní seznam neuložil veřejný recept, nepřepočítal množství nebo nemá no-store';
     }
 
     foreach ([$recipeDraftSlug, $recipeFutureSlug, $recipeInactiveSlug] as $hiddenRecipeSlug) {
@@ -15256,8 +15324,119 @@ try {
         || substr_count($recipeAdminFormResponse['body'], 'id="recipe-status-help"') !== 1
         || httpIntegrationStatusCode($recipeAdminContentResponse) !== 200
         || !str_contains($recipeAdminContentResponse['body'], 'Skupiny ingrediencí')
+        || !str_contains($recipeAdminContentResponse['body'], 'id="quantity_min"')
+        || !str_contains($recipeAdminContentResponse['body'], 'Textové množství, volitelné')
+        || !str_contains($recipeAdminContentResponse['body'], 'Historie struktury')
         || !str_contains($recipeAdminContentResponse['body'], 'id="recipe-steps-title">Postup</h2>')) {
         $recipeIssues[] = 'administrační editory receptu nemají očekávané fieldsety, nápovědy nebo správu struktury';
+    }
+
+    httpIntegrationRefreshAdminSessionCsrf(
+        $baseUrl,
+        $adminSession,
+        $recipeIssues,
+        'duplikace receptu'
+    );
+    $recipeCloneResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/recipe_clone.php',
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'id' => (string)$recipeId,
+            'confirm_action' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $recipeCloneStmt = $pdo->prepare(
+        "SELECT id, status FROM cms_recipes
+         WHERE title = ? AND deleted_at IS NULL
+         ORDER BY id DESC LIMIT 1"
+    );
+    $recipeCloneStmt->execute([$recipeTitle . ' (kopie)']);
+    $recipeClone = $recipeCloneStmt->fetch();
+    $recipeCloneId = is_array($recipeClone) ? (int)$recipeClone['id'] : 0;
+    if ($recipeCloneId > 0) {
+        $createdRecipeIds[] = $recipeCloneId;
+    }
+    $recipeCloneIngredientStmt = $pdo->prepare(
+        'SELECT COUNT(*) FROM cms_recipe_ingredients WHERE recipe_id = ?'
+    );
+    $recipeCloneIngredientStmt->execute([$recipeCloneId]);
+    $recipeCloneStepStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_recipe_steps WHERE recipe_id = ?');
+    $recipeCloneStepStmt->execute([$recipeCloneId]);
+    if (httpIntegrationStatusCode($recipeCloneResponse) !== 302
+        || $recipeCloneId < 1
+        || (string)($recipeClone['status'] ?? '') !== 'draft'
+        || (int)$recipeCloneIngredientStmt->fetchColumn() !== 1
+        || (int)$recipeCloneStepStmt->fetchColumn() !== 1) {
+        $recipeIssues[] = 'duplikace receptu nevytvořila úplnou samostatnou kopii jako koncept';
+    }
+
+    httpIntegrationRefreshAdminSessionCsrf(
+        $baseUrl,
+        $adminSession,
+        $recipeIssues,
+        'uložení strukturální historie receptu'
+    );
+    $recipeIngredientEditResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/recipe_content.php?id=' . $recipeId,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'recipe_id' => (string)$recipeId,
+            'action' => 'save_ingredient',
+            'ingredient_id' => (string)$recipeIngredientId,
+            'group_id' => (string)$recipeGroupId,
+            'quantity_min' => '300',
+            'quantity_max' => '',
+            'amount' => '',
+            'unit' => 'g',
+            'ingredient_name' => $recipeIngredientNeedle,
+            'ingredient_note' => 'přesně odvážená',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $recipeSnapshotStmt = $pdo->prepare(
+        'SELECT id FROM cms_recipe_structure_snapshots
+         WHERE recipe_id = ? ORDER BY id DESC LIMIT 1'
+    );
+    $recipeSnapshotStmt->execute([$recipeId]);
+    $recipeSnapshotId = (int)($recipeSnapshotStmt->fetchColumn() ?: 0);
+    $recipeQuantityStmt = $pdo->prepare(
+        'SELECT quantity_min FROM cms_recipe_ingredients WHERE id = ? AND recipe_id = ?'
+    );
+    $recipeQuantityStmt->execute([$recipeIngredientId, $recipeId]);
+    $editedRecipeQuantity = (string)$recipeQuantityStmt->fetchColumn();
+
+    httpIntegrationRefreshAdminSessionCsrf(
+        $baseUrl,
+        $adminSession,
+        $recipeIssues,
+        'obnova strukturální historie receptu'
+    );
+    $recipeHistoryRestoreResponse = postUrl(
+        $baseUrl . BASE_URL . '/admin/recipe_history.php?id=' . $recipeId,
+        [
+            'csrf_token' => $adminSession['csrf'],
+            'recipe_id' => (string)$recipeId,
+            'snapshot_id' => (string)$recipeSnapshotId,
+            'confirm_action' => '1',
+        ],
+        $adminSession['cookie'],
+        0
+    );
+    $restoredRecipeQuantityStmt = $pdo->prepare(
+        'SELECT quantity_min FROM cms_recipe_ingredients
+         WHERE recipe_id = ? AND name = ? LIMIT 1'
+    );
+    $restoredRecipeQuantityStmt->execute([$recipeId, $recipeIngredientNeedle]);
+    $restoredRecipeQuantity = (string)$restoredRecipeQuantityStmt->fetchColumn();
+    if (httpIntegrationStatusCode($recipeIngredientEditResponse) !== 302
+        || $recipeSnapshotId < 1
+        || (float)$editedRecipeQuantity !== 300.0
+        || httpIntegrationStatusCode($recipeHistoryRestoreResponse) !== 302
+        || (float)$restoredRecipeQuantity !== 250.0) {
+        $recipeIssues[] = 'strukturální historie receptu neuložila nebo neobnovila přesné předchozí množství';
     }
 
     $recipeCookbookResponse = fetchUrl(
@@ -20942,6 +21121,7 @@ try {
     foreach ($createdRecipeIds as $recipeIdToDelete) {
         $pdo->prepare("DELETE FROM cms_page_views WHERE page_type = 'recipe' AND page_ref_id = ?")->execute([$recipeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_stats_content_daily WHERE page_type = 'recipe' AND page_ref_id = ?")->execute([$recipeIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_recipe_structure_snapshots WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_recipe_steps WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_recipe_ingredients WHERE recipe_id = ?")->execute([$recipeIdToDelete]);
         $pdo->prepare("DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ?")->execute([$recipeIdToDelete]);

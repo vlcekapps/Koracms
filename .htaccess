@@ -132,6 +132,7 @@ Options -Indexes
     RewriteRule ^recipes/kucharka\.epub$ recipes/cookbook.php [L,QSA,NC]
     RewriteRule ^recipes/kucharka/([a-z0-9\-]+)\.epub$ recipes/cookbook.php?category_slug=$1 [L,QSA,NC]
     RewriteRule ^recipes/kategorie/([a-z0-9\-]+)/?$ recipes/index.php?category_slug=$1 [L,QSA,NC]
+    RewriteRule ^recipes/nakupni-seznam/?$ recipes/shopping.php [L,QSA,NC]
     RewriteRule ^recipes/([a-z0-9\-]+)/?$ recipes/recipe.php?slug=$1 [L,QSA,NC]
 
     # Multi-blog catch-all (MUSÍ být poslední – dynamické blog slugy)

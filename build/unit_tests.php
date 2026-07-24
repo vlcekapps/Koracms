@@ -243,6 +243,7 @@ assert_true(in_array('/appmarket/index.php', $modulePublicEntryPoints['appmarket
 assert_true(in_array('/appmarket/update.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket update API is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/publish.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket publisher API is declared as a guarded public module entrypoint');
 assert_true(in_array('/recipes/cookbook.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe cookbook is declared as a public module entrypoint');
+assert_true(in_array('/recipes/shopping.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe shopping list is declared as a public module entrypoint');
 assert_equals('blog', $modulePublicPathMap['/blog/page.php'] ?? null, 'blog static page public path maps to blog module');
 assert_equals('board', $modulePublicPathMap['/board/subscribe.php'] ?? null, 'board subscribe public path maps to board module');
 assert_equals('newsletter', $modulePublicPathMap['/subscribe.php'] ?? null, 'newsletter subscribe public path maps to newsletter module');
@@ -257,6 +258,7 @@ assert_true(in_array('/admin/blog_series.php', $moduleAdminEntryPoints['blog'] ?
 assert_true(in_array('/admin/res_resources.php', $moduleAdminEntryPoints['reservations'] ?? [], true), 'reservation resources are declared as admin module entrypoints');
 assert_true(in_array('/admin/appmarket.php', $moduleAdminEntryPoints['appmarket'] ?? [], true), 'Appmarket overview is declared as an admin module entrypoint');
 assert_true(in_array('/admin/recipe_content.php', $moduleAdminEntryPoints['recipes'] ?? [], true), 'recipe content editor is declared as an admin module entrypoint');
+assert_true(in_array('/admin/recipe_history.php', $moduleAdminEntryPoints['recipes'] ?? [], true), 'recipe structure history is declared as an admin module entrypoint');
 assert_equals('blog', $moduleAdminPathMap['/admin/blogs.php'] ?? null, 'blog admin path maps to blog module');
 assert_equals('statistics', $moduleAdminPathMap['/admin/statistics.php'] ?? null, 'statistics admin path maps to statistics module');
 assert_equals('/admin/blog.php', modulePrimaryAdminPath('blog'), 'blog primary admin path comes from first manifest admin path');
@@ -363,6 +365,7 @@ assert_true(in_array('cms_board_publication_events', $moduleDatabaseTables['boar
 assert_true(in_array('cms_res_booking_events', $moduleDatabaseTables['reservations'] ?? [], true), 'reservation history table comes from manifest');
 assert_true(in_array('cms_appmarket_publish_tokens', $moduleDatabaseTables['appmarket'] ?? [], true), 'Appmarket token table comes from manifest');
 assert_true(in_array('cms_recipe_steps', $moduleDatabaseTables['recipes'] ?? [], true), 'recipe supporting tables come from manifest');
+assert_true(in_array('cms_recipe_structure_snapshots', $moduleDatabaseTables['recipes'] ?? [], true), 'recipe structure snapshots come from manifest');
 assert_equals('blog', $moduleDatabaseTableMap['cms_blog_series'] ?? null, 'blog series table maps to blog module');
 assert_equals('food', $moduleDatabaseTableMap['cms_food_order_items'] ?? null, 'food order item table maps to food module');
 assert_equals('statistics', $moduleDatabaseTableMap['cms_stats_content_daily'] ?? null, 'content statistics table maps to statistics module');
@@ -1780,6 +1783,49 @@ assert_equals(
 assert_equals(12, recipeNullablePositiveInt('12'), 'recipe positive integer accepts exact whole number');
 assert_equals(null, recipeNullablePositiveInt('0'), 'recipe positive integer rejects zero');
 assert_equals(null, recipeNullablePositiveInt('12,5'), 'recipe positive integer rejects decimal estimates');
+assert_equals('1.5000', recipeNullableQuantity('1,5'), 'recipe quantity accepts exact Czech decimal input');
+assert_equals(null, recipeNullableQuantity('asi 2'), 'recipe quantity rejects textual estimates');
+assert_equals('1,5', recipeQuantityLabel('1.5000'), 'recipe quantity label uses Czech decimal separator');
+assert_equals('0,000001', recipeQuantityLabel(0.000001), 'recipe quantity label keeps very small scaled values');
+assert_equals('9999999999,99', recipeQuantityLabel(9999999999.99), 'recipe quantity label keeps large scaled values');
+assert_equals(
+    '250 g',
+    recipeIngredientAmountLabel(['quantity_min' => '250.0000', 'quantity_max' => null, 'unit' => 'g']),
+    'recipe exact ingredient quantity has a readable unit separator'
+);
+assert_equals(
+    '375–450 g',
+    recipeIngredientAmountLabel(
+        ['quantity_min' => '250.0000', 'quantity_max' => '300.0000', 'unit' => 'g'],
+        4,
+        6
+    ),
+    'recipe quantity range scales deterministically by servings'
+);
+assert_equals(
+    'podle chuti',
+    recipeIngredientAmountLabel(['amount' => 'podle chuti'], 4, 8),
+    'recipe textual amount stays unchanged while scaling'
+);
+assert_true(
+    recipeIngredientIsScalable(['quantity_min' => '2.0000']),
+    'recipe ingredient with exact quantity is scalable'
+);
+assert_false(
+    recipeIngredientIsScalable(['amount' => 'podle chuti']),
+    'recipe textual ingredient is not guessed as scalable'
+);
+assert_equals(6, recipeRequestedServings('6', 4), 'recipe servings accepts explicit public selection');
+assert_equals(4, recipeRequestedServings('101', 4), 'recipe servings falls back above the public limit');
+assert_equals(90, recipeMaximumMinutes('90'), 'recipe maximum time accepts exact minutes');
+assert_equals(null, recipeMaximumMinutes('1500'), 'recipe maximum time rejects values above one day');
+assert_equals(
+    [12 => 4, 15 => 8],
+    normalizeRecipeShoppingSelection(['12' => '4', 'bad' => 2, '15' => '8', '16' => '0']),
+    'recipe shopping selection keeps valid recipe and servings pairs'
+);
+assert_equals('/recipes/nakupni-seznam', recipeShoppingPublicPath(), 'recipe shopping path is canonical');
+assert_equals(null, recipeDecodeStructureSnapshot('{"version":2}'), 'recipe snapshot rejects unsupported versions');
 assert_equals('hlavni-jidlo', recipeSlug('Hlavní jídlo'), 'recipe slug normalizes Czech title');
 assert_equals('/recipes/testovaci-recept', recipePublicRequestPath('testovaci-recept'), 'recipe request path is canonical');
 assert_equals('/recipes/kategorie/polevky', recipeCategoryPublicPath('polevky'), 'recipe category path is canonical');

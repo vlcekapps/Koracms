@@ -687,13 +687,22 @@ Publikovaný stav lze uložit jen tehdy, když má recept aktivní kategorii, al
 
 ### Ingredience a postup
 
-Ingredience lze členit do skupin, například `Těsto`, `Náplň` nebo `Na dokončení`. Každá ingredience má samostatné množství, jednotku, název, poznámku a příznak `Volitelné`. Text zůstává přesně takový, jaký správce zadá; modul jednotky nepřevádí ani množství nepřepočítává.
+Ingredience lze členit do skupin, například `Těsto`, `Náplň` nebo `Na dokončení`. Každá ingredience má název, jednotku, poznámku a příznak `Volitelné`. Množství lze zadat dvěma způsoby:
+
+- `Přesné množství od` a volitelné `do` slouží pro číselnou hodnotu nebo rozsah, který lze bezpečně přepočítat podle porcí.
+- `Slovní množství` slouží pro údaje jako `podle chuti`, `1/2` nebo `jeden svazek`; veřejný přepočet tento text nikdy nemění.
+
+Přesné a slovní množství nelze u jedné ingredience kombinovat. Modul nepřevádí jednotky, nezaokrouhluje podle domnělých balení a ze staršího volného textu automaticky převede jen jednoznačné celé nebo desetinné číslo.
 
 Každý krok má volitelný krátký nadpis, povinnou instrukci a volitelný veřejný obrázek z knihovny médií s vlastním alt textem. Skupiny, ingredience i kroky se řadí přístupnými tlačítky nahoru a dolů, nikoli ovládáním závislým na myši. Smazání je serverově chráněné CSRF a výslovným potvrzením dopadu.
 
+Před přidáním, úpravou, odstraněním nebo přesunem skupiny, ingredience či kroku CMS automaticky uloží snapshot celé struktury. Odkaz `Historie struktury` umožní vybranou verzi obnovit; před obnovou se znovu uloží současný stav, akce vyžaduje samostatné potvrzení a obrazovka upozorní na případnou souběžnou editaci. Historie je provozní ochrana konkrétní instalace a není součástí JSON exportu.
+
+V přehledu receptů lze recept po výslovném potvrzení duplikovat. Kopie dostane unikátní slug, stav konceptu a vlastní kopii skupin, ingrediencí i kroků, takže další úpravy originál neovlivní.
+
 ### Veřejný katalog a vložení do obsahu
 
-Veřejný katalog umí hledat podle názvu, popisu, poznámek, kategorie, skupiny i ingredience a filtrovat podle kategorie, náročnosti a více současně platných dietních vlastností. Detail zobrazuje:
+Veřejný katalog umí hledat podle názvu, popisu, poznámek, kategorie, skupiny i ingredience a filtrovat podle kategorie, náročnosti, více současně platných dietních vlastností, maximálního celkového času a alergenů, které se ve výsledku nesmějí objevit. Recept bez zadaného celkového času se při aktivním časovém limitu nezobrazí. Detail zobrazuje:
 
 - přehled přesně zadaných hodnot,
 - textové dietní vlastnosti a alergeny,
@@ -702,6 +711,10 @@ Veřejný katalog umí hledat podle názvu, popisu, poznámek, kategorie, skupin
 - poznámky a bezpečný externí zdroj,
 - Recipe JSON-LD,
 - akci `Vytisknout recept`.
+
+Pokud má recept zadaný výchozí počet porcí a alespoň jednu ingredienci s přesným číselným množstvím, detail nabídne formulář `Přepočítat ingredience`. Přepočet přijímá 1–100 porcí, mění jen přesné hodnoty a u každého slovního množství zachová původní text.
+
+Tlačítko `Přidat do nákupního seznamu` uloží recept a zvolený počet porcí pouze do session aktuálního prohlížeče. Stránka `/recipes/nakupni-seznam` seskupuje ingredience podle receptů, dovolí upravit porce, jednotlivé řádky odškrtávat, recept odstranit nebo seznam vymazat a nabízí tisk. Ingredience různých receptů se záměrně neslučují a jednotky se nepřevádějí, aby CMS nevytvářel nepřesné součty. Seznam používá `no-store`/`noindex` a neukládá osobní údaje do databáze.
 
 Recept lze vložit do jiného podporovaného obsahu přes content picker nebo shortcode `[recipe]slug-receptu[/recipe]`. Nabízí se pouze skutečně veřejný recept z aktivní kategorie.
 
@@ -715,7 +728,7 @@ Veřejný tisk lze uložit jako PDF funkcí prohlížeče, ale takový soubor Ko
 
 ### Export, import a accessibility
 
-Hlavní JSON export přenáší kategorie, recepty, skupiny, ingredience a kroky, ale ne provozní statistiky. Import mapuje vazby podle skutečně vytvořených cílových ID a starší export bez Receptů zůstává kompatibilní.
+Hlavní JSON export přenáší kategorie, recepty, skupiny, přesná i slovní množství ingrediencí a kroky, ale ne provozní historii struktury, session nákupní seznam ani statistiky. Import mapuje vazby podle skutečně vytvořených cílových ID a starší export bez Receptů nebo bez přesných číselných množství zůstává kompatibilní.
 
 Modulová příloha [accessibility/modules/recipes.md](accessibility/modules/recipes.md) rozlišuje odpovědnost CMS a správce obsahu, automatizované důkazy i ruční scénáře pro klávesnici, NVDA, zoom, mobilní šířku a EPUB čtečky.
 

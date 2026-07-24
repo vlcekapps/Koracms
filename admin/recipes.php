@@ -63,6 +63,7 @@ $messageText = match ($message) {
     'deleted' => 'Recept byl přesunut do koše.',
     'restored' => 'Recept byl obnoven jako koncept.',
     'purged' => 'Recept byl trvale smazán.',
+    'duplicated' => 'Recept byl zkopírován jako nový koncept.',
     default => '',
 };
 $actionError = trim((string)($_GET['action_error'] ?? ''));
@@ -169,9 +170,20 @@ adminHeader('Recepty');
             <?php if ($recipe['deleted_at'] === null): ?>
               <a href="recipe_form.php?id=<?= $recipeId ?>">Upravit</a>
               <a href="recipe_content.php?id=<?= $recipeId ?>">Ingredience a postup</a>
+              <a href="recipe_history.php?id=<?= $recipeId ?>">Historie struktury</a>
               <?php if (recipeIsPubliclyVisible($recipe)): ?>
                 <a href="<?= h(recipePublicPath($recipe)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit<?= newWindowLinkSrOnlySuffix() ?></a>
               <?php endif; ?>
+              <form method="post" action="recipe_clone.php" class="inline-form">
+                <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                <input type="hidden" name="id" value="<?= $recipeId ?>">
+                <label class="admin-checkbox-label" for="confirm-recipe-clone-<?= $recipeId ?>">
+                  <input type="checkbox" id="confirm-recipe-clone-<?= $recipeId ?>"
+                         name="confirm_action" value="1" required aria-required="true">
+                  Potvrzuji vytvoření samostatné kopie receptu „<?= h((string)$recipe['title']) ?>“ jako konceptu
+                </label>
+                <button type="submit" class="btn">Duplikovat</button>
+              </form>
               <form method="post" action="recipe_action.php" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                 <input type="hidden" name="id" value="<?= $recipeId ?>">

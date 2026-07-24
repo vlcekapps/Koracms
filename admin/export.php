@@ -182,7 +182,7 @@ $tables = [
                   WHERE deleted_at IS NULL",
     'recipe_ingredient_groups' => "SELECT id, recipe_id, title, sort_order, created_at, updated_at
                                    FROM cms_recipe_ingredient_groups",
-    'recipe_ingredients' => "SELECT id, recipe_id, group_id, amount, unit, name, note,
+    'recipe_ingredients' => "SELECT id, recipe_id, group_id, amount, quantity_min, quantity_max, unit, name, note,
                                     is_optional, sort_order, created_at, updated_at
                              FROM cms_recipe_ingredients",
     'recipe_steps' => "SELECT id, recipe_id, title, instruction, media_id, image_alt_text,

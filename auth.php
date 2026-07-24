@@ -874,7 +874,7 @@ function adminRouteModuleRequirements(): array
             'message' => adminRouteModuleDisabledMessage('recipes'),
             'files' => [
                 'recipes.php', 'recipe_form.php', 'recipe_save.php', 'recipe_action.php',
-                'recipe_content.php', 'recipe_categories.php',
+                'recipe_content.php', 'recipe_history.php', 'recipe_clone.php', 'recipe_categories.php',
             ],
         ],
         'polls' => [

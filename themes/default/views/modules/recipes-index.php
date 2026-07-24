@@ -5,6 +5,8 @@ $activeCategory = is_array($activeCategory ?? null) ? $activeCategory : null;
 $query = (string)($query ?? '');
 $difficulty = (string)($difficulty ?? '');
 $dietaryFlags = is_array($dietaryFlags ?? null) ? $dietaryFlags : [];
+$excludedAllergens = is_array($excludedAllergens ?? null) ? $excludedAllergens : [];
+$maxTotalMinutes = isset($maxTotalMinutes) ? (int)$maxTotalMinutes : null;
 $heading = (string)($heading ?? 'Recepty');
 $intro = trim((string)($intro ?? ''));
 $filterSummary = is_array($filterSummary ?? null) ? $filterSummary : [];
@@ -63,6 +65,13 @@ $cookbookUrl = (string)($cookbookUrl ?? recipeCookbookPublicPath());
               <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-group">
+            <label for="recipe-max-time">Celkový čas nejvýše, minuty</label>
+            <input type="number" id="recipe-max-time" name="cas_max" class="form-control"
+                   min="1" max="1440" value="<?= $maxTotalMinutes ?? '' ?>"
+                   aria-describedby="recipe-max-time-help">
+            <small id="recipe-max-time-help" class="field-help">Při aktivním filtru se recepty bez uvedeného celkového času nezobrazí.</small>
+          </div>
         </div>
         <fieldset class="filter-bar__fieldset">
           <legend>Dietní vlastnosti, musí platit všechny vybrané</legend>
@@ -72,6 +81,22 @@ $cookbookUrl = (string)($cookbookUrl ?? recipeCookbookPublicPath());
               <label for="<?= h($filterId) ?>">
                 <input type="checkbox" id="<?= h($filterId) ?>" name="dieta[]" value="<?= h($flagKey) ?>"<?= in_array($flagKey, $dietaryFlags, true) ? ' checked' : '' ?>>
                 <?= h($flagLabel) ?>
+              </label>
+            <?php endforeach; ?>
+          </div>
+        </fieldset>
+        <fieldset class="filter-bar__fieldset">
+          <legend>Vyloučit recepty obsahující alergeny</legend>
+          <div class="checkbox-grid">
+            <?php foreach (recipeAllergenDefinitions() as $allergenKey => $allergenLabel): ?>
+              <?php
+              $allergenValue = (string)$allergenKey;
+                $filterId = 'recipe-allergen-' . $allergenValue;
+                ?>
+              <label for="<?= h($filterId) ?>">
+                <input type="checkbox" id="<?= h($filterId) ?>" name="bez_alergenu[]"
+                       value="<?= h($allergenValue) ?>"<?= in_array($allergenValue, $excludedAllergens, true) ? ' checked' : '' ?>>
+                <?= h($allergenValue . '. ' . $allergenLabel) ?>
               </label>
             <?php endforeach; ?>
           </div>

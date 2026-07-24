@@ -15,6 +15,8 @@ $categorySlug = recipeCategorySlug(trim((string)($_GET['category_slug'] ?? '')))
 $categoryId = inputInt('get', 'category');
 $difficulty = trim((string)($_GET['obtiznost'] ?? ''));
 $dietaryFlags = normalizeRecipeSelection($_GET['dieta'] ?? [], recipeDietaryFlagDefinitions());
+$excludedAllergens = normalizeRecipeSelection($_GET['bez_alergenu'] ?? [], recipeAllergenDefinitions());
+$maxTotalMinutes = recipeMaximumMinutes($_GET['cas_max'] ?? null);
 if ($difficulty !== '' && !isset(recipeDifficultyDefinitions()[$difficulty])) {
     $difficulty = '';
 }
@@ -72,6 +74,15 @@ if ($difficulty !== '') {
 foreach ($dietaryFlags as $dietaryFlag) {
     $where[] = 'FIND_IN_SET(?, r.dietary_flags) > 0';
     $params[] = $dietaryFlag;
+}
+foreach ($excludedAllergens as $allergen) {
+    $where[] = 'FIND_IN_SET(?, r.allergens) = 0';
+    $params[] = $allergen;
+}
+if ($maxTotalMinutes !== null) {
+    $where[] = '(r.prep_minutes IS NOT NULL OR r.cook_minutes IS NOT NULL)';
+    $where[] = '(COALESCE(r.prep_minutes, 0) + COALESCE(r.cook_minutes, 0)) <= ?';
+    $params[] = $maxTotalMinutes;
 }
 if ($query !== '') {
     $where[] = '(r.title LIKE ? OR r.summary LIKE ? OR r.notes LIKE ? OR c.name LIKE ?
@@ -138,13 +149,17 @@ $buildUrl = static function (array $overrides = []) use (
     $activeCategory,
     $categoryId,
     $difficulty,
-    $dietaryFlags
+    $dietaryFlags,
+    $excludedAllergens,
+    $maxTotalMinutes
 ): string {
     $params = [
         'q' => $query !== '' ? $query : null,
         'category' => $activeCategory === null ? $categoryId : null,
         'obtiznost' => $difficulty !== '' ? $difficulty : null,
         'dieta' => $dietaryFlags !== [] ? $dietaryFlags : null,
+        'bez_alergenu' => $excludedAllergens !== [] ? $excludedAllergens : null,
+        'cas_max' => $maxTotalMinutes,
         'strana' => null,
     ];
     foreach ($overrides as $key => $value) {
@@ -169,6 +184,12 @@ if ($difficulty !== '') {
 }
 foreach ($dietaryFlags as $flag) {
     $filterSummary[] = mb_strtolower(recipeDietaryFlagDefinitions()[$flag]);
+}
+foreach ($excludedAllergens as $allergen) {
+    $filterSummary[] = 'bez alergenu ' . $allergen . ' – ' . mb_strtolower(recipeAllergenDefinitions()[$allergen]);
+}
+if ($maxTotalMinutes !== null) {
+    $filterSummary[] = 'celkový čas nejvýše ' . recipeDurationLabel($maxTotalMinutes);
 }
 
 $heading = $activeCategory !== null ? (string)$activeCategory['name'] : 'Recepty';
@@ -201,6 +222,8 @@ renderPublicPage([
         'query' => $query,
         'difficulty' => $difficulty,
         'dietaryFlags' => $dietaryFlags,
+        'excludedAllergens' => $excludedAllergens,
+        'maxTotalMinutes' => $maxTotalMinutes,
         'heading' => $heading,
         'intro' => $intro,
         'filterSummary' => $filterSummary,

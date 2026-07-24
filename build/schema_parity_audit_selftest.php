@@ -485,6 +485,8 @@ CREATE TABLE IF NOT EXISTS cms_recipe_ingredients (
   id INT,
   recipe_id INT,
   group_id INT,
+  quantity_min DECIMAL(12,4),
+  quantity_max DECIMAL(12,4),
   name VARCHAR(255)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_recipe_steps (
@@ -492,6 +494,11 @@ CREATE TABLE IF NOT EXISTS cms_recipe_steps (
   recipe_id INT,
   instruction TEXT,
   media_id INT
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_recipe_structure_snapshots (
+  id BIGINT,
+  recipe_id INT,
+  snapshot_json LONGTEXT
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_res_resources (
   id INT,
@@ -744,6 +751,8 @@ PHP,
 // cms_recipe_steps
 // idx_recipe_steps_order
 // idx_recipe_steps_media
+// cms_recipe_structure_snapshots
+// idx_recipe_structure_snapshots_recipe
 // cms_res_resources.reminders_enabled
 // cms_res_resources.reminder_hours_before
 // cms_res_resources.reminder_message

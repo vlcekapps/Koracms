@@ -975,6 +975,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             recipe_id   INT          NOT NULL,
             group_id    INT          NOT NULL,
             amount      VARCHAR(40)  NOT NULL DEFAULT '',
+            quantity_min DECIMAL(12,4) NULL DEFAULT NULL,
+            quantity_max DECIMAL(12,4) NULL DEFAULT NULL,
             unit        VARCHAR(40)  NOT NULL DEFAULT '',
             name        VARCHAR(255) NOT NULL,
             note        VARCHAR(255) NOT NULL DEFAULT '',
@@ -997,6 +999,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_recipe_steps_order (recipe_id, sort_order, id),
             INDEX idx_recipe_steps_media (media_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_structure_snapshots (
+            id               BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            recipe_id        INT          NOT NULL,
+            action_label     VARCHAR(255) NOT NULL,
+            snapshot_json    LONGTEXT     NOT NULL,
+            ingredient_count INT          NOT NULL DEFAULT 0,
+            step_count       INT          NOT NULL DEFAULT 0,
+            user_id          INT          NULL DEFAULT NULL,
+            created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_recipe_structure_snapshots_recipe (recipe_id, created_at, id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         seedRecipeCategories($pdo);

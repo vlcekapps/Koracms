@@ -140,6 +140,7 @@ if ($routePath === '') {
         '#^recipes/kucharka\.epub$#i' => ['recipes/cookbook.php', []],
         '#^recipes/kucharka/([a-z0-9-]+)\.epub$#i' => ['recipes/cookbook.php', ['category_slug']],
         '#^recipes/kategorie/([a-z0-9-]+)/?$#i' => ['recipes/index.php', ['category_slug']],
+        '#^recipes/nakupni-seznam/?$#i' => ['recipes/shopping.php', []],
         '#^recipes/([a-z0-9-]+)/?$#i' => ['recipes/recipe.php', ['slug']],
         '#^([a-z0-9-]+)/archiv/([0-9]{4})/(0[1-9]|1[0-2])/?$#i' => ['blog_router.php', ['blog_slug', 'archive_year', 'archive_month']],
         '#^([a-z0-9-]+)/kategorie/([a-z0-9-]+)/?$#i' => ['blog_router.php', ['blog_slug', 'category_slug']],
