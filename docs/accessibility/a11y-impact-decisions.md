@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-07-24: platformně nezávislá validace serverových URL
+
+- Datum a rozsah: sdílená SSRF ochrana pro serverové načítání vzdálených URL, zejména import fotografií z eStránek.
+- Dotčená kritéria: bez přímého dopadu na WCAG 2.2 A/AA; nepřímo souvisí se stabilitou administračního workflow.
+- Rozhodnutí: validátor nyní binárně rozpozná IPv4 adresu vloženou do IPv6 a ověří její skutečný rozsah stejně na Windows i Linuxu. Nemění se formulář, popis pole, klávesové ovládání, fokus, chybové hlášky ani časový limit, proto se stav hlavní WCAG matice nemění.
+- Automatizovaný důkaz: unit testy pokrývají textový i hexadecimální IPv4-mapped loopback, veřejnou mapovanou adresu, literal host i celé URL; runtime guardraily vyžadují explicitní rozbalení mapované IPv4 před kontrolou soukromých a rezervovaných rozsahů.
+- Ruční ověření nebo zbývající riziko: žádný nový přístupnostní scénář není nutný. Funkční import finální veřejné HTTPS URL zůstává vhodné ověřit na cílovém hostingu podle existujícího protokolu; redirecty zůstávají z bezpečnostních důvodů zakázané.
+
 ### 2026-07-22: přehled využití zdrojů Ke stažení
 
 - Datum a rozsah: read-only sekce `Ke stažení` v detailních administračních statistikách, veřejné metriky na detailu položky a bezpečný externí redirect endpoint.

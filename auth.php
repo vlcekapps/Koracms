@@ -1115,10 +1115,37 @@ function normalizeHttpExternalUrl(string $target, bool $prependScheme = true): s
     return $validated;
 }
 
+function serverFetchMappedIpv4Address(string $ip): ?string
+{
+    if (!function_exists('inet_pton') || !function_exists('inet_ntop')) {
+        return null;
+    }
+
+    $packed = @inet_pton(trim($ip));
+    $mappedPrefix = str_repeat("\0", 10) . "\xff\xff";
+    if (!is_string($packed) || strlen($packed) !== 16 || substr($packed, 0, 12) !== $mappedPrefix) {
+        return null;
+    }
+
+    $mappedAddress = @inet_ntop(substr($packed, 12, 4));
+    if (!is_string($mappedAddress)
+        || filter_var($mappedAddress, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+        return null;
+    }
+
+    return $mappedAddress;
+}
+
 function serverFetchIpAllowed(string $ip): bool
 {
+    $ip = trim($ip);
+    $mappedIpv4 = serverFetchMappedIpv4Address($ip);
+    if ($mappedIpv4 !== null) {
+        $ip = $mappedIpv4;
+    }
+
     return filter_var(
-        trim($ip),
+        $ip,
         FILTER_VALIDATE_IP,
         FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
     ) !== false;

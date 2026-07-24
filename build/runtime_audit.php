@@ -8451,6 +8451,10 @@ $foundationChecks = [
         && str_contains($authSource, "isset(\$parts['user']) || isset(\$parts['pass'])")
         && str_contains($authSource, "str_starts_with(\$target, '/')")
         && str_contains($authSource, 'FILTER_VALIDATE_URL')
+        && str_contains($authSource, 'function serverFetchMappedIpv4Address(string $ip): ?string')
+        && str_contains($authSource, '$mappedIpv4 = serverFetchMappedIpv4Address($ip)')
+        && str_contains($unitTestsSource, "serverFetchIpAllowed('::ffff:7f00:1')")
+        && str_contains($unitTestsSource, "normalizeServerFetchUrl('http://[::ffff:127.0.0.1]/photo.jpg'")
         && str_contains($presentationSource, 'return normalizeHttpExternalUrl($value);')
         && str_contains($presentationSource, 'function normalizePublicFormUrlFieldValue(string $value): string')
         && str_contains($presentationSource, 'return normalizeHttpExternalUrl($value, false);')
@@ -20378,6 +20382,8 @@ foreach ([
 }
 if (!str_contains($authSource, 'function normalizeServerFetchUrl(')
     || !str_contains($authSource, 'FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE')
+    || !str_contains($authSource, 'function serverFetchMappedIpv4Address(string $ip): ?string')
+    || !str_contains($authSource, '$mappedIpv4 = serverFetchMappedIpv4Address($ip)')
     || !str_contains($authSource, 'function serverFetchResolvedAddresses(')) {
     $estrankyPhotoIssues[] = 'shared server fetch URL helper no longer rejects private or reserved network targets';
 }
