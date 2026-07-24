@@ -19553,6 +19553,17 @@ try {
             || str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="publish"')) {
             $appmarketIssues[] = 'administrace Appmarketu nezobrazila tabulku a potvrzení stažení vydání';
         }
+        $appmarketFormResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_form.php?id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($appmarketFormResponse) !== 200
+            || !str_contains($appmarketFormResponse['body'], '<legend>Základní údaje aplikace</legend>')
+            || !str_contains($appmarketFormResponse['body'], 'Můžete použít HTML, Markdown nebo snippety')
+            || !str_contains($appmarketFormResponse['body'], 'aria-describedby="appmarket-description-help"')) {
+            $appmarketIssues[] = 'editor aplikace se nenačetl s dostupnou a přístupně popsanou HTML nápovědou';
+        }
         $appmarketReviewResponse = fetchUrl(
             $baseUrl . BASE_URL . '/admin/appmarket_release_review.php?release_id=' . $appmarketReleaseId,
             $adminSession['cookie'],

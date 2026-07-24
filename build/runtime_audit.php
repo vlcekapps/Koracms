@@ -22982,6 +22982,7 @@ foreach ([
     }
 }
 if (!str_contains($adminAppmarketFormSource, '<fieldset>')
+    || !str_contains($adminAppmarketFormSource, "require_once __DIR__ . '/content_reference_picker.php';")
     || !str_contains($adminAppmarketFormSource, '<legend>Základní údaje aplikace</legend>')
     || !str_contains($adminAppmarketFormSource, 'Slug veřejné stránky, volitelné')
     || !str_contains($adminAppmarketFormSource, 'adminFieldAttributes(')

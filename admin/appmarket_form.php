@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/content_reference_picker.php';
 requireCapability('appmarket_manage', 'Přístup odepřen. Pro správu Appmarketu nemáte potřebné oprávnění.');
 requireModuleEnabled('appmarket');
 

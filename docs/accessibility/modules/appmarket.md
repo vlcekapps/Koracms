@@ -99,7 +99,7 @@ Správce odpovídá za srozumitelný název a popis aplikace, výstižné alt te
 - `build/schema_parity_audit.php`: pět Appmarket tabulek, úplný bezpečnostně důležitý sloupcový kontrakt a indexy v `install.php` i `migrate.php`.
 - `build/runtime_audit.php`: modulový manifest, capability, privátní storage a oprávnění souborů, povinná serverová analýza bez fallbacku, porovnání verze a velikosti, časové limity, kontrolní obrazovka, revokace certifikátu s POST/Redirect/GET ochranou proti opakovanému odeslání, revalidovatelná cache, sessionless API, routy, formuláře a export/import bez tokenů.
 - `build/theme_view_audit.php`: veřejné screenshoty používají `figure` pojmenovaný existujícím `figcaption`.
-- `build/http_integration.php`: veřejný katalog a detail, API bez session cookie, částečné stažení a cache hlavičky, kontrolní obrazovka, zneplatnění certifikátu, vypnutý modul, veřejná viditelnost a administrativní workflow.
+- `build/http_integration.php`: veřejný katalog a detail, API bez session cookie, částečné stažení a cache hlavičky, skutečné načtení editoru aplikace včetně popsané HTML nápovědy, kontrolní obrazovka, zneplatnění certifikátu, vypnutý modul, veřejná viditelnost a administrativní workflow.
 - `build/release_smoke.php`: instalační ZIP musí obsahovat lokální publisher, aby dokumentované ovládání nebylo závislé na vývojovém repozitáři.
 - `build/accessibility_conformance_audit.php`: změny rozhraní jsou provázané s tímto ACR dokumentem a automatizovanými důkazy.
 - `composer analyse:strict:appmarket` a `composer format:check:appmarket`: statická analýza a jednotný styl celého modulu.
