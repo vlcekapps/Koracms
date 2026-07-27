@@ -6,15 +6,17 @@ param(
     [ValidateNotNullOrEmpty()]
     [string] $ProjectPath,
 
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNull()]
-    [uri] $PublishApiUrl,
+    [uri] $PublishApiUrl = $null,
 
     [string] $ApkPath = '',
 
     [string] $ReleaseNotes = '',
 
     [string] $ReleaseNotesPath = '',
+
+    [string] $OutputBundlePath = '',
+
+    [switch] $SkipUpload,
 
     [ValidateRange(30, 3600)]
     [int] $TimeoutSeconds = 600
@@ -377,30 +379,157 @@ function Get-TextSha256 {
     }
 }
 
+function Add-ZipTextEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object] $Archive,
+
+        [Parameter(Mandatory = $true)]
+        [string] $EntryName,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $Content
+    )
+
+    $entry = $Archive.CreateEntry(
+        $EntryName,
+        [IO.Compression.CompressionLevel]::Optimal
+    )
+    $entryStream = $entry.Open()
+    $writer = [IO.StreamWriter]::new(
+        $entryStream,
+        [Text.UTF8Encoding]::new($false)
+    )
+    try {
+        $writer.Write($Content)
+    } finally {
+        $writer.Dispose()
+        $entryStream.Dispose()
+    }
+}
+
+function New-AppmarketReleaseBundle {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $BundlePath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ApkPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ManifestJson,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Signature,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string] $ReleaseNotes
+    )
+
+    $absoluteBundlePath = if ([IO.Path]::IsPathRooted($BundlePath)) {
+        [IO.Path]::GetFullPath($BundlePath)
+    } else {
+        [IO.Path]::GetFullPath((Join-Path -Path (Get-Location).ProviderPath -ChildPath $BundlePath))
+    }
+    if ([IO.Path]::GetExtension($absoluteBundlePath) -ine '.zip') {
+        throw 'OutputBundlePath musí končit příponou .zip.'
+    }
+    $bundleDirectory = [IO.Path]::GetDirectoryName($absoluteBundlePath)
+    if ([string]::IsNullOrWhiteSpace($bundleDirectory) -or
+        -not (Test-Path -LiteralPath $bundleDirectory -PathType Container)
+    ) {
+        throw 'Cílový adresář pro publisher balíček neexistuje.'
+    }
+    if (Test-Path -LiteralPath $absoluteBundlePath) {
+        throw 'Cílový publisher balíček už existuje. Zvolte nový název nebo jej nejprve ručně odstraňte.'
+    }
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $bundleStream = [IO.File]::Open(
+        $absoluteBundlePath,
+        [IO.FileMode]::CreateNew,
+        [IO.FileAccess]::ReadWrite,
+        [IO.FileShare]::None
+    )
+    $archive = [IO.Compression.ZipArchive]::new(
+        $bundleStream,
+        [IO.Compression.ZipArchiveMode]::Create,
+        $false,
+        [Text.UTF8Encoding]::new($false)
+    )
+    $bundleReady = $false
+    $bundleError = $null
+    try {
+        [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $archive,
+            $ApkPath,
+            [IO.Path]::GetFileName($ApkPath),
+            [IO.Compression.CompressionLevel]::Optimal
+        ) | Out-Null
+        Add-ZipTextEntry -Archive $archive -EntryName 'release.json' -Content $ManifestJson
+        Add-ZipTextEntry -Archive $archive -EntryName 'release.sig' -Content $Signature
+        Add-ZipTextEntry -Archive $archive -EntryName 'release-notes.md' -Content $ReleaseNotes
+        $bundleReady = $true
+    } catch {
+        $bundleError = $_
+    } finally {
+        if ($null -ne $archive) {
+            $archive.Dispose()
+        }
+        if ($null -ne $bundleStream) {
+            $bundleStream.Dispose()
+        }
+    }
+    if (-not $bundleReady -and (Test-Path -LiteralPath $absoluteBundlePath -PathType Leaf)) {
+        Remove-Item -LiteralPath $absoluteBundlePath -Force
+    }
+    if ($null -ne $bundleError) {
+        throw $bundleError
+    }
+
+    $absoluteBundlePath
+}
+
+$shouldUpload = ($null -ne $PublishApiUrl) -and -not $SkipUpload
+if (-not $shouldUpload -and [string]::IsNullOrWhiteSpace($OutputBundlePath)) {
+    throw 'Zadejte PublishApiUrl, nebo OutputBundlePath pro vytvoření přenosného balíčku.'
+}
+if ($SkipUpload -and [string]::IsNullOrWhiteSpace($OutputBundlePath)) {
+    throw 'Přepínač SkipUpload vyžaduje OutputBundlePath.'
+}
+
+$tokenSecure = $null
 $tokenText = [Environment]::GetEnvironmentVariable('KORA_APPMARKET_TOKEN', 'Process')
-if ([string]::IsNullOrWhiteSpace($tokenText)) {
+if ($shouldUpload -and [string]::IsNullOrWhiteSpace($tokenText)) {
     throw 'Chybí env KORA_APPMARKET_TOKEN. Token se z bezpečnostních důvodů nepřijímá jako parametr.'
 }
+if (-not [string]::IsNullOrWhiteSpace($tokenText)) {
+    $tokenSecure = ConvertTo-SecureString -String $tokenText -AsPlainText -Force
+}
+$tokenText = $null
 $signingKeyPath = [Environment]::GetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', 'Process')
 if ([string]::IsNullOrWhiteSpace($signingKeyPath)) {
     throw 'Chybí env KORA_APPMARKET_SIGNING_KEY s cestou k privátnímu publisher klíči.'
 }
-$tokenSecure = ConvertTo-SecureString -String $tokenText -AsPlainText -Force
-$tokenText = $null
 
 # Child procesy s Android nástroji token ani cestu ke klíči nepotřebují a nesmějí je zdědit.
 [Environment]::SetEnvironmentVariable('KORA_APPMARKET_TOKEN', $null, 'Process')
 [Environment]::SetEnvironmentVariable('KORA_APPMARKET_SIGNING_KEY', $null, 'Process')
 
 try {
-    if (-not $PublishApiUrl.IsAbsoluteUri) {
-        throw 'PublishApiUrl musí být absolutní URL.'
-    }
-    if ($PublishApiUrl.UserInfo -ne '' -or $PublishApiUrl.Query -ne '' -or $PublishApiUrl.Fragment -ne '') {
-        throw 'PublishApiUrl nesmí obsahovat přihlašovací údaje, query ani fragment.'
-    }
-    if ($PublishApiUrl.Scheme -ne 'https' -and -not $PublishApiUrl.IsLoopback) {
-        throw 'Publish API musí používat HTTPS; HTTP je povoleno pouze pro localhost.'
+    if ($shouldUpload) {
+        if (-not $PublishApiUrl.IsAbsoluteUri) {
+            throw 'PublishApiUrl musí být absolutní URL.'
+        }
+        if ($PublishApiUrl.UserInfo -ne '' -or $PublishApiUrl.Query -ne '' -or $PublishApiUrl.Fragment -ne '') {
+            throw 'PublishApiUrl nesmí obsahovat přihlašovací údaje, query ani fragment.'
+        }
+        if ($PublishApiUrl.Scheme -ne 'https' -and -not $PublishApiUrl.IsLoopback) {
+            throw 'Publish API musí používat HTTPS; HTTP je povoleno pouze pro localhost.'
+        }
     }
     if ($ReleaseNotes -ne '' -and $ReleaseNotesPath -ne '') {
         throw 'Použijte jen jeden z parametrů ReleaseNotes a ReleaseNotesPath.'
@@ -650,16 +779,27 @@ try {
         }
     }
 
-    Add-Type -AssemblyName System.Net.Http
-    $handler = [Net.Http.HttpClientHandler]::new()
-    $handler.AllowAutoRedirect = $false
-    $client = [Net.Http.HttpClient]::new($handler)
-    $multipart = [Net.Http.MultipartFormDataContent]::new()
-    $fileStream = $null
-    $response = $null
-    try {
+    if (-not [string]::IsNullOrWhiteSpace($OutputBundlePath)) {
+        $createdBundlePath = New-AppmarketReleaseBundle `
+            -BundlePath $OutputBundlePath `
+            -ApkPath $resolvedApk `
+            -ManifestJson $metadataJson `
+            -Signature $attestationSignature `
+            -ReleaseNotes $ReleaseNotes
+        Write-Output "Podepsaný publisher balíček: $createdBundlePath"
+    }
+
+    if ($shouldUpload) {
+        Add-Type -AssemblyName System.Net.Http
+        $handler = [Net.Http.HttpClientHandler]::new()
+        $handler.AllowAutoRedirect = $false
+        $client = [Net.Http.HttpClient]::new($handler)
+        $multipart = [Net.Http.MultipartFormDataContent]::new()
+        $fileStream = $null
+        $response = $null
+        try {
         $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
-        $client.DefaultRequestHeaders.UserAgent.ParseAdd('Kora-Appmarket-Publisher/1.0')
+        $client.DefaultRequestHeaders.UserAgent.ParseAdd('Kora-Appmarket-Publisher/2.0')
         $client.DefaultRequestHeaders.ExpectContinue = $false
 
         $plainToken = Convert-SecureStringToPlainText -Value $tokenSecure
@@ -752,23 +892,29 @@ try {
         Write-Output "Appmarket přijal koncept vydání $versionName ($versionCode), release ID: $releaseId."
         Write-Output "Balíček: $packageId"
         Write-Output "APK SHA-256: $apkSha256"
-        Write-Output 'Koncept nyní musí zkontrolovat a publikovat superadmin Kora CMS.'
-    } finally {
-        if ($null -ne $response) {
-            $response.Dispose()
+            Write-Output 'Koncept nyní musí zkontrolovat a publikovat superadmin Kora CMS.'
+        } finally {
+            if ($null -ne $response) {
+                $response.Dispose()
+            }
+            if ($null -ne $multipart) {
+                $multipart.Dispose()
+            }
+            if ($null -ne $fileStream) {
+                $fileStream.Dispose()
+            }
+            if ($null -ne $client) {
+                $client.Dispose()
+            }
+            if ($null -ne $handler) {
+                $handler.Dispose()
+            }
         }
-        if ($null -ne $multipart) {
-            $multipart.Dispose()
-        }
-        if ($null -ne $fileStream) {
-            $fileStream.Dispose()
-        }
-        if ($null -ne $client) {
-            $client.Dispose()
-        }
-        if ($null -ne $handler) {
-            $handler.Dispose()
-        }
+    } else {
+        Write-Output "Balíček: $packageId"
+        Write-Output "Verze: $versionName ($versionCode)"
+        Write-Output "APK SHA-256: $apkSha256"
+        Write-Output 'Balíček nahrajte v administraci Appmarketu jako nový koncept vydání.'
     }
 } finally {
     if ($null -ne $tokenSecure) {

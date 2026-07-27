@@ -241,6 +241,7 @@ assert_true(in_array('/reservations/calendar.php', $modulePublicEntryPoints['res
 assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics has no standalone public entrypoint');
 assert_true(in_array('/appmarket/index.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket catalog is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/update.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket update API is declared as a public module entrypoint');
+assert_true(in_array('/appmarket/update_v2.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket V2 update API is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/publish.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket publisher API is declared as a guarded public module entrypoint');
 assert_true(in_array('/recipes/cookbook.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe cookbook is declared as a public module entrypoint');
 assert_true(in_array('/recipes/shopping.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe shopping list is declared as a public module entrypoint');
@@ -385,6 +386,15 @@ assert_equals(42, appmarketNormalizeVersionCode('42'), 'Appmarket accepts a posi
 assert_equals(null, appmarketNormalizeVersionCode('0'), 'Appmarket rejects a zero version code');
 assert_equals(35, appmarketNormalizeSdkLevel('35'), 'Appmarket accepts an Android SDK level');
 assert_equals(null, appmarketNormalizeSdkLevel('invalid'), 'Appmarket rejects an invalid SDK level');
+assert_equals('critical', appmarketNormalizeUpdatePriority('critical'), 'Appmarket accepts a critical update priority');
+assert_equals('normal', appmarketNormalizeUpdatePriority('unknown'), 'Appmarket falls back to normal update priority');
+$validAppmarketPolicy = appmarketNormalizeReleasePolicy('important', '210', 210);
+assert_equals([], $validAppmarketPolicy['errors'], 'Appmarket accepts a valid update policy');
+assert_equals(210, $validAppmarketPolicy['required_below_version_code'], 'Appmarket keeps a valid mandatory-update boundary');
+$invalidAppmarketPolicy = appmarketNormalizeReleasePolicy('unknown', '211', 210);
+assert_equals(2, count($invalidAppmarketPolicy['errors']), 'Appmarket rejects an unknown priority and an excessive mandatory-update boundary');
+assert_true($invalidAppmarketPolicy['priority_error'] !== '', 'Appmarket associates an invalid priority with its field');
+assert_true($invalidAppmarketPolicy['required_below_error'] !== '', 'Appmarket associates an invalid mandatory-update boundary with its field');
 $appmarketHash = str_repeat('a1', 32);
 assert_equals($appmarketHash, appmarketNormalizeSha256(strtoupper($appmarketHash)), 'Appmarket normalizes SHA-256 to lowercase');
 assert_equals('', appmarketNormalizeSha256('abc'), 'Appmarket rejects incomplete SHA-256 values');
@@ -506,6 +516,7 @@ $_SERVER = $appmarketOriginalServer;
 assert_equals('/aplikace/moje-aplikace', appmarketAppPath('Moje aplikace'), 'Appmarket app path uses a canonical slug');
 assert_equals('/aplikace/moje-aplikace/verze/42', appmarketReleasePath('Moje aplikace', 42), 'Appmarket release path includes versionCode');
 assert_equals('/aplikace/moje-aplikace/stahnout/42', appmarketDownloadPath('Moje aplikace', 42), 'Appmarket download path includes versionCode');
+assert_equals('/api/appmarket/v2/update', appmarketUpdateApiV2Path(), 'Appmarket exposes the stable V2 update API path');
 assert_equals('https://example.cz/aplikace', appmarketNormalizeHttpUrl(' https://example.cz/aplikace '), 'Appmarket accepts an HTTPS project URL');
 assert_equals('', appmarketNormalizeHttpUrl('//example.cz/aplikace'), 'Appmarket rejects protocol-relative URLs');
 assert_equals('', appmarketNormalizeHttpUrl('javascript:alert(1)'), 'Appmarket rejects non-HTTP URLs');
@@ -566,6 +577,56 @@ $updatePayload = appmarketUpdatePayload(
 );
 assert_true((bool)$updatePayload['update_available'], 'Appmarket update payload announces a newer release');
 assert_equals(210, $updatePayload['latest']['version_code'] ?? null, 'Appmarket update payload exposes the latest versionCode');
+$permissionDiff = appmarketPermissionDiff(
+    ['permissions_json' => '["android.permission.INTERNET","android.permission.CAMERA"]'],
+    ['permissions_json' => '["android.permission.INTERNET","android.permission.RECORD_AUDIO"]']
+);
+assert_equals(
+    ['android.permission.RECORD_AUDIO'],
+    $permissionDiff['added'],
+    'Appmarket permission diff reports newly declared permissions'
+);
+assert_equals(
+    ['android.permission.CAMERA'],
+    $permissionDiff['removed'],
+    'Appmarket permission diff reports removed permissions'
+);
+$appmarketV2Release = [
+    'version_name' => '2.1.0',
+    'version_code' => 210,
+    'release_notes' => 'Důležitá aktualizace.',
+    'published_at' => '2026-07-23 10:00:00',
+    'min_sdk' => 26,
+    'target_sdk' => 35,
+    'apk_size' => 1024,
+    'apk_sha256' => $appmarketHash,
+    'certificate_fingerprint_sha256' => $appmarketHash,
+    'update_priority' => 'critical',
+    'required_below_version_code' => 205,
+    'permissions_json' => '["android.permission.INTERNET","android.permission.RECORD_AUDIO"]',
+];
+assert_true(
+    appmarketReleaseUpdateRequired($appmarketV2Release, 200),
+    'Appmarket marks clients below the configured boundary as requiring an update'
+);
+assert_false(
+    appmarketReleaseUpdateRequired($appmarketV2Release, 205),
+    'Appmarket does not require an update at the configured boundary'
+);
+$updatePayloadV2 = appmarketUpdatePayloadV2(
+    ['slug' => 'minirec', 'package_id' => 'cz.vlcekapps.minirec'],
+    $appmarketV2Release,
+    200,
+    34,
+    ['permissions_json' => '["android.permission.INTERNET"]']
+);
+assert_equals(2, $updatePayloadV2['schema_version'], 'Appmarket V2 update payload has a stable schema version');
+assert_true((bool)$updatePayloadV2['update_required'], 'Appmarket V2 exposes a mandatory update decision');
+assert_equals(
+    ['android.permission.RECORD_AUDIO'],
+    $updatePayloadV2['latest']['permission_changes']['added'] ?? null,
+    'Appmarket V2 exposes permission changes against a known installed release'
+);
 assert_equals(
     ['start' => 0, 'end' => 99],
     storedFileParseSingleRange('bytes=0-99', 1000),

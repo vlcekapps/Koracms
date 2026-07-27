@@ -12,6 +12,7 @@ $isLatest = $latestRelease !== null && (int)$latestRelease['id'] === (int)$relea
         <?php if ((string)$release['published_at_label'] !== ''): ?><span>Vydáno <?= h((string)$release['published_at_label']) ?></span><?php endif; ?>
         <span><?= h(formatFileSize((int)$release['apk_size'])) ?></span>
         <span><?= h((string)$release['download_count_label']) ?></span>
+        <span><?= h((string)$release['update_priority_label']) ?> aktualizace</span>
       </p>
       <div class="button-row button-row--start">
         <a class="btn" href="<?= h(appmarketDownloadPath($app, (int)$release['version_code'])) ?>">Stáhnout APK</a>
@@ -42,6 +43,13 @@ $isLatest = $latestRelease !== null && (int)$latestRelease['id'] === (int)$relea
         <div><dt>SHA-256 certifikátu</dt><dd><code class="break-long-token"><?= h((string)$release['certificate_fingerprint_sha256']) ?></code></dd></div>
         <?php if ($release['min_sdk'] !== null): ?><div><dt>Minimální Android SDK</dt><dd><?= (int)$release['min_sdk'] ?></dd></div><?php endif; ?>
         <?php if ($release['target_sdk'] !== null): ?><div><dt>Cílové Android SDK</dt><dd><?= (int)$release['target_sdk'] ?></dd></div><?php endif; ?>
+        <div><dt>Naléhavost aktualizace</dt><dd><?= h((string)$release['update_priority_label']) ?></dd></div>
+        <?php if ($release['required_below_version_code'] !== null): ?>
+          <div>
+            <dt>Povinná aktualizace</dt>
+            <dd>Pro instalace s versionCode nižším než <?= (int)$release['required_below_version_code'] ?></dd>
+          </div>
+        <?php endif; ?>
       </dl>
     </div>
   </section>

@@ -717,6 +717,8 @@ $tables = [
         analysis_json      LONGTEXT,
         metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk',
         publisher_token_id INT          NULL DEFAULT NULL,
+        update_priority    ENUM('normal','important','critical') NOT NULL DEFAULT 'normal',
+        required_below_version_code BIGINT UNSIGNED NULL DEFAULT NULL,
         status             ENUM('draft','published','withdrawn') NOT NULL DEFAULT 'draft',
         download_count     BIGINT UNSIGNED NOT NULL DEFAULT 0,
         published_at       DATETIME     NULL DEFAULT NULL,
@@ -726,6 +728,7 @@ $tables = [
         updated_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY uq_appmarket_release_version (app_id, version_code),
         KEY idx_appmarket_releases_public (app_id, status, version_code),
+        KEY idx_appmarket_releases_compatible (app_id, status, min_sdk, version_code),
         KEY idx_appmarket_releases_certificate (certificate_id),
         KEY idx_appmarket_releases_publisher_token (publisher_token_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -1753,6 +1756,8 @@ $addColumns = [
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_appmarket
     'cms_appmarket_releases.publisher_token_id' => "ALTER TABLE cms_appmarket_releases ADD COLUMN publisher_token_id INT NULL DEFAULT NULL AFTER metadata_source",
+    'cms_appmarket_releases.update_priority' => "ALTER TABLE cms_appmarket_releases ADD COLUMN update_priority ENUM('normal','important','critical') NOT NULL DEFAULT 'normal' AFTER publisher_token_id",
+    'cms_appmarket_releases.required_below_version_code' => "ALTER TABLE cms_appmarket_releases ADD COLUMN required_below_version_code BIGINT UNSIGNED NULL DEFAULT NULL AFTER update_priority",
     'cms_appmarket_publish_tokens.attestation_algorithm' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256' AFTER scopes",
     'cms_appmarket_publish_tokens.attestation_public_key' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_public_key TEXT AFTER attestation_algorithm",
     'cms_appmarket_publish_tokens.attestation_key_fingerprint' => "ALTER TABLE cms_appmarket_publish_tokens ADD COLUMN attestation_key_fingerprint CHAR(64) NOT NULL DEFAULT '' AFTER attestation_public_key",
@@ -1982,6 +1987,10 @@ try {
         'idx_appmarket_releases_publisher_token' => [
             'table' => 'cms_appmarket_releases',
             'sql' => 'ALTER TABLE cms_appmarket_releases ADD KEY idx_appmarket_releases_publisher_token (publisher_token_id)',
+        ],
+        'idx_appmarket_releases_compatible' => [
+            'table' => 'cms_appmarket_releases',
+            'sql' => 'ALTER TABLE cms_appmarket_releases ADD KEY idx_appmarket_releases_compatible (app_id, status, min_sdk, version_code)',
         ],
         'idx_appmarket_publish_tokens_attestation' => [
             'table' => 'cms_appmarket_publish_tokens',

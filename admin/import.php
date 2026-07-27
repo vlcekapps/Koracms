@@ -1058,8 +1058,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
                           package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
                           certificate_id, certificate_fingerprint_sha256, permissions_json, analysis_json,
-                          metadata_source, status, download_count, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,'draft',0,?,?)"
+                          metadata_source, update_priority, required_below_version_code,
+                          status, download_count, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,?,?,'draft',0,?,?)"
                     );
 
                     foreach ($data['appmarket_releases'] as $row) {
@@ -1091,6 +1092,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ?? date('Y-m-d H:i:s');
                         $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
                             ?? $createdAt;
+                        $policy = appmarketNormalizeReleasePolicy(
+                            (string)($row['update_priority'] ?? 'normal'),
+                            $row['required_below_version_code'] ?? null,
+                            $versionCode
+                        );
 
                         $insertAppmarketReleaseStmt->execute([
                             $appId,
@@ -1107,6 +1113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             appmarketNormalizeJsonMetadata($row['permissions_json'] ?? []),
                             appmarketNormalizeJsonMetadata($row['analysis_json'] ?? []),
                             'apk',
+                            $policy['priority'],
+                            $policy['required_below_version_code'],
                             $createdAt,
                             $updatedAt,
                         ]);

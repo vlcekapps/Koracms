@@ -19810,7 +19810,9 @@ try {
                 // covered statically and must independently rerun Android SDK analysis.
                 $pdo->prepare(
                     "UPDATE cms_appmarket_releases
-                     SET status = 'published', published_at = NOW(), published_by_user_id = ?
+                     SET status = 'published', update_priority = 'critical',
+                         required_below_version_code = 100,
+                         published_at = NOW(), published_by_user_id = ?
                      WHERE id = ? AND app_id = ?"
                 )->execute([$adminUserId, $appmarketReleaseId, $appmarketAppId]);
                 $pdo->prepare(
@@ -19896,6 +19898,8 @@ try {
             || !str_contains($appmarketReleaseResponse['body'], 'První bezpečné testovací vydání.')
             || !str_contains($appmarketReleaseResponse['body'], $fakeApkHash)
             || !str_contains($appmarketReleaseResponse['body'], $certificateHash)
+            || !str_contains($appmarketReleaseResponse['body'], 'Kritická aktualizace')
+            || !str_contains($appmarketReleaseResponse['body'], 'Pro instalace s versionCode nižším než 100')
             || !str_contains($appmarketReleaseResponse['body'], 'aria-labelledby="appmarket-release-security-heading"')) {
             $appmarketIssues[] = 'detail vydání nezobrazil changelog, kontrolní součty a bezpečnostní sekci';
         }
@@ -19930,6 +19934,49 @@ try {
             || !array_key_exists('latest', $currentUpdatePayload)
             || $currentUpdatePayload['latest'] !== null) {
             $appmarketIssues[] = 'update API nenahlásilo aktuální verzi bez dostupné aktualizace';
+        }
+        $updateV2Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=1&sdk_int=34',
+            '',
+            0
+        );
+        $updateV2Payload = json_decode($updateV2Response['body'], true);
+        if (httpIntegrationStatusCode($updateV2Response) !== 200
+            || !is_array($updateV2Payload)
+            || (int)($updateV2Payload['schema_version'] ?? 0) !== 2
+            || ($updateV2Payload['update_available'] ?? null) !== true
+            || ($updateV2Payload['update_required'] ?? null) !== true
+            || (string)($updateV2Payload['latest']['update_priority'] ?? '') !== 'critical'
+            || (int)($updateV2Payload['latest']['required_below_version_code'] ?? 0) !== 100
+            || (int)($updateV2Payload['latest']['version_code'] ?? 0) !== 100
+            || str_contains($updateV2Response['body'], 'device_id')
+            || httpIntegrationHeaderValue($updateV2Response, 'Set-Cookie') !== '') {
+            $appmarketIssues[] = 'update API V2 nevrátilo kompatibilní povinnou aktualizaci bez identifikátoru zařízení';
+        }
+        $incompatibleUpdateV2Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=1&sdk_int=25',
+            '',
+            0
+        );
+        $incompatibleUpdateV2Payload = json_decode($incompatibleUpdateV2Response['body'], true);
+        if (httpIntegrationStatusCode($incompatibleUpdateV2Response) !== 200
+            || !is_array($incompatibleUpdateV2Payload)
+            || ($incompatibleUpdateV2Payload['update_available'] ?? null) !== false
+            || !array_key_exists('latest', $incompatibleUpdateV2Payload)
+            || $incompatibleUpdateV2Payload['latest'] !== null) {
+            $appmarketIssues[] = 'update API V2 nabídlo APK zařízení s příliš nízkým Android SDK';
+        }
+        $invalidUpdateV2Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=1',
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($invalidUpdateV2Response) !== 400
+            || !str_contains($invalidUpdateV2Response['body'], 'invalid_request')) {
+            $appmarketIssues[] = 'update API V2 neodmítlo požadavek bez sdk_int';
         }
 
         $downloadUrl = $baseUrl . appmarketDownloadPath($appmarketSlug, 100);
@@ -20012,6 +20059,8 @@ try {
         if (httpIntegrationStatusCode($appmarketReviewResponse) !== 200
             || !str_contains($appmarketReviewResponse['body'], 'Kontrola vydání Appmarketu')
             || !str_contains($appmarketReviewResponse['body'], 'Oprávnění APK')
+            || !str_contains($appmarketReviewResponse['body'], 'Změny proti předchozímu vydání')
+            || !str_contains($appmarketReviewResponse['body'], 'Kritická')
             || !str_contains($appmarketReviewResponse['body'], $fakeApkHash)
             || !str_contains($appmarketReviewResponse['body'], $certificateHash)) {
             $appmarketIssues[] = 'samostatná kontrola vydání nezobrazila ověřovaná metadata a oprávnění';
@@ -20064,6 +20113,8 @@ try {
             if (is_array($exportedAppmarketRelease)
                 && (int)($exportedAppmarketRelease['app_id'] ?? 0) === $appmarketAppId
                 && (int)($exportedAppmarketRelease['version_code'] ?? 0) === 100
+                && (string)($exportedAppmarketRelease['update_priority'] ?? '') === 'critical'
+                && (int)($exportedAppmarketRelease['required_below_version_code'] ?? 0) === 100
             ) {
                 $exportedReleaseFound = true;
                 break;
@@ -20195,6 +20246,130 @@ try {
                     $createdAppmarketStoredFiles[] = (string)$signedRelease['apk_storage_name'];
                 }
 
+                if (!appmarketAndroidToolsAvailable() && class_exists(ZipArchive::class)) {
+                    $bundleReleaseNotes = "Offline publisher balíček pro hosting bez Android SDK.\n";
+                    $bundleApkBytes = "PK\x03\x04KORA-APPMARKET-BUNDLE-" . $appmarketToken;
+                    $bundleApkPath = httpIntegrationCreateTempFile(
+                        'kora-appmarket-bundle-apk-',
+                        $bundleApkBytes,
+                        $createdTempFiles
+                    );
+                    $bundleManifest = $signedManifest;
+                    $bundleManifest['issued_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                    $bundleManifest['nonce'] = bin2hex(random_bytes(16));
+                    $bundleManifest['release_notes_sha256'] = appmarketReleaseNotesSha256(
+                        $bundleReleaseNotes
+                    );
+                    $bundleManifest['version_name'] = '1.2.0';
+                    $bundleManifest['version_code'] = 120;
+                    $bundleManifest['permissions'] = [
+                        'android.permission.CAMERA',
+                        'android.permission.INTERNET',
+                    ];
+                    $bundleManifest['apk_sha256'] = hash('sha256', $bundleApkBytes);
+                    $bundleManifest['apk_size'] = strlen($bundleApkBytes);
+                    $bundleManifestJson = json_encode(
+                        $bundleManifest,
+                        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                    );
+                    $bundleManifestSignature = '';
+                    $bundleManifestReady = is_string($bundleManifestJson)
+                        && openssl_sign(
+                            appmarketAttestationMessage($bundleManifestJson),
+                            $bundleManifestSignature,
+                            $appmarketPublisherPrivateKey,
+                            OPENSSL_ALGO_SHA256
+                        );
+                    $bundlePath = httpIntegrationCreateTempFile(
+                        'kora-appmarket-bundle-',
+                        '',
+                        $createdTempFiles
+                    );
+                    $bundleArchive = new ZipArchive();
+                    $bundleOpened = $bundleManifestReady
+                        && $bundleArchive->open(
+                            $bundlePath,
+                            ZipArchive::CREATE | ZipArchive::OVERWRITE
+                        ) === true;
+                    if ($bundleOpened) {
+                        $bundleArchive->addFile($bundleApkPath, $appmarketSlug . '-1.2.0.apk');
+                        $bundleArchive->addFromString('release.json', $bundleManifestJson);
+                        $bundleArchive->addFromString(
+                            'release.sig',
+                            base64_encode($bundleManifestSignature)
+                        );
+                        $bundleArchive->addFromString('release-notes.md', $bundleReleaseNotes);
+                        $bundleArchive->close();
+
+                        $bundleFormResponse = fetchUrl(
+                            $baseUrl . BASE_URL . '/admin/appmarket_release_form.php?app_id='
+                                . $appmarketAppId,
+                            $adminSession['cookie'],
+                            0
+                        );
+                        $bundleCsrf = extractHiddenInputValue(
+                            $bundleFormResponse['body'],
+                            'csrf_token'
+                        );
+                        $bundleUploadResponse = postMultipartUrl(
+                            $baseUrl . BASE_URL . '/admin/appmarket_release_save.php',
+                            [
+                                'csrf_token' => $bundleCsrf,
+                                'app_id' => (string)$appmarketAppId,
+                                'release_notes' => '',
+                            ],
+                            [
+                                'release_file' => [
+                                    'path' => $bundlePath,
+                                    'filename' => $appmarketSlug . '-1.2.0.kora-app-release.zip',
+                                    'type' => 'application/zip',
+                                ],
+                            ],
+                            $adminSession['cookie'],
+                            0
+                        );
+                        $bundleReleaseStmt = $pdo->prepare(
+                            'SELECT id FROM cms_appmarket_releases WHERE app_id = ? AND version_code = 120 LIMIT 1'
+                        );
+                        $bundleReleaseStmt->execute([$appmarketAppId]);
+                        $bundleReleaseId = (int)($bundleReleaseStmt->fetchColumn() ?: 0);
+                        $bundleRelease = $bundleReleaseId > 0
+                            ? appmarketFindRelease($pdo, $bundleReleaseId)
+                            : null;
+                        if (httpIntegrationStatusCode($bundleUploadResponse) !== 302
+                            || $bundleRelease === null
+                            || (string)$bundleRelease['metadata_source'] !== 'publisher_attestation'
+                            || trim((string)$bundleRelease['release_notes'])
+                                !== trim($bundleReleaseNotes)
+                        ) {
+                            $appmarketIssues[] = 'offline publisher balíček nevytvořil koncept se signed manifestem a převzatým changelogem';
+                        } else {
+                            $createdAppmarketReleaseIds[] = $bundleReleaseId;
+                            $createdAppmarketStoredFiles[] = (string)$bundleRelease['apk_storage_name'];
+                            $bundleReviewResponse = fetchUrl(
+                                $baseUrl . BASE_URL . '/admin/appmarket_release_review.php?release_id='
+                                    . $bundleReleaseId,
+                                $adminSession['cookie'],
+                                0
+                            );
+                            if (httpIntegrationStatusCode($bundleReviewResponse) !== 200
+                                || !str_contains(
+                                    $bundleReviewResponse['body'],
+                                    'android.permission.CAMERA'
+                                )
+                                || !str_contains(
+                                    $bundleReviewResponse['body'],
+                                    '<legend>Politika aktualizace</legend>'
+                                )
+                            ) {
+                                $appmarketIssues[] = 'kontrola offline konceptu nezobrazila nová oprávnění a politiku aktualizace';
+                            }
+                        }
+                    } else {
+                        $appmarketIssues[] = 'integrační test nedokázal vytvořit offline publisher balíček';
+                    }
+                }
+
                 $tamperedManifestResult = appmarketVerifyPublisherAttestation(
                     $pdo,
                     $appmarketAppId,
@@ -20286,8 +20461,15 @@ try {
                 '',
                 0
             );
+            $disabledUpdateV2Response = fetchUrl(
+                $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                    . rawurlencode($appmarketPackageId) . '&version_code=1&sdk_int=34',
+                '',
+                0
+            );
             if (httpIntegrationStatusCode($disabledCatalogResponse) !== 302
                 || httpIntegrationStatusCode($disabledUpdateResponse) !== 404
+                || httpIntegrationStatusCode($disabledUpdateV2Response) !== 404
                 || str_contains($disabledUpdateResponse['body'], $appmarketPackageId)) {
                 $appmarketIssues[] = 'vypnutý Appmarket nezablokoval veřejný katalog nebo update API';
             }

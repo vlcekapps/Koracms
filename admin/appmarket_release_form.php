@@ -46,9 +46,9 @@ adminHeader('Nové vydání aplikace');
     <p class="success" role="status">Server má dostupný <code>apkanalyzer</code> i <code>apksigner</code> a ověří APK přímo.</p>
   <?php elseif ($attestationAvailable): ?>
     <p class="success" role="status">
-      Server nemá oba Android nástroje, ale podporuje kryptograficky podepsaná vydání z lokálního
-      publisheru. Úplnou Android kontrolu provede váš počítač a doména nezávisle ověří podpis
-      manifestu, velikost a SHA-256 APK.
+      Hosting pracuje v plně podporovaném režimu bez Android nástrojů. Úplnou Android kontrolu
+      provede lokální publisher a doména přes PHP OpenSSL nezávisle ověří podpis manifestu,
+      seznam změn, velikost a SHA-256 APK.
     </p>
   <?php else: ?>
     <p class="error" role="alert">
@@ -67,16 +67,17 @@ adminHeader('Nové vydání aplikace');
   <fieldset>
     <legend>Produkční balíček</legend>
 
-    <label for="release_file">APK nebo publisher balíček <span aria-hidden="true">*</span></label>
+    <label for="release_file"><?= $apkanalyzerAvailable && $apksignerAvailable ? 'APK nebo publisher balíček' : 'Podepsaný publisher balíček' ?> <span aria-hidden="true">*</span></label>
     <input type="file" id="release_file" name="release_file" required aria-required="true"
            accept=".apk,.zip,application/vnd.android.package-archive,application/zip"
            aria-describedby="appmarket-release-file-help<?= $errors !== [] ? ' appmarket-release-file-error' : '' ?>"
            <?= $errors !== [] ? 'aria-invalid="true"' : '' ?>>
     <small id="appmarket-release-file-help" class="field-help">
       Limit je <?= h(koraUploadMaxSizeLabel()) ?> a současně nesmí být nižší PHP limity hostingu.
-      Samostatné APK vyžaduje Android nástroje na serveru. Na hostingu bez nich použijte
-      <code>tools/appmarket-publish.ps1</code>, případně nahrajte <code>.kora-app-release.zip</code>
-      s přesně podepsanými soubory <code>release.json</code> a <code>release.sig</code>.
+      Samostatné APK vyžaduje Android nástroje na serveru. Pro běžný hosting použijte
+      <code>tools/appmarket-publish.ps1</code> a nahrajte vytvořený
+      <code>.kora-app-release.zip</code> s APK, <code>release.json</code>,
+      <code>release.sig</code> a <code>release-notes.md</code>.
       Debug a QA APK, duplicitní nebo nižší versionCode a cizí applicationId se odmítnou.
     </small>
     <?php if ($errors !== []): ?>
@@ -87,7 +88,11 @@ adminHeader('Nové vydání aplikace');
     <textarea id="release_notes" name="release_notes" rows="10" maxlength="<?= appmarketReleaseNotesMaxLength() ?>"
               aria-describedby="appmarket-release-notes-help<?= $releaseNotesError !== '' ? ' appmarket-release-notes-error' : '' ?>"
               <?= $releaseNotesError !== '' ? 'aria-invalid="true"' : '' ?>><?= h($releaseNotes) ?></textarea>
-    <small id="appmarket-release-notes-help" class="field-help">Bezpečný Markdown se zobrazí na veřejném detailu vydání a prostý text v update API; vložené HTML se nevykoná.</small>
+    <small id="appmarket-release-notes-help" class="field-help">
+      Bezpečný Markdown se zobrazí na veřejném detailu vydání a prostý text v update API;
+      vložené HTML se nevykoná. U podepsaného balíčku můžete pole ponechat prázdné,
+      seznam změn se bezpečně převezme z <code>release-notes.md</code>.
+    </small>
     <?php if ($releaseNotesError !== ''): ?>
       <small id="appmarket-release-notes-error" class="field-help field-error"><?= h($releaseNotesError) ?></small>
     <?php endif; ?>

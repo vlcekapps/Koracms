@@ -146,6 +146,7 @@ $appmarketAppSource = is_file(__DIR__ . '/../appmarket/app.php') ? (string) file
 $appmarketReleaseSource = is_file(__DIR__ . '/../appmarket/release.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/release.php') : '';
 $appmarketDownloadSource = is_file(__DIR__ . '/../appmarket/download.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/download.php') : '';
 $appmarketUpdateSource = is_file(__DIR__ . '/../appmarket/update.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/update.php') : '';
+$appmarketUpdateV2Source = is_file(__DIR__ . '/../appmarket/update_v2.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/update_v2.php') : '';
 $appmarketPublishSource = is_file(__DIR__ . '/../appmarket/publish.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/publish.php') : '';
 $appmarketIndexViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-index.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-index.php') : '';
 $appmarketAppViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') : '';
@@ -22908,6 +22909,7 @@ if (!is_array($appmarketDefinition)
     || ($appmarketDefinition['admin_capability'] ?? null) !== 'appmarket_manage'
     || !in_array('/appmarket/index.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/appmarket/update.php', $appmarketDefinition['public_paths'] ?? [], true)
+    || !in_array('/appmarket/update_v2.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/appmarket/publish.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/admin/appmarket.php', $appmarketDefinition['admin_paths'] ?? [], true)
     || !in_array('/admin/appmarket_release_review.php', $appmarketDefinition['admin_paths'] ?? [], true)
@@ -22947,6 +22949,9 @@ foreach ([
         'attestation_public_key TEXT',
         'attestation_key_fingerprint CHAR(64)',
         'idx_appmarket_releases_publisher_token',
+        "update_priority    ENUM('normal','important','critical') NOT NULL DEFAULT 'normal'",
+        'required_below_version_code BIGINT UNSIGNED',
+        'idx_appmarket_releases_compatible',
         'idx_appmarket_publish_tokens_attestation',
     ] as $appmarketSchemaFragment) {
         if (!str_contains($schemaSource, $appmarketSchemaFragment)) {
@@ -22986,9 +22991,15 @@ foreach ([
     'proc_open(',
     'if ((microtime(true) - $startedAt) >= 30.0)',
     'function appmarketInspectReleaseUpload',
+    "\$archive->locateName('release-notes.md'",
+    "'release_notes' => \$releaseNotes",
     'function appmarketCreateReleaseDraft',
     'function appmarketPublishRelease',
     'function appmarketReleasePublicationIssues',
+    'function appmarketNormalizeReleasePolicy',
+    'function appmarketLatestCompatiblePublishedRelease',
+    'function appmarketPermissionDiff',
+    'function appmarketUpdatePayloadV2',
     'function appmarketAppPublicVisibilitySql',
     'function appmarketReleasePublicVisibilitySql',
     'appmarket_certificate.is_active = 1',
@@ -23046,7 +23057,7 @@ if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Produkční balíč
     || !str_contains($adminAppmarketReleaseFormSource, 'aria-invalid="true"')
     || !str_contains(
         $adminAppmarketReleaseFormSource,
-        'Server nemá oba Android nástroje, ale podporuje kryptograficky podepsaná vydání'
+        'Hosting pracuje v plně podporovaném režimu bez Android nástrojů.'
     )
     || !str_contains($adminAppmarketReleaseFormSource, 'maxlength="<?= appmarketReleaseNotesMaxLength() ?>"')
     || !str_contains($adminAppmarketReleaseActionSource, "requireHttpMethods(['POST'])")
@@ -23058,6 +23069,12 @@ if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Produkční balíč
 if (!str_contains($adminAppmarketReleaseReviewSource, 'appmarketReleasePublicationIssues(')
     || !str_contains($adminAppmarketReleaseReviewSource, 'aria-labelledby="appmarket-release-review-heading"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'aria-labelledby="appmarket-release-review-permissions-heading"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'aria-labelledby="appmarket-release-review-delta-heading"')
+    || !str_contains($adminAppmarketReleaseReviewSource, '<legend>Politika aktualizace</legend>')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-update-priority-error"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-required-version-error"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'aria-invalid="true"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'name="required_below_version_code"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'renderProjectMarkdown(')
     || !str_contains($adminAppmarketReleaseReviewSource, 'name="confirm_action" value="publish"')) {
     $appmarketIssues[] = 'Appmarket publication must pass a separate accessible review of verified APK metadata';
@@ -23102,6 +23119,16 @@ if (!str_contains($appmarketUpdateSource, '$isHeadRequest = requireReadOnlyHttpM
     || str_contains($appmarketUpdateSource, 'device_id')) {
     $appmarketIssues[] = 'Appmarket update API must remain anonymous, read-only and device-identifier free';
 }
+if (!str_contains($appmarketUpdateV2Source, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($appmarketUpdateV2Source, 'session_write_close();')
+    || !str_contains($appmarketUpdateV2Source, "header_remove('Set-Cookie');")
+    || !str_contains($appmarketUpdateV2Source, "(\$_GET['sdk_int'] ?? null)")
+    || !str_contains($appmarketUpdateV2Source, 'appmarketLatestCompatiblePublishedRelease(')
+    || !str_contains($appmarketUpdateV2Source, 'appmarketUpdatePayloadV2(')
+    || str_contains($appmarketUpdateV2Source, 'device_id')
+    || str_contains($appmarketUpdateV2Source, 'installation_id')) {
+    $appmarketIssues[] = 'Appmarket V2 update API must select compatible releases without device identifiers';
+}
 if (!str_contains($appmarketDownloadSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
     || !str_contains($appmarketDownloadSource, 'session_write_close();')
     || !str_contains($appmarketDownloadSource, "header_remove('Set-Cookie');")
@@ -23118,6 +23145,7 @@ if (!str_contains($appmarketDownloadSource, '$isHeadRequest = requireReadOnlyHtt
     $appmarketIssues[] = 'Appmarket APK downloads must use public visibility checks and the shared range helper';
 }
 $appmarketUpdateRoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v1/update/');
+$appmarketUpdateV2RoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v2/update/');
 $appmarketPublishRoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v1/releases/');
 $appmarketCatalogRoutePosition = strpos($htaccessSource, 'RewriteRule ^aplikace/');
 $appmarketBlogCatchAllPosition = strpos(
@@ -23125,14 +23153,17 @@ $appmarketBlogCatchAllPosition = strpos(
     'RewriteRule ^([a-z0-9\-]+)/([a-z0-9\-]+)/?$ blog_router.php?blog_slug=$1&slug=$2'
 );
 if ($appmarketUpdateRoutePosition === false
+    || $appmarketUpdateV2RoutePosition === false
     || $appmarketPublishRoutePosition === false
     || $appmarketCatalogRoutePosition === false
     || $appmarketBlogCatchAllPosition === false
     || $appmarketUpdateRoutePosition > $appmarketBlogCatchAllPosition
+    || $appmarketUpdateV2RoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketPublishRoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketCatalogRoutePosition > $appmarketBlogCatchAllPosition
     || !str_contains($htaccessSource, 'appmarket/publish\.php')
     || !str_contains($htaccessSource, 'E=HTTP_AUTHORIZATION:%1')
+    || !str_contains($readmeSource, 'location = /api/appmarket/v2/update')
     || !str_contains($readmeSource, 'fastcgi_param HTTP_AUTHORIZATION $http_authorization;')
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')) {
     $appmarketIssues[] = 'Appmarket routes and publisher privacy headers must precede blog catch-all routes';
@@ -23173,6 +23204,10 @@ foreach ([
     "'Bearer',",
     '$permissions.Count -gt 256',
     '$ReleaseNotes.Length -gt 50000',
+    'New-AppmarketReleaseBundle',
+    "'release-notes.md'",
+    '$OutputBundlePath',
+    '$SkipUpload',
     'Soubor s poznámkami k vydání musí ležet uvnitř ověřovaného Git repozitáře.',
     'GetByteCount($metadataJson) -gt 65536',
     "attestation_type = 'kora-appmarket-release'",
@@ -23220,6 +23255,7 @@ foreach ([
     "'appmarket_certificates'",
     "'appmarket_releases'",
     "'appmarket_screenshots'",
+    'update_priority, required_below_version_code',
 ] as $appmarketExportFragment) {
     if (!str_contains($adminExportSource, $appmarketExportFragment)) {
         $appmarketIssues[] = 'JSON export is missing Appmarket metadata fragment: ' . $appmarketExportFragment;
@@ -23230,7 +23266,9 @@ foreach ([
     'Appmarket – podpisové certifikáty importovány jako neaktivní.',
     'Appmarket – metadata vydání importována jako koncepty bez APK.',
     "VALUES (?,?,?,?,?,?,0,?,?,?)",
-    "'draft',0,?,?",
+    'update_priority, required_below_version_code',
+    'appmarketNormalizeReleasePolicy(',
+    "?,?,?,?,?,?,?,?,'draft',0,?,?",
 ] as $appmarketImportFragment) {
     if (!str_contains($adminImportSource, $appmarketImportFragment)) {
         $appmarketIssues[] = 'Appmarket import is missing safe fallback fragment: ' . $appmarketImportFragment;
@@ -23247,6 +23285,8 @@ foreach ([
     'Ruční ověření',
     'OpenSSL',
     'podepsan',
+    'update API V1/V2',
+    'offline publisher balíček',
 ] as $appmarketAccessibilityFragment) {
     if (!str_contains($appmarketAccessibilitySource, $appmarketAccessibilityFragment)) {
         $appmarketIssues[] = 'Appmarket accessibility report is missing fragment: ' . $appmarketAccessibilityFragment;

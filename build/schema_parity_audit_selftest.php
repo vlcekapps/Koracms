@@ -361,6 +361,8 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
   analysis_json LONGTEXT,
   metadata_source VARCHAR(20),
   publisher_token_id INT,
+  update_priority VARCHAR(20),
+  required_below_version_code BIGINT,
   download_count BIGINT,
   status VARCHAR(20)
 ) ENGINE=InnoDB;
@@ -678,6 +680,7 @@ PHP,
 // cms_appmarket_releases
 // uq_appmarket_release_version
 // idx_appmarket_releases_public
+// idx_appmarket_releases_compatible
 // idx_appmarket_releases_publisher_token
 // cms_appmarket_screenshots
 // uq_appmarket_screenshot_media

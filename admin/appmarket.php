@@ -154,6 +154,7 @@ adminHeader('Appmarket');
                   <td>
                     <?= h(formatFileSize((int)$release['apk_size'])) ?>
                     <small><?= h((string)$release['metadata_source'] === 'apk' ? 'ověřeno Android nástroji' : 'ověřeno podepsaným publisherem') ?></small>
+                    <small><?= h((string)$release['update_priority_label']) ?> aktualizace<?= $release['required_below_version_code'] !== null ? ', povinná pod versionCode ' . (int)$release['required_below_version_code'] : '' ?></small>
                   </td>
                   <td>
                     <?php if (isSuperAdmin()): ?>

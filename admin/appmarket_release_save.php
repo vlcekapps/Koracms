@@ -39,6 +39,7 @@ if (empty($upload['ok'])) {
     exit;
 }
 
+$releaseNotes = $upload['release_notes'];
 $result = appmarketCreateReleaseDraft($pdo, $app, $upload, $releaseNotes, currentUserId());
 if (!$result['ok']) {
     $_SESSION['appmarket_release_flash'] = [

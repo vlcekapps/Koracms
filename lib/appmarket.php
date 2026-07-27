@@ -24,6 +24,18 @@ function appmarketReleaseStatusDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string,string>
+ */
+function appmarketUpdatePriorityDefinitions(): array
+{
+    return [
+        'normal' => 'Běžná',
+        'important' => 'Důležitá',
+        'critical' => 'Kritická',
+    ];
+}
+
 function appmarketNormalizeAppStatus(?string $status): string
 {
     $normalized = trim((string)$status);
@@ -34,6 +46,12 @@ function appmarketNormalizeReleaseStatus(?string $status): string
 {
     $normalized = trim((string)$status);
     return array_key_exists($normalized, appmarketReleaseStatusDefinitions()) ? $normalized : 'draft';
+}
+
+function appmarketNormalizeUpdatePriority(?string $priority): string
+{
+    $normalized = trim((string)$priority);
+    return array_key_exists($normalized, appmarketUpdatePriorityDefinitions()) ? $normalized : 'normal';
 }
 
 function appmarketMetadataMaxBytes(): int
@@ -113,6 +131,62 @@ function appmarketNormalizeVersionCode(mixed $versionCode): ?int
     ]);
 
     return $normalized === false ? null : (int)$normalized;
+}
+
+/**
+ * @return array{
+ *     priority:string,
+ *     required_below_version_code:?int,
+ *     priority_error:string,
+ *     required_below_error:string,
+ *     errors:list<string>
+ * }
+ */
+function appmarketNormalizeReleasePolicy(
+    mixed $priority,
+    mixed $requiredBelowVersionCode,
+    int $releaseVersionCode
+): array {
+    $rawPriority = trim((string)$priority);
+    $normalizedPriority = appmarketNormalizeUpdatePriority($rawPriority);
+    $errors = [];
+    $priorityError = '';
+    if ($rawPriority !== '' && !array_key_exists($rawPriority, appmarketUpdatePriorityDefinitions())) {
+        $priorityError = 'Vyberte podporovanou naléhavost aktualizace.';
+        $errors[] = $priorityError;
+    }
+
+    $requiredVersion = null;
+    $requiredBelowError = '';
+    $rawRequiredVersion = trim((string)$requiredBelowVersionCode);
+    if ($rawRequiredVersion !== '') {
+        $requiredVersion = appmarketNormalizeVersionCode($rawRequiredVersion);
+        if ($requiredVersion === null || $requiredVersion > $releaseVersionCode) {
+            $requiredBelowError = 'Hranice povinné aktualizace musí být kladný versionCode nejvýše rovný nové verzi.';
+            $errors[] = $requiredBelowError;
+            $requiredVersion = null;
+        }
+    }
+
+    return [
+        'priority' => $normalizedPriority,
+        'required_below_version_code' => $requiredVersion,
+        'priority_error' => $priorityError,
+        'required_below_error' => $requiredBelowError,
+        'errors' => $errors,
+    ];
+}
+
+/**
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseUpdateRequired(array $release, int $currentVersionCode): bool
+{
+    $requiredBelow = appmarketNormalizeVersionCode($release['required_below_version_code'] ?? null);
+    return $requiredBelow !== null
+        && $currentVersionCode > 0
+        && $currentVersionCode < $requiredBelow
+        && (int)($release['version_code'] ?? 0) > $currentVersionCode;
 }
 
 function appmarketNormalizeSdkLevel(mixed $sdkLevel): ?int
@@ -465,6 +539,11 @@ function appmarketUpdateApiPath(): string
     return BASE_URL . '/api/appmarket/v1/update';
 }
 
+function appmarketUpdateApiV2Path(): string
+{
+    return BASE_URL . '/api/appmarket/v2/update';
+}
+
 function appmarketPublishApiPath(): string
 {
     return BASE_URL . '/api/appmarket/v1/releases';
@@ -521,6 +600,13 @@ function appmarketHydrateReleasePresentation(array $release): array
     $release['download_count'] = max(0, (int)($release['download_count'] ?? 0));
     $release['download_count_label'] = appmarketDownloadCountLabel($release['download_count']);
     $release['status'] = appmarketNormalizeReleaseStatus((string)($release['status'] ?? ''));
+    $release['update_priority'] = appmarketNormalizeUpdatePriority(
+        (string)($release['update_priority'] ?? '')
+    );
+    $release['update_priority_label'] = appmarketUpdatePriorityDefinitions()[$release['update_priority']];
+    $release['required_below_version_code'] = appmarketNormalizeVersionCode(
+        $release['required_below_version_code'] ?? null
+    );
     $release['has_apk'] = appmarketPrivateApkPath((string)($release['apk_storage_name'] ?? '')) !== '';
     $release['release_notes_plain'] = trim(strip_tags((string)($release['release_notes'] ?? '')));
     $release['published_at_label'] = '';
@@ -571,6 +657,56 @@ function appmarketHydrateAppPresentation(array $app): array
     }
 
     return $app;
+}
+
+/**
+ * @param array<string,mixed>|string|null $releaseOrPermissions
+ * @return list<string>
+ */
+function appmarketReleasePermissions(array|string|null $releaseOrPermissions): array
+{
+    $rawPermissions = is_array($releaseOrPermissions)
+        ? ($releaseOrPermissions['permissions_json'] ?? [])
+        : $releaseOrPermissions;
+    if (is_string($rawPermissions)) {
+        try {
+            $decoded = json_decode($rawPermissions, true, 32, JSON_THROW_ON_ERROR);
+            $rawPermissions = is_array($decoded) ? $decoded : [];
+        } catch (JsonException $e) {
+            $rawPermissions = [];
+        }
+    }
+
+    $permissions = [];
+    foreach (is_array($rawPermissions) ? $rawPermissions : [] as $permission) {
+        $normalized = trim((string)$permission);
+        if ($normalized !== ''
+            && preg_match('/\A[a-zA-Z0-9._-]{1,255}\z/', $normalized) === 1
+        ) {
+            $permissions[$normalized] = true;
+        }
+    }
+    $result = array_keys($permissions);
+    sort($result);
+    return $result;
+}
+
+/**
+ * @param array<string,mixed>|string|null $fromRelease
+ * @param array<string,mixed>|string|null $toRelease
+ * @return array{added:list<string>,removed:list<string>}
+ */
+function appmarketPermissionDiff(
+    array|string|null $fromRelease,
+    array|string|null $toRelease
+): array {
+    $fromPermissions = appmarketReleasePermissions($fromRelease);
+    $toPermissions = appmarketReleasePermissions($toRelease);
+
+    return [
+        'added' => array_values(array_diff($toPermissions, $fromPermissions)),
+        'removed' => array_values(array_diff($fromPermissions, $toPermissions)),
+    ];
 }
 
 /**
@@ -644,6 +780,88 @@ function appmarketLatestPublishedRelease(PDO $pdo, int $appId, ?int $greaterThan
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    $row = $stmt->fetch();
+    return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketLatestCompatiblePublishedRelease(
+    PDO $pdo,
+    int $appId,
+    int $sdkLevel,
+    ?int $greaterThanVersionCode = null
+): ?array {
+    if ($appId <= 0 || appmarketNormalizeSdkLevel($sdkLevel) === null) {
+        return null;
+    }
+
+    $sql = "SELECT r.*
+            FROM cms_appmarket_releases r
+            WHERE r.app_id = ?
+              AND " . appmarketReleasePublicVisibilitySql('r') . '
+              AND (r.min_sdk IS NULL OR r.min_sdk <= ?)';
+    $params = [$appId, $sdkLevel];
+    if ($greaterThanVersionCode !== null) {
+        $sql .= ' AND r.version_code > ?';
+        $params[] = max(0, $greaterThanVersionCode);
+    }
+    $sql .= ' ORDER BY r.version_code DESC, r.id DESC LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $row = $stmt->fetch();
+    return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketFindPublishedReleaseByVersionCode(
+    PDO $pdo,
+    int $appId,
+    int $versionCode
+): ?array {
+    if ($appId <= 0 || $versionCode <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT r.*
+         FROM cms_appmarket_releases r
+         WHERE r.app_id = ?
+           AND r.version_code = ?
+           AND " . appmarketReleasePublicVisibilitySql('r') . '
+         LIMIT 1'
+    );
+    $stmt->execute([$appId, $versionCode]);
+    $row = $stmt->fetch();
+    return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketPreviousPublishedRelease(
+    PDO $pdo,
+    int $appId,
+    int $beforeVersionCode
+): ?array {
+    if ($appId <= 0 || $beforeVersionCode <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT r.*
+         FROM cms_appmarket_releases r
+         WHERE r.app_id = ?
+           AND r.version_code < ?
+           AND " . appmarketReleasePublicVisibilitySql('r') . '
+         ORDER BY r.version_code DESC, r.id DESC
+         LIMIT 1'
+    );
+    $stmt->execute([$appId, $beforeVersionCode]);
     $row = $stmt->fetch();
     return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
 }
@@ -1297,7 +1515,8 @@ function appmarketFileHasZipSignature(string $path): bool
  *     source_is_upload:bool,
  *     cleanup_paths:list<string>,
  *     analysis:array<string,mixed>,
- *     publisher_token_id:int
+ *     publisher_token_id:int,
+ *     release_notes:string
  * }
  */
 function appmarketInspectReleaseUpload(
@@ -1319,6 +1538,7 @@ function appmarketInspectReleaseUpload(
         'cleanup_paths' => [],
         'analysis' => [],
         'publisher_token_id' => 0,
+        'release_notes' => $releaseNotes,
     ];
     if (strlen($metadataJson) > appmarketMetadataMaxBytes()) {
         $emptyResult['errors'][] = 'Metadata vydání překračují bezpečný limit 64 KiB.';
@@ -1386,6 +1606,7 @@ function appmarketInspectReleaseUpload(
 
         $manifestIndex = $archive->locateName('release.json', ZipArchive::FL_NOCASE);
         $signatureIndex = $archive->locateName('release.sig', ZipArchive::FL_NOCASE);
+        $releaseNotesIndex = $archive->locateName('release-notes.md', ZipArchive::FL_NOCASE);
         $apkIndex = false;
         for ($index = 0; $index < $archive->numFiles; $index++) {
             $entryName = (string)$archive->getNameIndex($index);
@@ -1411,6 +1632,9 @@ function appmarketInspectReleaseUpload(
         $archiveApkName = (string)$archive->getNameIndex((int)$apkIndex);
         $manifestStat = $archive->statIndex((int)$manifestIndex);
         $signatureStat = $signatureIndex !== false ? $archive->statIndex((int)$signatureIndex) : null;
+        $releaseNotesStat = $releaseNotesIndex !== false
+            ? $archive->statIndex((int)$releaseNotesIndex)
+            : null;
         $apkStat = $archive->statIndex((int)$apkIndex);
         if (!is_array($manifestStat)
             || !is_array($apkStat)
@@ -1430,6 +1654,15 @@ function appmarketInspectReleaseUpload(
         ) {
             $archive->close();
             $emptyResult['errors'][] = 'Publisher balíček obsahuje neplatně velký podpis.';
+            return $emptyResult;
+        }
+        if ($releaseNotesIndex !== false
+            && (!is_array($releaseNotesStat)
+                || $releaseNotesStat['size'] < 0
+                || $releaseNotesStat['size'] > appmarketReleaseNotesMaxLength() * 4)
+        ) {
+            $archive->close();
+            $emptyResult['errors'][] = 'Publisher balíček obsahuje neplatně velký seznam změn.';
             return $emptyResult;
         }
 
@@ -1459,6 +1692,31 @@ function appmarketInspectReleaseUpload(
                 return $emptyResult;
             }
             $attestationSignature = trim($bundleSignature);
+        }
+        if ($releaseNotesIndex !== false) {
+            $bundleReleaseNotes = $archive->getFromIndex((int)$releaseNotesIndex);
+            if (!is_string($bundleReleaseNotes)) {
+                $archive->close();
+                $emptyResult['errors'][] = 'Seznam změn z publisher balíčku se nepodařilo načíst.';
+                return $emptyResult;
+            }
+            $bundleReleaseNotes = appmarketNormalizeReleaseNotes($bundleReleaseNotes);
+            if (!appmarketReleaseNotesValid($bundleReleaseNotes)) {
+                $archive->close();
+                $emptyResult['errors'][] = 'Seznam změn v publisher balíčku překračuje bezpečný limit.';
+                return $emptyResult;
+            }
+            if ($releaseNotes !== ''
+                && !hash_equals(
+                    appmarketReleaseNotesSha256($releaseNotes),
+                    appmarketReleaseNotesSha256($bundleReleaseNotes)
+                )
+            ) {
+                $archive->close();
+                $emptyResult['errors'][] = 'Seznam změn ve formuláři neodpovídá podepsanému publisher balíčku.';
+                return $emptyResult;
+            }
+            $releaseNotes = $bundleReleaseNotes;
         }
 
         if (!appmarketPrivateStorageIsSafe()
@@ -1587,6 +1845,7 @@ function appmarketInspectReleaseUpload(
         'cleanup_paths' => $cleanupPaths,
         'analysis' => $analysis,
         'publisher_token_id' => is_array($attestation) ? (int)$attestation['publisher_token_id'] : 0,
+        'release_notes' => $releaseNotes,
     ];
 }
 
@@ -1972,6 +2231,73 @@ function appmarketUpdatePayload(array $app, ?array $release, int $currentVersion
 }
 
 /**
+ * @param array<string,mixed> $app
+ * @param array<string,mixed>|null $release
+ * @param array<string,mixed>|null $currentRelease
+ * @return array<string,mixed>
+ */
+function appmarketUpdatePayloadV2(
+    array $app,
+    ?array $release,
+    int $currentVersionCode,
+    int $sdkLevel,
+    ?array $currentRelease = null
+): array {
+    $payload = [
+        'schema_version' => 2,
+        'package_id' => (string)($app['package_id'] ?? ''),
+        'current_version_code' => max(0, $currentVersionCode),
+        'device_sdk' => $sdkLevel,
+        'update_available' => $release !== null,
+        'update_required' => $release !== null
+            && appmarketReleaseUpdateRequired($release, $currentVersionCode),
+        'latest' => null,
+    ];
+    if ($release === null) {
+        return $payload;
+    }
+
+    $permissionDiff = $currentRelease !== null
+        ? appmarketPermissionDiff($currentRelease, $release)
+        : ['added' => [], 'removed' => []];
+    $payload['latest'] = [
+        'version_name' => (string)($release['version_name'] ?? ''),
+        'version_code' => (int)($release['version_code'] ?? 0),
+        'release_notes' => trim((string)($release['release_notes'] ?? '')),
+        'published_at' => (string)($release['published_at'] ?? ''),
+        'min_sdk' => $release['min_sdk'] ?? null,
+        'target_sdk' => $release['target_sdk'] ?? null,
+        'apk_size' => (int)($release['apk_size'] ?? 0),
+        'apk_sha256' => (string)($release['apk_sha256'] ?? ''),
+        'certificate_sha256' => (string)($release['certificate_fingerprint_sha256'] ?? ''),
+        'update_priority' => appmarketNormalizeUpdatePriority(
+            (string)($release['update_priority'] ?? '')
+        ),
+        'required_below_version_code' => appmarketNormalizeVersionCode(
+            $release['required_below_version_code'] ?? null
+        ),
+        'permissions' => appmarketReleasePermissions($release),
+        'permission_changes' => [
+            'baseline_known' => $currentRelease !== null,
+            'added' => $permissionDiff['added'],
+            'removed' => $permissionDiff['removed'],
+        ],
+        'release_url' => siteUrl(str_replace(
+            BASE_URL,
+            '',
+            appmarketReleasePath($app, (int)($release['version_code'] ?? 0))
+        )),
+        'download_url' => siteUrl(str_replace(
+            BASE_URL,
+            '',
+            appmarketDownloadPath($app, (int)($release['version_code'] ?? 0))
+        )),
+    ];
+
+    return $payload;
+}
+
+/**
  * @param array<string,mixed> $upload
  */
 function appmarketCleanupInspectedUpload(array $upload): void
@@ -2131,14 +2457,25 @@ function appmarketCreateReleaseDraft(
 /**
  * @return array{ok:bool,errors:list<string>}
  */
-function appmarketPublishRelease(PDO $pdo, int $releaseId, int $userId): array
-{
+function appmarketPublishRelease(
+    PDO $pdo,
+    int $releaseId,
+    int $userId,
+    string $updatePriority = 'normal',
+    mixed $requiredBelowVersionCode = null
+): array {
     $release = appmarketFindRelease($pdo, $releaseId);
     if ($release === null || (string)$release['status'] !== 'draft') {
         return ['ok' => false, 'errors' => ['Zveřejnit lze jen existující koncept vydání.']];
     }
 
     $issues = appmarketReleasePublicationIssues($pdo, $release);
+    $policy = appmarketNormalizeReleasePolicy(
+        $updatePriority,
+        $requiredBelowVersionCode,
+        (int)$release['version_code']
+    );
+    $issues = array_merge($issues, $policy['errors']);
     $latestPublished = appmarketLatestVersionCode($pdo, (int)$release['app_id'], true);
     if (!appmarketReleaseVersionIsNewer((int)$release['version_code'], $latestPublished)) {
         $issues[] = 'versionCode musí být vyšší než u aktuálně zveřejněného vydání.';
@@ -2151,9 +2488,15 @@ function appmarketPublishRelease(PDO $pdo, int $releaseId, int $userId): array
         $pdo->beginTransaction();
         $pdo->prepare(
             "UPDATE cms_appmarket_releases
-             SET status = 'published', published_at = NOW(), published_by_user_id = ?
+             SET status = 'published', update_priority = ?, required_below_version_code = ?,
+                 published_at = NOW(), published_by_user_id = ?
              WHERE id = ? AND status = 'draft'"
-        )->execute([$userId, $releaseId]);
+        )->execute([
+            $policy['priority'],
+            $policy['required_below_version_code'],
+            $userId,
+            $releaseId,
+        ]);
         $pdo->prepare(
             "UPDATE cms_appmarket_apps
              SET status = 'published', published_at = COALESCE(published_at, NOW())

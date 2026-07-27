@@ -31,8 +31,32 @@ if (in_array($action, ['publish', 'withdraw', 'delete'], true)
 }
 
 if ($action === 'publish') {
-    $result = appmarketPublishRelease($pdo, (int)$release['id'], currentUserId() ?? 0);
+    $updatePriority = trim((string)($_POST['update_priority'] ?? 'normal'));
+    $requiredBelowVersionCode = trim((string)($_POST['required_below_version_code'] ?? ''));
+    $policy = appmarketNormalizeReleasePolicy(
+        $updatePriority,
+        $requiredBelowVersionCode,
+        (int)$release['version_code']
+    );
+    $result = $policy['errors'] === []
+        ? appmarketPublishRelease(
+            $pdo,
+            (int)$release['id'],
+            currentUserId() ?? 0,
+            $policy['priority'],
+            $policy['required_below_version_code']
+        )
+        : ['ok' => false, 'errors' => $policy['errors']];
     if (!$result['ok']) {
+        if ($policy['errors'] !== []) {
+            $_SESSION['appmarket_policy_flash'] = [
+                'update_priority' => $updatePriority,
+                'required_below_version_code' => $requiredBelowVersionCode,
+                'priority_error' => $policy['priority_error'],
+                'required_below_error' => $policy['required_below_error'],
+                'errors' => $policy['errors'],
+            ];
+        }
         $_SESSION['appmarket_notice_error'] = implode(' ', $result['errors']);
         header('Location: appmarket_release_review.php?release_id=' . (int)$release['id']);
         exit;

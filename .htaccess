@@ -100,6 +100,7 @@ Options -Indexes
     RewriteRule ^authors/?$ authors/index.php [L,QSA,NC]
     RewriteRule ^changelog/?$ changelog.php [L,QSA,NC]
     RewriteRule ^author/([a-z0-9\-]+)/?$ author.php?slug=$1 [L,QSA,NC]
+    RewriteRule ^api/appmarket/v2/update/?$ appmarket/update_v2.php [L,QSA,NC]
     RewriteRule ^api/appmarket/v1/update/?$ appmarket/update.php [L,QSA,NC]
     RewriteRule ^api/appmarket/v1/releases/?$ appmarket/publish.php [L,QSA,NC]
     RewriteRule ^aplikace/?$ appmarket/index.php [L,QSA,NC]

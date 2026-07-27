@@ -372,6 +372,7 @@ function coreModuleDefinitions(): array
                 '/appmarket/release.php',
                 '/appmarket/download.php',
                 '/appmarket/update.php',
+                '/appmarket/update_v2.php',
                 '/appmarket/publish.php',
             ],
             'public_nav_order' => 75,

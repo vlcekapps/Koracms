@@ -61,6 +61,7 @@ if (empty($upload['ok'])) {
     ]);
 }
 
+$releaseNotes = $upload['release_notes'];
 $result = appmarketCreateReleaseDraft($pdo, $app, $upload, $releaseNotes, null);
 if (!$result['ok']) {
     appmarketSendJson(422, [
