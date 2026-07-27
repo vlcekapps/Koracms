@@ -13,7 +13,10 @@ $latestRelease = is_array($latestRelease ?? null) ? $latestRelease : null;
         <p class="meta-row"><span><code><?= h((string)$app['package_id']) ?></code></span><?php if ((string)$app['license_label'] !== ''): ?>, <span><?= h((string)$app['license_label']) ?></span><?php endif; ?></p>
         <?php if ($latestRelease !== null): ?>
           <div class="button-row button-row--start">
-            <a class="btn" href="<?= h(appmarketDownloadPath($app, (int)$latestRelease['version_code'])) ?>">Stáhnout verzi <?= h((string)$latestRelease['version_name']) ?></a>
+            <a class="btn" href="<?= h(appmarketDownloadPath($app, (int)$latestRelease['version_code'])) ?>">
+              Stáhnout <?= (string)$latestRelease['release_channel'] === 'stable' ? 'stabilní' : 'beta' ?>
+              verzi <?= h((string)$latestRelease['version_name']) ?>
+            </a>
             <a class="btn btn-secondary" href="<?= h(appmarketReleasePath($app, (int)$latestRelease['version_code'])) ?>">Podrobnosti vydání</a>
           </div>
         <?php endif; ?>
@@ -75,6 +78,7 @@ $latestRelease = is_array($latestRelease ?? null) ? $latestRelease : null;
           <li class="link-list__item">
             <a class="link-list__title" href="<?= h(appmarketReleasePath($app, (int)$release['version_code'])) ?>">Verze <?= h((string)$release['version_name']) ?></a>
             <p class="meta-row meta-row--tight">
+              <span><?= h((string)$release['release_channel_label']) ?> kanál</span>
               <span>versionCode <?= (int)$release['version_code'] ?></span>
               <?php if ((string)$release['published_at_label'] !== ''): ?><span><?= h((string)$release['published_at_label']) ?></span><?php endif; ?>
               <span><?= h(formatFileSize((int)$release['apk_size'])) ?></span>

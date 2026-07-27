@@ -45,6 +45,7 @@ $query = (string)($query ?? '');
               <h2 id="<?= h($headingId) ?>" class="card__title"><a href="<?= h(appmarketAppPath($app)) ?>"><?= h((string)$app['name']) ?></a></h2>
               <p class="card__description"><?= h((string)$app['short_description']) ?></p>
               <p class="meta-row meta-row--tight">
+                <span><?= h((string)$app['release_channel_label']) ?> kanál</span>
                 <span>Verze <?= h((string)$app['version_name']) ?></span>
                 <span><?= h(formatFileSize((int)$app['apk_size'])) ?></span>
                 <span><?= h((string)$app['download_count_label']) ?></span>

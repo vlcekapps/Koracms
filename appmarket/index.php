@@ -27,7 +27,8 @@ $stmt = $pdo->prepare(
             m.mime_type AS icon_mime_type,
             m.visibility AS icon_visibility,
             m.alt_text AS icon_alt_text,
-            r.version_name, r.version_code, r.apk_size, r.download_count, r.published_at AS release_published_at
+            r.version_name, r.version_code, r.apk_size, r.download_count,
+            r.release_channel, r.published_at AS release_published_at
      FROM cms_appmarket_apps a
      INNER JOIN cms_appmarket_releases r
        ON r.id = (
@@ -35,7 +36,8 @@ $stmt = $pdo->prepare(
          FROM cms_appmarket_releases latest
          WHERE latest.app_id = a.id
            AND " . appmarketReleasePublicVisibilitySql('latest') . "
-         ORDER BY latest.version_code DESC, latest.id DESC
+         ORDER BY CASE WHEN latest.release_channel = 'stable' THEN 0 ELSE 1 END,
+                  latest.version_code DESC, latest.id DESC
          LIMIT 1
        )
      LEFT JOIN cms_media m ON m.id = a.icon_media_id
@@ -47,6 +49,10 @@ $apps = array_map(
     static function (array $app): array {
         $app = appmarketHydrateAppPresentation($app);
         $app['download_count_label'] = appmarketDownloadCountLabel((int)($app['download_count'] ?? 0));
+        $app['release_channel'] = appmarketNormalizeReleaseChannel(
+            (string)($app['release_channel'] ?? 'stable')
+        );
+        $app['release_channel_label'] = appmarketReleaseChannelDefinitions()[$app['release_channel']];
         return $app;
     },
     $stmt->fetchAll()

@@ -36,6 +36,34 @@ function appmarketUpdatePriorityDefinitions(): array
     ];
 }
 
+/**
+ * @return array<string,string>
+ */
+function appmarketReleaseChannelDefinitions(): array
+{
+    return [
+        'stable' => 'Stabilní',
+        'beta' => 'Beta',
+    ];
+}
+
+/**
+ * @return array<string,string>
+ */
+function appmarketSupportedAbiDefinitions(): array
+{
+    return [
+        'arm64-v8a' => 'ARM 64-bit',
+        'armeabi-v7a' => 'ARM 32-bit',
+        'x86_64' => 'x86 64-bit',
+        'x86' => 'x86 32-bit',
+        'riscv64' => 'RISC-V 64-bit',
+        'armeabi' => 'ARM legacy',
+        'mips64' => 'MIPS 64-bit',
+        'mips' => 'MIPS 32-bit',
+    ];
+}
+
 function appmarketNormalizeAppStatus(?string $status): string
 {
     $normalized = trim((string)$status);
@@ -52,6 +80,110 @@ function appmarketNormalizeUpdatePriority(?string $priority): string
 {
     $normalized = trim((string)$priority);
     return array_key_exists($normalized, appmarketUpdatePriorityDefinitions()) ? $normalized : 'normal';
+}
+
+function appmarketNormalizeReleaseChannel(?string $channel): string
+{
+    $normalized = strtolower(trim((string)$channel));
+    return array_key_exists($normalized, appmarketReleaseChannelDefinitions()) ? $normalized : 'stable';
+}
+
+function appmarketNormalizeRolloutPercentage(mixed $percentage): ?int
+{
+    if ($percentage === null || $percentage === '') {
+        return null;
+    }
+
+    $normalized = filter_var($percentage, FILTER_VALIDATE_INT, [
+        'options' => [
+            'min_range' => 0,
+            'max_range' => 100,
+        ],
+    ]);
+
+    return $normalized === false ? null : (int)$normalized;
+}
+
+function appmarketNormalizeRolloutBucket(mixed $bucket): ?int
+{
+    if ($bucket === null || $bucket === '') {
+        return null;
+    }
+
+    $normalized = filter_var($bucket, FILTER_VALIDATE_INT, [
+        'options' => [
+            'min_range' => 0,
+            'max_range' => 99,
+        ],
+    ]);
+
+    return $normalized === false ? null : (int)$normalized;
+}
+
+function appmarketNormalizeAbi(?string $abi): string
+{
+    $normalized = strtolower(trim((string)$abi));
+    return array_key_exists($normalized, appmarketSupportedAbiDefinitions()) ? $normalized : '';
+}
+
+/**
+ * @return list<string>
+ */
+function appmarketNormalizeSupportedAbis(mixed $abis): array
+{
+    if (is_string($abis)) {
+        $trimmed = trim($abis);
+        if ($trimmed !== '' && str_starts_with($trimmed, '[')) {
+            try {
+                $decoded = json_decode($trimmed, true, 16, JSON_THROW_ON_ERROR);
+                $abis = is_array($decoded) ? $decoded : [];
+            } catch (JsonException $e) {
+                $abis = [];
+            }
+        } else {
+            $abis = preg_split('/[\s,;]+/', $trimmed) ?: [];
+        }
+    }
+
+    $normalized = [];
+    foreach (is_array($abis) ? $abis : [] as $abi) {
+        $value = appmarketNormalizeAbi((string)$abi);
+        if ($value !== '') {
+            $normalized[$value] = true;
+        }
+    }
+
+    $result = array_keys($normalized);
+    sort($result);
+    return $result;
+}
+
+function appmarketSupportedAbiListValid(mixed $abis): bool
+{
+    if (!is_array($abis)) {
+        return false;
+    }
+
+    $expectedIndex = 0;
+    foreach ($abis as $index => $abi) {
+        if ($index !== $expectedIndex
+            || !is_string($abi)
+            || appmarketNormalizeAbi($abi) === ''
+        ) {
+            return false;
+        }
+        $expectedIndex++;
+    }
+
+    return true;
+}
+
+function appmarketSupportedAbiLabel(string $abi): string
+{
+    $normalized = appmarketNormalizeAbi($abi);
+    return $normalized === ''
+        ? ''
+        : appmarketSupportedAbiDefinitions()[$normalized] . ' (' . $normalized . ')';
 }
 
 function appmarketMetadataMaxBytes(): int
@@ -137,15 +269,21 @@ function appmarketNormalizeVersionCode(mixed $versionCode): ?int
  * @return array{
  *     priority:string,
  *     required_below_version_code:?int,
+ *     channel:string,
+ *     rollout_percentage:int,
  *     priority_error:string,
  *     required_below_error:string,
+ *     channel_error:string,
+ *     rollout_error:string,
  *     errors:list<string>
  * }
  */
 function appmarketNormalizeReleasePolicy(
     mixed $priority,
     mixed $requiredBelowVersionCode,
-    int $releaseVersionCode
+    int $releaseVersionCode,
+    mixed $channel = 'stable',
+    mixed $rolloutPercentage = 100
 ): array {
     $rawPriority = trim((string)$priority);
     $normalizedPriority = appmarketNormalizeUpdatePriority($rawPriority);
@@ -168,11 +306,31 @@ function appmarketNormalizeReleasePolicy(
         }
     }
 
+    $rawChannel = strtolower(trim((string)$channel));
+    $normalizedChannel = appmarketNormalizeReleaseChannel($rawChannel);
+    $channelError = '';
+    if ($rawChannel === '' || !array_key_exists($rawChannel, appmarketReleaseChannelDefinitions())) {
+        $channelError = 'Vyberte podporovaný distribuční kanál.';
+        $errors[] = $channelError;
+    }
+
+    $normalizedRollout = appmarketNormalizeRolloutPercentage($rolloutPercentage);
+    $rolloutError = '';
+    if ($normalizedRollout === null) {
+        $rolloutError = 'Postupné nasazení musí být celé číslo od 0 do 100 procent.';
+        $errors[] = $rolloutError;
+        $normalizedRollout = 100;
+    }
+
     return [
         'priority' => $normalizedPriority,
         'required_below_version_code' => $requiredVersion,
+        'channel' => $normalizedChannel,
+        'rollout_percentage' => $normalizedRollout,
         'priority_error' => $priorityError,
         'required_below_error' => $requiredBelowError,
+        'channel_error' => $channelError,
+        'rollout_error' => $rolloutError,
         'errors' => $errors,
     ];
 }
@@ -544,6 +702,11 @@ function appmarketUpdateApiV2Path(): string
     return BASE_URL . '/api/appmarket/v2/update';
 }
 
+function appmarketUpdateApiV3Path(): string
+{
+    return BASE_URL . '/api/appmarket/v3/update';
+}
+
 function appmarketPublishApiPath(): string
 {
     return BASE_URL . '/api/appmarket/v1/releases';
@@ -570,6 +733,14 @@ function appmarketReleasePublicVisibilitySql(string $alias = 'r'): string
         . 'AND appmarket_certificate.fingerprint_sha256 = '
         . $prefix . 'certificate_fingerprint_sha256'
         . ')';
+}
+
+function appmarketReleaseLegacyUpdateVisibilitySql(string $alias = 'r'): string
+{
+    $prefix = $alias !== '' ? $alias . '.' : '';
+    return appmarketReleasePublicVisibilitySql($alias)
+        . ' AND ' . $prefix . "release_channel = 'stable'"
+        . ' AND ' . $prefix . 'rollout_percentage = 100';
 }
 
 function appmarketDownloadCountLabel(int $count): string
@@ -607,6 +778,26 @@ function appmarketHydrateReleasePresentation(array $release): array
     $release['required_below_version_code'] = appmarketNormalizeVersionCode(
         $release['required_below_version_code'] ?? null
     );
+    $release['release_channel'] = appmarketNormalizeReleaseChannel(
+        (string)($release['release_channel'] ?? 'stable')
+    );
+    $release['release_channel_label'] = appmarketReleaseChannelDefinitions()[$release['release_channel']];
+    $release['rollout_percentage'] = appmarketNormalizeRolloutPercentage(
+        $release['rollout_percentage'] ?? 100
+    ) ?? 100;
+    $release['rollout_label'] = $release['rollout_percentage'] === 0
+        ? 'Distribuce aktualizace pozastavena'
+        : 'Nasazení pro ' . $release['rollout_percentage'] . ' % anonymních kohort';
+    $release['supported_abis_known'] = array_key_exists('supported_abis_json', $release)
+        && $release['supported_abis_json'] !== null;
+    $release['supported_abis'] = $release['supported_abis_known']
+        ? appmarketNormalizeSupportedAbis($release['supported_abis_json'])
+        : [];
+    $release['supported_abis_label'] = !$release['supported_abis_known']
+        ? 'Nezjištěno u staršího vydání'
+        : ($release['supported_abis'] === []
+            ? 'Univerzální APK bez nativního ABI omezení'
+            : implode(', ', array_map('appmarketSupportedAbiLabel', $release['supported_abis'])));
     $release['has_apk'] = appmarketPrivateApkPath((string)($release['apk_storage_name'] ?? '')) !== '';
     $release['release_notes_plain'] = trim(strip_tags((string)($release['release_notes'] ?? '')));
     $release['published_at_label'] = '';
@@ -710,6 +901,78 @@ function appmarketPermissionDiff(
 }
 
 /**
+ * @param array<string,mixed>|string|null $releaseOrAbis
+ * @return list<string>
+ */
+function appmarketReleaseSupportedAbis(array|string|null $releaseOrAbis): array
+{
+    $rawAbis = is_array($releaseOrAbis)
+        ? ($releaseOrAbis['supported_abis_json'] ?? $releaseOrAbis['supported_abis'] ?? [])
+        : $releaseOrAbis;
+    return appmarketNormalizeSupportedAbis($rawAbis);
+}
+
+/**
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseAbiMetadataKnown(array $release): bool
+{
+    if (array_key_exists('supported_abis_known', $release)) {
+        return (bool)$release['supported_abis_known'];
+    }
+
+    return (array_key_exists('supported_abis_json', $release)
+            && $release['supported_abis_json'] !== null)
+        || array_key_exists('supported_abis', $release);
+}
+
+/**
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseSupportsAbi(array $release, string $deviceAbi): bool
+{
+    if (!appmarketReleaseAbiMetadataKnown($release)) {
+        return false;
+    }
+
+    $supportedAbis = appmarketReleaseSupportedAbis($release);
+    if ($supportedAbis === []) {
+        return true;
+    }
+
+    $normalizedDeviceAbi = appmarketNormalizeAbi($deviceAbi);
+    return $normalizedDeviceAbi !== '' && in_array($normalizedDeviceAbi, $supportedAbis, true);
+}
+
+/**
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseRolloutEligible(array $release, ?int $rolloutBucket): bool
+{
+    $percentage = appmarketNormalizeRolloutPercentage($release['rollout_percentage'] ?? 100) ?? 100;
+    if ($percentage <= 0) {
+        return false;
+    }
+    if ($percentage >= 100) {
+        return true;
+    }
+
+    return $rolloutBucket !== null && $rolloutBucket < $percentage;
+}
+
+/**
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseChannelEligible(array $release, string $requestedChannel): bool
+{
+    $requested = appmarketNormalizeReleaseChannel($requestedChannel);
+    $releaseChannel = appmarketNormalizeReleaseChannel((string)($release['release_channel'] ?? 'stable'));
+    return $requested === 'beta'
+        ? in_array($releaseChannel, ['stable', 'beta'], true)
+        : $releaseChannel === 'stable';
+}
+
+/**
  * @return array<string,mixed>|null
  */
 function appmarketFindApp(PDO $pdo, int $appId): ?array
@@ -787,6 +1050,70 @@ function appmarketLatestPublishedRelease(PDO $pdo, int $appId, ?int $greaterThan
 /**
  * @return array<string,mixed>|null
  */
+function appmarketLatestPublishedReleaseForChannel(
+    PDO $pdo,
+    int $appId,
+    string $channel
+): ?array {
+    if ($appId <= 0) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT r.*
+         FROM cms_appmarket_releases r
+         WHERE r.app_id = ?
+           AND r.release_channel = ?
+           AND " . appmarketReleasePublicVisibilitySql('r') . "
+         ORDER BY r.version_code DESC, r.id DESC
+         LIMIT 1"
+    );
+    $stmt->execute([$appId, appmarketNormalizeReleaseChannel($channel)]);
+    $row = $stmt->fetch();
+    return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketPreferredPublicRelease(PDO $pdo, int $appId): ?array
+{
+    return appmarketLatestPublishedReleaseForChannel($pdo, $appId, 'stable')
+        ?? appmarketLatestPublishedReleaseForChannel($pdo, $appId, 'beta');
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketLatestLegacyUpdateRelease(
+    PDO $pdo,
+    int $appId,
+    ?int $greaterThanVersionCode = null
+): ?array {
+    if ($appId <= 0) {
+        return null;
+    }
+
+    $sql = "SELECT r.*
+            FROM cms_appmarket_releases r
+            WHERE r.app_id = ?
+              AND " . appmarketReleaseLegacyUpdateVisibilitySql('r');
+    $params = [$appId];
+    if ($greaterThanVersionCode !== null) {
+        $sql .= ' AND r.version_code > ?';
+        $params[] = max(0, $greaterThanVersionCode);
+    }
+    $sql .= ' ORDER BY r.version_code DESC, r.id DESC LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $row = $stmt->fetch();
+    return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
 function appmarketLatestCompatiblePublishedRelease(
     PDO $pdo,
     int $appId,
@@ -800,7 +1127,7 @@ function appmarketLatestCompatiblePublishedRelease(
     $sql = "SELECT r.*
             FROM cms_appmarket_releases r
             WHERE r.app_id = ?
-              AND " . appmarketReleasePublicVisibilitySql('r') . '
+              AND " . appmarketReleaseLegacyUpdateVisibilitySql('r') . '
               AND (r.min_sdk IS NULL OR r.min_sdk <= ?)';
     $params = [$appId, $sdkLevel];
     if ($greaterThanVersionCode !== null) {
@@ -813,6 +1140,56 @@ function appmarketLatestCompatiblePublishedRelease(
     $stmt->execute($params);
     $row = $stmt->fetch();
     return is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function appmarketLatestV3UpdateRelease(
+    PDO $pdo,
+    int $appId,
+    int $sdkLevel,
+    int $greaterThanVersionCode,
+    string $channel,
+    string $deviceAbi,
+    ?int $rolloutBucket
+): ?array {
+    if ($appId <= 0
+        || appmarketNormalizeSdkLevel($sdkLevel) === null
+        || $greaterThanVersionCode < 0
+    ) {
+        return null;
+    }
+
+    $requestedChannel = appmarketNormalizeReleaseChannel($channel);
+    $stmt = $pdo->prepare(
+        "SELECT r.*
+         FROM cms_appmarket_releases r
+         WHERE r.app_id = ?
+           AND r.version_code > ?
+           AND " . appmarketReleasePublicVisibilitySql('r') . "
+           AND (r.min_sdk IS NULL OR r.min_sdk <= ?)
+           AND r.rollout_percentage > 0
+           AND r.release_channel IN ('stable','beta')
+         ORDER BY r.version_code DESC, r.id DESC"
+    );
+    $stmt->execute([$appId, $greaterThanVersionCode, $sdkLevel]);
+    foreach ($stmt->fetchAll() as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $release = appmarketHydrateReleasePresentation($row);
+        if (!appmarketReleaseChannelEligible($release, $requestedChannel)
+            || !appmarketReleaseRolloutEligible($release, $rolloutBucket)
+            || !appmarketReleaseSupportsAbi($release, $deviceAbi)
+        ) {
+            continue;
+        }
+
+        return $release;
+    }
+
+    return null;
 }
 
 /**
@@ -982,6 +1359,15 @@ function appmarketReleasePublicationIssues(PDO $pdo, array $release): array
                 $comparisonIssues[] = $prefix . ' zjistila jiný údaj: ' . $definition['label'] . '.';
             }
         }
+        $releaseAbisKnown = array_key_exists('supported_abis_json', $release)
+            && $release['supported_abis_json'] !== null;
+        if ($releaseAbisKnown !== (bool)($metadata['supported_abis_known'] ?? false)
+            || ($releaseAbisKnown
+                && appmarketNormalizeSupportedAbis($release['supported_abis_json'])
+                    !== appmarketNormalizeSupportedAbis($metadata['supported_abis'] ?? []))
+        ) {
+            $comparisonIssues[] = $prefix . ' zjistila jiné ABI APK.';
+        }
 
         return $comparisonIssues;
     };
@@ -1085,6 +1471,8 @@ function appmarketMetadataBool(mixed $value): bool
  *     debuggable:bool,
  *     build_type:string,
  *     permissions:list<string>,
+ *     supported_abis:list<string>,
+ *     supported_abis_known:bool,
  *     apk_sha256:string
  * }
  */
@@ -1136,6 +1524,8 @@ function appmarketNormalizeReleaseMetadata(array $metadata): array
         'debuggable' => appmarketMetadataBool($metadata['debuggable'] ?? false),
         'build_type' => $buildType,
         'permissions' => $permissions,
+        'supported_abis' => appmarketNormalizeSupportedAbis($metadata['supported_abis'] ?? []),
+        'supported_abis_known' => array_key_exists('supported_abis', $metadata),
         'apk_sha256' => appmarketNormalizeSha256((string)($metadata['apk_sha256'] ?? '')),
     ];
 }
@@ -1302,6 +1692,42 @@ function appmarketRunAndroidTool(string $toolPath, array $arguments): array
 }
 
 /**
+ * @return list<string>|null
+ */
+function appmarketInspectApkSupportedAbis(string $apkPath): ?array
+{
+    if (!class_exists(ZipArchive::class) || !is_file($apkPath) || !is_readable($apkPath)) {
+        return null;
+    }
+
+    $archive = new ZipArchive();
+    if ($archive->open($apkPath) !== true) {
+        return null;
+    }
+    if ($archive->numFiles < 0 || $archive->numFiles > 100000) {
+        $archive->close();
+        return null;
+    }
+
+    $abis = [];
+    for ($index = 0; $index < $archive->numFiles; $index++) {
+        $entryName = str_replace('\\', '/', (string)$archive->getNameIndex($index));
+        if (preg_match('/\Alib\/([^\/]+)\/.+\z/', $entryName, $match) !== 1) {
+            continue;
+        }
+        $abi = appmarketNormalizeAbi($match[1]);
+        if ($abi !== '') {
+            $abis[$abi] = true;
+        }
+    }
+    $archive->close();
+
+    $result = array_keys($abis);
+    sort($result);
+    return $result;
+}
+
+/**
  * @param array<string,mixed> $fallbackMetadata
  * @return array{
  *     ok:bool,
@@ -1351,6 +1777,10 @@ function appmarketAnalyzeApk(string $apkPath, array $fallbackMetadata = []): arr
     }
 
     $rawMetadata = ['apk_sha256' => $sha256, 'build_type' => 'unknown'];
+    $detectedAbis = appmarketInspectApkSupportedAbis($apkPath);
+    if ($detectedAbis !== null) {
+        $rawMetadata['supported_abis'] = $detectedAbis;
+    }
     if ($toolsAvailable) {
         $manifestFields = [
             'package_id' => 'application-id',
@@ -1442,6 +1872,12 @@ function appmarketAnalyzeApk(string $apkPath, array $fallbackMetadata = []): arr
         ) {
             $errors[] = 'Publisher metadata neodpovídají ověřené hodnotě ' . $label . '.';
         }
+    }
+    if (array_key_exists('supported_abis', $fallbackMetadata)
+        && $metadata['supported_abis_known']
+        && $declaredMetadata['supported_abis'] !== $metadata['supported_abis']
+    ) {
+        $errors[] = 'Publisher metadata neodpovídají ABI knihovnám ověřeným v APK.';
     }
     if ($metadata['package_id'] === '') {
         $errors[] = 'Z APK se nepodařilo zjistit platné applicationId.';
@@ -2042,11 +2478,12 @@ function appmarketVerifyPublisherAttestation(
         return $result;
     }
 
+    $manifestSchemaVersion = (int)($decoded['schema_version'] ?? 0);
     $fingerprint = appmarketNormalizeSha256((string)($decoded['key_fingerprint_sha256'] ?? ''));
     $algorithm = strtolower(trim((string)($decoded['attestation_algorithm'] ?? '')));
     $nonce = strtolower(trim((string)($decoded['nonce'] ?? '')));
     $releaseNotesHash = appmarketNormalizeSha256((string)($decoded['release_notes_sha256'] ?? ''));
-    if ((int)($decoded['schema_version'] ?? 0) !== 2
+    if (!in_array($manifestSchemaVersion, [2, 3], true)
         || (string)($decoded['attestation_type'] ?? '') !== 'kora-appmarket-release'
         || $algorithm !== appmarketAttestationAlgorithm()
         || $fingerprint === ''
@@ -2057,6 +2494,13 @@ function appmarketVerifyPublisherAttestation(
         || !hash_equals($releaseNotesHash, appmarketReleaseNotesSha256($releaseNotes))
     ) {
         $result['errors'][] = 'Publisher manifest nemá platné schéma, čas, nonce nebo vazbu na seznam změn.';
+        return $result;
+    }
+    if ($manifestSchemaVersion >= 3
+        && (!array_key_exists('supported_abis', $decoded)
+            || !appmarketSupportedAbiListValid($decoded['supported_abis']))
+    ) {
+        $result['errors'][] = 'Publisher manifest V3 neobsahuje platný seznam ověřených ABI APK.';
         return $result;
     }
     $sourceCommit = trim((string)($decoded['source_commit'] ?? ''));
@@ -2132,6 +2576,14 @@ function appmarketVerifyPublisherAttestation(
     $metadata = appmarketNormalizeReleaseMetadata($decoded);
     $metadata['apk_sha256'] = $declaredHash;
     $metadata['apk_size'] = $fileSize;
+    $verifiedAbis = appmarketInspectApkSupportedAbis($apkPath);
+    if ($verifiedAbis !== null
+        && $metadata['supported_abis_known']
+        && $verifiedAbis !== $metadata['supported_abis']
+    ) {
+        $result['errors'][] = 'ABI v publisher manifestu neodpovídají knihovnám obsaženým v APK.';
+        return $result;
+    }
     if ($metadata['package_id'] === ''
         || $metadata['version_name'] === ''
         || $metadata['version_code'] === null
@@ -2144,7 +2596,7 @@ function appmarketVerifyPublisherAttestation(
     }
 
     $analysis = [
-        'schema_version' => 2,
+        'schema_version' => $manifestSchemaVersion,
         'tool_verified' => false,
         'attestation_verified' => true,
         'attestation_algorithm' => appmarketAttestationAlgorithm(),
@@ -2298,6 +2750,49 @@ function appmarketUpdatePayloadV2(
 }
 
 /**
+ * @param array<string,mixed> $app
+ * @param array<string,mixed>|null $release
+ * @param array<string,mixed>|null $currentRelease
+ * @return array<string,mixed>
+ */
+function appmarketUpdatePayloadV3(
+    array $app,
+    ?array $release,
+    int $currentVersionCode,
+    int $sdkLevel,
+    string $channel,
+    string $deviceAbi,
+    ?int $rolloutBucket,
+    ?array $currentRelease = null
+): array {
+    $payload = appmarketUpdatePayloadV2(
+        $app,
+        $release,
+        $currentVersionCode,
+        $sdkLevel,
+        $currentRelease
+    );
+    $payload['schema_version'] = 3;
+    $payload['channel'] = appmarketNormalizeReleaseChannel($channel);
+    $payload['device_abi'] = appmarketNormalizeAbi($deviceAbi) ?: null;
+    $payload['rollout_bucket'] = $rolloutBucket;
+    if ($release === null || !is_array($payload['latest'])) {
+        return $payload;
+    }
+
+    $payload['latest']['release_channel'] = appmarketNormalizeReleaseChannel(
+        (string)($release['release_channel'] ?? 'stable')
+    );
+    $payload['latest']['rollout_percentage'] = appmarketNormalizeRolloutPercentage(
+        $release['rollout_percentage'] ?? 100
+    ) ?? 100;
+    $payload['latest']['supported_abis'] = appmarketReleaseSupportedAbis($release);
+    $payload['latest']['abi_metadata_known'] = appmarketReleaseAbiMetadataKnown($release);
+
+    return $payload;
+}
+
+/**
  * @param array<string,mixed> $upload
  */
 function appmarketCleanupInspectedUpload(array $upload): void
@@ -2404,13 +2899,16 @@ function appmarketCreateReleaseDraft(
         }
 
         $permissionsJson = appmarketNormalizeJsonMetadata($metadata['permissions'] ?? []);
+        $supportedAbisJson = !empty($metadata['supported_abis_known'])
+            ? appmarketNormalizeJsonMetadata($metadata['supported_abis'] ?? [])
+            : null;
         $pdo->prepare(
             "INSERT INTO cms_appmarket_releases
              (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
               package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
-              certificate_id, certificate_fingerprint_sha256, permissions_json, analysis_json,
+              certificate_id, certificate_fingerprint_sha256, permissions_json, supported_abis_json, analysis_json,
               metadata_source, publisher_token_id, status, created_by_user_id)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?)"
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'draft', ?)"
         )->execute([
             $appId,
             $versionName,
@@ -2426,6 +2924,7 @@ function appmarketCreateReleaseDraft(
             $certificateId,
             $fingerprint,
             $permissionsJson,
+            $supportedAbisJson,
             (string)($analysis['analysis_json'] ?? '[]'),
             $metadataSource,
             $publisherTokenId > 0 ? $publisherTokenId : null,
@@ -2462,7 +2961,9 @@ function appmarketPublishRelease(
     int $releaseId,
     int $userId,
     string $updatePriority = 'normal',
-    mixed $requiredBelowVersionCode = null
+    mixed $requiredBelowVersionCode = null,
+    string $releaseChannel = 'stable',
+    mixed $rolloutPercentage = 100
 ): array {
     $release = appmarketFindRelease($pdo, $releaseId);
     if ($release === null || (string)$release['status'] !== 'draft') {
@@ -2473,7 +2974,9 @@ function appmarketPublishRelease(
     $policy = appmarketNormalizeReleasePolicy(
         $updatePriority,
         $requiredBelowVersionCode,
-        (int)$release['version_code']
+        (int)$release['version_code'],
+        $releaseChannel,
+        $rolloutPercentage
     );
     $issues = array_merge($issues, $policy['errors']);
     $latestPublished = appmarketLatestVersionCode($pdo, (int)$release['app_id'], true);
@@ -2489,11 +2992,14 @@ function appmarketPublishRelease(
         $pdo->prepare(
             "UPDATE cms_appmarket_releases
              SET status = 'published', update_priority = ?, required_below_version_code = ?,
+                 release_channel = ?, rollout_percentage = ?,
                  published_at = NOW(), published_by_user_id = ?
              WHERE id = ? AND status = 'draft'"
         )->execute([
             $policy['priority'],
             $policy['required_below_version_code'],
+            $policy['channel'],
+            $policy['rollout_percentage'],
             $userId,
             $releaseId,
         ]);

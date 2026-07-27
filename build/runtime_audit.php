@@ -147,6 +147,7 @@ $appmarketReleaseSource = is_file(__DIR__ . '/../appmarket/release.php') ? (stri
 $appmarketDownloadSource = is_file(__DIR__ . '/../appmarket/download.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/download.php') : '';
 $appmarketUpdateSource = is_file(__DIR__ . '/../appmarket/update.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/update.php') : '';
 $appmarketUpdateV2Source = is_file(__DIR__ . '/../appmarket/update_v2.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/update_v2.php') : '';
+$appmarketUpdateV3Source = is_file(__DIR__ . '/../appmarket/update_v3.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/update_v3.php') : '';
 $appmarketPublishSource = is_file(__DIR__ . '/../appmarket/publish.php') ? (string) file_get_contents(__DIR__ . '/../appmarket/publish.php') : '';
 $appmarketIndexViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-index.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-index.php') : '';
 $appmarketAppViewSource = is_file(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') ? (string) file_get_contents(__DIR__ . '/../themes/default/views/modules/appmarket-app.php') : '';
@@ -22910,6 +22911,7 @@ if (!is_array($appmarketDefinition)
     || !in_array('/appmarket/index.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/appmarket/update.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/appmarket/update_v2.php', $appmarketDefinition['public_paths'] ?? [], true)
+    || !in_array('/appmarket/update_v3.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/appmarket/publish.php', $appmarketDefinition['public_paths'] ?? [], true)
     || !in_array('/admin/appmarket.php', $appmarketDefinition['admin_paths'] ?? [], true)
     || !in_array('/admin/appmarket_release_review.php', $appmarketDefinition['admin_paths'] ?? [], true)
@@ -22951,7 +22953,11 @@ foreach ([
         'idx_appmarket_releases_publisher_token',
         "update_priority    ENUM('normal','important','critical') NOT NULL DEFAULT 'normal'",
         'required_below_version_code BIGINT UNSIGNED',
+        'supported_abis_json LONGTEXT',
+        "release_channel    ENUM('stable','beta') NOT NULL DEFAULT 'stable'",
+        'rollout_percentage TINYINT UNSIGNED NOT NULL DEFAULT 100',
         'idx_appmarket_releases_compatible',
+        'idx_appmarket_releases_distribution',
         'idx_appmarket_publish_tokens_attestation',
     ] as $appmarketSchemaFragment) {
         if (!str_contains($schemaSource, $appmarketSchemaFragment)) {
@@ -22997,9 +23003,18 @@ foreach ([
     'function appmarketPublishRelease',
     'function appmarketReleasePublicationIssues',
     'function appmarketNormalizeReleasePolicy',
+    'function appmarketNormalizeReleaseChannel',
+    'function appmarketNormalizeRolloutPercentage',
+    'function appmarketNormalizeRolloutBucket',
+    'function appmarketNormalizeSupportedAbis',
+    'function appmarketSupportedAbiListValid',
+    'function appmarketInspectApkSupportedAbis',
     'function appmarketLatestCompatiblePublishedRelease',
+    'function appmarketLatestLegacyUpdateRelease',
+    'function appmarketLatestV3UpdateRelease',
     'function appmarketPermissionDiff',
     'function appmarketUpdatePayloadV2',
+    'function appmarketUpdatePayloadV3',
     'function appmarketAppPublicVisibilitySql',
     'function appmarketReleasePublicVisibilitySql',
     'appmarket_certificate.is_active = 1',
@@ -23012,6 +23027,7 @@ foreach ([
     'Server nemá Android SDK nástroje. Nahrajte vydání přes lokální publisher s platně podepsaným manifestem.',
     'Kryptografický podpis publisher manifestu není platný.',
     'Nahrané APK neodpovídá velikosti nebo SHA-256 v podepsaném manifestu.',
+    "appmarketSupportedAbiListValid(\$decoded['supported_abis'])",
     'Appmarket přijímá jen produkční release APK; debug a QA sestavení jsou zakázaná.',
     'Velikost uloženého APK nesouhlasí.',
     'Kontrolní součet uloženého APK nesouhlasí.',
@@ -23036,6 +23052,8 @@ foreach ([
     'appmarket_release_review.php?release_id=',
     'name="confirm_action" value="delete"',
     'name="confirm_action" value="withdraw"',
+    'name="confirm_action" value="distribution"',
+    '<legend>Postupné nasazení verze',
 ] as $appmarketAdminFragment) {
     if (!str_contains($adminAppmarketSource, $appmarketAdminFragment)) {
         $appmarketIssues[] = 'Appmarket overview is missing accessible or security fragment: ' . $appmarketAdminFragment;
@@ -23063,7 +23081,9 @@ if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Produkční balíč
     || !str_contains($adminAppmarketReleaseActionSource, "requireHttpMethods(['POST'])")
     || !str_contains($adminAppmarketReleaseActionSource, 'verifyCsrf();')
     || !str_contains($adminAppmarketReleaseActionSource, "trim((string)(\$_POST['confirm_action'] ?? '')) !== \$action")
-    || !str_contains($adminAppmarketReleaseActionSource, 'appmarketPublishRelease(')) {
+    || !str_contains($adminAppmarketReleaseActionSource, 'appmarketPublishRelease(')
+    || !str_contains($adminAppmarketReleaseActionSource, "\$action === 'distribution'")
+    || !str_contains($adminAppmarketReleaseActionSource, 'appmarketNormalizeRolloutPercentage(')) {
     $appmarketIssues[] = 'Appmarket release workflow must be accessible, CSRF-protected and confirm destructive actions';
 }
 if (!str_contains($adminAppmarketReleaseReviewSource, 'appmarketReleasePublicationIssues(')
@@ -23073,8 +23093,12 @@ if (!str_contains($adminAppmarketReleaseReviewSource, 'appmarketReleasePublicati
     || !str_contains($adminAppmarketReleaseReviewSource, '<legend>Politika aktualizace</legend>')
     || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-update-priority-error"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-required-version-error"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-release-channel-error"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'id="appmarket-rollout-error"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'aria-invalid="true"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'name="required_below_version_code"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'name="release_channel"')
+    || !str_contains($adminAppmarketReleaseReviewSource, 'name="rollout_percentage"')
     || !str_contains($adminAppmarketReleaseReviewSource, 'renderProjectMarkdown(')
     || !str_contains($adminAppmarketReleaseReviewSource, 'name="confirm_action" value="publish"')) {
     $appmarketIssues[] = 'Appmarket publication must pass a separate accessible review of verified APK metadata';
@@ -23113,7 +23137,7 @@ if (!str_contains($appmarketUpdateSource, '$isHeadRequest = requireReadOnlyHttpM
     || !str_contains($appmarketUpdateSource, 'session_write_close();')
     || !str_contains($appmarketUpdateSource, "header_remove('Set-Cookie');")
     || !str_contains($appmarketUpdateSource, 'appmarketNormalizePackageId(')
-    || !str_contains($appmarketUpdateSource, 'appmarketLatestPublishedRelease(')
+    || !str_contains($appmarketUpdateSource, 'appmarketLatestLegacyUpdateRelease(')
     || !str_contains($appmarketUpdateSource, 'appmarketUpdatePayload(')
     || str_contains($appmarketUpdateSource, 'appmarketAuthenticatePublishToken(')
     || str_contains($appmarketUpdateSource, 'device_id')) {
@@ -23128,6 +23152,20 @@ if (!str_contains($appmarketUpdateV2Source, '$isHeadRequest = requireReadOnlyHtt
     || str_contains($appmarketUpdateV2Source, 'device_id')
     || str_contains($appmarketUpdateV2Source, 'installation_id')) {
     $appmarketIssues[] = 'Appmarket V2 update API must select compatible releases without device identifiers';
+}
+if (!str_contains($appmarketUpdateV3Source, '$isHeadRequest = requireReadOnlyHttpMethod();')
+    || !str_contains($appmarketUpdateV3Source, 'session_write_close();')
+    || !str_contains($appmarketUpdateV3Source, "header_remove('Set-Cookie');")
+    || !str_contains($appmarketUpdateV3Source, "(\$_GET['sdk_int'] ?? null)")
+    || !str_contains($appmarketUpdateV3Source, "(\$_GET['channel'] ?? 'stable')")
+    || !str_contains($appmarketUpdateV3Source, "(\$_GET['abi'] ?? '')")
+    || !str_contains($appmarketUpdateV3Source, "(\$_GET['rollout_bucket'] ?? '')")
+    || !str_contains($appmarketUpdateV3Source, 'appmarketLatestV3UpdateRelease(')
+    || !str_contains($appmarketUpdateV3Source, 'appmarketUpdatePayloadV3(')
+    || str_contains($appmarketUpdateV3Source, 'device_id')
+    || str_contains($appmarketUpdateV3Source, 'installation_id')
+    || str_contains($appmarketUpdateV3Source, 'android_id')) {
+    $appmarketIssues[] = 'Appmarket V3 update API must use channel, ABI and anonymous rollout buckets without device identifiers';
 }
 if (!str_contains($appmarketDownloadSource, '$isHeadRequest = requireReadOnlyHttpMethod();')
     || !str_contains($appmarketDownloadSource, 'session_write_close();')
@@ -23146,6 +23184,7 @@ if (!str_contains($appmarketDownloadSource, '$isHeadRequest = requireReadOnlyHtt
 }
 $appmarketUpdateRoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v1/update/');
 $appmarketUpdateV2RoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v2/update/');
+$appmarketUpdateV3RoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v3/update/');
 $appmarketPublishRoutePosition = strpos($htaccessSource, 'RewriteRule ^api/appmarket/v1/releases/');
 $appmarketCatalogRoutePosition = strpos($htaccessSource, 'RewriteRule ^aplikace/');
 $appmarketBlogCatchAllPosition = strpos(
@@ -23154,16 +23193,19 @@ $appmarketBlogCatchAllPosition = strpos(
 );
 if ($appmarketUpdateRoutePosition === false
     || $appmarketUpdateV2RoutePosition === false
+    || $appmarketUpdateV3RoutePosition === false
     || $appmarketPublishRoutePosition === false
     || $appmarketCatalogRoutePosition === false
     || $appmarketBlogCatchAllPosition === false
     || $appmarketUpdateRoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketUpdateV2RoutePosition > $appmarketBlogCatchAllPosition
+    || $appmarketUpdateV3RoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketPublishRoutePosition > $appmarketBlogCatchAllPosition
     || $appmarketCatalogRoutePosition > $appmarketBlogCatchAllPosition
     || !str_contains($htaccessSource, 'appmarket/publish\.php')
     || !str_contains($htaccessSource, 'E=HTTP_AUTHORIZATION:%1')
     || !str_contains($readmeSource, 'location = /api/appmarket/v2/update')
+    || !str_contains($readmeSource, 'location = /api/appmarket/v3/update')
     || !str_contains($readmeSource, 'fastcgi_param HTTP_AUTHORIZATION $http_authorization;')
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')) {
     $appmarketIssues[] = 'Appmarket routes and publisher privacy headers must precede blog catch-all routes';
@@ -23205,12 +23247,15 @@ foreach ([
     '$permissions.Count -gt 256',
     '$ReleaseNotes.Length -gt 50000',
     'New-AppmarketReleaseBundle',
+    'Get-ApkSupportedAbis',
     "'release-notes.md'",
     '$OutputBundlePath',
     '$SkipUpload',
     'Soubor s poznámkami k vydání musí ležet uvnitř ověřovaného Git repozitáře.',
     'GetByteCount($metadataJson) -gt 65536',
     "attestation_type = 'kora-appmarket-release'",
+    'schema_version = 3',
+    'supported_abis = $supportedAbis',
     "attestation_algorithm = 'rsa-sha256'",
     'release_notes_sha256 = Get-TextSha256',
     "'sign',",
@@ -23256,6 +23301,8 @@ foreach ([
     "'appmarket_releases'",
     "'appmarket_screenshots'",
     'update_priority, required_below_version_code',
+    'supported_abis_json',
+    'release_channel, rollout_percentage',
 ] as $appmarketExportFragment) {
     if (!str_contains($adminExportSource, $appmarketExportFragment)) {
         $appmarketIssues[] = 'JSON export is missing Appmarket metadata fragment: ' . $appmarketExportFragment;
@@ -23267,6 +23314,8 @@ foreach ([
     'Appmarket – metadata vydání importována jako koncepty bez APK.',
     "VALUES (?,?,?,?,?,?,0,?,?,?)",
     'update_priority, required_below_version_code',
+    'supported_abis_json',
+    'release_channel, rollout_percentage',
     'appmarketNormalizeReleasePolicy(',
     "?,?,?,?,?,?,?,?,'draft',0,?,?",
 ] as $appmarketImportFragment) {
@@ -23285,8 +23334,10 @@ foreach ([
     'Ruční ověření',
     'OpenSSL',
     'podepsan',
-    'update API V1/V2',
+    'update API V1/V2/V3',
     'offline publisher balíček',
+    'anonymní rollout',
+    'ABI',
 ] as $appmarketAccessibilityFragment) {
     if (!str_contains($appmarketAccessibilitySource, $appmarketAccessibilityFragment)) {
         $appmarketIssues[] = 'Appmarket accessibility report is missing fragment: ' . $appmarketAccessibilityFragment;

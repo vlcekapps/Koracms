@@ -711,11 +711,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             certificate_id     INT          NULL DEFAULT NULL,
             certificate_fingerprint_sha256 CHAR(64) NOT NULL DEFAULT '',
             permissions_json   LONGTEXT,
+            supported_abis_json LONGTEXT NULL DEFAULT NULL,
             analysis_json      LONGTEXT,
             metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk',
             publisher_token_id INT          NULL DEFAULT NULL,
             update_priority    ENUM('normal','important','critical') NOT NULL DEFAULT 'normal',
             required_below_version_code BIGINT UNSIGNED NULL DEFAULT NULL,
+            release_channel    ENUM('stable','beta') NOT NULL DEFAULT 'stable',
+            rollout_percentage TINYINT UNSIGNED NOT NULL DEFAULT 100,
             status             ENUM('draft','published','withdrawn') NOT NULL DEFAULT 'draft',
             download_count     BIGINT UNSIGNED NOT NULL DEFAULT 0,
             published_at       DATETIME     NULL DEFAULT NULL,
@@ -726,6 +729,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UNIQUE KEY uq_appmarket_release_version (app_id, version_code),
             KEY idx_appmarket_releases_public (app_id, status, version_code),
             KEY idx_appmarket_releases_compatible (app_id, status, min_sdk, version_code),
+            KEY idx_appmarket_releases_distribution (app_id, status, release_channel, rollout_percentage, min_sdk, version_code),
             KEY idx_appmarket_releases_certificate (certificate_id),
             KEY idx_appmarket_releases_publisher_token (publisher_token_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");

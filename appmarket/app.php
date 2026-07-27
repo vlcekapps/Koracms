@@ -31,7 +31,14 @@ $releases = array_map(
     static fn (array $release): array => appmarketHydrateReleasePresentation($release),
     $releaseStmt->fetchAll()
 );
-$latestRelease = $releases[0] ?? null;
+$latestRelease = null;
+foreach ($releases as $candidateRelease) {
+    if ((string)$candidateRelease['release_channel'] === 'stable') {
+        $latestRelease = $candidateRelease;
+        break;
+    }
+}
+$latestRelease ??= $releases[0] ?? null;
 
 $screenshotStmt = $pdo->prepare(
     "SELECT s.*, m.filename, m.original_name, m.mime_type, m.visibility,

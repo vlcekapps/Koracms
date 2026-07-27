@@ -16,11 +16,12 @@ if ($release === null) {
 }
 
 $returnUrl = 'appmarket.php?app_id=' . (int)$release['app_id'];
-if (in_array($action, ['publish', 'withdraw', 'delete'], true)
+if (in_array($action, ['publish', 'distribution', 'withdraw', 'delete'], true)
     && trim((string)($_POST['confirm_action'] ?? '')) !== $action
 ) {
     $_SESSION['appmarket_notice_error'] = match ($action) {
         'publish' => 'Před zveřejněním projděte kontrolní obrazovku a potvrďte bezpečnostní souhrn.',
+        'distribution' => 'Před změnou postupného nasazení potvrďte distribuční zásah.',
         'withdraw' => 'Před stažením vydání potvrďte odstranění z veřejného katalogu a update API.',
         default => 'Před smazáním potvrďte trvalé odstranění konceptu a jeho APK.',
     };
@@ -33,10 +34,14 @@ if (in_array($action, ['publish', 'withdraw', 'delete'], true)
 if ($action === 'publish') {
     $updatePriority = trim((string)($_POST['update_priority'] ?? 'normal'));
     $requiredBelowVersionCode = trim((string)($_POST['required_below_version_code'] ?? ''));
+    $releaseChannel = trim((string)($_POST['release_channel'] ?? 'stable'));
+    $rolloutPercentage = trim((string)($_POST['rollout_percentage'] ?? '100'));
     $policy = appmarketNormalizeReleasePolicy(
         $updatePriority,
         $requiredBelowVersionCode,
-        (int)$release['version_code']
+        (int)$release['version_code'],
+        $releaseChannel,
+        $rolloutPercentage
     );
     $result = $policy['errors'] === []
         ? appmarketPublishRelease(
@@ -44,7 +49,9 @@ if ($action === 'publish') {
             (int)$release['id'],
             currentUserId() ?? 0,
             $policy['priority'],
-            $policy['required_below_version_code']
+            $policy['required_below_version_code'],
+            $policy['channel'],
+            $policy['rollout_percentage']
         )
         : ['ok' => false, 'errors' => $policy['errors']];
     if (!$result['ok']) {
@@ -52,8 +59,12 @@ if ($action === 'publish') {
             $_SESSION['appmarket_policy_flash'] = [
                 'update_priority' => $updatePriority,
                 'required_below_version_code' => $requiredBelowVersionCode,
+                'release_channel' => $releaseChannel,
+                'rollout_percentage' => $rolloutPercentage,
                 'priority_error' => $policy['priority_error'],
                 'required_below_error' => $policy['required_below_error'],
+                'channel_error' => $policy['channel_error'],
+                'rollout_error' => $policy['rollout_error'],
                 'errors' => $policy['errors'],
             ];
         }
@@ -62,6 +73,30 @@ if ($action === 'publish') {
         exit;
     } else {
         $_SESSION['appmarket_notice'] = 'Vydání bylo zveřejněno a je dostupné v katalogu i update API.';
+    }
+} elseif ($action === 'distribution' && (string)$release['status'] === 'published') {
+    $rolloutPercentage = appmarketNormalizeRolloutPercentage(
+        trim((string)($_POST['rollout_percentage'] ?? ''))
+    );
+    if ($rolloutPercentage === null) {
+        $_SESSION['appmarket_notice_error'] = 'Postupné nasazení musí být celé číslo od 0 do 100 procent.';
+    } else {
+        try {
+            $pdo->prepare(
+                "UPDATE cms_appmarket_releases
+                 SET rollout_percentage = ?
+                 WHERE id = ? AND status = 'published'"
+            )->execute([$rolloutPercentage, (int)$release['id']]);
+            $_SESSION['appmarket_notice'] = $rolloutPercentage === 0
+                ? 'Distribuce aktualizace byla pozastavena. Veřejné stažení vydání zůstává dostupné.'
+                : 'Postupné nasazení bylo nastaveno na ' . $rolloutPercentage . ' %.';
+        } catch (Throwable $e) {
+            koraLog('error', 'appmarket release rollout update failed', [
+                'release_id' => (int)$release['id'],
+                'exception' => $e,
+            ]);
+            $_SESSION['appmarket_notice_error'] = 'Postupné nasazení se nepodařilo bezpečně změnit.';
+        }
     }
 } elseif ($action === 'withdraw' && (string)$release['status'] === 'published') {
     try {

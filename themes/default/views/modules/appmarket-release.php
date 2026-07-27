@@ -5,13 +5,17 @@ $isLatest = $latestRelease !== null && (int)$latestRelease['id'] === (int)$relea
 <div class="page-stack page-stack--detail">
   <article class="surface surface--hero" aria-labelledby="appmarket-release-title">
     <div class="article-shell">
-      <p class="section-kicker"><?= $isLatest ? 'Aktuální vydání' : 'Starší vydání' ?></p>
+      <p class="section-kicker">
+        <?= $isLatest ? 'Aktuální' : 'Starší' ?>
+        <?= mb_strtolower((string)$release['release_channel_label']) ?> vydání
+      </p>
       <h1 id="appmarket-release-title" class="section-title section-title--hero"><?= h((string)$app['name']) ?> <?= h((string)$release['version_name']) ?></h1>
       <p class="meta-row">
         <span>versionCode <?= (int)$release['version_code'] ?></span>
         <?php if ((string)$release['published_at_label'] !== ''): ?><span>Vydáno <?= h((string)$release['published_at_label']) ?></span><?php endif; ?>
         <span><?= h(formatFileSize((int)$release['apk_size'])) ?></span>
         <span><?= h((string)$release['download_count_label']) ?></span>
+        <span><?= h((string)$release['release_channel_label']) ?> kanál</span>
         <span><?= h((string)$release['update_priority_label']) ?> aktualizace</span>
       </p>
       <div class="button-row button-row--start">
@@ -41,6 +45,9 @@ $isLatest = $latestRelease !== null && (int)$latestRelease['id'] === (int)$relea
         <div><dt>ApplicationId</dt><dd><code><?= h((string)$release['package_id_snapshot']) ?></code></dd></div>
         <div><dt>SHA-256 APK</dt><dd><code class="break-long-token"><?= h((string)$release['apk_sha256']) ?></code></dd></div>
         <div><dt>SHA-256 certifikátu</dt><dd><code class="break-long-token"><?= h((string)$release['certificate_fingerprint_sha256']) ?></code></dd></div>
+        <div><dt>Distribuční kanál</dt><dd><?= h((string)$release['release_channel_label']) ?></dd></div>
+        <div><dt>Postupné nasazení</dt><dd><?= h((string)$release['rollout_label']) ?></dd></div>
+        <div><dt>Podporované ABI</dt><dd><?= h((string)$release['supported_abis_label']) ?></dd></div>
         <?php if ($release['min_sdk'] !== null): ?><div><dt>Minimální Android SDK</dt><dd><?= (int)$release['min_sdk'] ?></dd></div><?php endif; ?>
         <?php if ($release['target_sdk'] !== null): ?><div><dt>Cílové Android SDK</dt><dd><?= (int)$release['target_sdk'] ?></dd></div><?php endif; ?>
         <div><dt>Naléhavost aktualizace</dt><dd><?= h((string)$release['update_priority_label']) ?></dd></div>

@@ -379,6 +379,52 @@ function Get-TextSha256 {
     }
 }
 
+function Get-ApkSupportedAbis {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ApkPath
+    )
+
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $knownAbis = @(
+        'arm64-v8a',
+        'armeabi-v7a',
+        'x86_64',
+        'x86',
+        'riscv64',
+        'armeabi',
+        'mips64',
+        'mips'
+    )
+    $detected = @{}
+    $archive = $null
+    try {
+        $archive = [IO.Compression.ZipFile]::OpenRead($ApkPath)
+        if ($archive.Entries.Count -gt 100000) {
+            throw 'APK obsahuje příliš mnoho položek pro bezpečnou kontrolu ABI.'
+        }
+        foreach ($entry in $archive.Entries) {
+            $parts = $entry.FullName.Replace('\', '/').Split('/')
+            if ($parts.Count -lt 3 -or $parts[0] -ne 'lib') {
+                continue
+            }
+            $abi = $parts[1].ToLowerInvariant()
+            if ($knownAbis -contains $abi) {
+                $detected[$abi] = $true
+            }
+        }
+    } catch {
+        throw 'Z APK se nepodařilo bezpečně načíst ABI nativních knihoven.'
+    } finally {
+        if ($null -ne $archive) {
+            $archive.Dispose()
+        }
+    }
+
+    @($detected.Keys | Sort-Object)
+}
+
 function Add-ZipTextEntry {
     param(
         [Parameter(Mandatory = $true)]
@@ -643,6 +689,7 @@ try {
     if ($permissions.Count -gt 256) {
         throw 'APK deklaruje více než 256 oprávnění a publisher jej odmítl.'
     }
+    $supportedAbis = @(Get-ApkSupportedAbis -ApkPath $resolvedApk)
 
     $signatureResult = Invoke-NativeTool -FilePath $apksigner -Arguments @(
         'verify',
@@ -712,7 +759,7 @@ try {
     }
 
     $metadata = [ordered] @{
-        schema_version = 2
+        schema_version = 3
         attestation_type = 'kora-appmarket-release'
         attestation_algorithm = 'rsa-sha256'
         key_fingerprint_sha256 = $attestationKeyFingerprint
@@ -736,6 +783,7 @@ try {
         debuggable = $false
         build_type = 'release'
         permissions = $permissions
+        supported_abis = $supportedAbis
         apk_sha256 = $apkSha256
         apk_size = $apkInfo.Length
     }
@@ -788,6 +836,12 @@ try {
             -ReleaseNotes $ReleaseNotes
         Write-Output "Podepsaný publisher balíček: $createdBundlePath"
     }
+    $abiSummary = if ($supportedAbis.Count -eq 0) {
+        'univerzální APK bez nativních knihoven'
+    } else {
+        $supportedAbis -join ', '
+    }
+    Write-Output "Podporované ABI: $abiSummary"
 
     if ($shouldUpload) {
         Add-Type -AssemblyName System.Net.Http
@@ -799,7 +853,7 @@ try {
         $response = $null
         try {
         $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
-        $client.DefaultRequestHeaders.UserAgent.ParseAdd('Kora-Appmarket-Publisher/2.0')
+        $client.DefaultRequestHeaders.UserAgent.ParseAdd('Kora-Appmarket-Publisher/3.0')
         $client.DefaultRequestHeaders.ExpectContinue = $false
 
         $plainToken = Convert-SecureStringToPlainText -Value $tokenSecure

@@ -37,11 +37,21 @@ $selectedRequiredBelow = trim((string)(
         ?? $release['required_below_version_code']
         ?? ''
 ));
+$selectedChannel = appmarketNormalizeReleaseChannel(
+    (string)($policyFlash['release_channel'] ?? $release['release_channel'] ?? 'stable')
+);
+$selectedRollout = trim((string)(
+    $policyFlash['rollout_percentage']
+        ?? $release['rollout_percentage']
+        ?? '100'
+));
 $policyErrors = is_array($policyFlash['errors'] ?? null)
     ? array_values(array_map('strval', $policyFlash['errors']))
     : [];
 $priorityError = trim((string)($policyFlash['priority_error'] ?? ''));
 $requiredBelowError = trim((string)($policyFlash['required_below_error'] ?? ''));
+$channelError = trim((string)($policyFlash['channel_error'] ?? ''));
+$rolloutError = trim((string)($policyFlash['rollout_error'] ?? ''));
 $publicationIssues = appmarketReleasePublicationIssues($pdo, $release);
 $noticeError = trim((string)($_SESSION['appmarket_notice_error'] ?? ''));
 unset($_SESSION['appmarket_notice_error']);
@@ -68,6 +78,8 @@ adminHeader('Kontrola vydání Appmarketu');
     <div><dt>ApplicationId</dt><dd><code><?= h((string)$release['package_id_snapshot']) ?></code></dd></div>
     <div><dt>VersionName</dt><dd><?= h((string)$release['version_name']) ?></dd></div>
     <div><dt>VersionCode</dt><dd><?= (int)$release['version_code'] ?></dd></div>
+    <div><dt>Distribuční kanál</dt><dd><?= h((string)$release['release_channel_label']) ?></dd></div>
+    <div><dt>Postupné nasazení</dt><dd><?= h((string)$release['rollout_label']) ?></dd></div>
     <div><dt>Naléhavost aktualizace</dt><dd><?= h((string)$release['update_priority_label']) ?></dd></div>
     <?php if ($release['required_below_version_code'] !== null): ?>
       <div>
@@ -98,6 +110,7 @@ adminHeader('Kontrola vydání Appmarketu');
     <?php endif; ?>
     <?php if ($release['min_sdk'] !== null): ?><div><dt>Minimální SDK</dt><dd><?= (int)$release['min_sdk'] ?></dd></div><?php endif; ?>
     <?php if ($release['target_sdk'] !== null): ?><div><dt>Cílové SDK</dt><dd><?= (int)$release['target_sdk'] ?></dd></div><?php endif; ?>
+    <div><dt>Podporované ABI</dt><dd><?= h((string)$release['supported_abis_label']) ?></dd></div>
   </dl>
 </section>
 
@@ -172,6 +185,15 @@ adminHeader('Kontrola vydání Appmarketu');
           ) ? 'Beze změny' : 'Změněn, vyžaduje zvláštní kontrolu' ?>
         </dd>
       </div>
+      <div>
+        <dt>Změna podporovaných ABI</dt>
+        <dd>
+          <?= h((string)$previousRelease['supported_abis_label']) ?>
+          <span aria-hidden="true">→</span>
+          <span class="sr-only">na</span>
+          <?= h((string)$release['supported_abis_label']) ?>
+        </dd>
+      </div>
     </dl>
   <?php endif; ?>
 </section>
@@ -202,6 +224,37 @@ adminHeader('Kontrola vydání Appmarketu');
       <input type="hidden" name="action" value="publish">
       <fieldset>
         <legend>Politika aktualizace</legend>
+
+        <label for="release_channel">Distribuční kanál</label>
+        <select id="release_channel" name="release_channel"
+                aria-describedby="appmarket-release-channel-help<?= $channelError !== '' ? ' appmarket-release-channel-error' : '' ?>"
+                <?= $channelError !== '' ? 'aria-invalid="true"' : '' ?>>
+          <?php foreach (appmarketReleaseChannelDefinitions() as $channelKey => $channelLabel): ?>
+            <option value="<?= h($channelKey) ?>"<?= $selectedChannel === $channelKey ? ' selected' : '' ?>>
+              <?= h($channelLabel) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <small id="appmarket-release-channel-help" class="field-help">
+          Stabilní kanál je určen běžným uživatelům. Beta klient může přijímat stabilní i beta vydání.
+          Kanál po zveřejnění nelze změnit.
+        </small>
+        <?php if ($channelError !== ''): ?>
+          <small id="appmarket-release-channel-error" class="field-help field-error"><?= h($channelError) ?></small>
+        <?php endif; ?>
+
+        <label for="rollout_percentage">Postupné nasazení v procentech</label>
+        <input type="number" id="rollout_percentage" name="rollout_percentage"
+               min="0" max="100" step="1" value="<?= h($selectedRollout) ?>"
+               aria-describedby="appmarket-rollout-help<?= $rolloutError !== '' ? ' appmarket-rollout-error' : '' ?>"
+               <?= $rolloutError !== '' ? 'aria-invalid="true"' : '' ?>>
+        <small id="appmarket-rollout-help" class="field-help">
+          Hodnota 100 nabídne aktualizaci všem kompatibilním klientům, 0 distribuci přes API pozastaví.
+          APK zůstane v obou případech veřejně dostupné ke stažení.
+        </small>
+        <?php if ($rolloutError !== ''): ?>
+          <small id="appmarket-rollout-error" class="field-help field-error"><?= h($rolloutError) ?></small>
+        <?php endif; ?>
 
         <label for="update_priority">Naléhavost</label>
         <select id="update_priority" name="update_priority"

@@ -358,11 +358,14 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
   certificate_id INT,
   certificate_fingerprint_sha256 CHAR(64),
   permissions_json LONGTEXT,
+  supported_abis_json LONGTEXT,
   analysis_json LONGTEXT,
   metadata_source VARCHAR(20),
   publisher_token_id INT,
   update_priority VARCHAR(20),
   required_below_version_code BIGINT,
+  release_channel VARCHAR(20),
+  rollout_percentage INT,
   download_count BIGINT,
   status VARCHAR(20)
 ) ENGINE=InnoDB;
@@ -681,6 +684,7 @@ PHP,
 // uq_appmarket_release_version
 // idx_appmarket_releases_public
 // idx_appmarket_releases_compatible
+// idx_appmarket_releases_distribution
 // idx_appmarket_releases_publisher_token
 // cms_appmarket_screenshots
 // uq_appmarket_screenshot_media

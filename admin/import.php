@@ -1057,10 +1057,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT INTO cms_appmarket_releases
                          (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
                           package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
-                          certificate_id, certificate_fingerprint_sha256, permissions_json, analysis_json,
+                          certificate_id, certificate_fingerprint_sha256, permissions_json, supported_abis_json,
+                          analysis_json,
                           metadata_source, update_priority, required_below_version_code,
+                          release_channel, rollout_percentage,
                           status, download_count, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,?,?,'draft',0,?,?)"
+                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,?,?)"
                     );
 
                     foreach ($data['appmarket_releases'] as $row) {
@@ -1095,8 +1097,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $policy = appmarketNormalizeReleasePolicy(
                             (string)($row['update_priority'] ?? 'normal'),
                             $row['required_below_version_code'] ?? null,
-                            $versionCode
+                            $versionCode,
+                            (string)($row['release_channel'] ?? 'stable'),
+                            $row['rollout_percentage'] ?? 100
                         );
+                        $supportedAbisJson = array_key_exists('supported_abis_json', $row)
+                            && $row['supported_abis_json'] !== null
+                            ? appmarketNormalizeJsonMetadata($row['supported_abis_json'])
+                            : null;
 
                         $insertAppmarketReleaseStmt->execute([
                             $appId,
@@ -1111,10 +1119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $certificateId,
                             $fingerprint,
                             appmarketNormalizeJsonMetadata($row['permissions_json'] ?? []),
+                            $supportedAbisJson,
                             appmarketNormalizeJsonMetadata($row['analysis_json'] ?? []),
                             'apk',
                             $policy['priority'],
                             $policy['required_below_version_code'],
+                            $policy['channel'],
+                            $policy['rollout_percentage'],
                             $createdAt,
                             $updatedAt,
                         ]);

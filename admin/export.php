@@ -148,9 +148,9 @@ $tables = [
                                  FROM cms_appmarket_certificates",
     'appmarket_releases' => "SELECT id, app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
                                     package_id_snapshot, apk_original_name, apk_size, apk_sha256,
-                                    certificate_id, certificate_fingerprint_sha256, permissions_json,
+                                    certificate_id, certificate_fingerprint_sha256, permissions_json, supported_abis_json,
                                     analysis_json, metadata_source, update_priority, required_below_version_code,
-                                    status, download_count, published_at,
+                                    release_channel, rollout_percentage, status, download_count, published_at,
                                     created_at, updated_at
                              FROM cms_appmarket_releases",
     'appmarket_screenshots' => "SELECT id, app_id, media_id, alt_text, caption, sort_order, created_at, updated_at

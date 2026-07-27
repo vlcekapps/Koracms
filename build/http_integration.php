@@ -19763,6 +19763,8 @@ try {
             'debuggable' => false,
             'build_type' => 'release',
             'permissions' => ['android.permission.INTERNET'],
+            'supported_abis' => ['arm64-v8a'],
+            'supported_abis_known' => true,
             'apk_sha256' => $fakeApkHash,
             'apk_size' => strlen($fakeApkBytes),
         ];
@@ -19884,7 +19886,8 @@ try {
         if (httpIntegrationStatusCode($appmarketDetailResponse) !== 200
             || !str_contains($appmarketDetailResponse['body'], 'O aplikaci')
             || !str_contains($appmarketDetailResponse['body'], 'Verze 1.0.0')
-            || !str_contains($appmarketDetailResponse['body'], 'Stáhnout verzi 1.0.0')
+            || !str_contains($appmarketDetailResponse['body'], 'Stáhnout stabilní')
+            || !str_contains($appmarketDetailResponse['body'], 'verzi 1.0.0')
             || !str_contains($appmarketDetailResponse['body'], 'aria-labelledby="appmarket-releases-heading"')) {
             $appmarketIssues[] = 'detail aplikace nezobrazil popis, vydání a přístupnou sekci';
         }
@@ -19900,6 +19903,7 @@ try {
             || !str_contains($appmarketReleaseResponse['body'], $certificateHash)
             || !str_contains($appmarketReleaseResponse['body'], 'Kritická aktualizace')
             || !str_contains($appmarketReleaseResponse['body'], 'Pro instalace s versionCode nižším než 100')
+            || !str_contains($appmarketReleaseResponse['body'], 'ARM 64-bit')
             || !str_contains($appmarketReleaseResponse['body'], 'aria-labelledby="appmarket-release-security-heading"')) {
             $appmarketIssues[] = 'detail vydání nezobrazil changelog, kontrolní součty a bezpečnostní sekci';
         }
@@ -19978,6 +19982,52 @@ try {
             || !str_contains($invalidUpdateV2Response['body'], 'invalid_request')) {
             $appmarketIssues[] = 'update API V2 neodmítlo požadavek bez sdk_int';
         }
+        $updateV3Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                . rawurlencode($appmarketPackageId)
+                . '&version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=42',
+            '',
+            0
+        );
+        $updateV3Payload = json_decode($updateV3Response['body'], true);
+        if (httpIntegrationStatusCode($updateV3Response) !== 200
+            || !is_array($updateV3Payload)
+            || (int)($updateV3Payload['schema_version'] ?? 0) !== 3
+            || ($updateV3Payload['update_available'] ?? null) !== true
+            || (string)($updateV3Payload['latest']['release_channel'] ?? '') !== 'stable'
+            || (int)($updateV3Payload['latest']['rollout_percentage'] ?? 0) !== 100
+            || ($updateV3Payload['latest']['supported_abis'] ?? null) !== ['arm64-v8a']
+            || str_contains($updateV3Response['body'], 'device_id')
+            || str_contains($updateV3Response['body'], 'installation_id')
+            || httpIntegrationHeaderValue($updateV3Response, 'Set-Cookie') !== '') {
+            $appmarketIssues[] = 'update API V3 nevrátilo kompatibilní stable vydání bez identifikátoru zařízení';
+        }
+        $incompatibleAbiV3Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                . rawurlencode($appmarketPackageId)
+                . '&version_code=1&sdk_int=34&channel=stable&abi=x86_64&rollout_bucket=42',
+            '',
+            0
+        );
+        $incompatibleAbiV3Payload = json_decode($incompatibleAbiV3Response['body'], true);
+        if (httpIntegrationStatusCode($incompatibleAbiV3Response) !== 200
+            || !is_array($incompatibleAbiV3Payload)
+            || ($incompatibleAbiV3Payload['update_available'] ?? null) !== false
+            || !array_key_exists('latest', $incompatibleAbiV3Payload)
+            || $incompatibleAbiV3Payload['latest'] !== null) {
+            $appmarketIssues[] = 'update API V3 nabídlo vydání nekompatibilnímu ABI';
+        }
+        $invalidBucketV3Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                . rawurlencode($appmarketPackageId)
+                . '&version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=100',
+            '',
+            0
+        );
+        if (httpIntegrationStatusCode($invalidBucketV3Response) !== 400
+            || !str_contains($invalidBucketV3Response['body'], 'invalid_request')) {
+            $appmarketIssues[] = 'update API V3 neodmítlo neplatný anonymní rollout bucket';
+        }
 
         $downloadUrl = $baseUrl . appmarketDownloadPath($appmarketSlug, 100);
         $downloadHeadResponse = requestRawUrl('HEAD', $downloadUrl, '', 'text/plain', '', 0);
@@ -20037,8 +20087,79 @@ try {
         if (httpIntegrationStatusCode($appmarketAdminResponse) !== 200
             || !str_contains($appmarketAdminResponse['body'], '<caption>Aplikace spravované Appmarketem</caption>')
             || !str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="withdraw"')
+            || !str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="distribution"')
+            || !str_contains($appmarketAdminResponse['body'], 'ARM 64-bit')
             || str_contains($appmarketAdminResponse['body'], 'name="confirm_action" value="publish"')) {
             $appmarketIssues[] = 'administrace Appmarketu nezobrazila tabulku a potvrzení stažení vydání';
+        }
+        $distributionCsrf = extractHiddenInputValue($appmarketAdminResponse['body'], 'csrf_token');
+        $distributionResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_release_action.php',
+            [
+                'csrf_token' => $distributionCsrf,
+                'release_id' => (string)$appmarketReleaseId,
+                'action' => 'distribution',
+                'rollout_percentage' => '25',
+                'confirm_action' => 'distribution',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $storedRollout = (int)$pdo->query(
+            'SELECT rollout_percentage FROM cms_appmarket_releases WHERE id = ' . $appmarketReleaseId
+        )->fetchColumn();
+        $eligibleRolloutV3Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                . rawurlencode($appmarketPackageId)
+                . '&version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=24',
+            '',
+            0
+        );
+        $eligibleRolloutV3Payload = json_decode($eligibleRolloutV3Response['body'], true);
+        $excludedRolloutV3Response = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                . rawurlencode($appmarketPackageId)
+                . '&version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=25',
+            '',
+            0
+        );
+        $excludedRolloutV3Payload = json_decode($excludedRolloutV3Response['body'], true);
+        $legacyDuringRolloutResponse = fetchUrl(
+            $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                . rawurlencode($appmarketPackageId) . '&version_code=1&sdk_int=34',
+            '',
+            0
+        );
+        $legacyDuringRolloutPayload = json_decode($legacyDuringRolloutResponse['body'], true);
+        if (httpIntegrationStatusCode($distributionResponse) !== 302
+            || $storedRollout !== 25
+            || ($eligibleRolloutV3Payload['update_available'] ?? null) !== true
+            || ($excludedRolloutV3Payload['update_available'] ?? null) !== false
+            || ($legacyDuringRolloutPayload['update_available'] ?? null) !== false) {
+            $appmarketIssues[] = 'postupné nasazení nerozdělilo anonymní kohorty nebo nebylo skryto před API V1/V2';
+        }
+        $distributionResetPage = fetchUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket.php?app_id=' . $appmarketAppId,
+            $adminSession['cookie'],
+            0
+        );
+        $distributionResetResponse = postUrl(
+            $baseUrl . BASE_URL . '/admin/appmarket_release_action.php',
+            [
+                'csrf_token' => extractHiddenInputValue($distributionResetPage['body'], 'csrf_token'),
+                'release_id' => (string)$appmarketReleaseId,
+                'action' => 'distribution',
+                'rollout_percentage' => '100',
+                'confirm_action' => 'distribution',
+            ],
+            $adminSession['cookie'],
+            0
+        );
+        $restoredRollout = (int)$pdo->query(
+            'SELECT rollout_percentage FROM cms_appmarket_releases WHERE id = ' . $appmarketReleaseId
+        )->fetchColumn();
+        if (httpIntegrationStatusCode($distributionResetResponse) !== 302 || $restoredRollout !== 100) {
+            $appmarketIssues[] = 'postupné nasazení nešlo bezpečně vrátit na sto procent';
         }
         $appmarketFormResponse = fetchUrl(
             $baseUrl . BASE_URL . '/admin/appmarket_form.php?id=' . $appmarketAppId,
@@ -20115,6 +20236,11 @@ try {
                 && (int)($exportedAppmarketRelease['version_code'] ?? 0) === 100
                 && (string)($exportedAppmarketRelease['update_priority'] ?? '') === 'critical'
                 && (int)($exportedAppmarketRelease['required_below_version_code'] ?? 0) === 100
+                && (string)($exportedAppmarketRelease['release_channel'] ?? '') === 'stable'
+                && (int)($exportedAppmarketRelease['rollout_percentage'] ?? 0) === 100
+                && appmarketNormalizeSupportedAbis(
+                    $exportedAppmarketRelease['supported_abis_json'] ?? null
+                ) === ['arm64-v8a']
             ) {
                 $exportedReleaseFound = true;
                 break;
@@ -20255,6 +20381,7 @@ try {
                         $createdTempFiles
                     );
                     $bundleManifest = $signedManifest;
+                    $bundleManifest['schema_version'] = 3;
                     $bundleManifest['issued_at'] = gmdate('Y-m-d\TH:i:s\Z');
                     $bundleManifest['nonce'] = bin2hex(random_bytes(16));
                     $bundleManifest['release_notes_sha256'] = appmarketReleaseNotesSha256(
@@ -20266,6 +20393,7 @@ try {
                         'android.permission.CAMERA',
                         'android.permission.INTERNET',
                     ];
+                    $bundleManifest['supported_abis'] = ['arm64-v8a'];
                     $bundleManifest['apk_sha256'] = hash('sha256', $bundleApkBytes);
                     $bundleManifest['apk_size'] = strlen($bundleApkBytes);
                     $bundleManifestJson = json_encode(
@@ -20361,8 +20489,106 @@ try {
                                     $bundleReviewResponse['body'],
                                     '<legend>Politika aktualizace</legend>'
                                 )
+                                || !str_contains($bundleReviewResponse['body'], 'name="release_channel"')
+                                || !str_contains($bundleReviewResponse['body'], 'name="rollout_percentage"')
+                                || !str_contains($bundleReviewResponse['body'], 'ARM 64-bit')
                             ) {
                                 $appmarketIssues[] = 'kontrola offline konceptu nezobrazila nová oprávnění a politiku aktualizace';
+                            } else {
+                                $bundlePublishResponse = postUrl(
+                                    $baseUrl . BASE_URL . '/admin/appmarket_release_action.php',
+                                    [
+                                        'csrf_token' => extractHiddenInputValue(
+                                            $bundleReviewResponse['body'],
+                                            'csrf_token'
+                                        ),
+                                        'release_id' => (string)$bundleReleaseId,
+                                        'action' => 'publish',
+                                        'update_priority' => 'important',
+                                        'required_below_version_code' => '',
+                                        'release_channel' => 'beta',
+                                        'rollout_percentage' => '25',
+                                        'confirm_action' => 'publish',
+                                    ],
+                                    $adminSession['cookie'],
+                                    0
+                                );
+                                $publishedBundleRelease = appmarketFindRelease(
+                                    $pdo,
+                                    $bundleReleaseId
+                                );
+                                $stableV3AfterBetaResponse = fetchUrl(
+                                    $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                                        . rawurlencode($appmarketPackageId)
+                                        . '&version_code=1&sdk_int=34&channel=stable'
+                                        . '&abi=arm64-v8a&rollout_bucket=24',
+                                    '',
+                                    0
+                                );
+                                $stableV3AfterBetaPayload = json_decode(
+                                    $stableV3AfterBetaResponse['body'],
+                                    true
+                                );
+                                $betaV3EligibleResponse = fetchUrl(
+                                    $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                                        . rawurlencode($appmarketPackageId)
+                                        . '&version_code=1&sdk_int=34&channel=beta'
+                                        . '&abi=arm64-v8a&rollout_bucket=24',
+                                    '',
+                                    0
+                                );
+                                $betaV3EligiblePayload = json_decode(
+                                    $betaV3EligibleResponse['body'],
+                                    true
+                                );
+                                $betaV3ExcludedResponse = fetchUrl(
+                                    $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                                        . rawurlencode($appmarketPackageId)
+                                        . '&version_code=1&sdk_int=34&channel=beta'
+                                        . '&abi=arm64-v8a&rollout_bucket=25',
+                                    '',
+                                    0
+                                );
+                                $betaV3ExcludedPayload = json_decode(
+                                    $betaV3ExcludedResponse['body'],
+                                    true
+                                );
+                                $legacyAfterBetaResponse = fetchUrl(
+                                    $baseUrl . BASE_URL . '/api/appmarket/v2/update?package_id='
+                                        . rawurlencode($appmarketPackageId)
+                                        . '&version_code=1&sdk_int=34',
+                                    '',
+                                    0
+                                );
+                                $legacyAfterBetaPayload = json_decode(
+                                    $legacyAfterBetaResponse['body'],
+                                    true
+                                );
+                                $publicAfterBetaResponse = fetchUrl(
+                                    $baseUrl . appmarketAppPath($appmarketSlug),
+                                    '',
+                                    0
+                                );
+                                if (httpIntegrationStatusCode($bundlePublishResponse) !== 302
+                                    || $publishedBundleRelease === null
+                                    || (string)$publishedBundleRelease['status'] !== 'published'
+                                    || (string)$publishedBundleRelease['release_channel'] !== 'beta'
+                                    || (int)$publishedBundleRelease['rollout_percentage'] !== 25
+                                    || (int)($stableV3AfterBetaPayload['latest']['version_code'] ?? 0) !== 100
+                                    || (int)($betaV3EligiblePayload['latest']['version_code'] ?? 0) !== 120
+                                    || (int)($betaV3ExcludedPayload['latest']['version_code'] ?? 0) !== 100
+                                    || (int)($legacyAfterBetaPayload['latest']['version_code'] ?? 0) !== 100
+                                    || !str_contains(
+                                        $publicAfterBetaResponse['body'],
+                                        'Stáhnout stabilní'
+                                    )
+                                    || !str_contains(
+                                        $publicAfterBetaResponse['body'],
+                                        'Beta kanál'
+                                    )
+                                ) {
+                                    $appmarketIssues[] = 'beta kanál, postupné nasazení nebo stable fallback V3 nefunguje podle kontraktu';
+                                }
                             }
                         }
                     } else {
@@ -20467,9 +20693,17 @@ try {
                 '',
                 0
             );
+            $disabledUpdateV3Response = fetchUrl(
+                $baseUrl . BASE_URL . '/api/appmarket/v3/update?package_id='
+                    . rawurlencode($appmarketPackageId)
+                    . '&version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a',
+                '',
+                0
+            );
             if (httpIntegrationStatusCode($disabledCatalogResponse) !== 302
                 || httpIntegrationStatusCode($disabledUpdateResponse) !== 404
                 || httpIntegrationStatusCode($disabledUpdateV2Response) !== 404
+                || httpIntegrationStatusCode($disabledUpdateV3Response) !== 404
                 || str_contains($disabledUpdateResponse['body'], $appmarketPackageId)) {
                 $appmarketIssues[] = 'vypnutý Appmarket nezablokoval veřejný katalog nebo update API';
             }

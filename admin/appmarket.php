@@ -134,6 +134,7 @@ adminHeader('Appmarket');
               <tr>
                 <th scope="col">Verze</th>
                 <th scope="col">Stav</th>
+                <th scope="col">Distribuce</th>
                 <th scope="col">Podpis</th>
                 <th scope="col">Soubor</th>
                 <th scope="col">Akce</th>
@@ -147,6 +148,11 @@ adminHeader('Appmarket');
                     <small>versionCode <?= (int)$release['version_code'] ?></small>
                   </th>
                   <td><?= h(appmarketReleaseStatusDefinitions()[(string)$release['status']]) ?></td>
+                  <td>
+                    <?= h((string)$release['release_channel_label']) ?>
+                    <small><?= h((string)$release['rollout_label']) ?></small>
+                    <small>ABI: <?= h((string)$release['supported_abis_label']) ?></small>
+                  </td>
                   <td>
                     <?= (int)($release['certificate_is_active'] ?? 0) === 1 ? 'Schválený' : 'Vyžaduje schválení' ?>
                     <small><code><?= h(substr((string)$release['certificate_fingerprint_sha256'], 0, 16)) ?>…</code></small>
@@ -176,6 +182,33 @@ adminHeader('Appmarket');
                           <button type="submit">Smazat koncept verze <?= h((string)$release['version_name']) ?></button>
                         </form>
                       <?php elseif ((string)$release['status'] === 'published'): ?>
+                        <?php
+                        $rolloutId = 'release-rollout-' . (int)$release['id'];
+                          $rolloutHelpId = $rolloutId . '-help';
+                          $confirmDistributionId = 'confirm-release-distribution-' . (int)$release['id'];
+                          ?>
+                        <form method="post" action="appmarket_release_action.php">
+                          <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
+                          <input type="hidden" name="release_id" value="<?= (int)$release['id'] ?>">
+                          <input type="hidden" name="action" value="distribution">
+                          <fieldset>
+                            <legend>Postupné nasazení verze <?= h((string)$release['version_name']) ?></legend>
+                            <label for="<?= h($rolloutId) ?>">Podíl kompatibilních klientů v procentech</label>
+                            <input type="number" id="<?= h($rolloutId) ?>" name="rollout_percentage"
+                                   min="0" max="100" step="1"
+                                   value="<?= (int)$release['rollout_percentage'] ?>"
+                                   aria-describedby="<?= h($rolloutHelpId) ?>">
+                            <small id="<?= h($rolloutHelpId) ?>" class="field-help">
+                              Hodnota 0 pozastaví update API, 100 nabídne aktualizaci všem kohortám.
+                            </small>
+                          </fieldset>
+                          <label class="admin-checkbox-label" for="<?= h($confirmDistributionId) ?>">
+                            <input type="checkbox" id="<?= h($confirmDistributionId) ?>"
+                                   name="confirm_action" value="distribution">
+                            Potvrzuji změnu postupného nasazení
+                          </label>
+                          <button type="submit">Uložit nasazení</button>
+                        </form>
                         <form method="post" action="appmarket_release_action.php">
                           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                           <input type="hidden" name="release_id" value="<?= (int)$release['id'] ?>">

@@ -242,6 +242,7 @@ assert_equals([], $modulePublicEntryPoints['statistics'] ?? null, 'statistics ha
 assert_true(in_array('/appmarket/index.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket catalog is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/update.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket update API is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/update_v2.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket V2 update API is declared as a public module entrypoint');
+assert_true(in_array('/appmarket/update_v3.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket V3 update API is declared as a public module entrypoint');
 assert_true(in_array('/appmarket/publish.php', $modulePublicEntryPoints['appmarket'] ?? [], true), 'Appmarket publisher API is declared as a guarded public module entrypoint');
 assert_true(in_array('/recipes/cookbook.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe cookbook is declared as a public module entrypoint');
 assert_true(in_array('/recipes/shopping.php', $modulePublicEntryPoints['recipes'] ?? [], true), 'recipe shopping list is declared as a public module entrypoint');
@@ -388,13 +389,52 @@ assert_equals(35, appmarketNormalizeSdkLevel('35'), 'Appmarket accepts an Androi
 assert_equals(null, appmarketNormalizeSdkLevel('invalid'), 'Appmarket rejects an invalid SDK level');
 assert_equals('critical', appmarketNormalizeUpdatePriority('critical'), 'Appmarket accepts a critical update priority');
 assert_equals('normal', appmarketNormalizeUpdatePriority('unknown'), 'Appmarket falls back to normal update priority');
-$validAppmarketPolicy = appmarketNormalizeReleasePolicy('important', '210', 210);
+assert_equals('beta', appmarketNormalizeReleaseChannel(' BETA '), 'Appmarket normalizes the beta release channel');
+assert_equals('stable', appmarketNormalizeReleaseChannel('unknown'), 'Appmarket falls back to the stable channel');
+assert_equals(0, appmarketNormalizeRolloutPercentage('0'), 'Appmarket allows a paused rollout');
+assert_equals(100, appmarketNormalizeRolloutPercentage('100'), 'Appmarket allows a complete rollout');
+assert_equals(null, appmarketNormalizeRolloutPercentage('101'), 'Appmarket rejects rollout above one hundred percent');
+assert_equals(24, appmarketNormalizeRolloutBucket('24'), 'Appmarket accepts an anonymous rollout bucket');
+assert_equals(null, appmarketNormalizeRolloutBucket('100'), 'Appmarket rejects an out-of-range rollout bucket');
+assert_equals(
+    ['arm64-v8a', 'x86_64'],
+    appmarketNormalizeSupportedAbis(['x86_64', 'arm64-v8a', 'x86_64', 'unknown']),
+    'Appmarket normalizes and deduplicates supported Android ABIs'
+);
+assert_true(
+    appmarketSupportedAbiListValid(['arm64-v8a', 'x86_64']),
+    'Appmarket accepts a signed list containing only supported Android ABIs'
+);
+assert_true(
+    appmarketSupportedAbiListValid([]),
+    'Appmarket accepts an empty signed ABI list for a universal APK'
+);
+assert_false(
+    appmarketSupportedAbiListValid(['arm64-v8a', 'unknown']),
+    'Appmarket rejects an unknown ABI instead of broadening compatibility'
+);
+assert_false(
+    appmarketSupportedAbiListValid(['abi' => 'arm64-v8a']),
+    'Appmarket rejects an object-shaped ABI manifest value'
+);
+assert_equals(
+    'ARM 64-bit (arm64-v8a)',
+    appmarketSupportedAbiLabel('arm64-v8a'),
+    'Appmarket exposes a readable ABI label together with its technical identifier'
+);
+$validAppmarketPolicy = appmarketNormalizeReleasePolicy('important', '210', 210, 'beta', '25');
 assert_equals([], $validAppmarketPolicy['errors'], 'Appmarket accepts a valid update policy');
 assert_equals(210, $validAppmarketPolicy['required_below_version_code'], 'Appmarket keeps a valid mandatory-update boundary');
+assert_equals('beta', $validAppmarketPolicy['channel'], 'Appmarket keeps a valid beta channel');
+assert_equals(25, $validAppmarketPolicy['rollout_percentage'], 'Appmarket keeps a valid staged rollout');
 $invalidAppmarketPolicy = appmarketNormalizeReleasePolicy('unknown', '211', 210);
 assert_equals(2, count($invalidAppmarketPolicy['errors']), 'Appmarket rejects an unknown priority and an excessive mandatory-update boundary');
 assert_true($invalidAppmarketPolicy['priority_error'] !== '', 'Appmarket associates an invalid priority with its field');
 assert_true($invalidAppmarketPolicy['required_below_error'] !== '', 'Appmarket associates an invalid mandatory-update boundary with its field');
+$invalidAppmarketDistribution = appmarketNormalizeReleasePolicy('normal', '', 210, 'preview', '101');
+assert_equals(2, count($invalidAppmarketDistribution['errors']), 'Appmarket rejects an unknown channel and invalid rollout');
+assert_true($invalidAppmarketDistribution['channel_error'] !== '', 'Appmarket associates an invalid channel with its field');
+assert_true($invalidAppmarketDistribution['rollout_error'] !== '', 'Appmarket associates an invalid rollout with its field');
 $appmarketHash = str_repeat('a1', 32);
 assert_equals($appmarketHash, appmarketNormalizeSha256(strtoupper($appmarketHash)), 'Appmarket normalizes SHA-256 to lowercase');
 assert_equals('', appmarketNormalizeSha256('abc'), 'Appmarket rejects incomplete SHA-256 values');
@@ -517,6 +557,7 @@ assert_equals('/aplikace/moje-aplikace', appmarketAppPath('Moje aplikace'), 'App
 assert_equals('/aplikace/moje-aplikace/verze/42', appmarketReleasePath('Moje aplikace', 42), 'Appmarket release path includes versionCode');
 assert_equals('/aplikace/moje-aplikace/stahnout/42', appmarketDownloadPath('Moje aplikace', 42), 'Appmarket download path includes versionCode');
 assert_equals('/api/appmarket/v2/update', appmarketUpdateApiV2Path(), 'Appmarket exposes the stable V2 update API path');
+assert_equals('/api/appmarket/v3/update', appmarketUpdateApiV3Path(), 'Appmarket exposes the V3 update API path');
 assert_equals('https://example.cz/aplikace', appmarketNormalizeHttpUrl(' https://example.cz/aplikace '), 'Appmarket accepts an HTTPS project URL');
 assert_equals('', appmarketNormalizeHttpUrl('//example.cz/aplikace'), 'Appmarket rejects protocol-relative URLs');
 assert_equals('', appmarketNormalizeHttpUrl('javascript:alert(1)'), 'Appmarket rejects non-HTTP URLs');
@@ -530,10 +571,13 @@ $appmarketMetadata = appmarketNormalizeReleaseMetadata([
     'debuggable' => false,
     'build_type' => 'release',
     'permissions' => ['android.permission.INTERNET', 'android.permission.INTERNET'],
+    'supported_abis' => ['arm64-v8a', 'arm64-v8a'],
     'apk_sha256' => $appmarketHash,
 ]);
 assert_equals(200, $appmarketMetadata['version_code'], 'Appmarket normalizes release versionCode metadata');
 assert_equals(['android.permission.INTERNET'], $appmarketMetadata['permissions'], 'Appmarket deduplicates release permissions');
+assert_equals(['arm64-v8a'], $appmarketMetadata['supported_abis'], 'Appmarket stores ABI compatibility from trusted metadata');
+assert_true($appmarketMetadata['supported_abis_known'], 'Appmarket distinguishes known ABI metadata from legacy releases');
 assert_false($appmarketMetadata['debuggable'], 'Appmarket keeps a production release non-debuggable');
 $manyAppmarketPermissions = [];
 for ($permissionIndex = 0; $permissionIndex < appmarketMaxPermissions() + 20; $permissionIndex++) {
@@ -627,6 +671,57 @@ assert_equals(
     $updatePayloadV2['latest']['permission_changes']['added'] ?? null,
     'Appmarket V2 exposes permission changes against a known installed release'
 );
+$appmarketV3Release = $appmarketV2Release + [
+    'release_channel' => 'beta',
+    'rollout_percentage' => 25,
+    'supported_abis_json' => '["arm64-v8a"]',
+];
+assert_true(
+    appmarketReleaseChannelEligible($appmarketV3Release, 'beta'),
+    'Appmarket beta clients accept beta releases'
+);
+assert_false(
+    appmarketReleaseChannelEligible($appmarketV3Release, 'stable'),
+    'Appmarket stable clients reject beta releases'
+);
+assert_true(
+    appmarketReleaseRolloutEligible($appmarketV3Release, 24),
+    'Appmarket includes the last anonymous bucket inside a staged rollout'
+);
+assert_false(
+    appmarketReleaseRolloutEligible($appmarketV3Release, 25),
+    'Appmarket excludes the first anonymous bucket outside a staged rollout'
+);
+assert_true(
+    appmarketReleaseSupportsAbi($appmarketV3Release, 'arm64-v8a'),
+    'Appmarket offers a release to a compatible ABI'
+);
+assert_false(
+    appmarketReleaseSupportsAbi($appmarketV3Release, 'x86_64'),
+    'Appmarket withholds a release from an incompatible ABI'
+);
+assert_false(
+    appmarketReleaseSupportsAbi([], 'arm64-v8a'),
+    'Appmarket V3 does not guess compatibility for legacy releases without ABI metadata'
+);
+assert_true(
+    appmarketReleaseSupportsAbi(['supported_abis_json' => '[]'], ''),
+    'Appmarket treats a known empty ABI list as a universal APK'
+);
+$updatePayloadV3 = appmarketUpdatePayloadV3(
+    ['slug' => 'minirec', 'package_id' => 'cz.vlcekapps.minirec'],
+    $appmarketV3Release,
+    200,
+    34,
+    'beta',
+    'arm64-v8a',
+    24,
+    ['permissions_json' => '["android.permission.INTERNET"]']
+);
+assert_equals(3, $updatePayloadV3['schema_version'], 'Appmarket V3 update payload has a stable schema version');
+assert_equals('beta', $updatePayloadV3['latest']['release_channel'] ?? null, 'Appmarket V3 exposes the selected release channel');
+assert_equals(25, $updatePayloadV3['latest']['rollout_percentage'] ?? null, 'Appmarket V3 exposes the active rollout percentage');
+assert_equals(['arm64-v8a'], $updatePayloadV3['latest']['supported_abis'] ?? null, 'Appmarket V3 exposes supported ABIs');
 assert_equals(
     ['start' => 0, 'end' => 99],
     storedFileParseSingleRange('bytes=0-99', 1000),

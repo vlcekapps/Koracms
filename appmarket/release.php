@@ -27,7 +27,11 @@ if ($app === null || $release === null) {
     ]);
 }
 
-$latestRelease = appmarketLatestPublishedRelease($pdo, (int)$app['id']);
+$latestRelease = appmarketLatestPublishedReleaseForChannel(
+    $pdo,
+    (int)$app['id'],
+    (string)$release['release_channel']
+);
 if (!isset($_SESSION['cms_user_id'])) {
     trackPageView('appmarket_release', (int)$release['id']);
 }
