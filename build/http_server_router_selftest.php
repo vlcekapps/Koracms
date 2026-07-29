@@ -267,6 +267,14 @@ try {
         'authors/index.php' => 'authors',
         'changelog.php' => 'changelog',
         'author.php' => 'author',
+        'appmarket/index.php' => 'appmarket-index',
+        'appmarket/app.php' => 'appmarket-app',
+        'appmarket/release.php' => 'appmarket-release',
+        'appmarket/download.php' => 'appmarket-download',
+        'appmarket/update.php' => 'appmarket-update-v1',
+        'appmarket/update_v2.php' => 'appmarket-update-v2',
+        'appmarket/update_v3.php' => 'appmarket-update-v3',
+        'appmarket/publish.php' => 'appmarket-publish',
         'blog/article.php' => 'blog-article',
         'chat/index.php' => 'chat-index',
         'chat/message.php' => 'chat-message',
@@ -308,6 +316,42 @@ try {
     httpServerRouterSelfTestAssertRoute($authorRoute, 'author', '/author.php');
     httpServerRouterSelfTestAssert(($authorRoute['get']['slug'] ?? '') === 'pavel-vlcek', 'Author slug was not routed.');
     httpServerRouterSelfTestAssert(($authorRoute['get']['source'] ?? '') === 'test', 'Author query string was not preserved.');
+
+    $appmarketCatalogRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/aplikace?q=mini');
+    httpServerRouterSelfTestAssertRoute($appmarketCatalogRoute, 'appmarket-index', '/appmarket/index.php');
+    httpServerRouterSelfTestAssert(($appmarketCatalogRoute['get']['q'] ?? '') === 'mini', 'Appmarket catalog query string was not preserved.');
+
+    $appmarketAppRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/aplikace/minirec');
+    httpServerRouterSelfTestAssertRoute($appmarketAppRoute, 'appmarket-app', '/appmarket/app.php');
+    httpServerRouterSelfTestAssert(($appmarketAppRoute['get']['slug'] ?? '') === 'minirec', 'Appmarket app slug was not routed.');
+
+    $appmarketReleaseRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/aplikace/minirec/verze/42');
+    httpServerRouterSelfTestAssertRoute($appmarketReleaseRoute, 'appmarket-release', '/appmarket/release.php');
+    httpServerRouterSelfTestAssert(($appmarketReleaseRoute['get']['slug'] ?? '') === 'minirec', 'Appmarket release slug was not routed.');
+    httpServerRouterSelfTestAssert(($appmarketReleaseRoute['get']['version_code'] ?? '') === '42', 'Appmarket release version code was not routed.');
+
+    $appmarketDownloadRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/aplikace/minirec/stahnout/42');
+    httpServerRouterSelfTestAssertRoute($appmarketDownloadRoute, 'appmarket-download', '/appmarket/download.php');
+    httpServerRouterSelfTestAssert(($appmarketDownloadRoute['get']['slug'] ?? '') === 'minirec', 'Appmarket download slug was not routed.');
+    httpServerRouterSelfTestAssert(($appmarketDownloadRoute['get']['version_code'] ?? '') === '42', 'Appmarket download version code was not routed.');
+
+    $appmarketUpdateV1Route = httpServerRouterSelfTestFetchJson($baseUrl . '/api/appmarket/v1/update?package_id=cz.vlcekapps.minirec');
+    httpServerRouterSelfTestAssertRoute($appmarketUpdateV1Route, 'appmarket-update-v1', '/appmarket/update.php');
+    httpServerRouterSelfTestAssert(
+        ($appmarketUpdateV1Route['get']['package_id'] ?? '') === 'cz.vlcekapps.minirec',
+        'Appmarket V1 update query string was not preserved.'
+    );
+
+    $appmarketUpdateV2Route = httpServerRouterSelfTestFetchJson($baseUrl . '/api/appmarket/v2/update?sdk_int=34');
+    httpServerRouterSelfTestAssertRoute($appmarketUpdateV2Route, 'appmarket-update-v2', '/appmarket/update_v2.php');
+    httpServerRouterSelfTestAssert(($appmarketUpdateV2Route['get']['sdk_int'] ?? '') === '34', 'Appmarket V2 update query string was not preserved.');
+
+    $appmarketUpdateV3Route = httpServerRouterSelfTestFetchJson($baseUrl . '/api/appmarket/v3/update?abi=arm64-v8a');
+    httpServerRouterSelfTestAssertRoute($appmarketUpdateV3Route, 'appmarket-update-v3', '/appmarket/update_v3.php');
+    httpServerRouterSelfTestAssert(($appmarketUpdateV3Route['get']['abi'] ?? '') === 'arm64-v8a', 'Appmarket V3 update query string was not preserved.');
+
+    $appmarketPublishRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/api/appmarket/v1/releases');
+    httpServerRouterSelfTestAssertRoute($appmarketPublishRoute, 'appmarket-publish', '/appmarket/publish.php');
 
     $blogArticleRoute = httpServerRouterSelfTestFetchJson($baseUrl . '/blog/testovaci-clanek');
     httpServerRouterSelfTestAssertRoute($blogArticleRoute, 'blog-article', '/blog/article.php');

@@ -114,6 +114,14 @@ if ($routePath === '') {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('recipes/index.php');
 } else {
     $routeMap = [
+        '#^api/appmarket/v3/update/?$#i' => ['appmarket/update_v3.php', []],
+        '#^api/appmarket/v2/update/?$#i' => ['appmarket/update_v2.php', []],
+        '#^api/appmarket/v1/update/?$#i' => ['appmarket/update.php', []],
+        '#^api/appmarket/v1/releases/?$#i' => ['appmarket/publish.php', []],
+        '#^aplikace/?$#i' => ['appmarket/index.php', []],
+        '#^aplikace/([a-z0-9-]+)/stahnout/([0-9]+)/?$#i' => ['appmarket/download.php', ['slug', 'version_code']],
+        '#^aplikace/([a-z0-9-]+)/verze/([0-9]+)/?$#i' => ['appmarket/release.php', ['slug', 'version_code']],
+        '#^aplikace/([a-z0-9-]+)/?$#i' => ['appmarket/app.php', ['slug']],
         '#^author/([a-z0-9-]+)/?$#i' => ['author.php', ['slug']],
         '#^blog/([a-z0-9-]+)/?$#i' => ['blog/article.php', ['slug']],
         '#^board/kategorie/([a-z0-9-]+)/?$#i' => ['board/index.php', ['category_slug']],

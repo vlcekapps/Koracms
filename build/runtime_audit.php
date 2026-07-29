@@ -23364,6 +23364,29 @@ if ($appmarketUpdateRoutePosition === false
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')) {
     $appmarketIssues[] = 'Appmarket routes and publisher privacy headers must precede blog catch-all routes';
 }
+$appmarketRouterRequiredRoutes = [
+    "'#^api/appmarket/v3/update/?\$#i' => ['appmarket/update_v3.php', []]",
+    "'#^api/appmarket/v2/update/?\$#i' => ['appmarket/update_v2.php', []]",
+    "'#^api/appmarket/v1/update/?\$#i' => ['appmarket/update.php', []]",
+    "'#^api/appmarket/v1/releases/?\$#i' => ['appmarket/publish.php', []]",
+    "'#^aplikace/?\$#i' => ['appmarket/index.php', []]",
+    "'#^aplikace/([a-z0-9-]+)/stahnout/([0-9]+)/?\$#i' => ['appmarket/download.php', ['slug', 'version_code']]",
+    "'#^aplikace/([a-z0-9-]+)/verze/([0-9]+)/?\$#i' => ['appmarket/release.php', ['slug', 'version_code']]",
+    "'#^aplikace/([a-z0-9-]+)/?\$#i' => ['appmarket/app.php', ['slug']]",
+];
+$appmarketRouterBlogCatchAllPosition = strpos(
+    $httpRouterSource,
+    "'#^([a-z0-9-]+)/([a-z0-9-]+)/?\$#i' => ['blog_router.php', ['blog_slug', 'slug']]"
+);
+foreach ($appmarketRouterRequiredRoutes as $appmarketRouterRequiredRoute) {
+    $appmarketRouterRoutePosition = strpos($httpRouterSource, $appmarketRouterRequiredRoute);
+    if ($appmarketRouterRoutePosition === false
+        || $appmarketRouterBlogCatchAllPosition === false
+        || $appmarketRouterRoutePosition > $appmarketRouterBlogCatchAllPosition) {
+        $appmarketIssues[] = 'Built-in PHP test router must mirror all Appmarket clean URLs before blog catch-all routes';
+        break;
+    }
+}
 if (!str_contains($searchSource, "if (isModuleEnabled('appmarket'))")
     || !str_contains($searchSource, "'appmarket_app' AS type")
     || !str_contains($searchSource, 'appmarketAppPublicVisibilitySql(')
