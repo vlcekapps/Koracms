@@ -66,6 +66,7 @@ jobs:
 
           define('BASE_URL', '');
           define('KORA_STORAGE_DIR', __DIR__ . '/../kora_storage');
+          define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', true);
 
           define('SMTP_HOST', 'localhost');
           define('SMTP_PORT', 25);

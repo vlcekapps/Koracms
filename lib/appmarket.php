@@ -1532,6 +1532,12 @@ function appmarketNormalizeReleaseMetadata(array $metadata): array
 
 function appmarketFindAndroidTool(string $tool): string
 {
+    if (defined('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS')
+        && constant('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS') === true
+    ) {
+        return '';
+    }
+
     static $cache = [];
     $normalizedTool = strtolower(trim($tool));
     if (!in_array($normalizedTool, ['apkanalyzer', 'apksigner'], true)) {

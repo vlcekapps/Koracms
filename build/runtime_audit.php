@@ -8389,6 +8389,10 @@ $foundationChecks = [
         && str_contains($fullCiWorkflowSource, 'mysql:8.0')
         && str_contains($fullCiWorkflowSource, 'MYSQL_DATABASE: koracms_ci')
         && str_contains($fullCiWorkflowSource, 'KORA_TEST_BASE_URL: http://127.0.0.1:8000')
+        && str_contains(
+            $fullCiWorkflowSource,
+            "define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', true);"
+        )
         && str_contains($fullCiWorkflowSource, 'php -S 127.0.0.1:8000 -t . build/http_server_router.php')
         && str_contains($fullCiWorkflowSource, 'install.php')
         && str_contains($fullCiWorkflowSource, 'site_profile=custom')
@@ -23148,6 +23152,8 @@ foreach ([
     'publisher_token_id',
     'function appmarketAuthenticatePublishToken',
     'function appmarketRunAndroidTool',
+    "defined('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS')",
+    "constant('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS') === true",
     'proc_open(',
     'if ((microtime(true) - $startedAt) >= 30.0)',
     'function appmarketInspectReleaseUpload',

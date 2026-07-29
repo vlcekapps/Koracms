@@ -192,4 +192,16 @@ assertAuditFails(
     'site_profile=custom'
 );
 
+assertAuditFails(
+    'Full CI Appmarket hosting mode guard',
+    $ciWorkflowSource,
+    replaceRequired(
+        $fullCiWorkflowSource,
+        "define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', true);",
+        "define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', false);",
+        'full CI Appmarket hosting mode'
+    ),
+    "define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', true);"
+);
+
 echo "Workflow audit self-test OK\n";

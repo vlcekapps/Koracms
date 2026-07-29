@@ -155,6 +155,7 @@ if ($fullCiWorkflowSource !== '') {
         'Prepare runtime config',
         'cat > config.php',
         "define('KORA_STORAGE_DIR', __DIR__ . '/../kora_storage');",
+        "define('KORA_TEST_APPMARKET_NO_ANDROID_TOOLS', true);",
         'Start PHP server',
         'php -S 127.0.0.1:8000 -t . build/http_server_router.php',
         'Install Kora CMS',
