@@ -56,6 +56,7 @@ $createdAppmarketStoredFiles = [];
 $createdFoodIds = [];
 $createdFoodSectionIds = [];
 $createdFoodItemIds = [];
+$createdFoodVariantIds = [];
 $createdFoodOrderIds = [];
 $createdRecipeCategoryIds = [];
 $createdRecipeIds = [];
@@ -15525,10 +15526,12 @@ try {
     $pdo->prepare(
         "INSERT INTO cms_food_cards (
             type, title, slug, description, content, valid_from, valid_to,
-            orders_enabled, order_instructions, is_current, is_published, status, author_id
+            orders_enabled, order_instructions, order_fulfillment_modes, order_requested_at_enabled,
+            is_current, is_published, status, author_id
         ) VALUES (
             'food', ?, ?, 'Veřejný lístek se strukturovanými položkami.', ?, CURDATE(), NULL,
-            1, 'Objednávky jsou nezávazné a provozovatel je potvrzuje ručně.', 1, 1, 'published', ?
+            1, 'Objednávky jsou nezávazné a provozovatel je potvrzuje ručně.', 'pickup,delivery', 1,
+            1, 1, 'published', ?
         )"
     )->execute([$foodTitle, $foodSlug, $foodContent, $adminUserId]);
     $foodCardId = (int)$pdo->lastInsertId();
@@ -15625,6 +15628,9 @@ try {
         }
     }
 
+    $foodItemId = 0;
+    $foodSmallVariantId = 0;
+    $foodLargeVariantId = 0;
     if ($foodSectionId > 0) {
         $itemResponse = postUrl($foodItemsAdminUrl, [
             'csrf_token' => $adminSession['csrf'],
@@ -15677,6 +15683,100 @@ try {
             $foodStructuredIssues[] = 'položka strukturovaného lístku neuložila cenu, obrázek, alergeny, dietní štítky nebo výživové údaje normalizovaně';
         }
 
+        if ($foodItemId > 0) {
+            $foodVariantsAdminUrl = $baseUrl . BASE_URL . '/admin/food_variants.php?item=' . $foodItemId;
+            $foodVariantsAdminPage = fetchUrl($foodVariantsAdminUrl, $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($foodVariantsAdminPage) !== 200
+                || !str_contains($foodVariantsAdminPage['body'], 'Varianty položky: HTTP Smažený sýr')
+                || !str_contains($foodVariantsAdminPage['body'], 'Přidat variantu')
+                || !str_contains($foodVariantsAdminPage['body'], 'Zatím nejsou vytvořené žádné varianty.')
+                || !httpIntegrationInputHasAttributes($foodVariantsAdminPage['body'], 'variant-label', [
+                    'aria-required' => 'true',
+                    'aria-describedby' => 'variant-label-help',
+                ])
+                || !str_contains($foodVariantsAdminPage['body'], 'id="variant-label" name="label" required')) {
+                $foodStructuredIssues[] = 'správa cenových a porčních variant se nenačetla s přístupným formulářem';
+            }
+
+            $invalidFoodVariantResponse = postUrl($foodVariantsAdminUrl, [
+                'csrf_token' => $adminSession['csrf'],
+                'action' => 'save',
+                'item_id' => (string)$foodItemId,
+                'variant_id' => '0',
+                'label' => '',
+                'portion_label' => 'HTTP zachovaná porce',
+                'price_amount' => 'sto korun',
+                'price_currency' => 'CZK',
+                'price_note' => 'HTTP zachovaná poznámka',
+                'is_available' => '1',
+                'sort_order' => '10',
+            ], $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($invalidFoodVariantResponse) !== 200
+                || !str_contains($invalidFoodVariantResponse['body'], 'Variantu nejde uložit bez názvu.')
+                || !httpIntegrationInputHasAttributes($invalidFoodVariantResponse['body'], 'variant-label', [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'variant-label-help variant_label-error',
+                ])
+                || !str_contains($invalidFoodVariantResponse['body'], 'Doplňte rozlišující název')
+                || !httpIntegrationInputHasAttributes($invalidFoodVariantResponse['body'], 'variant-portion', [
+                    'value' => 'HTTP zachovaná porce',
+                ])) {
+                $foodStructuredIssues[] = 'neplatná varianta nemá akční field-level chybu se zachovanými hodnotami';
+            }
+
+            foreach ([
+                ['label' => 'Malá', 'portion' => '1 porce', 'price' => '119,90', 'note' => 'malá porce', 'sort' => '10'],
+                ['label' => 'Velká', 'portion' => '2 porce', 'price' => '159,90', 'note' => 'velká porce', 'sort' => '20'],
+            ] as $foodVariantFixture) {
+                $foodVariantSaveResponse = postUrl($foodVariantsAdminUrl, [
+                    'csrf_token' => $adminSession['csrf'],
+                    'action' => 'save',
+                    'item_id' => (string)$foodItemId,
+                    'variant_id' => '0',
+                    'label' => $foodVariantFixture['label'],
+                    'portion_label' => $foodVariantFixture['portion'],
+                    'price_amount' => $foodVariantFixture['price'],
+                    'price_currency' => 'CZK',
+                    'price_note' => $foodVariantFixture['note'],
+                    'is_available' => '1',
+                    'sort_order' => $foodVariantFixture['sort'],
+                ], $adminSession['cookie'], 0);
+                if (httpIntegrationStatusCode($foodVariantSaveResponse) !== 302
+                    || !responseHasLocationHeader(
+                        $foodVariantSaveResponse['headers'],
+                        BASE_URL . '/admin/food_variants.php?item=' . $foodItemId . '&msg=saved',
+                        $baseUrl
+                    )) {
+                    $foodStructuredIssues[] = 'uložení varianty ' . $foodVariantFixture['label'] . ' nevrátilo bezpečný PRG redirect';
+                }
+            }
+            $foodVariantRowsStmt = $pdo->prepare(
+                "SELECT id, label, portion_label, price_amount
+                 FROM cms_food_item_variants
+                 WHERE item_id = ? AND card_id = ?
+                 ORDER BY sort_order, id"
+            );
+            $foodVariantRowsStmt->execute([$foodItemId, $foodCardId]);
+            $foodVariantRows = $foodVariantRowsStmt->fetchAll();
+            foreach ($foodVariantRows as $foodVariantRow) {
+                $variantId = (int)$foodVariantRow['id'];
+                $createdFoodVariantIds[] = $variantId;
+                if ((string)$foodVariantRow['label'] === 'Malá') {
+                    $foodSmallVariantId = $variantId;
+                }
+                if ((string)$foodVariantRow['label'] === 'Velká') {
+                    $foodLargeVariantId = $variantId;
+                }
+            }
+            if (count($foodVariantRows) !== 2
+                || $foodSmallVariantId <= 0
+                || $foodLargeVariantId <= 0
+                || (string)($foodVariantRows[0]['portion_label'] ?? '') !== '1 porce'
+                || (string)($foodVariantRows[1]['price_amount'] ?? '') !== '159.90') {
+                $foodStructuredIssues[] = 'cenové a porční varianty se neuložily normalizovaně a ve stabilním pořadí';
+            }
+        }
+
         $veganItemResponse = postUrl($foodItemsAdminUrl, [
             'csrf_token' => $adminSession['csrf'],
             'action' => 'save_item',
@@ -15722,6 +15822,15 @@ try {
                 $foodStructuredIssues[] = 'kopírování položky nevytvořilo novou položku';
             } else {
                 $createdFoodItemIds[] = $duplicateItemId;
+                $duplicateVariantStmt = $pdo->prepare(
+                    "SELECT COUNT(*)
+                     FROM cms_food_item_variants
+                     WHERE item_id = ? AND card_id = ?"
+                );
+                $duplicateVariantStmt->execute([$duplicateItemId, $foodCardId]);
+                if ((int)$duplicateVariantStmt->fetchColumn() !== 2) {
+                    $foodStructuredIssues[] = 'kopírování položky nezachovalo její cenové a porční varianty';
+                }
                 $bulkResponse = postUrl($foodItemsAdminUrl, [
                     'csrf_token' => $adminSession['csrf'],
                     'action' => 'bulk_availability',
@@ -15777,7 +15886,13 @@ try {
     if (httpIntegrationStatusCode($foodCardResponse) !== 200
         || !str_contains($foodCardResponse['body'], 'HTTP Smažený sýr')
         || !str_contains($foodCardResponse['body'], 'HTTP Veganský salát')
-        || !str_contains($foodCardResponse['body'], '129,90 Kč (za porci)')
+        || !str_contains($foodCardResponse['body'], 'Malá')
+        || !str_contains($foodCardResponse['body'], '1 porce')
+        || !str_contains($foodCardResponse['body'], '119,90 Kč (malá porce)')
+        || !str_contains($foodCardResponse['body'], 'Velká')
+        || !str_contains($foodCardResponse['body'], '2 porce')
+        || !str_contains($foodCardResponse['body'], '159,90 Kč (velká porce)')
+        || str_contains($foodCardResponse['body'], '129,90 Kč (za porci)')
         || !str_contains($foodCardResponse['body'], 'Dnešní nabídka')
         || !str_contains($foodCardResponse['body'], '11:00–14:00')
         || !str_contains($foodCardResponse['body'], 'Porce')
@@ -15790,8 +15905,9 @@ try {
         || !str_contains($foodCardResponse['body'], 'Poptat objednávku')
         || !str_contains($foodCardResponse['body'], 'Poznámky k lístku')
         || !str_contains($foodCardResponse['body'], '"hasMenuSection"')
+        || !str_contains($foodCardResponse['body'], '"name":"Velká – 2 porce"')
         || !str_contains($foodCardResponse['body'], '"NutritionInformation"')) {
-        $foodStructuredIssues[] = 'veřejný detail lístku nezobrazuje denní nabídku, výživové údaje, objednávku, strukturované položky, cenu, alergeny, obrázek, poznámky nebo JSON-LD';
+        $foodStructuredIssues[] = 'veřejný detail lístku nezobrazuje denní nabídku, varianty, výživové údaje, objednávku, alergeny, obrázek, poznámky nebo JSON-LD';
     }
 
     $foodTodayResponse = fetchUrl($baseUrl . $foodCardPath . '?' . http_build_query(['den' => date('Y-m-d')]), '', 0);
@@ -15853,13 +15969,24 @@ try {
 
     if ($foodItemId > 0) {
         $foodOrderUrl = $baseUrl . BASE_URL . '/food/order.php?slug=' . rawurlencode($foodSlug);
+        $foodOrderChoiceKey = foodOrderChoiceKey($foodItemId, $foodLargeVariantId);
+        $foodRequestedAtInput = date('Y-m-d\TH:i', time() + 86400);
+        $foodRequestedAtSql = str_replace('T', ' ', $foodRequestedAtInput) . ':00';
         $invalidFoodOrderEmail = 'http-food-order-invalid-' . bin2hex(random_bytes(4)) . '@example.test';
         $invalidFoodOrderSession = koraPrimeTestSession([], 'kora-http-food-order-invalid');
         $invalidFoodOrderPage = fetchUrl($foodOrderUrl, $invalidFoodOrderSession['cookie'], 0);
         $invalidFoodOrderCsrf = extractHiddenInputValue($invalidFoodOrderPage['body'], 'csrf_token');
         if (httpIntegrationStatusCode($invalidFoodOrderPage) !== 200
             || !str_contains($invalidFoodOrderPage['body'], 'Odeslat nezávaznou poptávku')
-            || !str_contains($invalidFoodOrderPage['body'], 'Objednávky jsou nezávazné')) {
+            || !str_contains($invalidFoodOrderPage['body'], 'Objednávky jsou nezávazné')
+            || !str_contains($invalidFoodOrderPage['body'], 'Převzetí poptávky')
+            || !str_contains($invalidFoodOrderPage['body'], 'name="fulfillment_type" value="delivery"')
+            || !httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'requested_at', [
+                'name' => 'requested_at',
+                'aria-required' => 'true',
+                'aria-describedby' => 'food-order-requested-at-help',
+            ])
+            || !str_contains($invalidFoodOrderPage['body'], 'name="qty[' . $foodOrderChoiceKey . ']"')) {
             $foodStructuredIssues[] = 'veřejný formulář objednávkové poptávky se nenačetl';
         }
         if (!httpIntegrationInputHasAttributes($invalidFoodOrderPage['body'], 'customer_name', ['autocomplete' => 'name'])
@@ -15886,10 +16013,13 @@ try {
             [
                 'csrf_token' => $invalidFoodOrderCsrf,
                 'slug' => $foodSlug,
-                'qty[' . $foodItemId . ']' => '1',
+                'qty[' . $foodOrderChoiceKey . ']' => '1',
                 'customer_name' => 'HTTP Zákazník',
                 'customer_email' => $invalidFoodOrderEmail,
                 'customer_phone' => '+420123456789',
+                'fulfillment_type' => 'delivery',
+                'requested_at' => $foodRequestedAtInput,
+                'customer_address' => 'HTTP ulice 1, Testov 100 00',
                 'customer_note' => '',
                 'captcha' => '0',
             ],
@@ -15907,6 +16037,39 @@ try {
             $foodStructuredIssues[] = 'objednávkový formulář uložil poptávku i po chybné captche';
         }
 
+        $incompleteFoodOrderEmail = 'http-food-order-incomplete-' . bin2hex(random_bytes(4)) . '@example.test';
+        $incompleteFoodOrderSession = koraPrimeTestSession([], 'kora-http-food-order-incomplete');
+        $incompleteFoodOrderPage = fetchUrl($foodOrderUrl, $incompleteFoodOrderSession['cookie'], 0);
+        $incompleteFoodOrderResponse = postUrl(
+            $foodOrderUrl,
+            [
+                'csrf_token' => extractHiddenInputValue($incompleteFoodOrderPage['body'], 'csrf_token'),
+                'slug' => $foodSlug,
+                'qty[' . $foodOrderChoiceKey . ']' => '1',
+                'customer_name' => 'HTTP Zákazník',
+                'customer_email' => $incompleteFoodOrderEmail,
+                'customer_phone' => '+420123456789',
+                'fulfillment_type' => 'delivery',
+                'requested_at' => '',
+                'customer_address' => '',
+                'customer_note' => '',
+                'captcha' => httpIntegrationExtractCaptchaAnswer($incompleteFoodOrderPage['body']),
+            ],
+            $incompleteFoodOrderSession['cookie'],
+            0
+        );
+        if (httpIntegrationStatusCode($incompleteFoodOrderResponse) !== 200
+            || !str_contains($incompleteFoodOrderResponse['body'], 'Pro doručení zadejte adresu.')
+            || !str_contains($incompleteFoodOrderResponse['body'], 'Zadejte platný požadovaný termín.')
+            || !httpIntegrationFieldHasAriaInvalid($incompleteFoodOrderResponse['body'], 'customer_address')
+            || !httpIntegrationFieldHasAriaInvalid($incompleteFoodOrderResponse['body'], 'requested_at')) {
+            $foodStructuredIssues[] = 'objednávkový formulář nevrátil přístupné chyby pro chybějící adresu a požadovaný termín';
+        }
+        $invalidFoodOrderCountStmt->execute([$incompleteFoodOrderEmail]);
+        if ((int)$invalidFoodOrderCountStmt->fetchColumn() !== 0) {
+            $foodStructuredIssues[] = 'objednávkový formulář uložil poptávku bez povinné adresy nebo termínu';
+        }
+
         $validFoodOrderEmail = 'http-food-order-valid-' . bin2hex(random_bytes(4)) . '@example.test';
         $validFoodOrderSession = koraPrimeTestSession([], 'kora-http-food-order-valid');
         $validFoodOrderPage = fetchUrl($foodOrderUrl, $validFoodOrderSession['cookie'], 0);
@@ -15922,10 +16085,13 @@ try {
             [
                 'csrf_token' => $validFoodOrderCsrf,
                 'slug' => $foodSlug,
-                'qty[' . $foodItemId . ']' => '2',
+                'qty[' . $foodOrderChoiceKey . ']' => '2',
                 'customer_name' => 'HTTP Zákazník',
                 'customer_email' => $validFoodOrderEmail,
                 'customer_phone' => '+420123456789',
+                'fulfillment_type' => 'delivery',
+                'requested_at' => $foodRequestedAtInput,
+                'customer_address' => 'HTTP ulice 1, Testov 100 00',
                 'customer_note' => 'Prosím připravit k vyzvednutí.',
                 'captcha' => $validFoodOrderCaptcha,
             ],
@@ -15940,29 +16106,52 @@ try {
             || !str_contains($validFoodOrderResponse['body'], 'Referenční kód poptávky')) {
             $foodStructuredIssues[] = 'validní objednávková poptávka nevrátila potvrzení s referenčním kódem';
         }
-        $foodOrderStmt = $pdo->prepare("SELECT id, reference_code, status, total_amount FROM cms_food_orders WHERE customer_email = ? AND card_id = ? ORDER BY id DESC LIMIT 1");
+        $foodOrderStmt = $pdo->prepare(
+            "SELECT id, reference_code, status, total_amount, fulfillment_type, requested_at, customer_address
+             FROM cms_food_orders
+             WHERE customer_email = ? AND card_id = ?
+             ORDER BY id DESC
+             LIMIT 1"
+        );
         $foodOrderStmt->execute([$validFoodOrderEmail, $foodCardId]);
         $foodOrderRow = $foodOrderStmt->fetch() ?: [];
         $foodOrderId = (int)($foodOrderRow['id'] ?? 0);
-        if ($foodOrderId <= 0 || (string)($foodOrderRow['status'] ?? '') !== 'new' || (string)($foodOrderRow['total_amount'] ?? '') !== '259.80') {
-            $foodStructuredIssues[] = 'validní objednávková poptávka se neuložila se stavem a snapshot součtem';
+        if ($foodOrderId <= 0
+            || (string)($foodOrderRow['status'] ?? '') !== 'new'
+            || (string)($foodOrderRow['total_amount'] ?? '') !== '319.80'
+            || (string)($foodOrderRow['fulfillment_type'] ?? '') !== 'delivery'
+            || (string)($foodOrderRow['requested_at'] ?? '') !== $foodRequestedAtSql
+            || (string)($foodOrderRow['customer_address'] ?? '') !== 'HTTP ulice 1, Testov 100 00') {
+            $foodStructuredIssues[] = 'validní objednávková poptávka se neuložila se stavem, převzetím, termínem a snapshot součtem';
         } else {
             $createdFoodOrderIds[] = $foodOrderId;
-            $foodOrderItemStmt = $pdo->prepare("SELECT item_title, quantity, unit_price_amount, price_currency, price_note FROM cms_food_order_items WHERE order_id = ? ORDER BY id LIMIT 1");
+            $foodOrderItemStmt = $pdo->prepare(
+                "SELECT item_title, variant_id, variant_label, portion_label, quantity,
+                        unit_price_amount, price_currency, price_note
+                 FROM cms_food_order_items
+                 WHERE order_id = ?
+                 ORDER BY id
+                 LIMIT 1"
+            );
             $foodOrderItemStmt->execute([$foodOrderId]);
             $foodOrderItemRow = $foodOrderItemStmt->fetch() ?: [];
             if ((string)($foodOrderItemRow['item_title'] ?? '') !== 'HTTP Smažený sýr'
+                || (int)($foodOrderItemRow['variant_id'] ?? 0) !== $foodLargeVariantId
+                || (string)($foodOrderItemRow['variant_label'] ?? '') !== 'Velká'
+                || (string)($foodOrderItemRow['portion_label'] ?? '') !== '2 porce'
                 || (int)($foodOrderItemRow['quantity'] ?? 0) !== 2
-                || (string)($foodOrderItemRow['unit_price_amount'] ?? '') !== '129.90'
+                || (string)($foodOrderItemRow['unit_price_amount'] ?? '') !== '159.90'
                 || (string)($foodOrderItemRow['price_currency'] ?? '') !== 'CZK'
-                || (string)($foodOrderItemRow['price_note'] ?? '') !== 'za porci') {
-                $foodStructuredIssues[] = 'položka objednávkové poptávky neuložila snapshot názvu, množství, ceny a měny';
+                || (string)($foodOrderItemRow['price_note'] ?? '') !== 'velká porce') {
+                $foodStructuredIssues[] = 'položka objednávkové poptávky neuložila snapshot varianty, porce, množství a ceny';
             }
 
             $foodOrdersAdminResponse = fetchUrl($baseUrl . BASE_URL . '/admin/food_orders.php?q=' . rawurlencode((string)$foodOrderRow['reference_code']), $adminSession['cookie'], 0);
             if (httpIntegrationStatusCode($foodOrdersAdminResponse) !== 200
                 || !str_contains($foodOrdersAdminResponse['body'], (string)$foodOrderRow['reference_code'])
-                || !str_contains($foodOrdersAdminResponse['body'], 'HTTP Zákazník')) {
+                || !str_contains($foodOrdersAdminResponse['body'], 'HTTP Zákazník')
+                || !str_contains($foodOrdersAdminResponse['body'], 'Doručení')
+                || !str_contains($foodOrdersAdminResponse['body'], formatCzechDateTime($foodRequestedAtSql))) {
                 $foodStructuredIssues[] = 'admin přehled objednávkových poptávek nezobrazil uloženou poptávku';
             }
 
@@ -15973,6 +16162,10 @@ try {
             $foodOrderStatusConfirmationName = 'confirm_food_order_status_' . $foodOrderId;
             if (httpIntegrationStatusCode($foodOrderAdminResponse) !== 200
                 || !str_contains($foodOrderAdminResponse['body'], 'Položky poptávky')
+                || !str_contains($foodOrderAdminResponse['body'], 'Varianta: Velká')
+                || !str_contains($foodOrderAdminResponse['body'], 'Porce: 2 porce')
+                || !str_contains($foodOrderAdminResponse['body'], 'Adresa doručení')
+                || !str_contains($foodOrderAdminResponse['body'], 'HTTP ulice 1, Testov 100 00')
                 || !str_contains($foodOrderAdminResponse['body'], 'zákazníkovi se automaticky neodešle e-mail')
                 || !str_contains($foodOrderAdminResponse['body'], '<form method="post" novalidate>')
                 || !httpIntegrationInputHasAttributes(
@@ -16116,13 +16309,17 @@ try {
     $adminExportWithFoodResponse = httpIntegrationFetchConfirmedJsonExport($baseUrl, $adminSession, $foodStructuredIssues, 'food structured JSON export');
     if (!str_contains($adminExportWithFoodResponse['body'], '"food_sections"')
         || !str_contains($adminExportWithFoodResponse['body'], '"food_items"')
+        || !str_contains($adminExportWithFoodResponse['body'], '"food_item_variants"')
         || !str_contains($adminExportWithFoodResponse['body'], '"image_alt_text"')
         || !str_contains($adminExportWithFoodResponse['body'], '"serving_date"')
         || !str_contains($adminExportWithFoodResponse['body'], '"portion_label"')
         || !str_contains($adminExportWithFoodResponse['body'], '"orders_enabled"')
+        || !str_contains($adminExportWithFoodResponse['body'], '"order_fulfillment_modes": "pickup,delivery"')
+        || !str_contains($adminExportWithFoodResponse['body'], '"order_requested_at_enabled": 1')
+        || !str_contains($adminExportWithFoodResponse['body'], '"label": "Velká"')
         || str_contains($adminExportWithFoodResponse['body'], '"food_orders"')
         || !str_contains($adminExportWithFoodResponse['body'], 'HTTP Smažený sýr')) {
-        $foodStructuredIssues[] = 'JSON export neobsahuje strukturované sekce, položky, denní/nutriční/objednávkové nastavení nebo chybně exportuje objednávky';
+        $foodStructuredIssues[] = 'JSON export neobsahuje varianty, denní/nutriční/objednávkové nastavení nebo chybně exportuje osobní objednávky';
     }
 
     $pdo->prepare(
@@ -16132,6 +16329,13 @@ try {
     )->execute([$foodCardId, $foodSectionId, $foodMediaId]);
     $foodDeleteItemId = (int)$pdo->lastInsertId();
     $createdFoodItemIds[] = $foodDeleteItemId;
+    $pdo->prepare(
+        "INSERT INTO cms_food_item_variants
+         (card_id, item_id, label, portion_label, price_amount, price_currency, is_available, sort_order)
+         VALUES (?, ?, 'HTTP mazaná varianta', 'testovací porce', 49.90, 'CZK', 1, 10)"
+    )->execute([$foodCardId, $foodDeleteItemId]);
+    $foodDeleteItemVariantId = (int)$pdo->lastInsertId();
+    $createdFoodVariantIds[] = $foodDeleteItemVariantId;
     $foodDeleteItemConfirmField = 'confirm_food_item_delete_' . $foodDeleteItemId;
     $foodDeleteItemReviewId = 'food-item-delete-review-' . $foodDeleteItemId;
     $foodDeleteItemErrorId = 'confirm-food-item-delete-' . $foodDeleteItemId . '-error';
@@ -16159,12 +16363,15 @@ try {
         'delete_error_id' => $foodDeleteItemId,
     ]);
     $foodDeleteItemExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_items WHERE id = ? AND card_id = ?");
+    $foodDeleteItemVariantExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_item_variants WHERE id = ? AND item_id = ?");
     $foodDeleteItemExistsStmt->execute([$foodDeleteItemId, $foodCardId]);
+    $foodDeleteItemVariantExistsStmt->execute([$foodDeleteItemVariantId, $foodDeleteItemId]);
     if (httpIntegrationStatusCode($foodDeleteItemRejectedResponse) !== 302
         || !responseHasLocationHeader($foodDeleteItemRejectedResponse['headers'], $foodDeleteItemErrorPath, $baseUrl)
         || (int)$foodDeleteItemExistsStmt->fetchColumn() !== 1
+        || (int)$foodDeleteItemVariantExistsStmt->fetchColumn() !== 1
         || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_item_delete'")->fetchColumn() !== $foodDeleteItemLogBefore) {
-        $foodStructuredIssues[] = 'nepotvrzené smazání položky změnilo data nebo audit log';
+        $foodStructuredIssues[] = 'nepotvrzené smazání položky změnilo položku, variantu nebo audit log';
     }
     $foodDeleteItemErrorPage = fetchUrl($baseUrl . $foodDeleteItemErrorPath, $adminSession['cookie'], 0);
     if (!str_contains($foodDeleteItemErrorPage['body'], '<p id="food-delete-error" class="error" role="alert" aria-atomic="true">Položku lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.</p>')
@@ -16184,11 +16391,13 @@ try {
         $foodDeleteItemConfirmField => '1',
     ], $adminSession['cookie'], 0);
     $foodDeleteItemExistsStmt->execute([$foodDeleteItemId, $foodCardId]);
+    $foodDeleteItemVariantExistsStmt->execute([$foodDeleteItemVariantId, $foodDeleteItemId]);
     $foodMediaStillExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_media WHERE id = ?");
     $foodMediaStillExistsStmt->execute([$foodMediaId]);
     if (httpIntegrationStatusCode($foodDeleteItemConfirmedResponse) !== 302
         || !responseHasLocationHeader($foodDeleteItemConfirmedResponse['headers'], BASE_URL . '/admin/food_items.php?card=' . $foodCardId . '&msg=deleted', $baseUrl)
         || (int)$foodDeleteItemExistsStmt->fetchColumn() !== 0
+        || (int)$foodDeleteItemVariantExistsStmt->fetchColumn() !== 0
         || (int)$foodMediaStillExistsStmt->fetchColumn() !== 1
         || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_item_delete'")->fetchColumn() !== $foodDeleteItemLogBefore + 1) {
         $foodStructuredIssues[] = 'potvrzené smazání položky neprovedlo očekávaný cleanup, PRG nebo audit log';
@@ -16198,6 +16407,7 @@ try {
         ->execute([$foodCardId]);
     $foodDeleteSectionId = (int)$pdo->lastInsertId();
     $createdFoodSectionIds[] = $foodDeleteSectionId;
+    $foodDeleteSectionVariantIds = [];
     foreach (['HTTP první položka mazané sekce', 'HTTP druhá položka mazané sekce'] as $foodDeleteSectionItemIndex => $foodDeleteSectionItemTitle) {
         $pdo->prepare(
             "INSERT INTO cms_food_items
@@ -16212,6 +16422,18 @@ try {
         ]);
         $foodDeleteSectionItemId = (int)$pdo->lastInsertId();
         $createdFoodItemIds[] = $foodDeleteSectionItemId;
+        $pdo->prepare(
+            "INSERT INTO cms_food_item_variants
+             (card_id, item_id, label, portion_label, price_amount, price_currency, is_available, sort_order)
+             VALUES (?, ?, ?, 'testovací porce', 39.90, 'CZK', 1, 10)"
+        )->execute([
+            $foodCardId,
+            $foodDeleteSectionItemId,
+            'HTTP varianta ' . ($foodDeleteSectionItemIndex + 1),
+        ]);
+        $foodDeleteSectionVariantId = (int)$pdo->lastInsertId();
+        $createdFoodVariantIds[] = $foodDeleteSectionVariantId;
+        $foodDeleteSectionVariantIds[] = $foodDeleteSectionVariantId;
     }
     $foodDeleteSectionConfirmField = 'confirm_food_section_delete_' . $foodDeleteSectionId;
     $foodDeleteSectionReviewId = 'food-section-delete-review-' . $foodDeleteSectionId;
@@ -16241,14 +16463,17 @@ try {
     ]);
     $foodDeleteSectionExistsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_sections WHERE id = ? AND card_id = ?");
     $foodDeleteSectionItemsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_items WHERE section_id = ? AND card_id = ?");
+    $foodDeleteSectionVariantsStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_food_item_variants WHERE card_id = ? AND item_id IN (SELECT id FROM cms_food_items WHERE section_id = ? AND card_id = ?)");
     $foodDeleteSectionExistsStmt->execute([$foodDeleteSectionId, $foodCardId]);
     $foodDeleteSectionItemsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    $foodDeleteSectionVariantsStmt->execute([$foodCardId, $foodDeleteSectionId, $foodCardId]);
     if (httpIntegrationStatusCode($foodDeleteSectionRejectedResponse) !== 302
         || !responseHasLocationHeader($foodDeleteSectionRejectedResponse['headers'], $foodDeleteSectionErrorPath, $baseUrl)
         || (int)$foodDeleteSectionExistsStmt->fetchColumn() !== 1
         || (int)$foodDeleteSectionItemsStmt->fetchColumn() !== 2
+        || (int)$foodDeleteSectionVariantsStmt->fetchColumn() !== 2
         || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_section_delete'")->fetchColumn() !== $foodDeleteSectionLogBefore) {
-        $foodStructuredIssues[] = 'nepotvrzené smazání sekce změnilo sekci, položky nebo audit log';
+        $foodStructuredIssues[] = 'nepotvrzené smazání sekce změnilo sekci, položky, varianty nebo audit log';
     }
     $foodDeleteSectionErrorPage = fetchUrl($baseUrl . $foodDeleteSectionErrorPath, $adminSession['cookie'], 0);
     if (!str_contains($foodDeleteSectionErrorPage['body'], '<p id="food-delete-error" class="error" role="alert" aria-atomic="true">Sekci lístku nejde smazat bez potvrzení kontroly dopadu. U pole Potvrzení smazání je konkrétní nápověda.</p>')
@@ -16269,11 +16494,17 @@ try {
     ], $adminSession['cookie'], 0);
     $foodDeleteSectionExistsStmt->execute([$foodDeleteSectionId, $foodCardId]);
     $foodDeleteSectionItemsStmt->execute([$foodDeleteSectionId, $foodCardId]);
+    $foodDeleteSectionVariantPlaceholders = implode(',', array_fill(0, count($foodDeleteSectionVariantIds), '?'));
+    $foodDeleteSectionVariantsAfterStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM cms_food_item_variants WHERE id IN ({$foodDeleteSectionVariantPlaceholders})"
+    );
+    $foodDeleteSectionVariantsAfterStmt->execute($foodDeleteSectionVariantIds);
     $foodMediaStillExistsStmt->execute([$foodMediaId]);
     if (httpIntegrationStatusCode($foodDeleteSectionConfirmedResponse) !== 302
         || !responseHasLocationHeader($foodDeleteSectionConfirmedResponse['headers'], BASE_URL . '/admin/food_items.php?card=' . $foodCardId . '&msg=deleted', $baseUrl)
         || (int)$foodDeleteSectionExistsStmt->fetchColumn() !== 0
         || (int)$foodDeleteSectionItemsStmt->fetchColumn() !== 0
+        || (int)$foodDeleteSectionVariantsAfterStmt->fetchColumn() !== 0
         || (int)$foodMediaStillExistsStmt->fetchColumn() !== 1
         || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action = 'food_section_delete'")->fetchColumn() !== $foodDeleteSectionLogBefore + 1) {
         $foodStructuredIssues[] = 'potvrzené smazání sekce neprovedlo transakční cleanup, PRG nebo audit log';
@@ -21510,7 +21741,11 @@ try {
         $pdo->prepare("UPDATE cms_downloads SET dl_category_id = NULL WHERE dl_category_id = ?")->execute([$downloadCategoryIdToDelete]);
         $pdo->prepare("DELETE FROM cms_dl_categories WHERE id = ?")->execute([$downloadCategoryIdToDelete]);
     }
+    foreach ($createdFoodVariantIds as $foodVariantIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_food_item_variants WHERE id = ?")->execute([$foodVariantIdToDelete]);
+    }
     foreach ($createdFoodItemIds as $foodItemIdToDelete) {
+        $pdo->prepare("DELETE FROM cms_food_item_variants WHERE item_id = ?")->execute([$foodItemIdToDelete]);
         $pdo->prepare("DELETE FROM cms_food_items WHERE id = ?")->execute([$foodItemIdToDelete]);
     }
     foreach ($createdFoodOrderIds as $foodOrderIdToDelete) {
@@ -21529,6 +21764,7 @@ try {
             $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id = ?")->execute([$foodOrderId]);
         }
         $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$foodIdToDelete]);
+        $pdo->prepare("DELETE FROM cms_food_item_variants WHERE card_id = ?")->execute([$foodIdToDelete]);
         $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$foodIdToDelete]);
         $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$foodIdToDelete]);
         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$foodIdToDelete]);

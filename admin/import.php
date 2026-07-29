@@ -1301,8 +1301,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_food_cards
                          (id, type, title, slug, description, content, valid_from, valid_to,
-                          orders_enabled, order_email, order_instructions, is_current, is_published, status, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                          orders_enabled, order_email, order_instructions, order_fulfillment_modes, order_requested_at_enabled,
+                          is_current, is_published, status, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['food_cards'] as $row) {
                         $title = trim((string)($row['title'] ?? ''));
@@ -1333,6 +1334,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)($row['orders_enabled'] ?? 0) === 1 ? 1 : 0,
                             $orderEmail,
                             trim((string)($row['order_instructions'] ?? '')),
+                            implode(',', normalizeFoodOrderFulfillmentModes($row['order_fulfillment_modes'] ?? '')),
+                            (int)($row['order_requested_at_enabled'] ?? 0) === 1 ? 1 : 0,
                             (int)($row['is_current'] ?? 0),
                             (int)($row['is_published'] ?? 1),
                             $row['status'] ?? 'published',
@@ -1446,6 +1449,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ]);
                     }
                     $summary[] = 'Položky jídelních lístků importovány.';
+                }
+
+                if (!empty($data['food_item_variants']) && is_array($data['food_item_variants'])) {
+                    $itemExistsStmt = $pdo->prepare("SELECT id, card_id FROM cms_food_items WHERE id = ?");
+                    $ins = $pdo->prepare(
+                        "INSERT IGNORE INTO cms_food_item_variants
+                         (id, card_id, item_id, label, portion_label, price_amount, price_currency,
+                          price_note, is_available, sort_order, created_at, updated_at)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+                    );
+                    foreach ($data['food_item_variants'] as $row) {
+                        $itemId = (int)($row['item_id'] ?? 0);
+                        $itemExistsStmt->execute([$itemId]);
+                        $itemRow = $itemExistsStmt->fetch() ?: null;
+                        if (!$itemRow) {
+                            continue;
+                        }
+                        $label = mb_substr(trim((string)($row['label'] ?? '')), 0, 120);
+                        if ($label === '') {
+                            continue;
+                        }
+                        $priceAmount = normalizeFoodPriceInput((string)($row['price_amount'] ?? ''));
+                        if ($priceAmount === false) {
+                            $priceAmount = null;
+                        }
+                        $createdAt = $row['created_at'] ?? date('Y-m-d H:i:s');
+                        $updatedAt = $row['updated_at'] ?? $createdAt;
+                        $ins->execute([
+                            (int)($row['id'] ?? 0),
+                            (int)$itemRow['card_id'],
+                            $itemId,
+                            $label,
+                            mb_substr(trim((string)($row['portion_label'] ?? '')), 0, 80),
+                            $priceAmount,
+                            normalizeFoodCurrency((string)($row['price_currency'] ?? 'CZK')),
+                            mb_substr(trim((string)($row['price_note'] ?? '')), 0, 255),
+                            (int)($row['is_available'] ?? 1) === 1 ? 1 : 0,
+                            max(0, (int)($row['sort_order'] ?? 0)),
+                            $createdAt,
+                            $updatedAt,
+                        ]);
+                    }
+                    $summary[] = 'Varianty položek jídelních lístků importovány.';
                 }
 
                 // Recepty – kategorie, recepty a jejich strukturovaný obsah.

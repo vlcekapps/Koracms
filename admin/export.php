@@ -164,7 +164,7 @@ $tables = [
                                created_at, updated_at
                                FROM cms_downloads",
     'food_cards'    => "SELECT id, type, title, slug, description, content, valid_from, valid_to,
-                               orders_enabled, order_email, order_instructions,
+                               orders_enabled, order_email, order_instructions, order_fulfillment_modes, order_requested_at_enabled,
                                is_current, is_published, status, created_at, updated_at FROM cms_food_cards",
     'food_sections' => "SELECT id, card_id, title, description, serving_date, serving_time_from, serving_time_to, serving_note,
                                sort_order, created_at, updated_at FROM cms_food_sections",
@@ -172,6 +172,9 @@ $tables = [
                                price_note, portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
                                media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order, created_at, updated_at
                         FROM cms_food_items",
+    'food_item_variants' => "SELECT id, card_id, item_id, label, portion_label, price_amount, price_currency,
+                                    price_note, is_available, sort_order, created_at, updated_at
+                             FROM cms_food_item_variants",
     'recipe_categories' => "SELECT id, name, slug, description, meta_title, meta_description,
                                    sort_order, is_active, created_at, updated_at
                             FROM cms_recipe_categories",

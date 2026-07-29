@@ -446,6 +446,7 @@ function coreModuleDefinitions(): array
                 'cms_food_cards',
                 'cms_food_sections',
                 'cms_food_items',
+                'cms_food_item_variants',
                 'cms_food_orders',
                 'cms_food_order_items',
             ],
@@ -464,6 +465,7 @@ function coreModuleDefinitions(): array
             'admin_paths' => [
                 '/admin/food.php',
                 '/admin/food_items.php',
+                '/admin/food_variants.php',
                 '/admin/food_orders.php',
             ],
         ],

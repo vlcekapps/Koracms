@@ -818,6 +818,8 @@ $tables = [
         orders_enabled TINYINT(1) NOT NULL DEFAULT 0,
         order_email  VARCHAR(255) NOT NULL DEFAULT '',
         order_instructions TEXT,
+        order_fulfillment_modes VARCHAR(100) NOT NULL DEFAULT '',
+        order_requested_at_enabled TINYINT(1) NOT NULL DEFAULT 0,
         is_current   TINYINT(1)   NOT NULL DEFAULT 0,
         is_published TINYINT(1)   NOT NULL DEFAULT 1,
         status       ENUM('pending','published') NOT NULL DEFAULT 'published',
@@ -871,6 +873,24 @@ $tables = [
         INDEX idx_food_items_section_order (section_id, sort_order, id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_food_item_variants' => "CREATE TABLE IF NOT EXISTS cms_food_item_variants (
+        id             INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        card_id        INT           NOT NULL,
+        item_id        INT           NOT NULL,
+        label          VARCHAR(120)  NOT NULL,
+        portion_label  VARCHAR(80)   NOT NULL DEFAULT '',
+        price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
+        price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
+        price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+        is_available   TINYINT(1)    NOT NULL DEFAULT 1,
+        sort_order     INT           NOT NULL DEFAULT 0,
+        created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_food_item_variants_label (item_id, label),
+        INDEX idx_food_item_variants_order (item_id, sort_order, id),
+        INDEX idx_food_item_variants_card (card_id, item_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_food_orders' => "CREATE TABLE IF NOT EXISTS cms_food_orders (
         id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         card_id         INT          NOT NULL,
@@ -879,6 +899,9 @@ $tables = [
         customer_name   VARCHAR(255) NOT NULL,
         customer_email  VARCHAR(255) NOT NULL,
         customer_phone  VARCHAR(80)  NOT NULL DEFAULT '',
+        fulfillment_type VARCHAR(20) NOT NULL DEFAULT '',
+        requested_at    DATETIME     NULL DEFAULT NULL,
+        customer_address TEXT,
         customer_note   TEXT,
         status          ENUM('new','confirmed','rejected','completed','cancelled') NOT NULL DEFAULT 'new',
         total_amount    DECIMAL(10,2) NULL DEFAULT NULL,
@@ -893,14 +916,18 @@ $tables = [
         id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         order_id          INT          NOT NULL,
         item_id           INT          NULL DEFAULT NULL,
+        variant_id        INT          NULL DEFAULT NULL,
         item_title        VARCHAR(255) NOT NULL,
+        variant_label     VARCHAR(120) NOT NULL DEFAULT '',
+        portion_label     VARCHAR(80)  NOT NULL DEFAULT '',
         quantity          INT          NOT NULL DEFAULT 1,
         unit_price_amount DECIMAL(10,2) NULL DEFAULT NULL,
         price_currency    VARCHAR(3)   NOT NULL DEFAULT 'CZK',
         price_note        VARCHAR(255) NOT NULL DEFAULT '',
         sort_order        INT          NOT NULL DEFAULT 0,
         INDEX idx_food_order_items_order (order_id, sort_order, id),
-        INDEX idx_food_order_items_item (item_id)
+        INDEX idx_food_order_items_item (item_id),
+        INDEX idx_food_order_items_variant (variant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_recipe_categories' => "CREATE TABLE IF NOT EXISTS cms_recipe_categories (
@@ -1929,6 +1956,8 @@ $addColumns = [
     'cms_food_cards.orders_enabled'  => "ALTER TABLE cms_food_cards ADD COLUMN orders_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER valid_to",
     'cms_food_cards.order_email'     => "ALTER TABLE cms_food_cards ADD COLUMN order_email VARCHAR(255) NOT NULL DEFAULT '' AFTER orders_enabled",
     'cms_food_cards.order_instructions' => "ALTER TABLE cms_food_cards ADD COLUMN order_instructions TEXT AFTER order_email",
+    'cms_food_cards.order_fulfillment_modes' => "ALTER TABLE cms_food_cards ADD COLUMN order_fulfillment_modes VARCHAR(100) NOT NULL DEFAULT '' AFTER order_instructions",
+    'cms_food_cards.order_requested_at_enabled' => "ALTER TABLE cms_food_cards ADD COLUMN order_requested_at_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER order_fulfillment_modes",
     'cms_food_sections.serving_date' => "ALTER TABLE cms_food_sections ADD COLUMN serving_date DATE NULL DEFAULT NULL AFTER description",
     'cms_food_sections.serving_time_from' => "ALTER TABLE cms_food_sections ADD COLUMN serving_time_from TIME NULL DEFAULT NULL AFTER serving_date",
     'cms_food_sections.serving_time_to' => "ALTER TABLE cms_food_sections ADD COLUMN serving_time_to TIME NULL DEFAULT NULL AFTER serving_time_from",
@@ -1942,6 +1971,12 @@ $addColumns = [
     'cms_food_items.salt_g'          => "ALTER TABLE cms_food_items ADD COLUMN salt_g DECIMAL(8,2) NULL DEFAULT NULL AFTER fat_g",
     'cms_food_items.media_id'        => "ALTER TABLE cms_food_items ADD COLUMN media_id INT NULL DEFAULT NULL AFTER salt_g",
     'cms_food_items.image_alt_text'  => "ALTER TABLE cms_food_items ADD COLUMN image_alt_text VARCHAR(255) NOT NULL DEFAULT '' AFTER media_id",
+    'cms_food_orders.fulfillment_type' => "ALTER TABLE cms_food_orders ADD COLUMN fulfillment_type VARCHAR(20) NOT NULL DEFAULT '' AFTER customer_phone",
+    'cms_food_orders.requested_at'   => "ALTER TABLE cms_food_orders ADD COLUMN requested_at DATETIME NULL DEFAULT NULL AFTER fulfillment_type",
+    'cms_food_orders.customer_address' => "ALTER TABLE cms_food_orders ADD COLUMN customer_address TEXT AFTER requested_at",
+    'cms_food_order_items.variant_id' => "ALTER TABLE cms_food_order_items ADD COLUMN variant_id INT NULL DEFAULT NULL AFTER item_id",
+    'cms_food_order_items.variant_label' => "ALTER TABLE cms_food_order_items ADD COLUMN variant_label VARCHAR(120) NOT NULL DEFAULT '' AFTER item_title",
+    'cms_food_order_items.portion_label' => "ALTER TABLE cms_food_order_items ADD COLUMN portion_label VARCHAR(80) NOT NULL DEFAULT '' AFTER variant_label",
     'cms_recipe_ingredients.quantity_min' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_min DECIMAL(12,4) NULL DEFAULT NULL AFTER amount",
     'cms_recipe_ingredients.quantity_max' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_max DECIMAL(12,4) NULL DEFAULT NULL AFTER quantity_min",
 ];
@@ -4043,6 +4078,21 @@ foreach ([
         }
     } catch (\PDOException $e) {
         $log[] = "✗ Index <code>{$contactIndexName}</code> pro {$contactIndexLabel} – CHYBA: " . h($e->getMessage());
+    }
+}
+
+foreach ([
+    ['cms_food_order_items', 'idx_food_order_items_variant', '(variant_id)', 'varianty položek v objednávkách'],
+] as [$foodIndexTable, $foodIndexName, $foodIndexColumns, $foodIndexLabel]) {
+    try {
+        if (!$indexExists($foodIndexTable, $foodIndexName)) {
+            $pdo->exec("ALTER TABLE {$foodIndexTable} ADD INDEX {$foodIndexName} {$foodIndexColumns}");
+            $log[] = "✓ Index <code>{$foodIndexName}</code> pro {$foodIndexLabel} přidán – OK";
+        } else {
+            $log[] = "· Index <code>{$foodIndexName}</code> pro {$foodIndexLabel} již existuje – přeskočeno";
+        }
+    } catch (\PDOException $e) {
+        $log[] = "✗ Index <code>{$foodIndexName}</code> pro {$foodIndexLabel} – CHYBA: " . h($e->getMessage());
     }
 }
 

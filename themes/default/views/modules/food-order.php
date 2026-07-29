@@ -5,6 +5,7 @@ $fieldErrors = is_array($fieldErrors ?? null) ? $fieldErrors : [];
 $errors = is_array($errors ?? null) ? $errors : [];
 $formData = is_array($formData ?? null) ? $formData : [];
 $referenceCode = trim((string)($referenceCode ?? ''));
+$fulfillmentModes = normalizeFoodOrderFulfillmentModes($fulfillmentModes ?? []);
 $fieldErrorId = static fn (string $key): string => 'food-order-' . str_replace('_', '-', $key) . '-error';
 $fieldValue = static function (string $key) use ($formData): string {
     return (string)($formData[$key] ?? '');
@@ -84,24 +85,97 @@ if (isset($fieldErrors['items'])) {
             <?php foreach ($selectableItems as $item): ?>
               <?php
               $itemId = (int)($item['id'] ?? 0);
-              $quantityId = 'food-order-qty-' . $itemId;
-              $itemPrice = foodPriceLabel(
-                  $item['price_amount'] !== null ? (string)$item['price_amount'] : null,
-                  (string)($item['price_currency'] ?? 'CZK'),
-                  (string)($item['price_note'] ?? '')
-              );
-              ?>
-              <div class="food-order-item">
-                <div>
-                  <label for="<?= h($quantityId) ?>"><strong><?= h((string)($item['title'] ?? '')) ?></strong></label>
-                  <?php if ($itemPrice !== ''): ?><p class="meta-row meta-row--tight"><?= h($itemPrice) ?></p><?php endif; ?>
+                $itemVariants = is_array($item['variants'] ?? null) ? array_values(array_filter(
+                    $item['variants'],
+                    static fn ($variant): bool => is_array($variant) && (int)($variant['is_available'] ?? 1) === 1
+                )) : [];
+                ?>
+              <?php if ($itemVariants !== []): ?>
+                <fieldset class="food-order-item-group">
+                  <legend><?= h((string)($item['title'] ?? '')) ?></legend>
+                  <?php foreach ($itemVariants as $variant): ?>
+                    <?php
+                      $choiceKey = foodOrderChoiceKey($itemId, (int)$variant['id']);
+                      $quantityId = 'food-order-qty-' . str_replace('-', '_', $choiceKey);
+                      ?>
+                    <div class="food-order-item">
+                      <div>
+                        <label for="<?= h($quantityId) ?>"><strong><?= h(foodItemVariantDisplayLabel($variant)) ?></strong></label>
+                        <?php if ((string)$variant['price_label'] !== ''): ?><p class="meta-row meta-row--tight"><?= h((string)$variant['price_label']) ?></p><?php endif; ?>
+                      </div>
+                      <input id="<?= h($quantityId) ?>" class="form-control form-control--compact" type="number" min="0" max="99" step="1"
+                             name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric">
+                    </div>
+                  <?php endforeach; ?>
+                </fieldset>
+              <?php else: ?>
+                <?php
+                $choiceKey = foodOrderChoiceKey($itemId);
+                  $quantityId = 'food-order-qty-' . str_replace('-', '_', $choiceKey);
+                  $itemPrice = foodPriceLabel(
+                      $item['price_amount'] !== null ? (string)$item['price_amount'] : null,
+                      (string)($item['price_currency'] ?? 'CZK'),
+                      (string)($item['price_note'] ?? '')
+                  );
+                  ?>
+                <div class="food-order-item">
+                  <div>
+                    <label for="<?= h($quantityId) ?>"><strong><?= h((string)($item['title'] ?? '')) ?></strong></label>
+                    <?php if ($itemPrice !== ''): ?><p class="meta-row meta-row--tight"><?= h($itemPrice) ?></p><?php endif; ?>
+                  </div>
+                  <input id="<?= h($quantityId) ?>" class="form-control form-control--compact" type="number" min="0" max="99" step="1"
+                         name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric">
                 </div>
-                <input id="<?= h($quantityId) ?>" class="form-control form-control--compact" type="number" min="0" max="99" step="1"
-                       name="qty[<?= $itemId ?>]" value="<?= h((string)($quantities[$itemId] ?? '0')) ?>" inputmode="numeric">
-              </div>
+              <?php endif; ?>
             <?php endforeach; ?>
           </div>
         </fieldset>
+
+        <?php if ($fulfillmentModes !== [] || (int)($card['order_requested_at_enabled'] ?? 0) === 1): ?>
+          <fieldset class="form-fieldset">
+            <legend>Převzetí poptávky</legend>
+            <?php if (count($fulfillmentModes) === 1): ?>
+              <input type="hidden" name="fulfillment_type" value="<?= h($fulfillmentModes[0]) ?>">
+              <p><strong>Způsob převzetí:</strong> <?= h(foodOrderFulfillmentLabel($fulfillmentModes[0])) ?></p>
+            <?php elseif (count($fulfillmentModes) > 1): ?>
+              <fieldset class="form-fieldset">
+                <legend>Způsob převzetí <span aria-hidden="true">*</span></legend>
+                <p id="food-order-fulfillment-help" class="field-help field-help--flush">Vyberte jednu možnost. Provozovatel ji potvrdí spolu s poptávkou.</p>
+                <?php foreach ($fulfillmentModes as $fulfillmentMode): ?>
+                  <?php $fulfillmentId = 'food-order-fulfillment-' . str_replace('_', '-', $fulfillmentMode); ?>
+                  <label class="check-row" for="<?= h($fulfillmentId) ?>">
+                    <input id="<?= h($fulfillmentId) ?>" type="radio" name="fulfillment_type" value="<?= h($fulfillmentMode) ?>" required
+                           <?= $fieldValue('fulfillment_type') === $fulfillmentMode ? 'checked' : '' ?>
+                           <?= $fieldAttributes('fulfillment_type', ['food-order-fulfillment-help']) ?>>
+                    <span><?= h(foodOrderFulfillmentLabel($fulfillmentMode)) ?></span>
+                  </label>
+                <?php endforeach; ?>
+                <?php if (isset($fieldErrors['fulfillment_type'])): ?><small id="<?= h($fieldErrorId('fulfillment_type')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['fulfillment_type']) ?></small><?php endif; ?>
+              </fieldset>
+            <?php endif; ?>
+
+            <?php if (in_array('delivery', $fulfillmentModes, true)): ?>
+              <div class="field">
+                <label for="customer_address">Adresa doručení <span class="field-help">(povinná při volbě Doručení)</span></label>
+                <textarea id="customer_address" name="customer_address" class="form-control" autocomplete="street-address" maxlength="1000"
+                          <?= $fieldAttributes('customer_address', ['food-order-address-help']) ?>><?= h($fieldValue('customer_address')) ?></textarea>
+                <small id="food-order-address-help" class="field-help">Uveďte ulici, číslo, obec a PSČ. Při jiném způsobu převzetí pole nechte prázdné.</small>
+                <?php if (isset($fieldErrors['customer_address'])): ?><small id="<?= h($fieldErrorId('customer_address')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['customer_address']) ?></small><?php endif; ?>
+              </div>
+            <?php endif; ?>
+
+            <?php if ((int)($card['order_requested_at_enabled'] ?? 0) === 1): ?>
+              <div class="field">
+                <label for="requested_at">Požadovaný termín <span aria-hidden="true">*</span></label>
+                <input type="datetime-local" id="requested_at" name="requested_at" class="form-control" required aria-required="true"
+                       value="<?= h($fieldValue('requested_at')) ?>"
+                       <?= $fieldAttributes('requested_at', ['food-order-requested-at-help']) ?>>
+                <small id="food-order-requested-at-help" class="field-help">Vyberte budoucí datum a čas. Provozovatel termín teprve potvrdí.</small>
+                <?php if (isset($fieldErrors['requested_at'])): ?><small id="<?= h($fieldErrorId('requested_at')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['requested_at']) ?></small><?php endif; ?>
+              </div>
+            <?php endif; ?>
+          </fieldset>
+        <?php endif; ?>
 
         <fieldset class="form-fieldset">
           <legend>Kontaktní údaje</legend>
@@ -128,7 +202,10 @@ if (isset($fieldErrors['items'])) {
 
           <div class="field">
             <label for="customer_note">Poznámka</label>
-            <textarea id="customer_note" name="customer_note" class="form-control"><?= h($fieldValue('customer_note')) ?></textarea>
+            <textarea id="customer_note" name="customer_note" class="form-control" maxlength="3000"
+                      <?= $fieldAttributes('customer_note', ['food-order-note-help']) ?>><?= h($fieldValue('customer_note')) ?></textarea>
+            <small id="food-order-note-help" class="field-help">Volitelné upřesnění, nejvýše 3000 znaků.</small>
+            <?php if (isset($fieldErrors['customer_note'])): ?><small id="<?= h($fieldErrorId('customer_note')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['customer_note']) ?></small><?php endif; ?>
           </div>
 
           <div class="field">

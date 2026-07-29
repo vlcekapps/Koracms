@@ -423,7 +423,9 @@ CREATE TABLE IF NOT EXISTS cms_food_cards (
   id INT,
   orders_enabled TINYINT(1),
   order_email VARCHAR(255),
-  order_instructions TEXT
+  order_instructions TEXT,
+  order_fulfillment_modes VARCHAR(100),
+  order_requested_at_enabled TINYINT(1)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_sections (
   id INT,
@@ -454,17 +456,36 @@ CREATE TABLE IF NOT EXISTS cms_food_items (
   dietary_flags VARCHAR(255),
   is_available TINYINT(1)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_food_item_variants (
+  id INT,
+  card_id INT,
+  item_id INT,
+  label VARCHAR(120),
+  portion_label VARCHAR(80),
+  price_amount DECIMAL(10,2),
+  is_available TINYINT(1),
+  sort_order INT,
+  UNIQUE KEY uq_food_item_variants_label (item_id, label),
+  KEY idx_food_item_variants_order (item_id, sort_order, id),
+  KEY idx_food_item_variants_card (card_id, item_id)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_orders (
   id INT,
   card_id INT,
   reference_code VARCHAR(32),
   customer_email VARCHAR(255),
+  fulfillment_type VARCHAR(20),
+  requested_at DATETIME,
+  customer_address TEXT,
   status VARCHAR(20)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_food_order_items (
   id INT,
   order_id INT,
+  variant_id INT,
   item_title VARCHAR(255),
+  variant_label VARCHAR(120),
+  portion_label VARCHAR(80),
   quantity INT
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_recipe_categories (
@@ -716,6 +737,8 @@ PHP,
 // cms_food_cards.orders_enabled
 // cms_food_cards.order_email
 // cms_food_cards.order_instructions
+// cms_food_cards.order_fulfillment_modes
+// cms_food_cards.order_requested_at_enabled
 // cms_food_sections
 // cms_food_sections.serving_date
 // cms_food_sections.serving_time_from
@@ -736,12 +759,23 @@ PHP,
 // idx_food_items_section_order
 // idx_food_items_media
 // ft_food_items_search
+// cms_food_item_variants
+// uq_food_item_variants_label
+// idx_food_item_variants_order
+// idx_food_item_variants_card
 // cms_food_orders
+// cms_food_orders.fulfillment_type
+// cms_food_orders.requested_at
+// cms_food_orders.customer_address
 // uq_food_orders_reference
 // idx_food_orders_card_status
 // cms_food_order_items
 // idx_food_order_items_order
 // idx_food_order_items_item
+// cms_food_order_items.variant_id
+// cms_food_order_items.variant_label
+// cms_food_order_items.portion_label
+// idx_food_order_items_variant
 // cms_recipe_categories
 // uq_recipe_categories_slug
 // idx_recipe_categories_public
@@ -915,6 +949,18 @@ assertSchemaParityAuditFails(
     'Recipe fresh install column guard',
     $missingRecipeInstallColumnFiles,
     'install.php fresh schema is missing critical column cms_recipes.dietary_flags.'
+);
+
+$missingFoodVariantInstallColumnFiles = $validFiles;
+$missingFoodVariantInstallColumnFiles['install.php'] = str_replace(
+    "  variant_label VARCHAR(120),\n",
+    '',
+    $missingFoodVariantInstallColumnFiles['install.php']
+);
+assertSchemaParityAuditFails(
+    'Food variant snapshot fresh install column guard',
+    $missingFoodVariantInstallColumnFiles,
+    'install.php fresh schema is missing critical column cms_food_order_items.variant_label.'
 );
 
 $missingMigrationSnippetFiles = $validFiles;

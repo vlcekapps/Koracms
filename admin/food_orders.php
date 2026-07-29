@@ -8,6 +8,11 @@ $q = trim((string)($_GET['q'] ?? ''));
 $requestedStatus = trim((string)($_GET['status'] ?? 'all'));
 $statusLabels = foodOrderStatusLabels();
 $statusFilter = array_key_exists($requestedStatus, $statusLabels) ? $requestedStatus : 'all';
+$requestedFulfillment = trim((string)($_GET['fulfillment'] ?? 'all'));
+$fulfillmentDefinitions = foodOrderFulfillmentDefinitions();
+$fulfillmentFilter = array_key_exists($requestedFulfillment, $fulfillmentDefinitions)
+    ? $requestedFulfillment
+    : 'all';
 
 $whereParts = ['1=1'];
 $params = [];
@@ -21,10 +26,15 @@ if ($statusFilter !== 'all') {
     $whereParts[] = 'o.status = ?';
     $params[] = $statusFilter;
 }
+if ($fulfillmentFilter !== 'all') {
+    $whereParts[] = 'o.fulfillment_type = ?';
+    $params[] = $fulfillmentFilter;
+}
 
 $stmt = $pdo->prepare(
     "SELECT o.id, o.card_id, o.card_title, o.reference_code, o.customer_name, o.customer_email,
-            o.customer_phone, o.status, o.total_amount, o.price_currency, o.created_at, c.slug AS card_slug
+            o.customer_phone, o.fulfillment_type, o.requested_at, o.status,
+            o.total_amount, o.price_currency, o.created_at, c.slug AS card_slug
      FROM cms_food_orders o
      LEFT JOIN cms_food_cards c ON c.id = o.card_id
      WHERE " . implode(' AND ', $whereParts) . "
@@ -56,8 +66,17 @@ adminHeader('Objednávkové poptávky z lístků');
       <?php endforeach; ?>
     </select>
   </div>
+  <div>
+    <label for="fulfillment">Převzetí</label>
+    <select id="fulfillment" name="fulfillment">
+      <option value="all"<?= $fulfillmentFilter === 'all' ? ' selected' : '' ?>>Vše</option>
+      <?php foreach ($fulfillmentDefinitions as $fulfillmentKey => $fulfillmentLabel): ?>
+        <option value="<?= h($fulfillmentKey) ?>"<?= $fulfillmentFilter === $fulfillmentKey ? ' selected' : '' ?>><?= h($fulfillmentLabel) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
   <button type="submit" class="btn">Použít filtr</button>
-  <?php if ($q !== '' || $statusFilter !== 'all'): ?>
+  <?php if ($q !== '' || $statusFilter !== 'all' || $fulfillmentFilter !== 'all'): ?>
     <a href="food_orders.php" class="btn">Zrušit filtr</a>
   <?php endif; ?>
 </form>
@@ -73,6 +92,7 @@ adminHeader('Objednávkové poptávky z lístků');
         <th scope="col">Referenční kód</th>
         <th scope="col">Lístek</th>
         <th scope="col">Zákazník</th>
+        <th scope="col">Převzetí</th>
         <th scope="col">Stav</th>
         <th scope="col">Součet</th>
         <th scope="col">Vytvořeno</th>
@@ -93,6 +113,12 @@ adminHeader('Objednávkové poptávky z lístků');
             <?= h((string)$order['customer_name']) ?>
             <br><small class="table-meta"><?= h((string)$order['customer_email']) ?></small>
             <br><small class="table-meta"><?= h((string)$order['customer_phone']) ?></small>
+          </td>
+          <td>
+            <?= h(foodOrderFulfillmentLabel((string)($order['fulfillment_type'] ?? '')) ?: 'Neuvedeno') ?>
+            <?php if (!empty($order['requested_at'])): ?>
+              <br><small class="table-meta"><?= h(formatCzechDateTime((string)$order['requested_at'])) ?></small>
+            <?php endif; ?>
           </td>
           <td><?= h(foodOrderStatusLabel((string)$order['status'])) ?></td>
           <td><?= h(foodPriceLabel($order['total_amount'] !== null ? (string)$order['total_amount'] : null, (string)$order['price_currency'])) ?></td>

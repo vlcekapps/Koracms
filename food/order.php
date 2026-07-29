@@ -45,10 +45,13 @@ $card = hydrateFoodCardPresentation($cardRow);
 $card['sections'] = foodLoadCardSections($pdo, (int)$card['id']);
 $card = hydrateFoodCardPresentation($card);
 $selectableItems = foodOrderSelectableItems($card['sections']);
-$itemsById = [];
-foreach ($selectableItems as $selectableItem) {
-    $itemsById[(int)$selectableItem['id']] = $selectableItem;
+$selectableChoices = foodOrderSelectableChoices($card['sections']);
+$choicesByKey = [];
+foreach ($selectableChoices as $selectableChoice) {
+    $choicesByKey[(string)$selectableChoice['key']] = $selectableChoice;
 }
+$fulfillmentModes = normalizeFoodOrderFulfillmentModes($card['order_fulfillment_modes'] ?? '');
+$defaultFulfillmentType = count($fulfillmentModes) === 1 ? $fulfillmentModes[0] : '';
 
 $errors = [];
 $fieldErrors = [];
@@ -60,6 +63,11 @@ $formData = [
     'customer_name' => $isPostRequest ? trim((string)($_POST['customer_name'] ?? '')) : $contactDefaults['name'],
     'customer_email' => $isPostRequest ? trim((string)($_POST['customer_email'] ?? '')) : $contactDefaults['email'],
     'customer_phone' => $isPostRequest ? trim((string)($_POST['customer_phone'] ?? '')) : $contactDefaults['phone'],
+    'fulfillment_type' => $isPostRequest
+        ? normalizeFoodOrderFulfillmentType((string)($_POST['fulfillment_type'] ?? ''))
+        : $defaultFulfillmentType,
+    'requested_at' => trim((string)($_POST['requested_at'] ?? '')),
+    'customer_address' => trim((string)($_POST['customer_address'] ?? '')),
     'customer_note' => trim((string)($_POST['customer_note'] ?? '')),
     'quantities' => [],
 ];
@@ -88,6 +96,39 @@ if ($isPostRequest) {
             $errors[] = 'Zadejte telefon pro upřesnění poptávky.';
             $fieldErrors['customer_phone'] = 'Zadejte telefon pro upřesnění poptávky.';
         }
+        if ($fulfillmentModes === []) {
+            $formData['fulfillment_type'] = '';
+        } elseif (!in_array($formData['fulfillment_type'], $fulfillmentModes, true)) {
+            $errors[] = 'Vyberte dostupný způsob převzetí.';
+            $fieldErrors['fulfillment_type'] = 'Vyberte jednu z nabízených možností převzetí.';
+        }
+        if ($formData['fulfillment_type'] === 'delivery') {
+            if ($formData['customer_address'] === '') {
+                $errors[] = 'Pro doručení zadejte adresu.';
+                $fieldErrors['customer_address'] = 'Doplňte ulici, číslo, obec a PSČ pro doručení.';
+            } elseif (mb_strlen($formData['customer_address']) > 1000) {
+                $errors[] = 'Adresa doručení je příliš dlouhá.';
+                $fieldErrors['customer_address'] = 'Zkraťte adresu nejvýše na 1000 znaků.';
+            }
+        } else {
+            $formData['customer_address'] = '';
+        }
+        if (mb_strlen($formData['customer_note']) > 3000) {
+            $errors[] = 'Poznámka je příliš dlouhá.';
+            $fieldErrors['customer_note'] = 'Zkraťte poznámku nejvýše na 3000 znaků.';
+        }
+        $requestedAt = normalizeFoodOrderRequestedAt($formData['requested_at']);
+        if ((int)($card['order_requested_at_enabled'] ?? 0) === 1) {
+            if ($requestedAt === null || $requestedAt === false) {
+                $errors[] = 'Zadejte platný požadovaný termín.';
+                $fieldErrors['requested_at'] = 'Vyberte platné datum a čas.';
+            } elseif (!foodOrderRequestedAtIsFuture($requestedAt)) {
+                $errors[] = 'Požadovaný termín musí být v budoucnosti.';
+                $fieldErrors['requested_at'] = 'Vyberte budoucí datum a čas.';
+            }
+        } else {
+            $requestedAt = null;
+        }
         if (!captchaVerify((string)($_POST['captcha'] ?? ''))) {
             $captchaError = publicCaptchaErrorMessage();
             $errors[] = $captchaError;
@@ -96,16 +137,22 @@ if ($isPostRequest) {
 
         $rawQuantities = is_array($_POST['qty'] ?? null) ? (array)$_POST['qty'] : [];
         $quantities = [];
-        foreach ($rawQuantities as $rawItemId => $rawQuantity) {
-            $itemId = (int)$rawItemId;
+        foreach ($rawQuantities as $rawChoiceKey => $rawQuantity) {
+            $choiceKey = trim((string)$rawChoiceKey);
+            if (!isset($choicesByKey[$choiceKey]) && ctype_digit($choiceKey)) {
+                $legacyChoiceKey = foodOrderChoiceKey((int)$choiceKey);
+                if (isset($choicesByKey[$legacyChoiceKey])) {
+                    $choiceKey = $legacyChoiceKey;
+                }
+            }
             $quantity = (int)$rawQuantity;
-            if ($itemId <= 0 || !isset($itemsById[$itemId])) {
+            if ($choiceKey === '' || !isset($choicesByKey[$choiceKey])) {
                 continue;
             }
             $quantity = max(0, min(99, $quantity));
-            $formData['quantities'][$itemId] = (string)$quantity;
+            $formData['quantities'][$choiceKey] = (string)$quantity;
             if ($quantity > 0) {
-                $quantities[$itemId] = $quantity;
+                $quantities[$choiceKey] = $quantity;
             }
         }
 
@@ -114,7 +161,7 @@ if ($isPostRequest) {
             $fieldErrors['items'] = 'Vyberte alespoň jednu dostupnou položku a zadejte množství.';
         }
 
-        $snapshot = foodBuildOrderSnapshot($itemsById, $quantities);
+        $snapshot = foodBuildOrderSnapshot($choicesByKey, $quantities);
         if ($snapshot['items'] === [] && $quantities !== []) {
             $errors[] = 'Vybrané položky už nejsou dostupné.';
             $fieldErrors['items'] = 'Vybrané položky už nejsou dostupné.';
@@ -126,9 +173,10 @@ if ($isPostRequest) {
                 $pdo->beginTransaction();
                 $pdo->prepare(
                     "INSERT INTO cms_food_orders
-                     (card_id, card_title, reference_code, customer_name, customer_email, customer_phone, customer_note,
+                     (card_id, card_title, reference_code, customer_name, customer_email, customer_phone,
+                      fulfillment_type, requested_at, customer_address, customer_note,
                       status, total_amount, price_currency, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, NOW(), NOW())"
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, NOW(), NOW())"
                 )->execute([
                     (int)$card['id'],
                     (string)$card['title'],
@@ -136,6 +184,9 @@ if ($isPostRequest) {
                     $formData['customer_name'],
                     $formData['customer_email'],
                     $formData['customer_phone'],
+                    $formData['fulfillment_type'],
+                    $requestedAt,
+                    $formData['fulfillment_type'] === 'delivery' ? $formData['customer_address'] : '',
                     $formData['customer_note'],
                     $snapshot['total'],
                     $snapshot['currency'],
@@ -143,14 +194,18 @@ if ($isPostRequest) {
                 $orderId = (int)$pdo->lastInsertId();
                 $insertItem = $pdo->prepare(
                     "INSERT INTO cms_food_order_items
-                     (order_id, item_id, item_title, quantity, unit_price_amount, price_currency, price_note, sort_order)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                     (order_id, item_id, variant_id, item_title, variant_label, portion_label,
+                      quantity, unit_price_amount, price_currency, price_note, sort_order)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
                 foreach ($snapshot['items'] as $snapshotItem) {
                     $insertItem->execute([
                         $orderId,
                         (int)$snapshotItem['item_id'],
+                        $snapshotItem['variant_id'],
                         (string)$snapshotItem['item_title'],
+                        (string)$snapshotItem['variant_label'],
+                        (string)$snapshotItem['portion_label'],
                         (int)$snapshotItem['quantity'],
                         $snapshotItem['unit_price_amount'],
                         (string)$snapshotItem['price_currency'],
@@ -178,16 +233,35 @@ if ($isPostRequest) {
                         'Jméno: ' . $formData['customer_name'],
                         'E-mail: ' . $formData['customer_email'],
                         'Telefon: ' . $formData['customer_phone'],
-                        '',
-                        'Položky:',
                     ];
+                    $fulfillmentLabel = foodOrderFulfillmentLabel($formData['fulfillment_type']);
+                    if ($fulfillmentLabel !== '') {
+                        $lines[] = 'Způsob převzetí: ' . $fulfillmentLabel;
+                    }
+                    if ($requestedAt !== null && $requestedAt !== false) {
+                        $lines[] = 'Požadovaný termín: ' . formatCzechDateTime($requestedAt);
+                    }
+                    if ($formData['fulfillment_type'] === 'delivery' && $formData['customer_address'] !== '') {
+                        $lines[] = 'Adresa doručení: ' . $formData['customer_address'];
+                    }
+                    $lines[] = '';
+                    $lines[] = 'Položky:';
                     foreach ($snapshot['items'] as $snapshotItem) {
                         $priceLabel = foodPriceLabel(
                             $snapshotItem['unit_price_amount'] !== null ? (string)$snapshotItem['unit_price_amount'] : null,
                             (string)$snapshotItem['price_currency'],
                             (string)$snapshotItem['price_note']
                         );
-                        $lines[] = '- ' . (int)$snapshotItem['quantity'] . '× ' . (string)$snapshotItem['item_title']
+                        $variantLabel = trim((string)$snapshotItem['variant_label']);
+                        $portionLabel = trim((string)$snapshotItem['portion_label']);
+                        $selectionLabel = (string)$snapshotItem['item_title'];
+                        if ($variantLabel !== '') {
+                            $selectionLabel .= ' – ' . $variantLabel;
+                        }
+                        if ($portionLabel !== '') {
+                            $selectionLabel .= ' (' . $portionLabel . ')';
+                        }
+                        $lines[] = '- ' . (int)$snapshotItem['quantity'] . '× ' . $selectionLabel
                             . ($priceLabel !== '' ? ' (' . $priceLabel . ')' : '');
                     }
                     if ($snapshot['total'] !== null) {
@@ -224,6 +298,7 @@ renderPublicPage([
     'view_data' => [
         'card' => $card,
         'selectableItems' => $selectableItems,
+        'fulfillmentModes' => $fulfillmentModes,
         'success' => $success,
         'errors' => $errors,
         'fieldErrors' => $fieldErrors,

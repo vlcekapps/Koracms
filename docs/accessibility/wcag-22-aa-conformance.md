@@ -26,6 +26,7 @@ Oficiální zdroje:
 - Veřejná homepage a default theme layout.
 - Blog index, detail článku, dlouhý článek s osnovou, kategorie, štítky a série.
 - Modulová blogová příloha: `docs/accessibility/modules/blog.md`.
+- Modulová Food příloha: `docs/accessibility/modules/food.md`.
 - Vyhledávání, widgety, content snippety, media picker a PDF preview.
 - Form Builder, komentáře, kontakt, chat, ankety, newsletter subscribe.
 - Galerie, média, downloads, board, events, places, reservations, food a podcast.

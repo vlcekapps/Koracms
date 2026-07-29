@@ -29,6 +29,8 @@ $card = $card ?: [
     'orders_enabled' => 0,
     'order_email' => '',
     'order_instructions' => '',
+    'order_fulfillment_modes' => '',
+    'order_requested_at_enabled' => 0,
     'is_current' => 0,
     'is_published' => 1,
     'status' => 'published',
@@ -176,6 +178,26 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 
     <label for="order-instructions">Instrukce pro objednávku</label>
     <textarea id="order-instructions" name="order_instructions" rows="3" aria-describedby="food-orders-help"><?= h((string)($card['order_instructions'] ?? '')) ?></textarea>
+
+    <fieldset class="admin-fieldset-card">
+      <legend>Způsob převzetí</legend>
+      <p id="food-fulfillment-help" class="field-help field-help--flush">Volitelné. Když nevyberete žádnou možnost, formulář zůstane stejně jednoduchý jako dosud. Při více možnostech si návštěvník jednu zvolí.</p>
+      <?php foreach (foodOrderFulfillmentDefinitions() as $fulfillmentKey => $fulfillmentLabel): ?>
+        <label class="admin-checkbox-label">
+          <input type="checkbox" name="order_fulfillment_modes[]" value="<?= h($fulfillmentKey) ?>"
+                 aria-describedby="food-fulfillment-help"
+                 <?= in_array($fulfillmentKey, $card['order_fulfillment_mode_values'] ?? [], true) ? 'checked' : '' ?>>
+          <?= h($fulfillmentLabel) ?>
+        </label>
+      <?php endforeach; ?>
+    </fieldset>
+
+    <label class="admin-checkbox-label">
+      <input type="checkbox" name="order_requested_at_enabled" value="1" aria-describedby="food-requested-at-help"
+             <?= (int)($card['order_requested_at_enabled'] ?? 0) === 1 ? 'checked' : '' ?>>
+      Umožnit návštěvníkovi uvést požadovaný termín
+    </label>
+    <small id="food-requested-at-help" class="field-help">Termín je ve veřejném formuláři povinný, pokud tuto volbu zapnete. CMS přijme pouze platný budoucí datum a čas.</small>
   </fieldset>
 
   <?php if (currentUserHasCapability('content_approve_shared')): ?>

@@ -868,7 +868,7 @@ function adminRouteModuleRequirements(): array
         ],
         'food' => [
             'message' => adminRouteModuleDisabledMessage('food'),
-            'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php', 'food_items.php', 'food_orders.php', 'food_order.php'],
+            'files' => ['food.php', 'food_form.php', 'food_save.php', 'food_delete.php', 'food_items.php', 'food_variants.php', 'food_orders.php', 'food_order.php'],
         ],
         'recipes' => [
             'message' => adminRouteModuleDisabledMessage('recipes'),

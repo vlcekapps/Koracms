@@ -2758,6 +2758,30 @@ body.theme-public textarea.form-control {
   white-space: nowrap;
 }
 
+.food-menu-item__variants {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  margin: 0;
+  min-width: 10rem;
+}
+
+.food-menu-item__variants div {
+  display: grid;
+  gap: 0.15rem 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.food-menu-item__variants dt {
+  font-weight: 600;
+}
+
+.food-menu-item__variants dd {
+  margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .food-menu-item__description,
 .food-menu-item__meta,
 .food-menu-notes {
@@ -2816,6 +2840,20 @@ body.theme-public textarea.form-control {
   padding: 0.85rem;
 }
 
+.food-order-item-group {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  border: 1px solid var(--border, #d8dee8);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+}
+
+.food-order-item-group legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+}
+
 .food-allergen-legend {
   border-top: 1px solid var(--border, #d8dee8);
   padding-top: 1rem;
@@ -2853,6 +2891,15 @@ body.theme-public textarea.form-control {
   }
 
   .food-menu-item__price {
+    white-space: normal;
+  }
+
+  .food-menu-item__variants,
+  .food-menu-item__variants div {
+    grid-template-columns: 1fr;
+  }
+
+  .food-menu-item__variants dd {
     white-space: normal;
   }
 

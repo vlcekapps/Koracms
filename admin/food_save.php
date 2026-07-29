@@ -17,6 +17,8 @@ $validTo = trim($_POST['valid_to'] ?? '') ?: null;
 $ordersEnabled = isset($_POST['orders_enabled']) ? 1 : 0;
 $orderEmail = trim((string)($_POST['order_email'] ?? ''));
 $orderInstructions = trim((string)($_POST['order_instructions'] ?? ''));
+$orderFulfillmentModes = normalizeFoodOrderFulfillmentModes($_POST['order_fulfillment_modes'] ?? []);
+$orderRequestedAtEnabled = isset($_POST['order_requested_at_enabled']) ? 1 : 0;
 $fallback = BASE_URL . '/admin/food_form.php' . ($id ? '?id=' . $id : '');
 $isValidDate = static function (string $value): bool {
     $dateTime = DateTime::createFromFormat('Y-m-d', $value);
@@ -93,6 +95,7 @@ if ($existingCard) {
             "UPDATE cms_food_cards
              SET type = ?, title = ?, slug = ?, description = ?, content = ?,
                  valid_from = ?, valid_to = ?, orders_enabled = ?, order_email = ?, order_instructions = ?,
+                 order_fulfillment_modes = ?, order_requested_at_enabled = ?,
                  is_current = ?, is_published = ?, updated_at = NOW()
              WHERE id = ?"
         )->execute([
@@ -106,6 +109,8 @@ if ($existingCard) {
             $ordersEnabled,
             $orderEmail,
             $orderInstructions,
+            implode(',', $orderFulfillmentModes),
+            $orderRequestedAtEnabled,
             $isCurrent,
             $isPublished,
             $id,
@@ -115,6 +120,7 @@ if ($existingCard) {
             "UPDATE cms_food_cards
              SET type = ?, title = ?, slug = ?, description = ?, content = ?,
                  valid_from = ?, valid_to = ?, orders_enabled = ?, order_email = ?, order_instructions = ?,
+                 order_fulfillment_modes = ?, order_requested_at_enabled = ?,
                  updated_at = NOW()
              WHERE id = ?"
         )->execute([
@@ -128,6 +134,8 @@ if ($existingCard) {
             $ordersEnabled,
             $orderEmail,
             $orderInstructions,
+            implode(',', $orderFulfillmentModes),
+            $orderRequestedAtEnabled,
             $id,
         ]);
     }
@@ -143,6 +151,8 @@ if ($existingCard) {
         'orders_enabled' => $ordersEnabled,
         'order_email' => $orderEmail,
         'order_instructions' => $orderInstructions,
+        'order_fulfillment_modes' => implode(',', $orderFulfillmentModes),
+        'order_requested_at_enabled' => $orderRequestedAtEnabled,
         'is_current' => $canApproveContent ? $isCurrent : (int)($existingCard['is_current'] ?? 0),
         'is_published' => $canApproveContent ? $isPublished : (int)($existingCard['is_published'] ?? 0),
         'status' => (string)($existingCard['status'] ?? 'published'),
@@ -156,8 +166,9 @@ if ($existingCard) {
     $pdo->prepare(
         "INSERT INTO cms_food_cards
          (type, title, slug, description, content, valid_from, valid_to, orders_enabled, order_email, order_instructions,
+          order_fulfillment_modes, order_requested_at_enabled,
           is_current, is_published, status, author_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     )->execute([
         $type,
         $title,
@@ -169,6 +180,8 @@ if ($existingCard) {
         $ordersEnabled,
         $orderEmail,
         $orderInstructions,
+        implode(',', $orderFulfillmentModes),
+        $orderRequestedAtEnabled,
         $current,
         $visible,
         $status,

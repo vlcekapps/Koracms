@@ -830,6 +830,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             orders_enabled TINYINT(1) NOT NULL DEFAULT 0,
             order_email  VARCHAR(255) NOT NULL DEFAULT '',
             order_instructions TEXT,
+            order_fulfillment_modes VARCHAR(100) NOT NULL DEFAULT '',
+            order_requested_at_enabled TINYINT(1) NOT NULL DEFAULT 0,
             is_current   TINYINT(1)   NOT NULL DEFAULT 0,
             is_published TINYINT(1)   NOT NULL DEFAULT 1,
             status       ENUM('pending','published') NOT NULL DEFAULT 'published',
@@ -886,6 +888,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FULLTEXT INDEX ft_food_items_search (title, description)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_item_variants (
+            id             INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            card_id        INT           NOT NULL,
+            item_id        INT           NOT NULL,
+            label          VARCHAR(120)  NOT NULL,
+            portion_label  VARCHAR(80)   NOT NULL DEFAULT '',
+            price_amount   DECIMAL(10,2) NULL DEFAULT NULL,
+            price_currency VARCHAR(3)    NOT NULL DEFAULT 'CZK',
+            price_note     VARCHAR(255)  NOT NULL DEFAULT '',
+            is_available   TINYINT(1)    NOT NULL DEFAULT 1,
+            sort_order     INT           NOT NULL DEFAULT 0,
+            created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_food_item_variants_label (item_id, label),
+            INDEX idx_food_item_variants_order (item_id, sort_order, id),
+            INDEX idx_food_item_variants_card (card_id, item_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_food_orders (
             id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             card_id         INT          NOT NULL,
@@ -894,6 +914,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             customer_name   VARCHAR(255) NOT NULL,
             customer_email  VARCHAR(255) NOT NULL,
             customer_phone  VARCHAR(80)  NOT NULL DEFAULT '',
+            fulfillment_type VARCHAR(20) NOT NULL DEFAULT '',
+            requested_at    DATETIME     NULL DEFAULT NULL,
+            customer_address TEXT,
             customer_note   TEXT,
             status          ENUM('new','confirmed','rejected','completed','cancelled') NOT NULL DEFAULT 'new',
             total_amount    DECIMAL(10,2) NULL DEFAULT NULL,
@@ -908,14 +931,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
             order_id          INT          NOT NULL,
             item_id           INT          NULL DEFAULT NULL,
+            variant_id        INT          NULL DEFAULT NULL,
             item_title        VARCHAR(255) NOT NULL,
+            variant_label     VARCHAR(120) NOT NULL DEFAULT '',
+            portion_label     VARCHAR(80)  NOT NULL DEFAULT '',
             quantity          INT          NOT NULL DEFAULT 1,
             unit_price_amount DECIMAL(10,2) NULL DEFAULT NULL,
             price_currency    VARCHAR(3)   NOT NULL DEFAULT 'CZK',
             price_note        VARCHAR(255) NOT NULL DEFAULT '',
             sort_order        INT          NOT NULL DEFAULT 0,
             INDEX idx_food_order_items_order (order_id, sort_order, id),
-            INDEX idx_food_order_items_item (item_id)
+            INDEX idx_food_order_items_item (item_id),
+            INDEX idx_food_order_items_variant (variant_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_recipe_categories (

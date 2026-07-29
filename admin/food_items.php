@@ -197,6 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->beginTransaction();
             try {
+                $pdo->prepare("DELETE FROM cms_food_item_variants WHERE card_id = ? AND item_id IN (SELECT id FROM cms_food_items WHERE section_id = ? AND card_id = ?)")
+                    ->execute([$cardId, $deleteSectionId, $cardId]);
                 $pdo->prepare("DELETE FROM cms_food_items WHERE section_id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
                 $pdo->prepare("DELETE FROM cms_food_sections WHERE id = ? AND card_id = ?")->execute([$deleteSectionId, $cardId]);
                 logAction('food_section_delete', "card={$cardId} section={$deleteSectionId}");
@@ -221,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->beginTransaction();
             try {
+                $pdo->prepare("DELETE FROM cms_food_item_variants WHERE item_id = ? AND card_id = ?")->execute([$deleteItemId, $cardId]);
                 $pdo->prepare("DELETE FROM cms_food_items WHERE id = ? AND card_id = ?")->execute([$deleteItemId, $cardId]);
                 logAction('food_item_delete', "card={$cardId} item={$deleteItemId}");
                 $pdo->commit();
@@ -265,34 +268,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $maxStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) + 10 FROM cms_food_items WHERE card_id = ? AND section_id = ?");
             $maxStmt->execute([$cardId, (int)$item['section_id']]);
             $sortOrder = (int)$maxStmt->fetchColumn();
-            $pdo->prepare(
-                "INSERT INTO cms_food_items
-                 (card_id, section_id, title, description, price_amount, price_currency, price_note,
-                  portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
-                  media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            )->execute([
-                $cardId,
-                (int)$item['section_id'],
-                'Kopie: ' . (string)$item['title'],
-                (string)($item['description'] ?? ''),
-                $item['price_amount'],
-                (string)$item['price_currency'],
-                (string)$item['price_note'],
-                (string)($item['portion_label'] ?? ''),
-                $item['energy_kj'] !== null ? (int)$item['energy_kj'] : null,
-                $item['energy_kcal'] !== null ? (int)$item['energy_kcal'] : null,
-                $item['protein_g'],
-                $item['carbs_g'],
-                $item['fat_g'],
-                $item['salt_g'],
-                $item['media_id'] !== null ? (int)$item['media_id'] : null,
-                (string)($item['image_alt_text'] ?? ''),
-                (string)$item['allergens'],
-                (string)$item['dietary_flags'],
-                (int)$item['is_available'],
-                $sortOrder,
-            ]);
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare(
+                    "INSERT INTO cms_food_items
+                     (card_id, section_id, title, description, price_amount, price_currency, price_note,
+                      portion_label, energy_kj, energy_kcal, protein_g, carbs_g, fat_g, salt_g,
+                      media_id, image_alt_text, allergens, dietary_flags, is_available, sort_order)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )->execute([
+                    $cardId,
+                    (int)$item['section_id'],
+                    'Kopie: ' . (string)$item['title'],
+                    (string)($item['description'] ?? ''),
+                    $item['price_amount'],
+                    (string)$item['price_currency'],
+                    (string)$item['price_note'],
+                    (string)($item['portion_label'] ?? ''),
+                    $item['energy_kj'] !== null ? (int)$item['energy_kj'] : null,
+                    $item['energy_kcal'] !== null ? (int)$item['energy_kcal'] : null,
+                    $item['protein_g'],
+                    $item['carbs_g'],
+                    $item['fat_g'],
+                    $item['salt_g'],
+                    $item['media_id'] !== null ? (int)$item['media_id'] : null,
+                    (string)($item['image_alt_text'] ?? ''),
+                    (string)$item['allergens'],
+                    (string)$item['dietary_flags'],
+                    (int)$item['is_available'],
+                    $sortOrder,
+                ]);
+                $duplicateItemId = (int)$pdo->lastInsertId();
+                $pdo->prepare(
+                    "INSERT INTO cms_food_item_variants
+                     (card_id, item_id, label, portion_label, price_amount, price_currency, price_note, is_available, sort_order)
+                     SELECT card_id, ?, label, portion_label, price_amount, price_currency, price_note, is_available, sort_order
+                     FROM cms_food_item_variants
+                     WHERE item_id = ? AND card_id = ?"
+                )->execute([$duplicateItemId, $itemId, $cardId]);
+                $pdo->commit();
+            } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $exception;
+            }
             logAction('food_item_duplicate', "card={$cardId} item={$itemId}");
         }
         $redirectToItems('duplicated');
@@ -784,7 +804,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
             <input type="text" id="item-price" name="price_amount" inputmode="decimal" maxlength="20"
                    value="<?= h((string)$itemState['price_amount']) ?>"
                    <?= adminFieldAttributes('item_price_amount', $fieldErrors, [], ['item-price-help']) ?>>
-            <small id="item-price-help" class="field-help">Volitelné. Použijte například 129 nebo 129,90.</small>
+            <small id="item-price-help" class="field-help">Volitelné. Použijte například 129 nebo 129,90. Pokud později přidáte varianty, veřejný lístek a poptávka použijí jejich ceny místo této základní ceny.</small>
             <?php adminRenderFieldError('item_price_amount', $fieldErrors, [], $fieldErrorFor('item_price_amount')); ?>
           </div>
           <div class="form-group">
@@ -1019,7 +1039,20 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                     <span class="table-meta">Bez obrázku</span>
                   <?php endif; ?>
                 </td>
-                <td><?= h((string)($item['price_label'] !== '' ? $item['price_label'] : 'Bez ceny')) ?></td>
+                <td>
+                  <?php if (!empty($item['variants'])): ?>
+                    <strong><?= count($item['variants']) ?> variant<?= count($item['variants']) === 1 ? 'a' : (count($item['variants']) < 5 ? 'y' : '') ?></strong>
+                    <?php foreach ($item['variants'] as $variant): ?>
+                      <br><small class="table-meta">
+                        <?= h(foodItemVariantDisplayLabel($variant)) ?>:
+                        <?= h((string)($variant['price_label'] !== '' ? $variant['price_label'] : 'bez ceny')) ?>
+                        <?= (int)$variant['is_available'] === 1 ? '' : ' – nedostupná' ?>
+                      </small>
+                    <?php endforeach; ?>
+                  <?php else: ?>
+                    <?= h((string)($item['price_label'] !== '' ? $item['price_label'] : 'Bez ceny')) ?>
+                  <?php endif; ?>
+                </td>
                 <td>
                   <?php if (!empty($item['allergen_labels'])): ?>
                     <small class="table-meta">Alergeny: <?= h(implode(', ', $item['allergen_labels'])) ?></small><br>
@@ -1031,6 +1064,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                 <td><?= (int)$item['is_available'] === 1 ? 'Dostupná' : 'Nedostupná' ?></td>
                 <td class="actions">
                   <a class="btn" href="food_items.php?card=<?= (int)$cardId ?>&amp;edit_item=<?= (int)$item['id'] ?>">Upravit</a>
+                  <a class="btn" href="food_variants.php?item=<?= (int)$item['id'] ?>">Varianty (<?= count($item['variants'] ?? []) ?>)</a>
                   <form method="post" class="admin-inline-form">
                     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
                     <input type="hidden" name="action" value="move_item">
@@ -1061,7 +1095,7 @@ adminHeader('Položky lístku: ' . (string)$card['title']);
                     <input type="hidden" name="item_id" value="<?= $itemId ?>">
                     <fieldset class="admin-inline-fieldset">
                       <legend class="sr-only">Smazat položku <?= h((string)$item['title']) ?></legend>
-                      <p id="<?= h($itemDeleteReviewId) ?>" class="field-help field-help--flush">Smazání trvale odstraní položku <?= h((string)$item['title']) ?> ze sekce <?= h((string)$section['title']) ?> včetně ceny, alergenů, výživových údajů a vazby na obrázek. Soubor média v knihovně zůstane zachovaný.</p>
+                      <p id="<?= h($itemDeleteReviewId) ?>" class="field-help field-help--flush">Smazání trvale odstraní položku <?= h((string)$item['title']) ?> ze sekce <?= h((string)$section['title']) ?> včetně <?= count($item['variants'] ?? []) ?> variant, ceny, alergenů, výživových údajů a vazby na obrázek. Historické poptávky zůstanou zachované. Soubor média v knihovně zůstane zachovaný.</p>
                       <label class="admin-checkbox-label" for="<?= h($itemDeleteConfirmField) ?>">
                         <input type="checkbox" id="<?= h($itemDeleteConfirmField) ?>" name="<?= h($itemDeleteConfirmField) ?>" value="1"<?= adminFieldAttributes($itemDeleteConfirmField, $itemDeleteErrorFields, [], [$itemDeleteReviewId], $itemDeleteFieldErrorId) ?>>
                         Potvrzuji kontrolu dopadu a chci položku trvale smazat.

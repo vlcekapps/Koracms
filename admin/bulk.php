@@ -163,6 +163,7 @@ $moduleConfig = match ($module) {
                 $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$orderPh})")->execute($orderIds);
             }
             $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id IN ({$ph})")->execute($deleteIds);
+            $pdo->prepare("DELETE FROM cms_food_item_variants WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_food_items WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id IN ({$ph})")->execute($deleteIds);
             $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id IN ({$ph})")->execute($deleteIds);

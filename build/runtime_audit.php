@@ -14831,9 +14831,17 @@ $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form
 $foodSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_save.php');
 $foodFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_form.php');
 $foodItemsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_items.php');
+$foodVariantsAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_variants.php');
 $foodOrdersAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_orders.php');
 $foodOrderAdminSource = (string)file_get_contents(dirname(__DIR__) . '/admin/food_order.php');
 $foodOrderPublicSource = (string)file_get_contents(dirname(__DIR__) . '/food/order.php');
+$foodStructuredMenuViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-structured-menu.php');
+$foodOrderViewSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/views/modules/food-order.php');
+$foodPublicCssSource = (string)file_get_contents(dirname(__DIR__) . '/themes/default/assets/public.css');
+$foodTrashSource = (string)file_get_contents(dirname(__DIR__) . '/admin/trash.php');
+$foodAccessibilityAcrSource = is_file(dirname(__DIR__) . '/docs/accessibility/modules/food.md')
+    ? (string)file_get_contents(dirname(__DIR__) . '/docs/accessibility/modules/food.md')
+    : '';
 $blogSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_save.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $podcastEpisodeSaveSource = (string)file_get_contents(dirname(__DIR__) . '/admin/podcast_save.php');
@@ -14879,22 +14887,96 @@ foreach (["'valid_from' =>", "'valid_to' =>", "'valid_range' =>"] as $foodFormFr
 }
 $foodInstallSource = (string)file_get_contents(dirname(__DIR__) . '/install.php');
 $foodMigrateSource = (string)file_get_contents(dirname(__DIR__) . '/migrate.php');
-foreach (['cms_food_sections', 'serving_date', 'serving_time_from', 'serving_note', 'cms_food_items', 'portion_label', 'energy_kj', 'protein_g', 'media_id', 'image_alt_text', 'cms_food_orders', 'cms_food_order_items', 'orders_enabled', 'order_email', 'idx_food_sections_card_order', 'idx_food_items_card_order', 'idx_food_items_section_order', 'idx_food_items_media', 'idx_food_orders_card_status', 'idx_food_order_items_order'] as $foodSchemaFragment) {
+foreach ([
+    'cms_food_sections',
+    'serving_date',
+    'serving_time_from',
+    'serving_note',
+    'cms_food_items',
+    'portion_label',
+    'energy_kj',
+    'protein_g',
+    'media_id',
+    'image_alt_text',
+    'cms_food_item_variants',
+    'uq_food_item_variants_label',
+    'idx_food_item_variants_order',
+    'idx_food_item_variants_card',
+    'cms_food_orders',
+    'cms_food_order_items',
+    'orders_enabled',
+    'order_email',
+    'order_fulfillment_modes',
+    'order_requested_at_enabled',
+    'fulfillment_type',
+    'requested_at',
+    'customer_address',
+    'variant_id',
+    'variant_label',
+    'idx_food_sections_card_order',
+    'idx_food_items_card_order',
+    'idx_food_items_section_order',
+    'idx_food_items_media',
+    'idx_food_orders_card_status',
+    'idx_food_order_items_order',
+    'idx_food_order_items_variant',
+] as $foodSchemaFragment) {
     if (!str_contains($foodInstallSource, $foodSchemaFragment) || !str_contains($foodMigrateSource, $foodSchemaFragment)) {
         $editorialValidationIssues[] = 'food structured menu schema is missing install/migrate fragment: ' . $foodSchemaFragment;
     }
 }
-foreach (['foodAllergenDefinitions', 'normalizeFoodAllergenList', 'foodDietaryFlagDefinitions', 'normalizeFoodPriceInput', 'normalizeFoodStructuredFilters', 'foodFilterStructuredSections', 'foodStructuredAllergenLegend', 'foodStructuredFilterExistsSql', 'foodApplyStructuredFiltersToCard', 'foodApplyServingDateToCard', 'foodItemNutritionLabels', 'foodCardCanAcceptOrders', 'foodBuildOrderSnapshot', 'uniqueFoodOrderReferenceCode', 'mediaFileUrl', 'hasMenuSection', 'NutritionInformation'] as $foodHelperFragment) {
+foreach ([
+    'foodAllergenDefinitions',
+    'normalizeFoodAllergenList',
+    'foodDietaryFlagDefinitions',
+    'normalizeFoodPriceInput',
+    'normalizeFoodStructuredFilters',
+    'foodFilterStructuredSections',
+    'foodStructuredAllergenLegend',
+    'foodStructuredFilterExistsSql',
+    'foodApplyStructuredFiltersToCard',
+    'foodApplyServingDateToCard',
+    'foodItemNutritionLabels',
+    'hydrateFoodItemVariant',
+    'foodItemVariantDisplayLabel',
+    'foodOrderFulfillmentDefinitions',
+    'normalizeFoodOrderFulfillmentModes',
+    'normalizeFoodOrderRequestedAt',
+    'foodOrderChoiceKey',
+    'foodOrderSelectableChoices',
+    'foodCardCanAcceptOrders',
+    'foodBuildOrderSnapshot',
+    'uniqueFoodOrderReferenceCode',
+    'mediaFileUrl',
+    'hasMenuSection',
+    'NutritionInformation',
+] as $foodHelperFragment) {
     if (!str_contains($presentationSource, $foodHelperFragment)) {
         $editorialValidationIssues[] = 'food structured menu helper is missing: ' . $foodHelperFragment;
     }
 }
-foreach (['verifyCsrf()', '$sectionBelongsToCard', '$itemBelongsToCard', 'adminFieldAttributes(', 'mediaCanPreviewImage', 'bulk_availability', 'duplicate_item', 'move_item', 'image_alt_text', 'serving_date', 'serving_time_from', 'Výživové údaje', 'portion_label', 'energy_kj', 'Položky lístku'] as $foodItemsFragment) {
+foreach (['verifyCsrf()', '$sectionBelongsToCard', '$itemBelongsToCard', 'adminFieldAttributes(', 'mediaCanPreviewImage', 'bulk_availability', 'duplicate_item', 'move_item', 'image_alt_text', 'serving_date', 'serving_time_from', 'Výživové údaje', 'portion_label', 'energy_kj', 'Položky lístku', 'cms_food_item_variants', 'food_variants.php?item='] as $foodItemsFragment) {
     if (!str_contains($foodItemsAdminSource, $foodItemsFragment)) {
         $editorialValidationIssues[] = 'food items admin is missing guarded fragment: ' . $foodItemsFragment;
     }
 }
-foreach (['orders_enabled', 'order_email', 'order_instructions'] as $foodFormOrderFragment) {
+foreach ([
+    'requireCapability(',
+    'requireModuleEnabled(',
+    'verifyCsrf()',
+    'cms_food_item_variants',
+    '$loadVariant',
+    'adminFieldAttributes(',
+    '<fieldset>',
+    '<legend>Údaje varianty</legend>',
+    'confirm_food_variant_delete_',
+    'Historické poptávky si zachovají uložený název a cenu.',
+] as $foodVariantAdminFragment) {
+    if (!str_contains($foodVariantsAdminSource, $foodVariantAdminFragment)) {
+        $editorialValidationIssues[] = 'food variants admin is missing guarded fragment: ' . $foodVariantAdminFragment;
+    }
+}
+foreach (['orders_enabled', 'order_email', 'order_instructions', 'order_fulfillment_modes', 'order_requested_at_enabled'] as $foodFormOrderFragment) {
     if (!str_contains($foodFormSource, $foodFormOrderFragment) || !str_contains($foodSaveSource, $foodFormOrderFragment)) {
         $editorialValidationIssues[] = 'food card order settings are missing form/save fragment: ' . $foodFormOrderFragment;
     }
@@ -14902,19 +14984,91 @@ foreach (['orders_enabled', 'order_email', 'order_instructions'] as $foodFormOrd
 if (!str_contains($foodFormSource, 'Objednávkové poptávky')) {
     $editorialValidationIssues[] = 'food card form is missing order settings fieldset copy';
 }
-foreach (['verifyCsrf()', "captchaVerify((string)(\$_POST['captcha'] ?? ''))", 'honeypotTriggered()', "rateLimit('food_order'", 'foodBuildOrderSnapshot', 'cms_food_orders', 'cms_food_order_items'] as $foodOrderPublicFragment) {
+foreach ([
+    'verifyCsrf()',
+    "captchaVerify((string)(\$_POST['captcha'] ?? ''))",
+    'honeypotTriggered()',
+    "rateLimit('food_order'",
+    'foodOrderSelectableChoices',
+    'foodOrderChoiceKey',
+    'normalizeFoodOrderRequestedAt',
+    'foodOrderRequestedAtIsFuture',
+    'foodBuildOrderSnapshot',
+    'cms_food_orders',
+    'cms_food_order_items',
+    'variant_id',
+    'variant_label',
+    'fulfillment_type',
+    'customer_address',
+    '$fulfillmentModes === []',
+] as $foodOrderPublicFragment) {
     if (!str_contains($foodOrderPublicSource, $foodOrderPublicFragment)) {
         $editorialValidationIssues[] = 'food public order endpoint is missing guarded fragment: ' . $foodOrderPublicFragment;
     }
 }
-foreach (['cms_food_orders', 'foodOrderStatusLabels', '$statusFilter = array_key_exists', 'Detail'] as $foodOrdersAdminFragment) {
+foreach (['cms_food_orders', 'foodOrderStatusLabels', '$statusFilter = array_key_exists', '$fulfillmentFilter', 'foodOrderFulfillmentLabel', 'requested_at', 'Detail'] as $foodOrdersAdminFragment) {
     if (!str_contains($foodOrdersAdminSource, $foodOrdersAdminFragment)) {
         $editorialValidationIssues[] = 'food orders admin overview is missing guarded fragment: ' . $foodOrdersAdminFragment;
     }
 }
-foreach (['verifyCsrf()', 'normalizeFoodOrderStatus', 'cms_food_order_items', 'Stav poptávky'] as $foodOrderAdminFragment) {
+foreach (['verifyCsrf()', 'normalizeFoodOrderStatus', 'cms_food_order_items', 'Stav poptávky', 'Způsob převzetí', 'Požadovaný termín', 'Adresa doručení', 'variant_label', 'portion_label'] as $foodOrderAdminFragment) {
     if (!str_contains($foodOrderAdminSource, $foodOrderAdminFragment)) {
         $editorialValidationIssues[] = 'food order admin detail is missing guarded fragment: ' . $foodOrderAdminFragment;
+    }
+}
+foreach ([
+    "'food_item_variants'",
+    'order_fulfillment_modes',
+    'order_requested_at_enabled',
+] as $foodExportFragment) {
+    if (!str_contains($adminExportSource, $foodExportFragment)) {
+        $editorialValidationIssues[] = 'food export is missing variants or order settings fragment: ' . $foodExportFragment;
+    }
+}
+foreach ([
+    "\$data['food_item_variants']",
+    'normalizeFoodOrderFulfillmentModes',
+    'order_requested_at_enabled',
+    'cms_food_item_variants',
+] as $foodImportFragment) {
+    if (!str_contains($adminImportSource, $foodImportFragment)) {
+        $editorialValidationIssues[] = 'food import is missing variants or order settings fragment: ' . $foodImportFragment;
+    }
+}
+foreach ([$adminBulkSource, $foodTrashSource] as $foodCleanupSource) {
+    if (!str_contains($foodCleanupSource, 'cms_food_item_variants')) {
+        $editorialValidationIssues[] = 'food cleanup is missing item variant deletion';
+    }
+}
+foreach ([
+    'food-menu-item__variants',
+    'foodItemVariantDisplayLabel',
+    'nedostupná',
+] as $foodVariantViewFragment) {
+    if (!str_contains($foodStructuredMenuViewSource, $foodVariantViewFragment)) {
+        $editorialValidationIssues[] = 'food structured menu view is missing variant fragment: ' . $foodVariantViewFragment;
+    }
+}
+foreach ([
+    '<legend>Převzetí poptávky</legend>',
+    'name="fulfillment_type"',
+    'autocomplete="street-address"',
+    'name="requested_at"',
+    'maxlength="1000"',
+    'maxlength="3000"',
+] as $foodOrderViewFragment) {
+    if (!str_contains($foodOrderViewSource, $foodOrderViewFragment)) {
+        $editorialValidationIssues[] = 'food order view is missing fulfillment accessibility fragment: ' . $foodOrderViewFragment;
+    }
+}
+foreach (['.food-menu-item__variants', '.food-order-item-group'] as $foodCssFragment) {
+    if (!str_contains($foodPublicCssSource, $foodCssFragment)) {
+        $editorialValidationIssues[] = 'food public CSS is missing responsive variant/order fragment: ' . $foodCssFragment;
+    }
+}
+foreach (['WCAG 2.2 AA', 'Cenové a porční varianty', 'Způsob převzetí', 'Ruční ověření'] as $foodAcrFragment) {
+    if (!str_contains($foodAccessibilityAcrSource, $foodAcrFragment)) {
+        $editorialValidationIssues[] = 'food accessibility module report is missing fragment: ' . $foodAcrFragment;
     }
 }
 if (!str_contains($blogSaveSource, 'validateDateTimeLocal($publishAt)') || !str_contains($blogSaveSource, 'validateDateTimeLocal($unpublishAt)')) {

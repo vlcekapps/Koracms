@@ -4052,6 +4052,47 @@ function foodPriceLabel(?string $amount, string $currency = 'CZK', string $note 
 }
 
 /**
+ * @param array<string,mixed> $variant
+ * @return array<string,mixed>
+ */
+function hydrateFoodItemVariant(array $variant): array
+{
+    $priceAmount = $variant['price_amount'] !== null && $variant['price_amount'] !== ''
+        ? number_format((float)$variant['price_amount'], 2, '.', '')
+        : null;
+    $variant['id'] = max(0, (int)($variant['id'] ?? 0));
+    $variant['item_id'] = max(0, (int)($variant['item_id'] ?? 0));
+    $variant['card_id'] = max(0, (int)($variant['card_id'] ?? 0));
+    $variant['label'] = mb_substr(trim((string)($variant['label'] ?? '')), 0, 120);
+    $variant['portion_label'] = mb_substr(trim((string)($variant['portion_label'] ?? '')), 0, 80);
+    $variant['price_amount'] = $priceAmount;
+    $variant['price_currency'] = normalizeFoodCurrency((string)($variant['price_currency'] ?? 'CZK'));
+    $variant['price_note'] = mb_substr(trim((string)($variant['price_note'] ?? '')), 0, 255);
+    $variant['price_label'] = foodPriceLabel(
+        $priceAmount,
+        (string)$variant['price_currency'],
+        (string)$variant['price_note']
+    );
+    $variant['is_available'] = (int)($variant['is_available'] ?? 1) === 1 ? 1 : 0;
+    $variant['sort_order'] = max(0, (int)($variant['sort_order'] ?? 0));
+
+    return $variant;
+}
+
+/**
+ * @param array<string,mixed> $variant
+ */
+function foodItemVariantDisplayLabel(array $variant): string
+{
+    $parts = array_values(array_filter([
+        trim((string)($variant['label'] ?? '')),
+        trim((string)($variant['portion_label'] ?? '')),
+    ], static fn (string $part): bool => $part !== ''));
+
+    return implode(' – ', $parts);
+}
+
+/**
  * @param array<string, mixed> $item
  * @return array<string, mixed>
  */
@@ -4086,6 +4127,14 @@ function hydrateFoodItemPresentation(array $item): array
     $item['is_available'] = (int)($item['is_available'] ?? 1) === 1 ? 1 : 0;
     $item['media_id'] = (int)($item['media_id'] ?? 0);
     $item['image_alt_text'] = mb_substr(trim((string)($item['image_alt_text'] ?? '')), 0, 255);
+    $item['variants'] = array_map(
+        static fn (array $variant): array => hydrateFoodItemVariant($variant),
+        array_values(array_filter(
+            is_array($item['variants'] ?? null) ? $item['variants'] : [],
+            'is_array'
+        ))
+    );
+    $item['has_variants'] = $item['variants'] !== [];
     $item['image_url'] = '';
     $item['image_thumb_url'] = '';
     $item['image_alt'] = '';
@@ -4152,8 +4201,21 @@ function foodLoadCardSections(PDO $pdo, int $cardId): array
          ORDER BY fi.section_id, fi.sort_order, fi.id"
     );
     $itemStmt->execute([$cardId]);
+    $variantStmt = $pdo->prepare(
+        "SELECT id, card_id, item_id, label, portion_label, price_amount, price_currency,
+                price_note, is_available, sort_order
+         FROM cms_food_item_variants
+         WHERE card_id = ?
+         ORDER BY item_id, sort_order, id"
+    );
+    $variantStmt->execute([$cardId]);
+    $variantsByItem = [];
+    foreach ($variantStmt->fetchAll() as $variant) {
+        $variantsByItem[(int)$variant['item_id']][] = hydrateFoodItemVariant($variant);
+    }
     $itemsBySection = [];
     foreach ($itemStmt->fetchAll() as $item) {
+        $item['variants'] = $variantsByItem[(int)$item['id']] ?? [];
         $itemsBySection[(int)$item['section_id']][] = hydrateFoodItemPresentation($item);
     }
 
@@ -4312,6 +4374,8 @@ function foodRevisionSnapshot(array $card): array
         'orders_enabled' => (string)(int)($card['orders_enabled'] ?? 0),
         'order_email' => (string)($card['order_email'] ?? ''),
         'order_instructions' => (string)($card['order_instructions'] ?? ''),
+        'order_fulfillment_modes' => implode(',', normalizeFoodOrderFulfillmentModes($card['order_fulfillment_modes'] ?? '')),
+        'order_requested_at_enabled' => (string)(int)($card['order_requested_at_enabled'] ?? 0),
         'is_current' => (string)(int)($card['is_current'] ?? 0),
         'is_published' => (string)(int)($card['is_published'] ?? 0),
         'status' => (string)($card['status'] ?? 'published'),
@@ -4418,9 +4482,26 @@ function foodCardStructuredData(array $card): string
                     $menuItem['nutrition'] = $nutrition;
                 }
             }
+            $offers = [];
+            foreach (($item['variants'] ?? []) as $variant) {
+                $variantPrice = trim((string)($variant['price_amount'] ?? ''));
+                if ($variantPrice === '') {
+                    continue;
+                }
+                $offers[] = [
+                    '@type' => 'Offer',
+                    'name' => foodItemVariantDisplayLabel($variant),
+                    'price' => $variantPrice,
+                    'priceCurrency' => normalizeFoodCurrency((string)($variant['price_currency'] ?? 'CZK')),
+                    'availability' => (int)($item['is_available'] ?? 1) === 1
+                        && (int)($variant['is_available'] ?? 1) === 1
+                            ? 'https://schema.org/InStock'
+                            : 'https://schema.org/OutOfStock',
+                ];
+            }
             $priceAmount = trim((string)($item['price_amount'] ?? ''));
-            if ($priceAmount !== '') {
-                $menuItem['offers'] = [
+            if ($offers === [] && $priceAmount !== '') {
+                $offers[] = [
                     '@type' => 'Offer',
                     'price' => $priceAmount,
                     'priceCurrency' => normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK')),
@@ -4428,6 +4509,9 @@ function foodCardStructuredData(array $card): string
                         ? 'https://schema.org/InStock'
                         : 'https://schema.org/OutOfStock',
                 ];
+            }
+            if ($offers !== []) {
+                $menuItem['offers'] = count($offers) === 1 ? $offers[0] : $offers;
             }
             $menuItems[] = $menuItem;
         }
@@ -4473,6 +4557,9 @@ function hydrateFoodCardPresentation(array $card): array
     $card['orders_enabled'] = (int)($card['orders_enabled'] ?? 0) === 1 ? 1 : 0;
     $card['order_email'] = trim((string)($card['order_email'] ?? ''));
     $card['order_instructions'] = trim((string)($card['order_instructions'] ?? ''));
+    $card['order_fulfillment_mode_values'] = normalizeFoodOrderFulfillmentModes($card['order_fulfillment_modes'] ?? '');
+    $card['order_fulfillment_modes'] = implode(',', $card['order_fulfillment_mode_values']);
+    $card['order_requested_at_enabled'] = (int)($card['order_requested_at_enabled'] ?? 0) === 1 ? 1 : 0;
     $card['is_publicly_visible'] = ((string)($card['status'] ?? 'published') === 'published')
         && (int)($card['is_published'] ?? 1) === 1;
     $card['is_temporally_active'] = (string)$card['state_key'] === 'current';
@@ -4510,6 +4597,82 @@ function foodOrderStatusLabel(string $status): string
 }
 
 /**
+ * @return array<string,string>
+ */
+function foodOrderFulfillmentDefinitions(): array
+{
+    return [
+        'pickup' => 'Osobní vyzvednutí',
+        'dine_in' => 'Konzumace na místě',
+        'delivery' => 'Doručení',
+    ];
+}
+
+/**
+ * @param mixed $value
+ * @return list<string>
+ */
+function normalizeFoodOrderFulfillmentModes($value): array
+{
+    $rawValues = is_array($value) ? $value : explode(',', (string)$value);
+    $allowed = foodOrderFulfillmentDefinitions();
+    $result = [];
+    foreach ($rawValues as $rawValue) {
+        $mode = trim((string)$rawValue);
+        if ($mode !== '' && isset($allowed[$mode]) && !in_array($mode, $result, true)) {
+            $result[] = $mode;
+        }
+    }
+
+    return $result;
+}
+
+function normalizeFoodOrderFulfillmentType(string $value): string
+{
+    $value = trim($value);
+
+    return isset(foodOrderFulfillmentDefinitions()[$value]) ? $value : '';
+}
+
+function foodOrderFulfillmentLabel(string $value): string
+{
+    $value = normalizeFoodOrderFulfillmentType($value);
+
+    return $value !== '' ? foodOrderFulfillmentDefinitions()[$value] : '';
+}
+
+/**
+ * @return string|null|false
+ */
+function normalizeFoodOrderRequestedAt(string $value)
+{
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+    $dateTime = \DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $value);
+    $errors = \DateTimeImmutable::getLastErrors();
+    $hasErrors = is_array($errors)
+        && ((int)$errors['warning_count'] > 0 || (int)$errors['error_count'] > 0);
+    if ($dateTime === false || $hasErrors || $dateTime->format('Y-m-d\TH:i') !== $value) {
+        return false;
+    }
+
+    return $dateTime->format('Y-m-d H:i:s');
+}
+
+function foodOrderRequestedAtIsFuture(string $value): bool
+{
+    try {
+        $requestedAt = new \DateTimeImmutable($value);
+    } catch (\Exception) {
+        return false;
+    }
+
+    return $requestedAt >= new \DateTimeImmutable('-1 minute');
+}
+
+/**
  * @param array<string,mixed> $card
  */
 function foodCardOrderRecipient(array $card): string
@@ -4537,13 +4700,86 @@ function foodOrderSelectableItems(array $sections): array
     $items = [];
     foreach ($sections as $section) {
         foreach (($section['items'] ?? []) as $item) {
-            if (is_array($item) && (int)($item['is_available'] ?? 1) === 1) {
-                $items[] = $item;
+            if (!is_array($item) || (int)($item['is_available'] ?? 1) !== 1) {
+                continue;
             }
+            $variants = is_array($item['variants'] ?? null) ? $item['variants'] : [];
+            if ($variants !== []) {
+                $hasAvailableVariant = false;
+                foreach ($variants as $variant) {
+                    if (is_array($variant) && (int)($variant['is_available'] ?? 1) === 1) {
+                        $hasAvailableVariant = true;
+                        break;
+                    }
+                }
+                if (!$hasAvailableVariant) {
+                    continue;
+                }
+            }
+            $items[] = $item;
         }
     }
 
     return $items;
+}
+
+function foodOrderChoiceKey(int $itemId, ?int $variantId = null): string
+{
+    return $variantId !== null && $variantId > 0
+        ? 'variant-' . $variantId
+        : 'item-' . $itemId;
+}
+
+/**
+ * @param list<array<string,mixed>> $sections
+ * @return list<array<string,mixed>>
+ */
+function foodOrderSelectableChoices(array $sections): array
+{
+    $choices = [];
+    foreach (foodOrderSelectableItems($sections) as $item) {
+        $itemId = (int)($item['id'] ?? 0);
+        if ($itemId <= 0) {
+            continue;
+        }
+        $variants = is_array($item['variants'] ?? null) ? $item['variants'] : [];
+        if ($variants === []) {
+            $choices[] = [
+                'key' => foodOrderChoiceKey($itemId),
+                'item_id' => $itemId,
+                'variant_id' => null,
+                'item_title' => (string)($item['title'] ?? ''),
+                'variant_label' => '',
+                'portion_label' => (string)($item['portion_label'] ?? ''),
+                'price_amount' => $item['price_amount'] ?? null,
+                'price_currency' => normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK')),
+                'price_note' => (string)($item['price_note'] ?? ''),
+            ];
+            continue;
+        }
+        foreach ($variants as $variant) {
+            if (!is_array($variant) || (int)($variant['is_available'] ?? 1) !== 1) {
+                continue;
+            }
+            $variantId = (int)($variant['id'] ?? 0);
+            if ($variantId <= 0) {
+                continue;
+            }
+            $choices[] = [
+                'key' => foodOrderChoiceKey($itemId, $variantId),
+                'item_id' => $itemId,
+                'variant_id' => $variantId,
+                'item_title' => (string)($item['title'] ?? ''),
+                'variant_label' => (string)($variant['label'] ?? ''),
+                'portion_label' => (string)($variant['portion_label'] ?? ''),
+                'price_amount' => $variant['price_amount'] ?? null,
+                'price_currency' => normalizeFoodCurrency((string)($variant['price_currency'] ?? 'CZK')),
+                'price_note' => (string)($variant['price_note'] ?? ''),
+            ];
+        }
+    }
+
+    return $choices;
 }
 
 /**
@@ -4553,7 +4789,7 @@ function foodCardCanAcceptOrders(array $card): bool
 {
     return !empty($card['orders_enabled'])
         && !empty($card['is_publicly_visible'])
-        && foodOrderSelectableItems(is_array($card['sections'] ?? null) ? $card['sections'] : []) !== [];
+        && foodOrderSelectableChoices(is_array($card['sections'] ?? null) ? $card['sections'] : []) !== [];
 }
 
 function uniqueFoodOrderReferenceCode(PDO $pdo): string
@@ -4572,36 +4808,48 @@ function uniqueFoodOrderReferenceCode(PDO $pdo): string
 }
 
 /**
- * @param array<int,array<string,mixed>> $itemsById
- * @param array<int,int> $quantities
+ * @param array<string,array<string,mixed>> $choicesByKey
+ * @param array<string,int> $quantities
  * @return array{items:list<array<string,mixed>>,total:string|null,currency:string}
  */
-function foodBuildOrderSnapshot(array $itemsById, array $quantities): array
+function foodBuildOrderSnapshot(array $choicesByKey, array $quantities): array
 {
     $items = [];
     $total = 0.0;
     $hasPricedItem = false;
     $currency = 'CZK';
+    $hasMixedCurrencies = false;
     $sortOrder = 10;
-    foreach ($quantities as $itemId => $quantity) {
-        if ($quantity <= 0 || !isset($itemsById[$itemId])) {
+    foreach ($quantities as $choiceKey => $quantity) {
+        $choiceKey = (string)$choiceKey;
+        if ($quantity <= 0 || !isset($choicesByKey[$choiceKey])) {
             continue;
         }
-        $item = $itemsById[$itemId];
-        $unitPrice = $item['price_amount'] !== null && $item['price_amount'] !== '' ? (string)$item['price_amount'] : null;
-        $itemCurrency = normalizeFoodCurrency((string)($item['price_currency'] ?? 'CZK'));
+        $choice = $choicesByKey[$choiceKey];
+        $unitPrice = $choice['price_amount'] !== null && $choice['price_amount'] !== ''
+            ? (string)$choice['price_amount']
+            : null;
+        $itemCurrency = normalizeFoodCurrency((string)($choice['price_currency'] ?? 'CZK'));
         if ($unitPrice !== null) {
+            if ($hasPricedItem && $currency !== $itemCurrency) {
+                $hasMixedCurrencies = true;
+            }
             $hasPricedItem = true;
             $total += ((float)$unitPrice) * $quantity;
             $currency = $itemCurrency;
         }
         $items[] = [
-            'item_id' => $itemId,
-            'item_title' => (string)($item['title'] ?? ''),
+            'item_id' => (int)($choice['item_id'] ?? 0),
+            'variant_id' => isset($choice['variant_id']) && (int)$choice['variant_id'] > 0
+                ? (int)$choice['variant_id']
+                : null,
+            'item_title' => (string)($choice['item_title'] ?? ''),
+            'variant_label' => (string)($choice['variant_label'] ?? ''),
+            'portion_label' => (string)($choice['portion_label'] ?? ''),
             'quantity' => $quantity,
             'unit_price_amount' => $unitPrice,
             'price_currency' => $itemCurrency,
-            'price_note' => (string)($item['price_note'] ?? ''),
+            'price_note' => (string)($choice['price_note'] ?? ''),
             'sort_order' => $sortOrder,
         ];
         $sortOrder += 10;
@@ -4609,7 +4857,7 @@ function foodBuildOrderSnapshot(array $itemsById, array $quantities): array
 
     return [
         'items' => $items,
-        'total' => $hasPricedItem ? number_format($total, 2, '.', '') : null,
+        'total' => $hasPricedItem && !$hasMixedCurrencies ? number_format($total, 2, '.', '') : null,
         'currency' => $currency,
     ];
 }

@@ -2272,28 +2272,121 @@ assert_equals([
     'salt_g' => '2.00',
 ]), 'food nutrition labels render filled values');
 assert_equals('new', normalizeFoodOrderStatus('bad-status'), 'food order status falls back to new');
-$foodOrderSnapshot = foodBuildOrderSnapshot([
-    10 => [
-        'id' => 10,
-        'title' => 'Smažený sýr',
+assert_equals(
+    ['pickup', 'delivery'],
+    normalizeFoodOrderFulfillmentModes(['pickup', 'bad', 'delivery', 'pickup']),
+    'food order fulfillment modes keep allowed unique values'
+);
+assert_equals('delivery', normalizeFoodOrderFulfillmentType('delivery'), 'food order fulfillment accepts known type');
+assert_equals('', normalizeFoodOrderFulfillmentType('courier'), 'food order fulfillment rejects unknown type');
+assert_equals('Doručení', foodOrderFulfillmentLabel('delivery'), 'food order fulfillment provides Czech label');
+assert_equals(
+    '2099-07-29 12:30:00',
+    normalizeFoodOrderRequestedAt('2099-07-29T12:30'),
+    'food order requested time normalizes datetime-local value'
+);
+assert_equals(false, normalizeFoodOrderRequestedAt('2099-02-30T12:30'), 'food order requested time rejects invalid date');
+assert_equals(true, foodOrderRequestedAtIsFuture('2099-07-29 12:30:00'), 'food order requested time recognizes future value');
+assert_equals(false, foodOrderRequestedAtIsFuture('not-a-date'), 'food order requested time rejects malformed value');
+
+$foodVariantFixture = hydrateFoodItemVariant([
+    'id' => 101,
+    'item_id' => 10,
+    'card_id' => 1,
+    'label' => 'Velká',
+    'portion_label' => '2 porce',
+    'price_amount' => '159.9',
+    'price_currency' => 'czk',
+    'price_note' => 'za variantu',
+    'is_available' => 1,
+]);
+assert_equals('159,90 Kč (za variantu)', $foodVariantFixture['price_label'], 'food variant hydrates price label');
+assert_equals('Velká – 2 porce', foodItemVariantDisplayLabel($foodVariantFixture), 'food variant display label keeps textual separation');
+
+$foodOrderChoices = foodOrderSelectableChoices([
+    [
+        'items' => [
+            [
+                'id' => 10,
+                'title' => 'Smažený sýr',
+                'is_available' => 1,
+                'variants' => [
+                    [
+                        'id' => 100,
+                        'label' => 'Malá',
+                        'portion_label' => '1 porce',
+                        'price_amount' => '119.90',
+                        'price_currency' => 'CZK',
+                        'price_note' => '',
+                        'is_available' => 0,
+                    ],
+                    $foodVariantFixture,
+                ],
+            ],
+            [
+                'id' => 11,
+                'title' => 'Polévka',
+                'portion_label' => 'miska',
+                'price_amount' => null,
+                'price_currency' => 'CZK',
+                'price_note' => '',
+                'is_available' => 1,
+                'variants' => [],
+            ],
+        ],
+    ],
+]);
+assert_equals(2, count($foodOrderChoices), 'food order choices keep available variants and variant-less items');
+assert_equals('variant-101', $foodOrderChoices[0]['key'], 'food order choice uses stable variant key');
+assert_equals('item-11', $foodOrderChoices[1]['key'], 'food order choice uses stable base item key');
+$foodChoicesByKey = [];
+foreach ($foodOrderChoices as $foodOrderChoice) {
+    $foodChoicesByKey[$foodOrderChoice['key']] = $foodOrderChoice;
+}
+$foodOrderSnapshot = foodBuildOrderSnapshot($foodChoicesByKey, [
+    'variant-101' => 2,
+    'item-11' => 1,
+]);
+assert_equals(2, count($foodOrderSnapshot['items']), 'food order snapshot keeps selected choices');
+assert_equals('319.80', $foodOrderSnapshot['total'], 'food order snapshot totals selected variant prices');
+assert_equals('Smažený sýr', $foodOrderSnapshot['items'][0]['item_title'], 'food order snapshot stores item title');
+assert_equals(101, $foodOrderSnapshot['items'][0]['variant_id'], 'food order snapshot stores variant id');
+assert_equals('Velká', $foodOrderSnapshot['items'][0]['variant_label'], 'food order snapshot stores variant label');
+assert_equals('2 porce', $foodOrderSnapshot['items'][0]['portion_label'], 'food order snapshot stores variant portion');
+assert_equals(
+    [],
+    foodOrderSelectableChoices([
+        [
+            'items' => [
+                [
+                    'id' => 12,
+                    'title' => 'Nedostupná položka',
+                    'is_available' => 1,
+                    'variants' => [
+                        ['id' => 102, 'label' => 'Jediná', 'is_available' => 0],
+                    ],
+                ],
+            ],
+        ],
+    ]),
+    'food order choices hide items whose variants are all unavailable'
+);
+
+$foodLegacyOrderSnapshot = foodBuildOrderSnapshot([
+    'item-10' => [
+        'item_id' => 10,
+        'item_title' => 'Smažený sýr',
+        'variant_id' => null,
+        'variant_label' => '',
+        'portion_label' => '1 porce',
         'price_amount' => '129.90',
         'price_currency' => 'CZK',
         'price_note' => 'za porci',
     ],
-    11 => [
-        'id' => 11,
-        'title' => 'Polévka',
-        'price_amount' => null,
-        'price_currency' => 'CZK',
-        'price_note' => '',
-    ],
 ], [
-    10 => 2,
-    11 => 1,
+    'item-10' => 2,
 ]);
-assert_equals(2, count($foodOrderSnapshot['items']), 'food order snapshot keeps selected items');
-assert_equals('259.80', $foodOrderSnapshot['total'], 'food order snapshot totals priced items');
-assert_equals('Smažený sýr', $foodOrderSnapshot['items'][0]['item_title'], 'food order snapshot stores item title');
+assert_equals('259.80', $foodLegacyOrderSnapshot['total'], 'food order snapshot keeps variant-less item behavior');
 
 $foodStructuredData = foodCardStructuredData([
     'title' => 'Testovací lístek',
@@ -2314,6 +2407,22 @@ $foodStructuredData = foodCardStructuredData([
                     'energy_kcal' => 500,
                     'protein_g' => '21.50',
                     'image_url' => BASE_URL . '/uploads/media/syr.jpg',
+                    'variants' => [
+                        [
+                            'label' => 'Malá',
+                            'portion_label' => '1 porce',
+                            'price_amount' => '119.00',
+                            'price_currency' => 'CZK',
+                            'is_available' => 1,
+                        ],
+                        [
+                            'label' => 'Velká',
+                            'portion_label' => '2 porce',
+                            'price_amount' => '159.00',
+                            'price_currency' => 'CZK',
+                            'is_available' => 0,
+                        ],
+                    ],
                 ],
             ],
         ],
@@ -2321,7 +2430,9 @@ $foodStructuredData = foodCardStructuredData([
 ]);
 assert_contains('"hasMenuSection"', $foodStructuredData, 'food structured data contains MenuSection');
 assert_contains('"@type":"MenuItem"', $foodStructuredData, 'food structured data contains MenuItem');
-assert_contains('"price":"129.00"', $foodStructuredData, 'food structured data contains price');
+assert_contains('"name":"Malá – 1 porce"', $foodStructuredData, 'food structured data contains variant label');
+assert_contains('"price":"119.00"', $foodStructuredData, 'food structured data contains variant price');
+assert_contains('"availability":"https://schema.org/OutOfStock"', $foodStructuredData, 'food structured data contains variant availability');
 assert_contains('"priceCurrency":"CZK"', $foodStructuredData, 'food structured data keeps ISO currency');
 assert_contains('"image":"', $foodStructuredData, 'food structured data contains item image');
 assert_contains('"@type":"NutritionInformation"', $foodStructuredData, 'food structured data contains nutrition information');

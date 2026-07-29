@@ -63,7 +63,19 @@ $foodStructuredAllergenLegend = foodStructuredAllergenLegend($foodStructuredSect
                     </dl>
                   <?php endif; ?>
                 </div>
-                <?php if ((string)($item['price_label'] ?? '') !== ''): ?>
+                <?php if (!empty($item['variants'])): ?>
+                  <dl class="food-menu-item__variants">
+                    <?php foreach ($item['variants'] as $variant): ?>
+                      <div>
+                        <dt>
+                          <?= h(foodItemVariantDisplayLabel($variant)) ?>
+                          <?php if ((int)$variant['is_available'] !== 1): ?><span> – nedostupná</span><?php endif; ?>
+                        </dt>
+                        <dd><?= h((string)($variant['price_label'] !== '' ? $variant['price_label'] : 'Cena neuvedena')) ?></dd>
+                      </div>
+                    <?php endforeach; ?>
+                  </dl>
+                <?php elseif ((string)($item['price_label'] ?? '') !== ''): ?>
                   <p class="food-menu-item__price"><?= h((string)$item['price_label']) ?></p>
                 <?php endif; ?>
               </li>

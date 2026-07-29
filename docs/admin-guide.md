@@ -565,6 +565,8 @@ Každý lístek může mít:
 - příznak `Použít jako aktuální lístek`
 - zveřejnění na webu
 - volitelné nezávazné objednávkové poptávky, cílový e-mail a instrukce pro zákazníka
+- povolené způsoby převzetí: osobní vyzvednutí, konzumace na místě nebo doručení
+- volitelné vyžádání budoucího data a času v objednávkové poptávce
 
 Pokud je u typu označený nový aktuální lístek, předchozí aktuální lístek stejného typu se při uložení automaticky odznačí.
 
@@ -576,6 +578,7 @@ Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lís
 - den podávání sekce, čas od/do a poznámku k podávání pro denní nabídky
 - položky v sekcích
 - cenu, měnu a volitelnou poznámku k ceně
+- cenové a porční varianty položky, například malou a velkou porci nebo objem 0,3 a 0,5 l
 - alergeny podle číselníku 1-14
 - dietní štítky, například vegetariánské, veganské, bez lepku, bez laktózy, pikantní nebo alkohol
 - volitelné výživové údaje položky: porce, energie v kJ/kcal, bílkoviny, sacharidy, tuky a sůl
@@ -583,6 +586,12 @@ Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lís
 - dostupnost položky a pořadí v sekci
 
 Správa položek nabízí i rychlé bezpečné akce: sekce a položky lze posouvat nahoru/dolů, položku lze duplikovat a vybrané položky lze hromadně označit jako dostupné nebo nedostupné.
+
+### Cenové a porční varianty
+
+Z řádku konkrétní položky otevřete odkaz `Varianty`. Každá varianta má vlastní název, volitelnou porci nebo objem, cenu, měnu, poznámku, dostupnost a pořadí. Pokud položka nemá žádnou variantu, používá svoji základní cenu a porci. Jakmile varianty přidáte, veřejný lístek, JSON-LD i objednávková poptávka používají jejich údaje místo základní ceny položky.
+
+Varianty lze ovládat pouze klávesnicí a řadit tlačítky `Nahoru` a `Dolů`. Při duplikaci položky se zkopírují také její varianty. Smazání varianty vyžaduje kontrolu dopadu; starší objednávkové poptávky si ponechají snapshot původního názvu, porce a ceny.
 
 Pokud lístek žádné strukturované položky nemá, veřejný web dál použije původní HTML obsah lístku. Pokud má lístek strukturované položky i HTML obsah, položky se zobrazí jako hlavní menu a HTML obsah jako doplňkové poznámky k lístku. Alergeny, dietní štítky a nedostupnost se zobrazují textově, ne jen barvou. U zobrazených strukturovaných položek se doplní také alergenová legenda, aby návštěvník nemusel význam čísel hádat.
 
@@ -604,9 +613,11 @@ Více dietních štítků se vyhodnocuje současně, takže položka musí splni
 
 ### Nezávazné objednávkové poptávky
 
-Objednávkové poptávky jsou volitelné a slouží jako nezávazný kontakt zákazníka, ne jako platební nebo skladový systém. Pokud je u lístku zapnete a lístek je veřejně viditelný, návštěvník se dostane na formulář `food/order.php?slug=...`, vybere dostupné položky, množství a vyplní kontaktní údaje.
+Objednávkové poptávky jsou volitelné a slouží jako nezávazný kontakt zákazníka, ne jako platební nebo skladový systém. Pokud je u lístku zapnete a lístek je veřejně viditelný, návštěvník se dostane na formulář `food/order.php?slug=...`, vybere dostupné položky nebo jejich varianty, množství a vyplní kontaktní údaje.
 
-Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Uložená poptávka drží snapshot názvu položky, ceny a měny, takže pozdější změna lístku nepřepíše historický požadavek. Notifikace se posílá na e-mail objednávek vyplněný u lístku, případně na kontaktní nebo administrační e-mail webu. V administraci je samostatný přehled `Objednávkové poptávky` s filtrem podle stavu a detail se stavy `Nová / Potvrzená / Odmítnutá / Vyřízená / Zrušená`. Před změnou detail zobrazí referenční kód, aktuální stav, interní dopad a informaci, že se zákazníkovi automaticky neodesílá e-mail; uložení vyžaduje potvrzovací checkbox. Nepovolený stav nebo chybějící potvrzení vrátí textový alert a field-level chybu bez změny poptávky či auditního logu.
+U lístku lze nabídnout jeden nebo více způsobů převzetí. Pro doručení formulář vyžaduje adresu; při vyzvednutí nebo konzumaci na místě ji neukládá. Volba `Vyžadovat požadovaný termín` doplní povinné budoucí datum a čas, který provozovatel teprve potvrdí. Server přijme jen možnosti povolené u konkrétního lístku.
+
+Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Uložená poptávka drží snapshot názvu položky, varianty, porce, ceny a měny, takže pozdější změna lístku nepřepíše historický požadavek a návštěvník nemůže podstrčit vlastní cenu. Notifikace se posílá na e-mail objednávek vyplněný u lístku, případně na kontaktní nebo administrační e-mail webu. V administraci je samostatný přehled `Objednávkové poptávky` s filtrem podle stavu a způsobu převzetí a detail se stavy `Nová / Potvrzená / Odmítnutá / Vyřízená / Zrušená`. Detail ukazuje také požadovaný termín, doručovací adresu a přesný snapshot variant. Před změnou detail zobrazí referenční kód, aktuální stav, interní dopad a informaci, že se zákazníkovi automaticky neodesílá e-mail; uložení vyžaduje potvrzovací checkbox. Nepovolený stav nebo chybějící potvrzení vrátí textový alert a field-level chybu bez změny poptávky či auditního logu.
 
 ### Jak funguje platnost na webu
 
@@ -623,6 +634,7 @@ Formulář je chráněný CSRF tokenem, honeypotem, captchou a rate-limitem. Ulo
 
 - Přehled lístků nově umí hledání, workflow stav, filtr podle typu i filtr podle časové platnosti.
 - Odkaz `Položky lístku` otevře samostatnou správu strukturovaných sekcí, cen, alergenů a dietních štítků.
+- Odkaz `Varianty` u položky otevře správu samostatných porcí, objemů, cen, dostupnosti a pořadí.
 - Odkaz `Objednávkové poptávky` otevře administraci nezávazných objednávek Food modulu.
 - Z detailu i ze seznamu vede odkaz na historii revizí.
 - Revize zachycují změny typu, názvu, slugu, popisu, obsahu, platnosti, stavu aktuálnosti i zveřejnění.

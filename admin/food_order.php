@@ -104,6 +104,18 @@ adminHeader('Poptávka ' . (string)$order['reference_code']);
     <dd><a href="mailto:<?= h((string)$order['customer_email']) ?>"><?= h((string)$order['customer_email']) ?></a></dd>
     <dt>Telefon</dt>
     <dd><?= h((string)$order['customer_phone']) ?></dd>
+    <?php if (foodOrderFulfillmentLabel((string)($order['fulfillment_type'] ?? '')) !== ''): ?>
+      <dt>Způsob převzetí</dt>
+      <dd><?= h(foodOrderFulfillmentLabel((string)$order['fulfillment_type'])) ?></dd>
+    <?php endif; ?>
+    <?php if (!empty($order['requested_at'])): ?>
+      <dt>Požadovaný termín</dt>
+      <dd><?= h(formatCzechDateTime((string)$order['requested_at'])) ?></dd>
+    <?php endif; ?>
+    <?php if (trim((string)($order['customer_address'] ?? '')) !== ''): ?>
+      <dt>Adresa doručení</dt>
+      <dd><?= nl2br(h((string)$order['customer_address'])) ?></dd>
+    <?php endif; ?>
     <dt>Stav</dt>
     <dd><?= h(foodOrderStatusLabel((string)$order['status'])) ?></dd>
     <dt>Vytvořeno</dt>
@@ -129,7 +141,15 @@ adminHeader('Poptávka ' . (string)$order['reference_code']);
     <tbody>
       <?php foreach ($items as $item): ?>
         <tr>
-          <td><?= h((string)$item['item_title']) ?></td>
+          <td>
+            <?= h((string)$item['item_title']) ?>
+            <?php if (trim((string)($item['variant_label'] ?? '')) !== ''): ?>
+              <br><small class="table-meta">Varianta: <?= h((string)$item['variant_label']) ?></small>
+            <?php endif; ?>
+            <?php if (trim((string)($item['portion_label'] ?? '')) !== ''): ?>
+              <br><small class="table-meta">Porce: <?= h((string)$item['portion_label']) ?></small>
+            <?php endif; ?>
+          </td>
           <td><?= (int)$item['quantity'] ?></td>
           <td><?= h(foodPriceLabel($item['unit_price_amount'] !== null ? (string)$item['unit_price_amount'] : null, (string)$item['price_currency'], (string)$item['price_note'])) ?></td>
         </tr>
