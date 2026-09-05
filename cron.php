@@ -144,6 +144,8 @@ function cronProcessReservationReminders(PDO $pdo): array
         return $result;
     }
 
+    // Match reservationReminderIsDue: integer hours, default 24, minimum 1.
+    // Comparing seconds also avoids DATE_ADD overflow for large legacy values.
     $stmt = $pdo->prepare(
         "SELECT b.id
          FROM cms_res_bookings b
@@ -153,6 +155,8 @@ function cronProcessReservationReminders(PDO $pdo): array
            AND COALESCE(b.reminder_last_error, '') = ''
            AND r.reminders_enabled = 1
            AND TIMESTAMP(b.booking_date, b.start_time) > NOW()
+           AND TIMESTAMPDIFF(SECOND, NOW(), TIMESTAMP(b.booking_date, b.start_time))
+               <= GREATEST(1, TRUNCATE(COALESCE(r.reminder_hours_before, 24), 0)) * 3600
          ORDER BY b.booking_date, b.start_time, b.id
          LIMIT 100"
     );
@@ -244,6 +248,70 @@ function cronMissingColumns(PDO $pdo, string $tableName, array $requiredColumns)
     return $missing;
 }
 
+function cronProcessScheduledBoardPublications(PDO $pdo): int
+{
+    if (!isModuleEnabled('board') || cronMissingColumns($pdo, 'cms_board', [
+        'publish_at', 'unpublish_at', 'posted_date', 'deleted_at', 'status', 'is_published', 'created_at', 'slug',
+    ]) !== [] || cronMissingColumns($pdo, 'cms_board_publication_events', [
+        'board_id', 'event_type', 'event_date', 'actor_user_id', 'public_path',
+        'attachment_name', 'attachment_size', 'attachment_checksum',
+    ]) !== []) {
+        return 0;
+    }
+
+    // A past publish_at can also remain after board_save already announced an
+    // immediately public item. Claim the row, then check that exact event type.
+    $eligibleSql = "publish_at IS NOT NULL AND publish_at <= NOW()
+        AND deleted_at IS NULL AND status = 'published' AND posted_date <= CURDATE()
+        AND (unpublish_at IS NULL OR unpublish_at > NOW()) AND TRIM(slug) <> ''";
+    $ids = $pdo->query("SELECT id FROM cms_board WHERE {$eligibleSql} ORDER BY publish_at, id LIMIT 100")
+        ->fetchAll(PDO::FETCH_COLUMN);
+    $published = 0;
+    foreach ($ids as $boardId) {
+        $pdo->beginTransaction();
+        try {
+            $statement = $pdo->prepare("SELECT * FROM cms_board WHERE id = ? AND {$eligibleSql} FOR UPDATE");
+            $statement->execute([(int)$boardId]);
+            $document = $statement->fetch();
+            if (!is_array($document)) {
+                $pdo->commit();
+                continue;
+            }
+            $publicationStatement = $pdo->prepare(
+                "SELECT id FROM cms_board_publication_events
+                 WHERE board_id = ? AND event_type = 'published' AND event_date >= ?
+                 LIMIT 1"
+            );
+            $publicationStatement->execute([(int)$boardId, (string)$document['publish_at']]);
+            if ($publicationStatement->fetchColumn() !== false) {
+                // Preserve the actual publication timestamp recorded by save.
+                $pdo->prepare('UPDATE cms_board SET is_published = 1, publish_at = NULL WHERE id = ?')
+                    ->execute([(int)$boardId]);
+                $pdo->commit();
+                continue;
+            }
+            $pdo->prepare("UPDATE cms_board SET is_published = 1, created_at = publish_at, publish_at = NULL WHERE id = ?")
+                ->execute([(int)$boardId]);
+            $document['is_published'] = 1;
+            $document['created_at'] = $document['publish_at'];
+            $document['publish_at'] = null;
+            recordBoardPublicationEvent($pdo, $document, 'published');
+            $pdo->commit();
+        } catch (Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception;
+        }
+        $published++;
+        $sentNotifications = notifyBoardSubscribers($pdo, $document);
+        if ($sentNotifications > 0) {
+            logAction('board_notify', 'id=' . (int)$boardId . ' sent=' . $sentNotifications);
+        }
+    }
+    return $published;
+}
+
 /**
  * @return list<string>
  */
@@ -326,8 +394,15 @@ function runKoraCron(PDO $pdo): array
             cronAppendLog($log, 'Chyba plánovaného publikování: ' . $e->getMessage());
         }
     }
-    // Stránky a nástěnka (is_published místo status)
-    $publishIsPublishedTables = ['cms_pages', 'cms_board', 'cms_events'];
+    // Nástěnka potřebuje kromě změny stavu také publikační událost a oznámení.
+    try {
+        $totalPublished += cronProcessScheduledBoardPublications($pdo);
+    } catch (\PDOException $e) {
+        cronAppendLog($log, 'Chyba plánovaného publikování nástěnky: ' . $e->getMessage());
+    }
+
+    // Stránky a události (is_published místo status)
+    $publishIsPublishedTables = ['cms_pages', 'cms_events'];
     foreach ($publishIsPublishedTables as $tableName) {
         $missingColumns = cronMissingColumns($pdo, $tableName, ['publish_at', 'is_published', 'created_at']);
         if ($missingColumns !== []) {
@@ -355,11 +430,11 @@ function runKoraCron(PDO $pdo): array
         cronAppendLog($log, "Publikováno {$totalPublished} naplánovaných položek");
     }
 
-    // 2. Čištění starých rate-limit záznamů
+    // 2. Čištění expirovaných rate-limit záznamů; neznámá expirace se zachová.
     try {
         $statement = $pdo->prepare(
             "DELETE FROM cms_rate_limit
-             WHERE window_start < DATE_SUB(NOW(), INTERVAL 1 HOUR)"
+             WHERE expires_at <= NOW()"
         );
         $statement->execute();
         $deletedCount = $statement->rowCount();

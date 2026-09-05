@@ -243,7 +243,7 @@ function widgetInstanceAvailability(array $widget): array
                      WHERE blog_id = ?
                        AND status = 'published'
                        AND deleted_at IS NULL
-                       AND (publish_at IS NULL OR publish_at <= NOW())",
+                       AND (publish_at IS NULL OR publish_at <= NOW()) AND (unpublish_at IS NULL OR unpublish_at > NOW())",
                     [$blogId]
                 ) === 0) {
                     $reasons[] = 'vybraný blog zatím nemá veřejné články';
@@ -255,7 +255,7 @@ function widgetInstanceAvailability(array $widget): array
                  FROM cms_articles
                  WHERE status = 'published'
                    AND deleted_at IS NULL
-                   AND (publish_at IS NULL OR publish_at <= NOW())"
+                   AND (publish_at IS NULL OR publish_at <= NOW()) AND (unpublish_at IS NULL OR unpublish_at > NOW())"
             ) === 0) {
                 $reasons[] = 'zatím nejsou žádné veřejné články';
             }
@@ -332,7 +332,7 @@ function widgetInstanceAvailability(array $widget): array
                      FROM cms_articles
                      WHERE status = 'published'
                        AND deleted_at IS NULL
-                       AND (publish_at IS NULL OR publish_at <= NOW())"
+                       AND (publish_at IS NULL OR publish_at <= NOW()) AND (unpublish_at IS NULL OR unpublish_at > NOW())"
                 ) === 0) {
                     $reasons[] = 'zdroj Blog zatím nemá žádný veřejný doporučený obsah';
                 }
@@ -752,7 +752,7 @@ function renderWidget_latest_articles(array $widget, array $settings, string $zo
     }
 
     $pdo = db_connect();
-    $where = "WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND a.deleted_at IS NULL";
+    $where = "WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW()) AND a.deleted_at IS NULL";
     $params = [];
     if ($blogId !== null) {
         $where .= " AND a.blog_id = ?";
@@ -1561,7 +1561,7 @@ function renderWidget_featured_article(array $widget, array $settings, string $z
         $article = $pdo->query(
             "SELECT a.id, a.title, a.slug, a.perex, a.image_file, a.blog_id, a.view_count, b.slug AS blog_slug
              FROM cms_articles a LEFT JOIN cms_blogs b ON b.id = a.blog_id
-             WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              ORDER BY a.view_count DESC, a.created_at DESC LIMIT 1"
         )->fetch();
         if (!$article) {

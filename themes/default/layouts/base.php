@@ -84,15 +84,22 @@ document.addEventListener('click', function (e) {
   window.print();
 });
 function copyTextFallback(value) {
+  var previousFocus = document.activeElement;
   var ta = document.createElement('textarea');
   ta.value = value;
   ta.className = 'clipboard-fallback-control';
   ta.setAttribute('aria-hidden', 'true');
   ta.setAttribute('tabindex', '-1');
   document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
+  try {
+    ta.select();
+    return document.execCommand('copy') === true;
+  } catch (error) {
+    return false;
+  } finally {
+    document.body.removeChild(ta);
+    if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+  }
 }
 function rememberCopyButtonHtml(btn, fallback) {
   if (!btn.hasAttribute('data-copy-original-html')) {
@@ -105,22 +112,27 @@ function showCopySuccess(btn, fallback) {
   btn.textContent = 'Zkopírováno!';
   setTimeout(function () { btn.innerHTML = originalHtml; }, 2000);
 }
+function copyWithFeedback(btn, value, label, successMessage) {
+  var live = document.getElementById('a11y-live');
+  if (live) live.textContent = '';
+  return Promise.resolve().then(function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value).then(function () { return true; });
+    }
+    return copyTextFallback(value);
+  }).catch(function () {
+    return copyTextFallback(value);
+  }).then(function (copied) {
+    if (copied) showCopySuccess(btn, label);
+    if (live) live.textContent = copied ? successMessage : 'Kopírování se nepodařilo. Označte text a zkopírujte jej ručně.';
+  });
+}
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-link');
   if (!btn) return;
   var url = btn.getAttribute('data-url') || window.location.href;
-  var live = document.getElementById('a11y-live');
   var defaultLabel = 'Kopírovat odkaz';
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function () {
-      showCopySuccess(btn, defaultLabel);
-      if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
-    });
-  } else {
-    copyTextFallback(url);
-    showCopySuccess(btn, defaultLabel);
-    if (live) live.textContent = 'Odkaz byl zkopírován do schránky.';
-  }
+  copyWithFeedback(btn, url, defaultLabel, 'Odkaz byl zkopírován do schránky.');
 });
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('.js-copy-content');
@@ -129,21 +141,12 @@ document.addEventListener('click', function (e) {
   var source = targetId ? document.getElementById(targetId) : null;
   if (!source) return;
   var payload = source.textContent || '';
-  var live = document.getElementById('a11y-live');
   var defaultLabel = btn.getAttribute('data-copy-label') || 'Kopírovat do schránky';
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(payload).then(function () {
-      showCopySuccess(btn, defaultLabel);
-      if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
-    });
-  } else {
-    copyTextFallback(payload);
-    showCopySuccess(btn, defaultLabel);
-    if (live) live.textContent = 'Obsah byl zkopírován do schránky.';
-  }
+  copyWithFeedback(btn, payload, defaultLabel, 'Obsah byl zkopírován do schránky.');
 });
 </script>
-<?php $customFooter = getSetting('custom_footer_code', ''); if ($customFooter !== ''): ?>
+<?php $customFooter = getSetting('custom_footer_code', '');
+if ($customFooter !== ''): ?>
 <?= $customFooter ?>
 <?php endif; ?>
 </body>

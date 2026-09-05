@@ -62,10 +62,10 @@ if ($q !== '' && mb_strlen($q) >= 2) {
                 $q,
                 $like,
                 "SELECT a.id, a.title, a.slug, a.perex, a.created_at, 'blog' AS type, b.slug AS blog_slug",
-                "FROM cms_articles a LEFT JOIN cms_blogs b ON b.id = a.blog_id WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())",
-                'title, perex, content',
+                "FROM cms_articles a LEFT JOIN cms_blogs b ON b.id = a.blog_id WHERE a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())",
+                'a.title, a.perex, a.content',
                 [],
-                'created_at DESC',
+                'a.created_at DESC',
                 10
             ) as $row) {
                 $results[] = $row;
@@ -100,11 +100,16 @@ if ($q !== '' && mb_strlen($q) >= 2) {
             $pdo,
             $q,
             $like,
-            "SELECT id, title, '' AS perex, created_at, 'page' AS type, slug",
-            "FROM cms_pages WHERE is_published = 1",
-            'title, content',
+            "SELECT p.id, p.title, '' AS perex, p.created_at, 'page' AS type, p.slug, p.blog_id, b.slug AS blog_slug",
+            "FROM cms_pages p LEFT JOIN cms_blogs b ON b.id = p.blog_id
+             WHERE p.is_published = 1 AND p.status = 'published' AND p.deleted_at IS NULL
+               AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+               AND (p.unpublish_at IS NULL OR p.unpublish_at > NOW())
+               AND (p.blog_id IS NULL OR b.id IS NOT NULL)"
+               . (isModuleEnabled('blog') ? '' : ' AND p.blog_id IS NULL'),
+            'p.title, p.content',
             [],
-            'title',
+            'p.title',
             5
         ) as $row) {
             $results[] = $row;

@@ -2,6 +2,57 @@
 
 require_once __DIR__ . '/../db.php';
 
+/** @return array<string, list<string>> */
+function adminEditorFormFields(): array
+{
+    return [
+        'news' => ['title', 'slug', 'content', 'publish_at', 'unpublish_at', 'admin_note', 'meta_title', 'meta_description', 'article_status'],
+        'event' => ['title', 'slug', 'event_kind', 'event_type_id', 'place_id', 'excerpt', 'description', 'program_note', 'location', 'organizer_name', 'organizer_email', 'registration_url', 'price_note', 'accessibility_note', 'event_date', 'event_time', 'event_end_date', 'event_end_time', 'recurrence_frequency', 'recurrence_interval', 'recurrence_count', 'publish_at', 'unpublish_at', 'admin_note', 'article_status'],
+        'faq' => ['question', 'slug', 'excerpt', 'answer', 'category_id', 'meta_title', 'meta_description', 'article_status'],
+        'podcast' => ['title', 'slug', 'description', 'transcript', 'audio_url', 'audio_mime_type', 'audio_file_size', 'subtitle', 'duration', 'episode_num', 'season_num', 'episode_type', 'explicit_mode', 'publish_at', 'article_status'],
+        'podcast_show' => ['title', 'slug', 'author', 'subtitle', 'language', 'category', 'owner_name', 'owner_email', 'explicit_mode', 'show_type', 'feed_episode_limit', 'website_url', 'description', 'article_status'],
+    ];
+}
+
+/** @param array<string, mixed> $input */
+function adminEditorFormFlashStore(string $editor, ?int $id, array $input, ?int $scopeId = null): void
+{
+    $values = [];
+    foreach (adminEditorFormFields()[$editor] ?? [] as $field) {
+        if (isset($input[$field]) && is_scalar($input[$field])) {
+            $values[$field === 'article_status' ? 'status' : $field] = (string)$input[$field];
+        }
+    }
+    $checkboxes = match ($editor) {
+        'event' => ['is_published', 'event_image_delete'],
+        'faq' => ['is_published'],
+        'podcast' => ['block_from_feed', 'audio_file_delete', 'image_file_delete'],
+        'podcast_show' => ['feed_complete', 'is_published', 'cover_image_delete'],
+        default => [],
+    };
+    foreach ($checkboxes as $field) {
+        $values[$field] = isset($input[$field]) ? '1' : '0';
+    }
+    $key = $editor . ':' . ($id ?? 'new') . ':' . ($scopeId ?? '');
+    $_SESSION['cms_editor_form_flash'][$key] = ['values' => $values];
+}
+
+/** @return array<string, string> */
+function adminEditorFormFlashTake(string $editor, ?int $id, ?int $scopeId = null): array
+{
+    $key = $editor . ':' . ($id ?? 'new') . ':' . ($scopeId ?? '');
+    $flash = $_SESSION['cms_editor_form_flash'][$key] ?? null;
+    unset($_SESSION['cms_editor_form_flash'][$key]);
+    return is_array($flash) && is_array($flash['values'] ?? null) ? $flash['values'] : [];
+}
+
+function adminEditorDateTimeValue(?string $value): string
+{
+    $value = trim($value ?? '');
+    $candidate = substr(str_replace(' ', 'T', $value), 0, 16);
+    return validateDateTimeLocal($candidate) !== null ? $candidate : $value;
+}
+
 /**
  * @param string|list<string> $errorState
  * @param array<string, list<string>> $fieldErrorMap
@@ -530,20 +581,26 @@ function adminFooter(): void
        . '});</script>'
        . '<script nonce="' . $nonce . '">'
        . '(function(){'
-       . 'var form=document.querySelector(\'form[method="post"]\');'
+       . 'var form=Array.from(document.querySelectorAll(\'form[method="post"]\')).find(function(candidate){return candidate.querySelector(\'textarea\');});'
        . 'if(!form||!form.querySelector(\'textarea\'))return;'
        . 'var key=\'kora_autosave_\'+location.pathname+(new URLSearchParams(location.search).get(\'id\')||\'_new\');'
        . 'var recoveryKey=key+"_submitted";'
+       . 'function editorFields(){'
+       . 'return Array.from(form.querySelectorAll(\'.ql-container\')).map(function(container){'
+       . 'var field=container.nextElementSibling;'
+       . 'var editor=container.querySelector(\'.ql-editor\');'
+       . 'return editor&&field&&field.matches(\'textarea[name],input[type="hidden"][name]\')?{field:field,editor:editor}:null;'
+       . '}).filter(Boolean);'
+       . '}'
        . 'function gather(){'
        . 'var d={};'
-       . 'document.querySelectorAll(\'.ql-container\').forEach(function(container){'
-       . 'var editor=container.querySelector(\'.ql-editor\');'
-       . 'var ta=container.parentNode.querySelector(\'textarea\');'
-       . 'if(editor&&ta)ta.value=editor.innerHTML;'
+       . 'editorFields().forEach(function(pair){'
+       . 'pair.field.value=pair.editor.innerHTML;'
+       . 'd[pair.field.name]=pair.field.value;'
        . '});'
        . 'form.querySelectorAll(\'input[type="text"][name],input[type="email"][name],input[type="url"][name],input[type="number"][name],input[type="date"][name],input[type="time"][name],input[type="datetime-local"][name],input[type="search"][name],textarea[name],select[name]\').forEach(function(el){'
        . 'if(el.name===\'csrf_token\')return;'
-       . 'd[el.name]=el.value;'
+       . 'd[el.name]=el.multiple?Array.from(el.selectedOptions,function(option){return option.value;}):el.value;'
        . '});'
        . 'form.querySelectorAll(\'input[type="checkbox"][name],input[type="radio"][name]\').forEach(function(el){'
        . 'if(el.name===\'csrf_token\')return;'
@@ -566,12 +623,11 @@ function adminFooter(): void
        . 'return;'
        . '}'
        . 'var el=form.querySelector(\'[name="\'+CSS.escape(k)+\'"]\');'
-       . 'if(el)el.value=d[k];'
+       . 'if(el&&el.multiple){var values=Array.isArray(d[k])?d[k]:[d[k]];Array.from(el.options).forEach(function(option){option.selected=values.includes(option.value);});}'
+       . 'else if(el)el.value=d[k];'
        . '});'
-       . 'document.querySelectorAll(\'.ql-container\').forEach(function(container){'
-       . 'var editor=container.querySelector(\'.ql-editor\');'
-       . 'var ta=container.parentNode.querySelector(\'textarea\');'
-       . 'if(editor&&ta&&ta.value)editor.innerHTML=ta.value;'
+       . 'editorFields().forEach(function(pair){'
+       . 'pair.editor.innerHTML=pair.field.value;'
        . '});'
        . '}'
        . 'try{'

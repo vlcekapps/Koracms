@@ -14,6 +14,8 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../admin/settings_shared.php';
 require_once __DIR__ . '/../cron.php';
 require_once __DIR__ . '/http_test_helpers.php';
+require_once __DIR__ . '/rc_publication_http.php';
+require_once __DIR__ . '/rc_session_security_http.php';
 
 $baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
 if (!is_string($baseUrlInput) || $baseUrlInput === '') {
@@ -704,6 +706,9 @@ try {
     saveSetting('module_reservations', '1');
     saveSetting('module_forms', '1');
     clearSettingsCache();
+    httpIntegrationPrintResult('rc_publication_window_http', rcPublicationHttpChecks($pdo, $baseUrl), $failures);
+    httpIntegrationClearLocalRateLimits($pdo, ['login_2fa']);
+    httpIntegrationPrintResult('rc_session_security_http', rcSessionSecurityHttpChecks($pdo, $baseUrl), $failures);
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
             id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -3600,7 +3605,11 @@ try {
     httpIntegrationPrintResult('admin_consistent_help_http', $adminConsistentHelpIssues, $failures);
 
     $adminCommandIssues = [];
-    $adminCommandUserId = 900000 + random_int(1, 99999);
+    $pdo->prepare("INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed)
+        VALUES (?, ?, 'HTTP', 'Command Admin', 'admin', 1, 1)")
+        ->execute(['http-command-' . bin2hex(random_bytes(6)) . '@example.test', password_hash('HTTP-Command-123!', PASSWORD_DEFAULT)]);
+    $adminCommandUserId = (int)$pdo->lastInsertId();
+    $createdUsers[] = $adminCommandUserId;
     $adminCommandSession = koraPrimeTestSession([
         'cms_logged_in' => true,
         'cms_superadmin' => true,
@@ -12470,6 +12479,8 @@ try {
     $bookingId = (int)$pdo->lastInsertId();
     reservationRecordBookingEvent($pdo, $bookingId, 'created', 'Rezervace byla vytvořena integračním testem.');
 
+    $pdo->prepare('UPDATE cms_res_resources SET max_concurrent = 1 WHERE id = ?')->execute([$resourceId]);
+    $pdo->prepare('UPDATE cms_res_slots SET max_bookings = 1 WHERE resource_id = ?')->execute([$resourceId]);
     $reservationConflictResponse = postUrl(
         $baseUrl . BASE_URL . '/admin/res_booking_add.php',
         [
@@ -12480,23 +12491,23 @@ try {
             'guest_email' => 'conflict@example.test',
             'guest_phone' => '',
             'booking_date' => $bookingDate,
-            'start_time' => '09:15',
-            'end_time' => '09:45',
+            'start_time' => '09:00',
+            'end_time' => '10:00',
             'party_size' => '1',
             'notes' => '',
         ],
         $adminSession['cookie'],
         0
     );
+    $pdo->prepare('UPDATE cms_res_slots SET max_bookings = 2 WHERE resource_id = ?')->execute([$resourceId]);
     if (httpIntegrationStatusCode($reservationConflictResponse) !== 200) {
         $reservationIssues[] = 'chybový stav ruční rezervace conflict se nevyrenderoval';
     } else {
         foreach ([
-            'role="alert" class="error" id="form-error" aria-atomic="true">V daném čase už existuje jiná rezervace pro tento zdroj.',
-            'aria-invalid="true" aria-describedby="booking_date-error"',
+            'role="alert" class="error" id="form-error" aria-atomic="true">Vybraný čas byl právě obsazen.',
             'aria-invalid="true" aria-describedby="start_time-error"',
             'aria-invalid="true" aria-describedby="end_time-error"',
-            'Vyberte skutečné datum rezervace.',
+            'Nabídka byla aktualizována, vyberte prosím jiný čas.',
             'value="Kolizní host"',
         ] as $reservationConflictExpectedFragment) {
             if (!str_contains($reservationConflictResponse['body'], $reservationConflictExpectedFragment)) {

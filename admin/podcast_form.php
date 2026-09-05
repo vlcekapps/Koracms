@@ -70,9 +70,11 @@ $episode['show_slug'] = (string)$show['slug'];
 $episode['show_title'] = (string)$show['title'];
 $episode['show_cover_image'] = (string)($show['cover_image'] ?? '');
 $episode = hydratePodcastEpisodePresentation($episode);
+$formValues = adminEditorFormFlashTake('podcast', $id, $showId);
+$episode = array_replace($episode, $formValues);
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$publishInput = !empty($episode['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$episode['publish_at'])) : '';
+$publishInput = adminEditorDateTimeValue($episode['publish_at'] ?? '');
 $err = trim((string)($_GET['err'] ?? ''));
 $podcastEpisodeAudioUrlErrorMessage = 'Externí audio odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud používáte nahraný audio soubor, nechte pole prázdné.';
 $podcastEpisodePublishAtErrorMessage = 'Plánované zveřejnění musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro zveřejnění po uložení či schválení.';
@@ -81,6 +83,7 @@ $podcastEpisodeAudioMimeErrorMessage = 'MIME typ externího audia musí mít tva
 $podcastEpisodeAudioSizeErrorMessage = 'Velikost externího audia musí být celé nezáporné číslo v bajtech.';
 $podcastEpisodeImageErrorMessage = 'Obrázek epizody musí být čtvercový JPG nebo PNG v rozmezí 1024×1024 až 3000×3000 px. Nahrajte vhodný čtvercový obrázek, nebo pole nechte prázdné a použijte cover pořadu.';
 $formError = match ($err) {
+    'save' => 'Epizodu se nepodařilo uložit. Zadané hodnoty a původní soubory zůstaly zachované. Zkuste uložení znovu; případné nové soubory vyberte znovu.',
     'required' => 'Epizodu podcastu nejde uložit bez názvu. U pole Název epizody je konkrétní nápověda.',
     'slug' => 'Slug epizody není použitelný. U pole Slug veřejné stránky je konkrétní nápověda.',
     'slug_taken' => 'Slug epizody už v rámci pořadu používá jiná epizoda. U pole Slug veřejné stránky je konkrétní nápověda.',
@@ -163,12 +166,12 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
       <div class="admin-form-grid__cell">
         <label for="episode_num">Číslo epizody</label>
         <input type="number" id="episode_num" name="episode_num" min="1"
-               value="<?= !empty($episode['episode_num']) ? (int)$episode['episode_num'] : '' ?>">
+               value="<?= h($formValues['episode_num'] ?? (!empty($episode['episode_num']) ? (string)(int)$episode['episode_num'] : '')) ?>">
       </div>
       <div class="admin-form-grid__cell">
         <label for="season_num">Číslo sezóny</label>
         <input type="number" id="season_num" name="season_num" min="1"
-               value="<?= !empty($episode['season_num']) ? (int)$episode['season_num'] : '' ?>">
+               value="<?= h($formValues['season_num'] ?? (!empty($episode['season_num']) ? (string)(int)$episode['season_num'] : '')) ?>">
       </div>
       <div class="admin-form-grid__cell">
         <label for="duration">Délka</label>
@@ -230,7 +233,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php if ((string)$episode['audio_file'] !== ''): ?>
       <div class="admin-field-row">
         <label for="audio_file_delete" class="admin-checkbox-label">
-          <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1">
+          <input type="checkbox" id="audio_file_delete" name="audio_file_delete" value="1"<?= !empty($episode['audio_file_delete']) ? ' checked' : '' ?>>
           Odebrat stávající audio soubor
         </label>
       </div>
@@ -257,7 +260,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
         <label for="audio_file_size">Velikost externího audia v bajtech</label>
         <input type="number" id="audio_file_size" name="audio_file_size" min="0" step="1"
                <?= adminFieldAttributes('audio_file_size', $err, $fieldErrorMap, ['podcast-episode-audio-size-help']) ?>
-               value="<?= (int)$episode['audio_file_size'] > 0 ? (int)$episode['audio_file_size'] : '' ?>">
+               value="<?= h($formValues['audio_file_size'] ?? ((int)$episode['audio_file_size'] > 0 ? (string)(int)$episode['audio_file_size'] : '')) ?>">
         <small id="podcast-episode-audio-size-help" class="field-help">Pro externí audio uveďte přesnou velikost souboru. U nahraného souboru ji CMS zjistí automaticky.</small>
         <?php adminRenderFieldError('audio_file_size', $err, $fieldErrorMap, $fieldErrorMessages['audio_file_size']); ?>
       </div>
@@ -277,7 +280,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
     <?php if ((string)$episode['image_file'] !== ''): ?>
       <div class="admin-field-row">
         <label for="image_file_delete" class="admin-checkbox-label">
-          <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1">
+          <input type="checkbox" id="image_file_delete" name="image_file_delete" value="1"<?= !empty($episode['image_file_delete']) ? ' checked' : '' ?>>
           Odebrat stávající obrázek epizody
         </label>
       </div>
@@ -330,7 +333,7 @@ adminHeader($id !== null ? 'Upravit epizodu podcastu' : 'Nová epizoda podcastu'
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
-    let slugManual = <?= $id !== null && !empty($episode['slug']) ? 'true' : 'false' ?>;
+    let slugManual = <?= !empty($episode['slug']) ? 'true' : 'false' ?>;
 
     const slugify = (value) => value
         .toLowerCase()

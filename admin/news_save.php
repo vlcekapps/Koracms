@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireLogin(BASE_URL . '/admin/login.php');
 requireModuleEnabled('news');
 verifyCsrf();
@@ -16,6 +16,7 @@ $metaDescription = trim((string)($_POST['meta_description'] ?? ''));
 
 $redirectBase = BASE_URL . '/admin/news_form.php';
 $redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
+    adminEditorFormFlashStore('news', $id, $_POST);
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);

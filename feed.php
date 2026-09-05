@@ -140,7 +140,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
     $articleWhere = [
         "a.status = 'published'",
         'a.deleted_at IS NULL',
-        '(a.publish_at IS NULL OR a.publish_at <= NOW())',
+        '(a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())',
     ];
     $articleParams = [];
 

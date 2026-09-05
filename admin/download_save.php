@@ -107,192 +107,183 @@ if ($externalUrlInput !== '' && $externalUrl === '') {
     $redirectWithError('url');
 }
 
-$imageFilename = (string)$existing['image_file'];
-$imageUpload = uploadDownloadImage($_FILES['download_image'] ?? [], $imageFilename);
-if ($imageUpload['error'] !== '') {
-    $redirectWithError('image');
+$prepared = downloadPrepareFileMutation(
+    $existing,
+    is_array($_FILES['file'] ?? null) ? $_FILES['file'] : [],
+    is_array($_FILES['download_image'] ?? null) ? $_FILES['download_image'] : [],
+    $deleteStoredFile,
+    $deleteImage,
+    $externalUrl
+);
+if (!$prepared['ok']) {
+    $redirectWithError((string)$prepared['error']);
 }
-$imageFilename = $imageUpload['filename'];
-if ($deleteImage && $imageFilename !== '') {
-    deleteDownloadImageFile($imageFilename);
-    $imageFilename = '';
-}
-
-$storedFilename = (string)$existing['filename'];
-$originalName = (string)$existing['original_name'];
-$fileSize = (int)$existing['file_size'];
+$imageFilename = (string)$prepared['image_file'];
+$storedFilename = (string)$prepared['filename'];
+$originalName = (string)$prepared['original_name'];
+$fileSize = (int)$prepared['file_size'];
 if ($checksumSha256 === '') {
     $checksumSha256 = normalizeDownloadChecksum((string)$existing['checksum_sha256']);
 }
 
-if ($deleteStoredFile && $storedFilename !== '') {
-    deleteDownloadStoredFile($storedFilename);
-    $storedFilename = '';
-    $originalName = '';
-    $fileSize = 0;
-    if ($checksumInput === '') {
-        $checksumSha256 = '';
-    }
-}
-
-$fileField = $_FILES['file'] ?? null;
-if (koraUploadHasFile($fileField)) {
-    $storedFileUpload = uploadDownloadStoredFile(
-        is_array($fileField) ? $fileField : [],
-        $storedFilename
-    );
-    if ((string)$storedFileUpload['error'] !== '') {
-        $redirectWithError('file');
-    }
-    if (!empty($storedFileUpload['uploaded'])) {
-        $storedFilename = (string)$storedFileUpload['filename'];
-        $originalName = (string)$storedFileUpload['original_name'];
-        $fileSize = (int)$storedFileUpload['file_size'];
-        $checksumSha256 = (string)$storedFileUpload['checksum'];
-    }
-}
-
-if ($storedFilename === '' && $externalUrl === '') {
-    $redirectWithError('source');
+if (!empty($prepared['uploaded'])) {
+    $checksumSha256 = (string)$prepared['checksum'];
 }
 
 if ($storedFilename === '' && $checksumInput === '') {
     $checksumSha256 = '';
 }
 
-if ($id !== null) {
-    $oldSnapshot = downloadRevisionSnapshot($existingDownload);
-    $oldPath = downloadPublicPath($existingDownload);
+$notifyNewDownload = false;
+try {
+    $pdo->beginTransaction();
+    if ($id !== null) {
+        $oldSnapshot = downloadRevisionSnapshot($existingDownload);
+        $oldPath = downloadPublicPath($existingDownload);
 
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = $existingDownload['status'] ?? 'published';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = (($existingDownload['status'] ?? '') === 'published') ? 'published' : 'pending';
-    }
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $existingDownload['status'] ?? 'published';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = (($existingDownload['status'] ?? '') === 'published') ? 'published' : 'pending';
+        }
 
-    // Při první publikaci aktualizovat created_at
-    $publishingNow = $requestedStatus === 'published' && ($existingDownload['status'] ?? '') !== 'published';
-    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+        // Při první publikaci aktualizovat created_at
+        $publishingNow = $requestedStatus === 'published' && ($existingDownload['status'] ?? '') !== 'published';
+        $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
-    $stmt = $pdo->prepare(
-        "UPDATE cms_downloads
+        $stmt = $pdo->prepare(
+            "UPDATE cms_downloads
          SET title = ?, slug = ?, download_type = ?, dl_category_id = ?, excerpt = ?, description = ?,
              image_file = ?, version_label = ?, platform_label = ?, license_label = ?, project_url = ?,
              release_date = ?, requirements = ?, checksum_sha256 = ?, series_key = ?, external_url = ?,
              download_series_id = ?, is_current_version = ?, filename = ?, original_name = ?, file_size = ?, is_featured = ?, is_published = ?,
              status = ?, author_id = COALESCE(author_id, ?), updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
-    );
-    $stmt->execute([
-        $title,
-        $uniqueSlug,
-        $downloadType,
-        $dlCategoryId,
-        $excerpt,
-        $description,
-        $imageFilename,
-        $versionLabel,
-        $platformLabel,
-        $licenseLabel,
-        $projectUrl,
-        $releaseDate,
-        $requirements,
-        $checksumSha256,
-        $seriesKey,
-        $externalUrl,
-        $downloadSeriesId,
-        $isCurrentVersion,
-        $storedFilename,
-        $originalName,
-        $fileSize,
-        $isFeatured,
-        $isPublished,
-        $requestedStatus,
-        currentUserId(),
-        $id,
-    ]);
+        );
+        $stmt->execute([
+            $title,
+            $uniqueSlug,
+            $downloadType,
+            $dlCategoryId,
+            $excerpt,
+            $description,
+            $imageFilename,
+            $versionLabel,
+            $platformLabel,
+            $licenseLabel,
+            $projectUrl,
+            $releaseDate,
+            $requirements,
+            $checksumSha256,
+            $seriesKey,
+            $externalUrl,
+            $downloadSeriesId,
+            $isCurrentVersion,
+            $storedFilename,
+            $originalName,
+            $fileSize,
+            $isFeatured,
+            $isPublished,
+            $requestedStatus,
+            currentUserId(),
+            $id,
+        ]);
 
-    saveRevision($pdo, 'download', $id, $oldSnapshot, downloadRevisionSnapshot([
-        'title' => $title,
-        'slug' => $uniqueSlug,
-        'download_type' => $downloadType,
-        'dl_category_id' => $dlCategoryId,
-        'excerpt' => $excerpt,
-        'description' => $description,
-        'version_label' => $versionLabel,
-        'platform_label' => $platformLabel,
-        'license_label' => $licenseLabel,
-        'project_url' => $projectUrl,
-        'release_date' => $releaseDate,
-        'requirements' => $requirements,
-        'checksum_sha256' => $checksumSha256,
-        'series_key' => $seriesKey,
-        'download_series_id' => $downloadSeriesId,
-        'is_current_version' => $isCurrentVersion,
-        'external_url' => $externalUrl,
-        'is_featured' => $isFeatured,
-        'is_published' => $isPublished,
-    ]));
-    if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
-        $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $id]);
-    }
-    upsertPathRedirect($pdo, $oldPath, downloadPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
-    logAction('download_edit', "id={$id} title={$title} slug={$uniqueSlug} featured={$isFeatured}");
-} else {
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = 'draft';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = 'pending';
-    }
-    $status = $requestedStatus;
-    $authorId = currentUserId();
-    $stmt = $pdo->prepare(
-        "INSERT INTO cms_downloads
+        saveRevision($pdo, 'download', $id, $oldSnapshot, downloadRevisionSnapshot([
+            'title' => $title,
+            'slug' => $uniqueSlug,
+            'download_type' => $downloadType,
+            'dl_category_id' => $dlCategoryId,
+            'excerpt' => $excerpt,
+            'description' => $description,
+            'version_label' => $versionLabel,
+            'platform_label' => $platformLabel,
+            'license_label' => $licenseLabel,
+            'project_url' => $projectUrl,
+            'release_date' => $releaseDate,
+            'requirements' => $requirements,
+            'checksum_sha256' => $checksumSha256,
+            'series_key' => $seriesKey,
+            'download_series_id' => $downloadSeriesId,
+            'is_current_version' => $isCurrentVersion,
+            'external_url' => $externalUrl,
+            'is_featured' => $isFeatured,
+            'is_published' => $isPublished,
+        ]));
+        if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
+            $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $id]);
+        }
+        upsertPathRedirect($pdo, $oldPath, downloadPublicPath(['id' => $id, 'slug' => $uniqueSlug]));
+        logAction('download_edit', "id={$id} title={$title} slug={$uniqueSlug} featured={$isFeatured}");
+    } else {
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
+        $authorId = currentUserId();
+        $stmt = $pdo->prepare(
+            "INSERT INTO cms_downloads
          (title, slug, download_type, dl_category_id, excerpt, description, image_file, version_label,
           platform_label, license_label, project_url, release_date, requirements, checksum_sha256,
           series_key, download_series_id, is_current_version, external_url, filename, original_name, file_size, is_featured,
           is_published, status, author_id)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    );
-    $stmt->execute([
-        $title,
-        $uniqueSlug,
-        $downloadType,
-        $dlCategoryId,
-        $excerpt,
-        $description,
-        $imageFilename,
-        $versionLabel,
-        $platformLabel,
-        $licenseLabel,
-        $projectUrl,
-        $releaseDate,
-        $requirements,
-        $checksumSha256,
-        $seriesKey,
-        $downloadSeriesId,
-        $isCurrentVersion,
-        $externalUrl,
-        $storedFilename,
-        $originalName,
-        $fileSize,
-        $isFeatured,
-        currentUserHasCapability('content_approve_shared') ? $isPublished : 0,
-        $status,
-        $authorId,
-    ]);
-    $newDownloadId = (int)$pdo->lastInsertId();
-    if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
-        $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $newDownloadId]);
+        );
+        $stmt->execute([
+            $title,
+            $uniqueSlug,
+            $downloadType,
+            $dlCategoryId,
+            $excerpt,
+            $description,
+            $imageFilename,
+            $versionLabel,
+            $platformLabel,
+            $licenseLabel,
+            $projectUrl,
+            $releaseDate,
+            $requirements,
+            $checksumSha256,
+            $seriesKey,
+            $downloadSeriesId,
+            $isCurrentVersion,
+            $externalUrl,
+            $storedFilename,
+            $originalName,
+            $fileSize,
+            $isFeatured,
+            currentUserHasCapability('content_approve_shared') ? $isPublished : 0,
+            $status,
+            $authorId,
+        ]);
+        $newDownloadId = (int)$pdo->lastInsertId();
+        if ($downloadSeriesId !== null && $isCurrentVersion === 1) {
+            $pdo->prepare("UPDATE cms_downloads SET is_current_version = 0 WHERE download_series_id = ? AND id <> ?")->execute([$downloadSeriesId, $newDownloadId]);
+        }
+        logAction('download_add', "title={$title} status={$status} featured={$isFeatured}");
+        $notifyNewDownload = $status === 'pending';
     }
-    logAction('download_add', "title={$title} status={$status} featured={$isFeatured}");
-    if ($status === 'pending') {
-        notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');
+
+    if (!mediaApplyFileChanges($prepared['files'], $prepared['removals'], static fn (): bool => $pdo->commit())) {
+        throw new RuntimeException('Cannot commit download files and record.');
     }
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    koraLog('error', 'download save failed', ['download_id' => $id, 'exception' => $e]);
+    mediaRemoveWorkDirectory($prepared['directory']);
+    $redirectWithError('file');
+}
+mediaRemoveWorkDirectory($prepared['directory']);
+if ($notifyNewDownload) {
+    notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');
 }
 
 header('Location: ' . BASE_URL . '/admin/downloads.php');

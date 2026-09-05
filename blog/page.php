@@ -18,6 +18,19 @@ if (!$blog || $pageSlug === '') {
 }
 
 $pdo = db_connect();
+$previewInput = $_GET['preview'] ?? '';
+$previewToken = is_string($previewInput) ? trim($previewInput) : '__invalid_preview_token__';
+if ($previewToken !== '') {
+    sendNoStoreNoIndexHeaders();
+    if (!isValidArticlePreviewToken($previewToken)) {
+        $previewToken = '__invalid_preview_token__';
+    }
+}
+$visibilitySql = $previewToken !== ''
+    ? 'p.preview_token = ?'
+    : "p.status = 'published' AND p.is_published = 1
+       AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+       AND (p.unpublish_at IS NULL OR p.unpublish_at > NOW())";
 $stmt = $pdo->prepare(
     "SELECT p.*, b.slug AS blog_slug, b.name AS blog_name
      FROM cms_pages p
@@ -25,11 +38,14 @@ $stmt = $pdo->prepare(
      WHERE p.slug = ?
        AND p.blog_id = ?
        AND p.deleted_at IS NULL
-       AND p.status = 'published'
-       AND p.is_published = 1
+       AND {$visibilitySql}
      LIMIT 1"
 );
-$stmt->execute([$pageSlug, (int)$blog['id']]);
+$pageParams = [$pageSlug, (int)$blog['id']];
+if ($previewToken !== '') {
+    $pageParams[] = $previewToken;
+}
+$stmt->execute($pageParams);
 $page = $stmt->fetch() ?: null;
 
 if (!$page) {
@@ -41,7 +57,9 @@ if (!$page) {
     ]);
 }
 
-trackPageView('page', (int)$page['id']);
+if ($previewToken === '') {
+    trackPageView('page', (int)$page['id']);
+}
 
 $siteName = getSetting('site_name', 'Kora CMS');
 $metaTitle = trim((string)($page['title'] ?? ''));

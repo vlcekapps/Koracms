@@ -81,6 +81,20 @@
     "test:phpstan-bootstrap-selftest": "php build/phpstan_bootstrap_selftest.php",
     "test:composer-validate": "composer validate --strict",
     "test:unit": "php build/unit_tests.php",
+    "test:rc-core": [
+      "php build/rate_limit_expiry_selftest.php",
+      "php build/rc_session_security_selftest.php",
+      "php build/rc_reservations_selftest.php",
+      "php build/rc_module_state_selftest.php",
+      "php build/rc_editor_publication_selftest.php",
+      "php build/rc_media_security_selftest.php",
+      "node build/rc_clipboard_selftest.js"
+    ],
+    "test:rc-runtime": [
+      "php build/rc_rate_limit_db_selftest.php",
+      "php build/rc_reservation_mysql_selftest.php",
+      "php build/rc_upload_http_selftest.php"
+    ],
     "test:runtime": "php build/runtime_audit.php",
     "test:http": "php build/http_integration.php",
     "test:release-package": "php build/release_package_audit.php",
@@ -186,15 +200,18 @@
       "@test:release-package",
       "@test:release-package-selftest",
       "@test:release-smoke",
-      "@test:unit"
+      "@test:unit",
+      "@test:rc-core"
     ],
     "ci:module-ready": [
       "@ci:basic",
+      "@test:rc-runtime",
       "@test:runtime",
       "@test:http"
     ],
     "ci:full": [
       "@ci:basic",
+      "@test:rc-runtime",
       "@test:runtime",
       "@test:http"
     ]

@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 checkMaintenanceMode();
 sendNoStoreNoIndexHeaders();
 
@@ -39,11 +40,9 @@ if (!$booking) {
 
 $canCancel = false;
 if ($error === null) {
-    $bookingTs = strtotime($booking['booking_date'] . ' ' . $booking['start_time']);
-    $nowTs = time();
     $hours = (int)$booking['cancellation_hours'];
 
-    if ($hours === 0 || ($bookingTs - $nowTs) >= ($hours * 3600)) {
+    if (reservationBookingCanBeCancelled($booking)) {
         $canCancel = true;
     } else {
         $error = 'Lhůta pro bezplatné zrušení již vypršela (nejpozději ' . $hours . ' hodin předem).';
@@ -54,13 +53,9 @@ $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canCancel) {
     verifyCsrf();
 
-    $updateStmt = $pdo->prepare(
-        "UPDATE cms_res_bookings
-         SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW()
-         WHERE id = ? AND confirmation_token = ?"
-    );
-    $updateStmt->execute([$booking['id'], $token]);
-    if ($updateStmt->rowCount() > 0) {
+    if (!reservationCancelBooking($pdo, $booking, null, $token)) {
+        $error = 'Rezervaci již nelze zrušit. Stav nebo lhůta pro zrušení se mezitím změnily.';
+    } else {
         reservationRecordBookingEvent(
             $pdo,
             (int)$booking['id'],
@@ -69,34 +64,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canCancel) {
             null,
             ['source' => 'public_token']
         );
-    }
 
-    $email = $booking['guest_email'] ?: '';
-    if ($email === '' && $booking['user_id']) {
-        $userStmt = $pdo->prepare("SELECT email FROM cms_users WHERE id = ?");
-        $userStmt->execute([$booking['user_id']]);
-        $userRow = $userStmt->fetch();
-        if ($userRow) {
-            $email = $userRow['email'];
+        $email = $booking['guest_email'] ?: '';
+        if ($email === '' && $booking['user_id']) {
+            $userStmt = $pdo->prepare("SELECT email FROM cms_users WHERE id = ?");
+            $userStmt->execute([$booking['user_id']]);
+            $userRow = $userStmt->fetch();
+            if ($userRow) {
+                $email = $userRow['email'];
+            }
         }
-    }
-    if ($email !== '') {
-        $mailBody = "Dobrý den,\n\n"
-            . "vaše rezervace byla úspěšně zrušena:\n\n"
-            . "Zdroj: " . $booking['resource_name'] . "\n"
-            . "Datum: " . $booking['booking_date'] . "\n"
-            . "Čas: " . substr($booking['start_time'], 0, 5) . " – " . substr($booking['end_time'], 0, 5) . "\n\n"
-            . "Pokud máte dotazy, kontaktujte nás.";
-        if (!sendMail($email, 'Rezervace zrušena – ' . $booking['resource_name'], $mailBody)) {
-            mailLogFailure('notification_failed', [
-                'notification' => 'reservation_cancelled_token',
-                'booking_id' => (int)$booking['id'],
-                'recipient_domain' => mailEmailDomain((string)$email),
-            ]);
+        if ($email !== '') {
+            $mailBody = "Dobrý den,\n\n"
+                . "vaše rezervace byla úspěšně zrušena:\n\n"
+                . "Zdroj: " . $booking['resource_name'] . "\n"
+                . "Datum: " . $booking['booking_date'] . "\n"
+                . "Čas: " . substr($booking['start_time'], 0, 5) . " – " . substr($booking['end_time'], 0, 5) . "\n\n"
+                . "Pokud máte dotazy, kontaktujte nás.";
+            if (!sendMail($email, 'Rezervace zrušena – ' . $booking['resource_name'], $mailBody)) {
+                mailLogFailure('notification_failed', [
+                    'notification' => 'reservation_cancelled_token',
+                    'booking_id' => (int)$booking['id'],
+                    'recipient_domain' => mailEmailDomain((string)$email),
+                ]);
+            }
         }
-    }
 
-    $success = true;
+        $success = true;
+    }
 }
 
 renderPublicPage([

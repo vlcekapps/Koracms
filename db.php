@@ -1,4 +1,5 @@
 <?php
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/lib/theme.php';
@@ -197,3 +198,4 @@ require_once __DIR__ . '/lib/revisions.php';
 require_once __DIR__ . '/lib/widgets.php';
 require_once __DIR__ . '/lib/totp.php';
 
+refreshAuthenticatedSession();

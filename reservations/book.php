@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 header('Cache-Control: no-cache, no-store, must-revalidate');
 checkMaintenanceMode();
 
@@ -107,12 +108,7 @@ if ($slotMode === 'slots') {
     $predefinedSlots = $slotsStmt->fetchAll();
 
     foreach ($predefinedSlots as $slot) {
-        $booked = 0;
-        foreach ($existingBookings as $booking) {
-            if ($booking['start_time'] < $slot['end_time'] && $booking['end_time'] > $slot['start_time']) {
-                $booked++;
-            }
-        }
+        $booked = reservationBookingPeakOverlap($existingBookings, $slot['start_time'], $slot['end_time']);
         $maxBookings = (int)$slot['max_bookings'];
         $free = $maxBookings - $booked;
         if ($free > 0) {
@@ -155,12 +151,7 @@ if ($slotMode === 'slots') {
         }
         $currentStr = $current->format('H:i:s');
         $endStr = $slotEnd->format('H:i:s');
-        $overlap = 0;
-        foreach ($existingBookings as $booking) {
-            if ($booking['start_time'] < $endStr && $booking['end_time'] > $currentStr) {
-                $overlap++;
-            }
-        }
+        $overlap = reservationBookingPeakOverlap($existingBookings, $currentStr, $endStr);
         if ($overlap < $maxConcurrent) {
             $slots[] = $current->format('H:i');
         }
@@ -224,86 +215,42 @@ if ($isPostRequest) {
     }
 
     if ($slotMode === 'slots') {
-        $selectedSlot = $_POST['slot'] ?? '';
-        if ($selectedSlot === '' || !preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2})$/', $selectedSlot, $matches)) {
-            $message = 'Vyberte prosím jeden z dostupných časových slotů.';
-            $errors[] = $message;
-            $fieldErrors['slot'] = $message;
-            $startTime = null;
-            $endTime = null;
-        } else {
-            $startTime = $matches[1] . ':00';
-            $endTime = $matches[2] . ':00';
-        }
-    } elseif ($slotMode === 'range') {
-        $startTime = ($_POST['start_time'] ?? '') . ':00';
-        $endTime = ($_POST['end_time'] ?? '') . ':00';
-        if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', $startTime) || !preg_match('/^\d{2}:\d{2}:\d{2}$/', $endTime)) {
-            $message = 'Vyberte prosím platný začátek a konec rezervace z nabízených časů.';
-            $errors[] = $message;
-            $fieldErrors['start_time'] = $message;
-            $fieldErrors['end_time'] = $message;
-        } elseif ($startTime >= $endTime) {
-            $message = 'Čas konce musí být po začátku. Vyberte pozdější konec rezervace.';
-            $errors[] = $message;
-            $fieldErrors['end_time'] = $message;
-        }
+        $selectedSlot = is_string($_POST['slot'] ?? null) ? $_POST['slot'] : '';
+        $matches = [];
+        preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2})$/D', $selectedSlot, $matches);
+        $startTime = $matches[1] ?? '';
+        $endTime = $matches[2] ?? '';
     } else {
-        $selectedStart = $_POST['start_time'] ?? '';
-        if (!preg_match('/^\d{2}:\d{2}$/', $selectedStart)) {
-            $message = 'Vyberte prosím čas začátku z nabízených možností.';
-            $errors[] = $message;
-            $fieldErrors['start_time'] = $message;
-            $startTime = null;
-            $endTime = null;
-        } else {
-            $duration = (int)$resource['slot_duration_min'];
-            $startTime = $selectedStart . ':00';
-            $endTime = (new DateTime($dateStr . ' ' . $selectedStart))->modify("+{$duration} minutes")->format('H:i:s');
-        }
+        $startTime = is_string($_POST['start_time'] ?? null) ? $_POST['start_time'] : '';
+        $endTime = $slotMode === 'duration' ? null : (is_string($_POST['end_time'] ?? null) ? $_POST['end_time'] : '');
     }
 
-    if (empty($errors) && $startTime !== null) {
-        $bookingDateTime = new DateTime($dateStr . ' ' . substr($startTime, 0, 5));
-        $diffHours = ($bookingDateTime->getTimestamp() - $now->getTimestamp()) / 3600;
-        if ($diffHours < (int)$resource['min_advance_hours']) {
-            $message = 'Rezervace musí být provedena nejméně ' . (int)$resource['min_advance_hours'] . ' hodin předem. Vyberte pozdější termín.';
-            $errors[] = $message;
-            $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
-        }
-    }
-
-    if (empty($errors) && $startTime !== null && $endTime !== null) {
+    if (empty($errors)) {
         $pdo->beginTransaction();
         try {
-            $countStmt = $pdo->prepare(
-                "SELECT COUNT(*) FROM cms_res_bookings
-                 WHERE resource_id = ? AND booking_date = ? AND start_time < ? AND end_time > ?
-                 AND status IN ('pending', 'confirmed') FOR UPDATE"
+            $validation = reservationValidateBookingInsert(
+                $pdo,
+                $resId,
+                $dateStr,
+                $startTime,
+                $endTime,
+                $partySize,
+                true,
+                $isGuest
             );
-            $countStmt->execute([$resId, $dateStr, $endTime, $startTime]);
-            $overlapCount = (int)$countStmt->fetchColumn();
-
-            $maxAllowed = ($slotMode === 'slots')
-                ? (int)($predefinedSlots[0]['max_bookings'] ?? 1)
-                : (int)$resource['max_concurrent'];
-
-            if ($slotMode === 'slots') {
-                $slotCheckStmt = $pdo->prepare(
-                    "SELECT max_bookings FROM cms_res_slots
-                     WHERE resource_id = ? AND day_of_week = ? AND start_time = ? AND end_time = ?"
-                );
-                $slotCheckStmt->execute([$resId, $dayOfWeek, $startTime, $endTime]);
-                $slotRow = $slotCheckStmt->fetch();
-                $maxAllowed = $slotRow ? (int)$slotRow['max_bookings'] : 1;
-            }
-
-            if ($overlapCount >= $maxAllowed) {
+            if ($validation['error'] !== '') {
                 $pdo->rollBack();
-                $message = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
+                $message = reservationBookingValidationMessage($validation['error']);
                 $errors[] = $message;
-                $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
+                $errorField = $validation['error'] === 'party_size' ? 'party_size' : ($slotMode === 'slots' ? 'slot' : 'start_time');
+                $fieldErrors[$errorField] = $message;
+                if ($slotMode === 'range' && $errorField === 'start_time') {
+                    $fieldErrors['end_time'] = $message;
+                }
             } else {
+                $resource = $validation['resource'];
+                $startTime = $validation['start_time'];
+                $endTime = $validation['end_time'];
                 $status = (int)$resource['requires_approval'] ? 'pending' : 'confirmed';
                 $token = bin2hex(random_bytes(16));
                 $calendarToken = reservationCalendarToken();
@@ -343,64 +290,49 @@ if ($isPostRequest) {
                 ]);
                 $bookingId = (int)$pdo->lastInsertId();
 
-                $recheckStmt = $pdo->prepare(
-                    "SELECT COUNT(*) FROM cms_res_bookings
-                     WHERE resource_id = ? AND booking_date = ? AND start_time < ? AND end_time > ?
-                     AND status IN ('pending', 'confirmed')"
+                $pdo->commit();
+
+                reservationRecordBookingEvent(
+                    $pdo,
+                    $bookingId,
+                    'created',
+                    $status === 'confirmed' ? 'Rezervace byla vytvořena a potvrzena.' : 'Rezervace byla vytvořena a čeká na schválení.',
+                    null,
+                    ['status' => $status]
                 );
-                $recheckStmt->execute([$resId, $dateStr, $endTime, $startTime]);
-                $finalCount = (int)$recheckStmt->fetchColumn();
 
-                if ($finalCount > $maxAllowed) {
-                    $pdo->rollBack();
-                    $message = 'Vybraný čas byl právě obsazen. Nabídka byla aktualizována, vyberte prosím jiný čas.';
-                    $errors[] = $message;
-                    $fieldErrors[$slotMode === 'slots' ? 'slot' : 'start_time'] = $message;
-                } else {
-                    $pdo->commit();
+                $notificationBooking = reservationBookingForNotification($pdo, $bookingId);
 
-                    reservationRecordBookingEvent(
-                        $pdo,
-                        $bookingId,
-                        'created',
-                        $status === 'confirmed' ? 'Rezervace byla vytvořena a potvrzena.' : 'Rezervace byla vytvořena a čeká na schválení.',
-                        null,
-                        ['status' => $status]
+                if ($guestEmail !== '' && $notificationBooking !== null) {
+                    $statusLabel = $status === 'confirmed' ? 'potvrzena' : 'čeká na schválení';
+                    $cancelUrl = siteUrl('/reservations/cancel_booking.php?token=' . $token);
+                    $mailBody = "Dobrý den,\n\n"
+                        . "vaše rezervace byla vytvořena:\n\n"
+                        . "Zdroj: " . $resource['name'] . "\n"
+                        . "Datum: " . $dateStr . "\n"
+                        . "Čas: " . substr($startTime, 0, 5) . " – " . substr($endTime, 0, 5) . "\n"
+                        . "Počet osob: " . $partySize . "\n"
+                        . "Stav: " . $statusLabel . "\n\n"
+                        . "Pokud chcete rezervaci zrušit, klikněte na tento odkaz:\n"
+                        . $cancelUrl . "\n\n"
+                        . "Děkujeme za rezervaci.";
+                    reservationSendMail(
+                        $notificationBooking,
+                        'Rezervace – ' . $resource['name'],
+                        $mailBody,
+                        'reservation_created',
+                        $status === 'confirmed'
                     );
-
-                    $notificationBooking = reservationBookingForNotification($pdo, $bookingId);
-
-                    if ($guestEmail !== '' && $notificationBooking !== null) {
-                        $statusLabel = $status === 'confirmed' ? 'potvrzena' : 'čeká na schválení';
-                        $cancelUrl = siteUrl('/reservations/cancel_booking.php?token=' . $token);
-                        $mailBody = "Dobrý den,\n\n"
-                            . "vaše rezervace byla vytvořena:\n\n"
-                            . "Zdroj: " . $resource['name'] . "\n"
-                            . "Datum: " . $dateStr . "\n"
-                            . "Čas: " . substr($startTime, 0, 5) . " – " . substr($endTime, 0, 5) . "\n"
-                            . "Počet osob: " . $partySize . "\n"
-                            . "Stav: " . $statusLabel . "\n\n"
-                            . "Pokud chcete rezervaci zrušit, klikněte na tento odkaz:\n"
-                            . $cancelUrl . "\n\n"
-                            . "Děkujeme za rezervaci.";
-                        reservationSendMail(
-                            $notificationBooking,
-                            'Rezervace – ' . $resource['name'],
-                            $mailBody,
-                            'reservation_created',
-                            $status === 'confirmed'
-                        );
-                    }
-
-                    if ($isGuest) {
-                        header('Location: ' . BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($slug) . '&msg=ok');
-                    } else {
-                        header('Location: ' . BASE_URL . '/reservations/my.php?msg=ok');
-                    }
-                    exit;
                 }
+
+                if ($isGuest) {
+                    header('Location: ' . BASE_URL . '/reservations/resource.php?slug=' . rawurlencode($slug) . '&msg=ok');
+                } else {
+                    header('Location: ' . BASE_URL . '/reservations/my.php?msg=ok');
+                }
+                exit;
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
@@ -417,12 +349,7 @@ if (!empty($errors)) {
 
     if ($slotMode === 'slots') {
         foreach ($predefinedSlots as $slot) {
-            $booked = 0;
-            foreach ($existingBookings as $booking) {
-                if ($booking['start_time'] < $slot['end_time'] && $booking['end_time'] > $slot['start_time']) {
-                    $booked++;
-                }
-            }
+            $booked = reservationBookingPeakOverlap($existingBookings, $slot['start_time'], $slot['end_time']);
             $maxBookings = (int)$slot['max_bookings'];
             $free = $maxBookings - $booked;
             if ($free > 0) {
@@ -463,12 +390,7 @@ if (!empty($errors)) {
             }
             $currentStr = $current->format('H:i:s');
             $endStr = $slotEnd->format('H:i:s');
-            $overlap = 0;
-            foreach ($existingBookings as $booking) {
-                if ($booking['start_time'] < $endStr && $booking['end_time'] > $currentStr) {
-                    $overlap++;
-                }
-            }
+            $overlap = reservationBookingPeakOverlap($existingBookings, $currentStr, $endStr);
             if ($overlap < $maxConcurrent) {
                 $slots[] = $current->format('H:i');
             }

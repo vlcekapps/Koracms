@@ -231,7 +231,12 @@ function mediaExtensionForMime(string $mimeType): string
 function mediaSanitizeExtension(string $originalName, string $mimeType): string
 {
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-    if ($extension !== '' && preg_match('/^[a-z0-9]{1,10}$/', $extension) === 1) {
+    $aliases = [
+        'image/jpeg' => ['jpg', 'jpeg'],
+        'text/plain' => ['txt', 'csv', 'vtt'],
+        'audio/mp4' => ['m4a', 'mp4'],
+    ];
+    if (in_array($extension, $aliases[strtolower(trim($mimeType))] ?? [], true)) {
         return $extension;
     }
 
@@ -251,7 +256,11 @@ function mediaIsPublic(array $media): bool
  */
 function mediaUsesProtectedFileEndpoint(array $media): bool
 {
-    return !mediaIsPublic($media) || mediaIsSvgMime((string)($media['mime_type'] ?? ''));
+    $mimeType = (string)($media['mime_type'] ?? '');
+    $extension = strtolower(pathinfo(mediaStoredFilename($media), PATHINFO_EXTENSION));
+    return !mediaIsPublic($media) || mediaIsSvgMime($mimeType)
+        || $extension === 'txt'
+        || $extension !== mediaSanitizeExtension(mediaStoredFilename($media), $mimeType);
 }
 
 /**
@@ -434,11 +443,14 @@ function mediaMoveFile(string $sourcePath, string $targetPath): bool
     }
 
     if (mediaRunFilesystemOperation(static fn (): bool => copy($sourcePath, $targetPath))) {
-        mediaDeleteFile($sourcePath, 'move_source_cleanup', [
+        if (mediaDeleteFile($sourcePath, 'move_source_cleanup', [
             'target_path_hash' => hash('sha256', str_replace('\\', '/', $targetPath)),
             'target_file_extension' => strtolower((string)pathinfo($targetPath, PATHINFO_EXTENSION)),
-        ]);
-        return true;
+        ])) {
+            return true;
+        }
+        mediaDeleteFile($targetPath, 'failed_move_target_cleanup');
+        return false;
     }
 
     mediaLogFilesystemFailure('move', $targetPath, [
@@ -455,43 +467,174 @@ function mediaMoveFile(string $sourcePath, string $targetPath): bool
  */
 function mediaDeleteDerivedFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool
 {
-    $deleted = true;
-    $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
-    if ($originalPath !== '') {
-        if (!mediaDeleteFile(mediaWebpPath($originalPath), 'delete_derived_webp')) {
-            $deleted = false;
+    return mediaApplyFileChanges([], array_values(array_diff(
+        mediaPhysicalPaths($media, $visibilityOverride, $filenameOverride),
+        [mediaOriginalPath($media, $visibilityOverride, $filenameOverride)]
+    )));
+}
+
+/**
+ * @param array<string,mixed> $media
+ * @return list<string>
+ */
+function mediaPhysicalPaths(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): array
+{
+    $original = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
+    $paths = [$original];
+    if (mediaCanPreviewImage($media)) {
+        $thumb = mediaThumbPath($media, $visibilityOverride, $filenameOverride);
+        $paths = array_merge($paths, [$thumb, mediaWebpPath($original), mediaWebpPath($thumb)]);
+    }
+    return array_values(array_unique(array_filter($paths, static fn (string $path): bool => $path !== '')));
+}
+
+function mediaWorkDirectory(): string
+{
+    $path = koraStoragePath('media/work/' . bin2hex(random_bytes(16)));
+    if (!koraEnsureDirectory($path, 0700)) {
+        throw new RuntimeException('Cannot prepare private media staging directory.');
+    }
+    return $path;
+}
+
+function mediaRemoveWorkDirectory(string $directory): void
+{
+    foreach (scandir($directory) ?: [] as $name) {
+        if ($name !== '.' && $name !== '..') {
+            mediaDeleteFile($directory . DIRECTORY_SEPARATOR . $name, 'work_cleanup');
         }
     }
+    mediaRunFilesystemOperation(static fn (): bool => rmdir($directory));
+}
 
-    $thumbPath = mediaThumbPath($media, $visibilityOverride, $filenameOverride);
-    if ($thumbPath !== '') {
-        if (!mediaDeleteFile($thumbPath, 'delete_thumb')) {
-            $deleted = false;
+function mediaCopyFile(string $source, string $target): bool
+{
+    if (!mediaRunFilesystemOperation(static fn (): bool => copy($source, $target))) {
+        return false;
+    }
+    clearstatcache(true, $target);
+    return is_file($target) && filesize($source) === filesize($target)
+        && hash_file('sha256', $source) === hash_file('sha256', $target);
+}
+
+/**
+ * Prepared files and rollback copies stay outside the web root. The persistence
+ * callback runs only after every file operation succeeds; a DB error restores files.
+ * @param array<string,string> $replacements Target path => prepared source path.
+ * @param list<string> $removals
+ */
+function mediaApplyFileChanges(array $replacements, array $removals = [], ?callable $persist = null): bool
+{
+    $directory = '';
+    $backups = [];
+    $changed = [];
+    $recoveryNeeded = false;
+    $lock = false;
+    try {
+        $directory = mediaWorkDirectory();
+        $lock = fopen(koraStoragePath('media/.mutation.lock'), 'c');
+        if ($lock === false || !flock($lock, LOCK_EX)) {
+            throw new RuntimeException('Cannot lock media mutation.');
         }
-        if (!mediaDeleteFile(mediaWebpPath($thumbPath), 'delete_thumb_webp')) {
-            $deleted = false;
+        $paths = array_values(array_unique(array_merge(array_keys($replacements), $removals)));
+        foreach ($paths as $index => $path) {
+            if ($path === '' || is_link($path) || (file_exists($path) && !is_file($path))) {
+                throw new RuntimeException('Invalid media mutation target.');
+            }
+            if (isset($replacements[$path]) && !koraEnsureDirectory(dirname($path))) {
+                throw new RuntimeException('Cannot prepare media target directory.');
+            }
+            if (is_file($path)) {
+                $backup = $directory . DIRECTORY_SEPARATOR . $index . '.bak';
+                if (!mediaCopyFile($path, $backup)) {
+                    throw new RuntimeException('Cannot preserve original media file.');
+                }
+                $backups[$path] = $backup;
+            }
+        }
+        foreach ($replacements as $target => $source) {
+            $changed[$target] = true;
+            if (!mediaMoveFile($source, $target)) {
+                throw new RuntimeException('Cannot install prepared media file.');
+            }
+        }
+        foreach (array_diff($removals, array_keys($replacements)) as $path) {
+            $changed[$path] = true;
+            if (!mediaDeleteFile($path, 'mutation_remove')) {
+                throw new RuntimeException('Cannot remove superseded media file.');
+            }
+        }
+        if ($persist !== null && $persist() === false) {
+            throw new RuntimeException('Cannot persist media mutation.');
+        }
+        return true;
+    } catch (Throwable $e) {
+        foreach (array_reverse(array_keys($changed)) as $path) {
+            $restored = isset($backups[$path])
+                ? mediaCopyFile($backups[$path], $path)
+                : mediaDeleteFile($path, 'mutation_rollback');
+            if (!$restored) {
+                $recoveryNeeded = true;
+                mediaLogFilesystemFailure('mutation_recovery_required', $path);
+            }
+        }
+        koraLog('error', 'media mutation failed', ['exception' => $e, 'recovery_required' => $recoveryNeeded]);
+        return false;
+    } finally {
+        if ($directory !== '' && !$recoveryNeeded) {
+            mediaRemoveWorkDirectory($directory);
+        }
+        if (is_resource($lock)) {
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
+}
 
-    return $deleted;
+/**
+ * @param array<string,mixed> $media
+ * @return array{directory:string,files:array<string,string>}|null
+ */
+function mediaPrepareFileSet(array $media, string $sourcePath): ?array
+{
+    $directory = mediaWorkDirectory();
+    try {
+        $extension = mediaSanitizeExtension(mediaStoredFilename($media), (string)$media['mime_type']);
+        $original = $directory . DIRECTORY_SEPARATOR . 'original.' . $extension;
+        if (!mediaCopyFile($sourcePath, $original)) {
+            throw new RuntimeException('Cannot stage original media file.');
+        }
+        $files = [mediaOriginalPath($media) => $original];
+        if (mediaCanPreviewImage($media)) {
+            $thumb = $directory . DIRECTORY_SEPARATOR . 'thumb.' . $extension;
+            if (!gallery_make_thumb($original, $thumb, 300)) {
+                throw new RuntimeException('Cannot decode media image.');
+            }
+            $files[mediaThumbPath($media)] = $thumb;
+            if (mediaIsPublic($media)) {
+                foreach ($files as $target => $source) {
+                    $webp = generateWebp($source);
+                    if ($webp !== '' && $webp !== $source && mediaWebpPath($target) !== $target) {
+                        $files[mediaWebpPath($target)] = $webp;
+                    }
+                }
+            }
+        }
+        return ['directory' => $directory, 'files' => $files];
+    } catch (Throwable $e) {
+        mediaRemoveWorkDirectory($directory);
+        koraLog('warning', 'media preparation failed', ['exception' => $e]);
+        return null;
+    }
 }
 
 /**
  * @param array<string,mixed> $media
  * @return bool True, pokud všechny fyzické soubory chybí nebo se je podařilo odstranit.
  */
-function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool
+function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null, ?callable $persist = null): bool
 {
-    $deleted = mediaDeleteDerivedFiles($media, $visibilityOverride, $filenameOverride);
-
-    $originalPath = mediaOriginalPath($media, $visibilityOverride, $filenameOverride);
-    if ($originalPath !== '') {
-        if (!mediaDeleteFile($originalPath, 'delete_original')) {
-            $deleted = false;
-        }
-    }
-
-    return $deleted;
+    return mediaApplyFileChanges([], mediaPhysicalPaths($media, $visibilityOverride, $filenameOverride), $persist);
 }
 
 /**
@@ -499,32 +642,23 @@ function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = nu
  */
 function mediaRebuildDerivedFiles(array $media): bool
 {
-    mediaDeleteDerivedFiles($media);
-
     if (!mediaCanPreviewImage($media)) {
         return true;
     }
-
     $originalPath = mediaOriginalPath($media);
-    $thumbPath = mediaThumbPath($media);
-    if ($originalPath === '' || $thumbPath === '' || !is_file($originalPath)) {
+    if ($originalPath === '' || !is_file($originalPath)) {
         return false;
     }
-
-    if (!koraEnsureDirectory(dirname($thumbPath))) {
+    $prepared = mediaPrepareFileSet($media, $originalPath);
+    if ($prepared === null) {
         return false;
     }
-
-    if (!gallery_make_thumb($originalPath, $thumbPath, 300)) {
-        return false;
+    try {
+        unset($prepared['files'][$originalPath]);
+        return mediaApplyFileChanges($prepared['files'], array_values(array_diff(mediaPhysicalPaths($media), [$originalPath])));
+    } finally {
+        mediaRemoveWorkDirectory($prepared['directory']);
     }
-
-    if (mediaIsPublic($media)) {
-        generateWebp($originalPath);
-        generateWebp($thumbPath);
-    }
-
-    return true;
 }
 
 function mediaCanonicalStoredFilename(string $originalName, string $mimeType): string
@@ -547,7 +681,7 @@ function mediaUploadErrorMessage(int $errorCode): string
  * @param array<string,mixed>|null $existingMedia
  * @return array{ok:bool,error?:string,filename?:string,original_name?:string,mime_type?:string,file_size?:int}
  */
-function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?array $existingMedia = null): array
+function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?array $existingMedia = null, ?callable $persist = null): array
 {
     $upload = koraInspectUploadedFile($file, [
         'no_file_error' => 'Nebyl vybrán žádný soubor.',
@@ -593,7 +727,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
 
         $oldExtension = strtolower(pathinfo($existingFilename, PATHINFO_EXTENSION));
         $newExtension = mediaSanitizeExtension($originalName, $mimeType);
-        if ($existingFilename !== '' && $existingVisibility === 'public' && !mediaIsSvgMime($existingMimeType) && $oldExtension !== '' && $oldExtension !== $newExtension) {
+        if ($existingFilename !== '' && $existingVisibility === 'public' && !mediaUsesProtectedFileEndpoint($existingMedia) && $oldExtension !== '' && $oldExtension !== $newExtension) {
             return [
                 'ok' => false,
                 'error' => 'Veřejný soubor lze nahradit jen variantou se stejnou příponou, aby zůstaly funkční stávající odkazy.',
@@ -604,7 +738,7 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
     $filename = mediaCanonicalStoredFilename($originalName, $mimeType);
     if ($existingFilename !== '') {
         $existingMimeType = (string)($existingMedia['mime_type'] ?? '');
-        $existingDirectPublic = $existingVisibility === 'public' && !mediaIsSvgMime($existingMimeType);
+        $existingDirectPublic = $existingVisibility === 'public' && !mediaUsesProtectedFileEndpoint($existingMedia);
         if ($existingDirectPublic) {
             $filename = $existingFilename;
         } else {
@@ -630,18 +764,6 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         ];
     }
 
-    mediaDeleteFile($targetPath, 'replace_existing');
-
-    $storedUpload = koraStoreInspectedUpload($upload, dirname($targetPath), basename($targetPath), [
-        'move_error' => 'Soubor se nepodařilo uložit.',
-    ]);
-    if (empty($storedUpload['ok'])) {
-        return [
-            'ok' => false,
-            'error' => (string)($storedUpload['error'] ?? 'Soubor se nepodařilo uložit.'),
-        ];
-    }
-
     $record = [
         'id' => (int)($existingMedia['id'] ?? 0),
         'filename' => $filename,
@@ -649,41 +771,43 @@ function mediaStoreUploadedFile(array $file, string $visibility = 'public', ?arr
         'visibility' => $visibility,
     ];
 
-    if (!mediaRebuildDerivedFiles($record)) {
-        mediaDeletePhysicalFiles($record);
+    $prepared = mediaPrepareFileSet($record, (string)$upload['tmp_path']);
+    if ($prepared === null) {
         return [
             'ok' => false,
             'error' => 'Náhled souboru se nepodařilo připravit.',
         ];
     }
 
-    if (is_array($existingMedia)) {
-        $oldFilename = mediaStoredFilename($existingMedia);
-        $oldVisibility = normalizeMediaVisibility((string)($existingMedia['visibility'] ?? 'public'));
-        if ($oldFilename !== '' && ($oldFilename !== $filename || $oldVisibility !== $visibility)) {
-            mediaDeletePhysicalFiles($existingMedia, $oldVisibility, $oldFilename);
-        }
-    }
-
-    return [
+    $result = [
         'ok' => true,
         'filename' => $filename,
         'original_name' => $originalName,
         'mime_type' => $mimeType,
         'file_size' => $fileSize,
     ];
+    try {
+        $saved = mediaApplyFileChanges(
+            $prepared['files'],
+            $existingMedia !== null ? mediaPhysicalPaths($existingMedia) : [],
+            $persist !== null ? static fn () => $persist($result) : null
+        );
+        return $saved ? $result : ['ok' => false, 'error' => 'Soubor se nepodařilo bezpečně uložit.'];
+    } finally {
+        mediaRemoveWorkDirectory($prepared['directory']);
+    }
 }
 
 /**
  * @param array<string,mixed> $media
  * @return array{ok:bool,error?:string}
  */
-function mediaSwitchVisibility(array $media, string $newVisibility): array
+function mediaSwitchVisibility(array $media, string $newVisibility, ?callable $persist = null): array
 {
     $currentVisibility = normalizeMediaVisibility((string)($media['visibility'] ?? 'public'));
     $newVisibility = normalizeMediaVisibility($newVisibility);
     if ($currentVisibility === $newVisibility) {
-        return ['ok' => true];
+        return ['ok' => mediaApplyFileChanges([], [], $persist)];
     }
 
     if (!mediaEnsureDirectories($newVisibility)) {
@@ -702,33 +826,22 @@ function mediaSwitchVisibility(array $media, string $newVisibility): array
         ];
     }
 
-    if (!mediaMoveFile($sourcePath, $targetPath)) {
-        return [
-            'ok' => false,
-            'error' => 'Soubor se nepodařilo přesunout do nového úložiště.',
-        ];
-    }
-
-    if (mediaCanPreviewImage($media)) {
-        $sourceThumb = mediaThumbPath($media, $currentVisibility);
-        $targetThumb = mediaThumbPath($media, $newVisibility);
-        if ($sourceThumb !== '' && is_file($sourceThumb) && $targetThumb !== '') {
-            mediaMoveFile($sourceThumb, $targetThumb);
-        }
-    }
-
-    mediaDeleteDerivedFiles($media, $currentVisibility);
-
     $updatedMedia = $media;
     $updatedMedia['visibility'] = $newVisibility;
-    if (!mediaRebuildDerivedFiles($updatedMedia)) {
+    $prepared = mediaPrepareFileSet($updatedMedia, $sourcePath);
+    if ($prepared === null) {
         return [
             'ok' => false,
-            'error' => 'Soubor se přesunul, ale nepodařilo se znovu připravit jeho náhled.',
+            'error' => 'Soubor nelze přesunout, protože se nepodařilo připravit jeho náhled.',
         ];
     }
 
-    return ['ok' => true];
+    try {
+        $saved = mediaApplyFileChanges($prepared['files'], mediaPhysicalPaths($media), $persist);
+        return $saved ? ['ok' => true] : ['ok' => false, 'error' => 'Soubor se nepodařilo bezpečně přesunout.'];
+    } finally {
+        mediaRemoveWorkDirectory($prepared['directory']);
+    }
 }
 
 /**
@@ -775,7 +888,7 @@ function mediaThumbUrl(array $media): string
         return '';
     }
 
-    if (!mediaIsPublic($media)) {
+    if (mediaUsesProtectedFileEndpoint($media)) {
         return BASE_URL . '/media/thumb.php?id=' . $id;
     }
 
@@ -801,6 +914,7 @@ function mediaDisplayKind(array $media): string
  *   id_column:string,
  *   title_sql:string,
  *   columns:list<string>,
+ *   reference_column?:string,
  *   label:string,
  *   admin_path:callable(array<string,mixed>):string
  * }>
@@ -808,6 +922,24 @@ function mediaDisplayKind(array $media): string
 function mediaUsageSearchDefinitions(): array
 {
     return [
+        [
+            'table' => 'cms_appmarket_apps',
+            'id_column' => 'id',
+            'title_sql' => 'name',
+            'columns' => [],
+            'reference_column' => 'icon_media_id',
+            'label' => 'Ikona aplikace',
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/appmarket_form.php?id=' . (int)$row['id'],
+        ],
+        [
+            'table' => 'cms_appmarket_screenshots',
+            'id_column' => 'app_id',
+            'title_sql' => "CONCAT('Appmarket #', app_id)",
+            'columns' => [],
+            'reference_column' => 'media_id',
+            'label' => 'Snímek aplikace',
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/appmarket_form.php?id=' . (int)$row['id'],
+        ],
         [
             'table' => 'cms_pages',
             'id_column' => 'id',
@@ -996,6 +1128,7 @@ function mediaUsageNeedles(array $media): array
     if ($id > 0) {
         $needles[] = '/media/file.php?id=' . $id;
         $needles[] = '/media/thumb.php?id=' . $id;
+        $needles[] = '/media/preview.php?id=' . $id;
     }
     if ($filename !== '') {
         $encodedFilename = rawurlencode($filename);
@@ -1006,6 +1139,25 @@ function mediaUsageNeedles(array $media): array
     }
 
     return array_values(array_unique($needles));
+}
+
+/** @param array<string,mixed> $media */
+function mediaContentReferences(array $media, string $content): bool
+{
+    foreach (mediaUsageNeedles($media) as $needle) {
+        if (str_contains($content, $needle)) {
+            return true;
+        }
+    }
+    preg_match_all('/\[pdf\s+([^\]]*)\]/i', $content, $matches);
+    foreach ($matches[1] as $attributes) {
+        $parsed = parseContentShortcodeAttributes($attributes);
+        $id = filter_var($parsed['media_id'] ?? $parsed['media'] ?? '', FILTER_VALIDATE_INT);
+        if ($id !== false && $id > 0 && $id === (int)($media['id'] ?? 0)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -1045,37 +1197,53 @@ function mediaFindUsages(array $media, int $limit = 25): array
             $definition['columns'],
             static fn (string $column): bool => mediaColumnExists($tableName, $column)
         ));
-        if ($columns === []) {
+        $referenceColumn = (string)($definition['reference_column'] ?? '');
+        if ($referenceColumn !== '' && !mediaColumnExists($tableName, $referenceColumn)) {
+            continue;
+        }
+        if ($columns === [] && $referenceColumn === '') {
             continue;
         }
 
         $whereParts = [];
         $params = [];
+        if ($referenceColumn !== '') {
+            $whereParts[] = $referenceColumn . ' = ?';
+            $params[] = $mediaId;
+        }
         foreach ($columns as $columnName) {
             $columnParts = [];
             foreach ($needles as $needle) {
                 $columnParts[] = "{$columnName} LIKE ?";
                 $params[] = '%' . $needle . '%';
             }
+            $columnParts[] = "{$columnName} LIKE ?";
+            $params[] = '%[pdf%';
             $whereParts[] = '(' . implode(' OR ', $columnParts) . ')';
         }
 
         $sql = sprintf(
-            "SELECT %s AS id, %s AS title
+            "SELECT %s AS id, %s AS title%s
              FROM %s
-             WHERE %s
-             LIMIT %d",
+             WHERE %s",
             $definition['id_column'],
             $definition['title_sql'],
+            $columns !== [] ? ', ' . implode(', ', $columns) : '',
             $tableName,
-            implode(' OR ', $whereParts),
-            max($limit > 0 ? $limit : 200, 1)
+            implode(' OR ', $whereParts)
         );
 
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            foreach ($stmt->fetchAll() as $row) {
+            $found = 0;
+            while ($row = $stmt->fetch()) {
+                if ($referenceColumn === '' && !array_filter(
+                    $columns,
+                    static fn (string $column): bool => mediaContentReferences($media, (string)($row[$column] ?? ''))
+                )) {
+                    continue;
+                }
                 $usage = [
                     'label' => (string)$definition['label'],
                     'title' => trim((string)($row['title'] ?? '')) !== ''
@@ -1084,13 +1252,18 @@ function mediaFindUsages(array $media, int $limit = 25): array
                     'admin_url' => (string)$definition['admin_path']($row),
                 ];
                 $usages[] = $usage;
+                if (++$found >= ($limit > 0 ? $limit : 200)) {
+                    break;
+                }
             }
+            $stmt->closeCursor();
         } catch (\PDOException $e) {
             koraLog('warning', 'media usage scan failed', [
                 'media_id' => $mediaId,
                 'source_table' => $tableName,
                 'exception' => $e,
             ]);
+            $usages[] = ['label' => 'Použití nelze ověřit', 'title' => $tableName, 'admin_url' => BASE_URL . '/admin/media.php'];
         }
     }
 

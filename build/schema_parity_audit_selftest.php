@@ -97,6 +97,13 @@ function validSchemaParityFixture(): array
     return [
         'install.php' => <<<'PHP'
 <?php
+CREATE TABLE IF NOT EXISTS cms_rate_limit (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  attempts INT NOT NULL DEFAULT 1,
+  window_start DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NULL DEFAULT NULL,
+  INDEX idx_rate_limit_expires_at (expires_at)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_pages (
   id INT,
   slug VARCHAR(255) NOT NULL,
@@ -570,6 +577,24 @@ CREATE TABLE IF NOT EXISTS cms_stats_content_daily (
 PHP,
         'migrate.php' => <<<'PHP'
 <?php
+CREATE TABLE IF NOT EXISTS cms_rate_limit (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  attempts INT NOT NULL DEFAULT 1,
+  window_start DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NULL DEFAULT NULL,
+  INDEX idx_rate_limit_expires_at (expires_at)
+) ENGINE=InnoDB;
+$addColumns = [
+    'cms_rate_limit.expires_at' => "ALTER TABLE cms_rate_limit ADD COLUMN expires_at DATETIME NULL DEFAULT NULL",
+];
+if ($columnExists('cms_rate_limit', 'expires_at')) {
+    $pdo->exec(
+        "UPDATE cms_rate_limit SET expires_at = DATE_ADD(window_start, INTERVAL 7 DAY) WHERE expires_at IS NULL"
+    );
+}
+if (!$indexExists('cms_rate_limit', 'idx_rate_limit_expires_at')) {
+    $pdo->exec("ALTER TABLE cms_rate_limit ADD INDEX idx_rate_limit_expires_at (expires_at)");
+}
 // cms_pages.blog_id
 // cms_pages.slug_scope_id
 // cms_pages.blog_nav_order
@@ -861,6 +886,11 @@ ALTER TABLE cms_appmarket_releases MODIFY COLUMN metadata_source ENUM('apk','pub
 // idx_stats_content_module_date
 // idx_stats_content_path_hash
 PHP,
+        'cron.php' => <<<'PHP'
+<?php
+$statement = $pdo->prepare("DELETE FROM cms_rate_limit WHERE expires_at <= NOW()");
+$statement->execute();
+PHP,
         'blog/index.php' => <<<'PHP'
 <?php
 $sql = 'SELECT id, title, slug, blog_id, blog_nav_order FROM cms_pages';
@@ -977,6 +1007,122 @@ if (!is_file($schemaParityAuditPath)) {
 $validFiles = validSchemaParityFixture();
 
 assertSchemaParityAuditPasses('Clean schema parity fixture', $validFiles);
+
+$rateLimitMutationCount = 0;
+foreach (['install.php', 'migrate.php'] as $sourceName) {
+    foreach (['', '  expires_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,'] as $replacement) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles[$sourceName] = str_replace(
+            '  expires_at DATETIME NULL DEFAULT NULL,',
+            $replacement,
+            $mutatedFiles[$sourceName]
+        );
+        assertSchemaParityAuditFails(
+            'Rate-limit nullable expiry definition in ' . $sourceName,
+            $mutatedFiles,
+            $sourceName . ' must define cms_rate_limit.expires_at as DATETIME NULL DEFAULT NULL.'
+        );
+        $rateLimitMutationCount++;
+    }
+    foreach (['', 'INDEX idx_rate_limit_expires_at (window_start)'] as $replacement) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles[$sourceName] = str_replace(
+            'INDEX idx_rate_limit_expires_at (expires_at)',
+            $replacement,
+            $mutatedFiles[$sourceName]
+        );
+        assertSchemaParityAuditFails(
+            'Rate-limit expiry index in ' . $sourceName,
+            $mutatedFiles,
+            $sourceName . ' must index cms_rate_limit.expires_at with idx_rate_limit_expires_at.'
+        );
+        $rateLimitMutationCount++;
+    }
+}
+$rateLimitUpgradeMutations = [
+    [
+        'ALTER TABLE cms_rate_limit ADD COLUMN expires_at DATETIME NULL DEFAULT NULL',
+        'ALTER TABLE cms_rate_limit ADD COLUMN expires_at DATETIME NOT NULL',
+        'migrate.php must register the nullable cms_rate_limit.expires_at upgrade.',
+    ],
+    [
+        "'cms_rate_limit.expires_at' =>",
+        "'cms_rate_limit.expiry' =>",
+        'migrate.php must register the nullable cms_rate_limit.expires_at upgrade.',
+    ],
+    [
+        'ALTER TABLE cms_rate_limit ADD INDEX idx_rate_limit_expires_at (expires_at)',
+        '',
+        'migrate.php must idempotently add idx_rate_limit_expires_at to existing installations.',
+    ],
+    [
+        '!$indexExists(\'cms_rate_limit\', \'idx_rate_limit_expires_at\')',
+        'true',
+        'migrate.php must idempotently add idx_rate_limit_expires_at to existing installations.',
+    ],
+];
+foreach ($rateLimitUpgradeMutations as [$original, $replacement, $expectedOutput]) {
+    $mutatedFiles = $validFiles;
+    $mutatedFiles['migrate.php'] = str_replace($original, $replacement, $mutatedFiles['migrate.php']);
+    assertSchemaParityAuditFails('Rate-limit upgrade guard', $mutatedFiles, $expectedOutput);
+    $rateLimitMutationCount++;
+}
+foreach ([
+    ['DATE_ADD(window_start, INTERVAL 7 DAY)', 'DATE_ADD(NOW(), INTERVAL 7 DAY)'],
+    ['INTERVAL 7 DAY', 'INTERVAL 1 HOUR'],
+    ['WHERE expires_at IS NULL', ''],
+    ['WHERE expires_at IS NULL', 'WHERE expires_at IS NOT NULL'],
+    ['UPDATE cms_rate_limit', 'UPDATE cms_other_table'],
+    ['$columnExists(\'cms_rate_limit\', \'expires_at\')', 'true'],
+] as [$original, $replacement]) {
+    $mutatedFiles = $validFiles;
+    $mutatedFiles['migrate.php'] = str_replace($original, $replacement, $mutatedFiles['migrate.php']);
+    assertSchemaParityAuditFails(
+        'Rate-limit conservative legacy backfill',
+        $mutatedFiles,
+        'migrate.php must preserve rate-limit rows and backfill only unknown expiries from window_start plus 7 days.'
+    );
+    $rateLimitMutationCount++;
+}
+foreach (['DELETE FROM cms_rate_limit', 'TRUNCATE TABLE cms_rate_limit'] as $destructiveSql) {
+    $mutatedFiles = $validFiles;
+    $mutatedFiles['migrate.php'] .= "\n" . '$pdo->exec("' . $destructiveSql . '");';
+    assertSchemaParityAuditFails(
+        'Rate-limit migration must not reset counters',
+        $mutatedFiles,
+        'migrate.php must preserve rate-limit rows and backfill only unknown expiries from window_start plus 7 days.'
+    );
+    $rateLimitMutationCount++;
+}
+foreach ([
+    'DELETE FROM cms_rate_limit',
+    'DELETE FROM cms_rate_limit WHERE window_start < DATE_SUB(NOW(), INTERVAL 1 HOUR)',
+    'DELETE FROM cms_rate_limit WHERE expires_at < NOW()',
+    'DELETE FROM cms_rate_limit WHERE expires_at <= NOW() OR expires_at IS NULL',
+    '',
+] as $replacement) {
+    $mutatedFiles = $validFiles;
+    $mutatedFiles['cron.php'] = str_replace(
+        'DELETE FROM cms_rate_limit WHERE expires_at <= NOW()',
+        $replacement,
+        $mutatedFiles['cron.php']
+    );
+    assertSchemaParityAuditFails(
+        'Rate-limit deadline-only cron cleanup',
+        $mutatedFiles,
+        'cron.php must delete rate-limit rows only at their own expires_at deadline, preserving unknown expiries.'
+    );
+    $rateLimitMutationCount++;
+}
+
+$additionalCleanupFiles = $validFiles;
+$additionalCleanupFiles['cron.php'] .= "\n" . '$pdo->exec("DELETE FROM cms_rate_limit");';
+assertSchemaParityAuditFails(
+    'Rate-limit cron must not add a second unscoped cleanup',
+    $additionalCleanupFiles,
+    'cron.php must delete rate-limit rows only at their own expires_at deadline, preserving unknown expiries.'
+);
+$rateLimitMutationCount++;
 
 $appmarketColumnMutations = [
     'cms_appmarket_apps.package_id' => [
@@ -1141,5 +1287,6 @@ assertSchemaParityAuditFails(
     'feed.php must keep articleExcerpt() available through db.php presentation helpers.'
 );
 
+echo 'Rate-limit schema/cleanup mutations rejected: ' . $rateLimitMutationCount . "\n";
 echo 'Appmarket schema mutations rejected: ' . $appmarketMutationCount . "\n";
 echo "Schema parity audit self-test OK\n";

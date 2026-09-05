@@ -1681,7 +1681,8 @@ function databaseDateTimeIsInFuture(string $dateTime): bool
  */
 function podcastShowIsPublic(array $show): bool
 {
-    return trim((string)($show['status'] ?? 'published')) === 'published'
+    return ($show['deleted_at'] ?? null) === null
+        && trim((string)($show['status'] ?? 'published')) === 'published'
         && (int)($show['is_published'] ?? 1) === 1;
 }
 
@@ -1703,7 +1704,8 @@ function podcastEpisodeIsScheduled(array $episode): bool
  */
 function podcastEpisodeIsPublic(array $episode): bool
 {
-    if (trim((string)($episode['status'] ?? 'published')) !== 'published') {
+    if (($episode['deleted_at'] ?? null) !== null
+        || trim((string)($episode['status'] ?? 'published')) !== 'published') {
         return false;
     }
 
@@ -1711,9 +1713,26 @@ function podcastEpisodeIsPublic(array $episode): bool
         return false;
     }
 
-    if (array_key_exists('show_status', $episode) || array_key_exists('show_is_published', $episode)) {
-        return trim((string)($episode['show_status'] ?? 'published')) === 'published'
-            && (int)($episode['show_is_published'] ?? 1) === 1;
+    if (!array_key_exists('show_deleted_at', $episode) && (int)($episode['show_id'] ?? 0) > 0) {
+        // File endpoints also call this predicate without a joined deletion column.
+        try {
+            $stmt = db_connect()->prepare('SELECT status, is_published, deleted_at FROM cms_podcast_shows WHERE id = ?');
+            $stmt->execute([(int)$episode['show_id']]);
+            $show = $stmt->fetch();
+            return is_array($show) && podcastShowIsPublic($show);
+        } catch (PDOException $e) {
+            koraLog('warning', 'podcast parent visibility lookup failed', ['exception' => $e]);
+            return false;
+        }
+    }
+
+    if (array_key_exists('show_status', $episode) || array_key_exists('show_is_published', $episode)
+        || array_key_exists('show_deleted_at', $episode)) {
+        return podcastShowIsPublic([
+            'status' => $episode['show_status'] ?? 'published',
+            'is_published' => $episode['show_is_published'] ?? 1,
+            'deleted_at' => $episode['show_deleted_at'] ?? null,
+        ]);
     }
 
     return true;
@@ -3140,10 +3159,8 @@ function deleteDownloadImageFile(string $filename): void
     }
 
     $path = dirname(__DIR__) . '/uploads/downloads/images/' . $filename;
-    if (is_file($path)) {
-        if (!unlink($path)) {
-            presentationLogFileDeleteFailure('download_image', $path);
-        }
+    if (!mediaApplyFileChanges([], array_values(array_unique([$path, presentationWebpVariantPath($path)])))) {
+        presentationLogFileDeleteFailure('download_image', $path);
     }
 }
 
@@ -3178,7 +3195,7 @@ function downloadAllowedFileExtensions(): array
  * @param array<string, mixed> $file
  * @return array{filename:string,original_name:string,file_size:int,checksum:string,uploaded:bool,error:string}
  */
-function uploadDownloadStoredFile(array $file, string $existingFilename = ''): array
+function uploadDownloadStoredFile(array $file, string $existingFilename = '', ?string $directory = null): array
 {
     if (!koraUploadHasFile($file)) {
         return [
@@ -3221,7 +3238,7 @@ function uploadDownloadStoredFile(array $file, string $existingFilename = ''): a
     $storedName = uniqid('dl_', true) . '.' . $extension;
     $storedUpload = koraStoreInspectedUpload(
         $upload,
-        dirname(__DIR__) . '/uploads/downloads/',
+        $directory ?? dirname(__DIR__) . '/uploads/downloads/',
         $storedName,
         [
             'mkdir_error' => 'Adresář pro soubory ke stažení se nepodařilo vytvořit.',
@@ -3273,20 +3290,83 @@ function uploadDownloadStoredFile(array $file, string $existingFilename = ''): a
  * @param array<string, mixed> $file
  * @return array<string, mixed>
  */
-function uploadDownloadImage(array $file, string $existingFilename = ''): array
+function uploadDownloadImage(array $file, string $existingFilename = '', ?string $directory = null): array
 {
     return storePresentationUploadedFile($file, $existingFilename, [
         'upload_error' => 'Obrázek se nepodařilo nahrát.',
         'invalid_upload_error' => 'Obrázek se nepodařilo zpracovat.',
         'allowed_mime_map' => presentationImageMimeMap(),
         'unsupported_type_error' => 'Obrázek musí být ve formátu JPEG, PNG, GIF nebo WebP.',
-        'directory' => dirname(__DIR__) . '/uploads/downloads/images/',
+        'directory' => $directory ?? dirname(__DIR__) . '/uploads/downloads/images/',
         'mkdir_error' => 'Adresář pro obrázky ke stažení se nepodařilo vytvořit.',
         'move_error' => 'Obrázek se nepodařilo uložit.',
         'prefix' => 'download_image_',
         'generate_webp' => true,
         'delete_callback' => 'deleteDownloadImageFile',
     ]);
+}
+
+/**
+ * Stage both download attachments before touching any existing file or row.
+ * @param array<string,mixed> $existing
+ * @param array<string,mixed> $file
+ * @param array<string,mixed> $image
+ * @return array<string,mixed>
+ */
+function downloadPrepareFileMutation(array $existing, array $file, array $image, bool $deleteFile, bool $deleteImage, string $externalUrl): array
+{
+    if (($deleteFile || trim((string)($existing['filename'] ?? '')) === '')
+        && !koraUploadHasFile($file) && $externalUrl === '') {
+        return ['ok' => false, 'error' => 'source'];
+    }
+    $directory = mediaWorkDirectory();
+    $result = array_merge($existing, ['ok' => true, 'directory' => $directory, 'files' => [], 'removals' => [], 'uploaded' => false]);
+    $root = dirname(__DIR__) . '/uploads/downloads/';
+    try {
+        if ($deleteFile) {
+            $result['filename'] = '';
+            $result['original_name'] = '';
+            $result['file_size'] = 0;
+        }
+        if (koraUploadHasFile($file)) {
+            $uploaded = uploadDownloadStoredFile($file, '', $directory);
+            if ($uploaded['error'] !== '') {
+                throw new RuntimeException('file');
+            }
+            $result = array_merge($result, $uploaded);
+            $result['files'][$root . $uploaded['filename']] = $directory . DIRECTORY_SEPARATOR . $uploaded['filename'];
+        }
+        if ($deleteImage) {
+            $result['image_file'] = '';
+        } elseif (koraUploadHasFile($image)) {
+            $uploadedImage = uploadDownloadImage($image, '', $directory);
+            if ($uploadedImage['error'] !== '') {
+                throw new RuntimeException('image');
+            }
+            $result['image_file'] = $uploadedImage['filename'];
+            $target = $root . 'images/' . $uploadedImage['filename'];
+            $source = $directory . DIRECTORY_SEPARATOR . $uploadedImage['filename'];
+            if (@getimagesize($source) === false) {
+                throw new RuntimeException('image');
+            }
+            $result['files'][$target] = $source;
+            $webp = presentationWebpVariantPath($source);
+            if ($webp !== $source && is_file($webp)) {
+                $result['files'][presentationWebpVariantPath($target)] = $webp;
+            }
+        }
+        if (!empty($existing['filename']) && $existing['filename'] !== $result['filename']) {
+            $result['removals'][] = $root . basename((string)$existing['filename']);
+        }
+        if (!empty($existing['image_file']) && $existing['image_file'] !== $result['image_file']) {
+            $oldImage = $root . 'images/' . basename((string)$existing['image_file']);
+            $result['removals'] = array_merge($result['removals'], array_unique([$oldImage, presentationWebpVariantPath($oldImage)]));
+        }
+        return $result;
+    } catch (Throwable $e) {
+        mediaRemoveWorkDirectory($directory);
+        return ['ok' => false, 'error' => in_array($e->getMessage(), ['file', 'image'], true) ? $e->getMessage() : 'file'];
+    }
 }
 
 function normalizeDownloadExternalUrl(string $value): string
@@ -8878,7 +8958,7 @@ function fetchPublicAuthors(PDO $pdo): array
              WHERE a.author_id = u.id
                AND a.status = 'published'
                AND a.deleted_at IS NULL
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW()))"
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW()))"
         : '0';
     $latestArticleSelect = isModuleEnabled('blog')
         ? "(SELECT MAX(COALESCE(a.publish_at, a.created_at))
@@ -8886,7 +8966,7 @@ function fetchPublicAuthors(PDO $pdo): array
              WHERE a.author_id = u.id
                AND a.status = 'published'
                AND a.deleted_at IS NULL
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW()))"
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW()))"
         : 'NULL';
     $newsCountSelect = isModuleEnabled('news')
         ? "(SELECT COUNT(*)
@@ -9041,7 +9121,7 @@ function fetchPublicAuthorContentCounts(PDO $pdo, int $authorId): array
              WHERE a.author_id = ?
                AND a.status = 'published'
                AND a.deleted_at IS NULL
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())"
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())"
         );
         $articleCountStmt->execute([$authorId]);
         $counts['article_count'] = (int)$articleCountStmt->fetchColumn();
@@ -9133,7 +9213,7 @@ function fetchPublicAuthorContent(PDO $pdo, int $authorId, string $contentType, 
                       WHERE a.author_id = ?
                         AND a.status = 'published'
                         AND a.deleted_at IS NULL
-                        AND (a.publish_at IS NULL OR a.publish_at <= NOW())";
+                        AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())";
         $params[] = $authorId;
     }
 
@@ -11151,7 +11231,7 @@ function publicBlogSeries(PDO $pdo, int $blogId, int $limit = 0): array
                AND a.blog_id = s.blog_id
                AND a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              GROUP BY s.id, s.blog_id, s.title, s.slug, s.description, s.sort_order, b.slug
              ORDER BY s.sort_order ASC, s.title ASC, s.id ASC{$limitSql}"
         );
@@ -11202,7 +11282,7 @@ function publicBlogSeriesDetail(PDO $pdo, int $blogId, string $seriesSlug): ?arr
                AND a.blog_id = ?
                AND a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              ORDER BY si.sort_order ASC, a.created_at ASC, a.id ASC"
         );
         $articlesStmt->execute([(int)$series['id'], $blogId]);
@@ -11261,7 +11341,7 @@ function articleSeriesNavigation(PDO $pdo, array $article): array
                AND a.blog_id = ?
                AND a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              ORDER BY si.sort_order ASC, a.created_at ASC, a.id ASC"
         );
 
@@ -11357,7 +11437,7 @@ function relatedArticleOptions(PDO $pdo, int $blogId, int $excludeArticleId = 0)
                AND id <> ?
                AND deleted_at IS NULL
                AND status = 'published'
-               AND (publish_at IS NULL OR publish_at <= NOW())
+               AND (publish_at IS NULL OR publish_at <= NOW()) AND (unpublish_at IS NULL OR unpublish_at > NOW())
              ORDER BY COALESCE(publish_at, created_at) DESC, id DESC"
         );
         $stmt->execute([$blogId, max(0, $excludeArticleId)]);
@@ -11421,7 +11501,7 @@ function manualRelatedArticles(PDO $pdo, array $article, int $limit): array
                AND a.id <> ?
                AND a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              ORDER BY ar.sort_order ASC, ar.related_article_id ASC
              LIMIT ?"
         );
@@ -11509,7 +11589,7 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
                AND a.id NOT IN ({$excludePlaceholders})
                AND a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              HAVING relevance_score > 0
              ORDER BY relevance_score DESC, a.created_at DESC
              LIMIT ?"
@@ -11543,7 +11623,7 @@ function relatedArticles(PDO $pdo, array $article, int $limit = 3): array
                    AND a.blog_id = ?
                    AND a.deleted_at IS NULL
                    AND a.status = 'published'
-                   AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+                   AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
                  ORDER BY a.created_at DESC
                  LIMIT ?"
             );

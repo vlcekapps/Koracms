@@ -27,8 +27,13 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.0'
-          extensions: gd, mbstring, fileinfo, pdo, pdo_mysql
+          extensions: gd, mbstring, fileinfo, pdo, pdo_mysql, pdo_sqlite
           coverage: none
+
+      - name: Setup JavaScript regression runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
 
       - name: Validate Composer config
         run: composer validate --strict

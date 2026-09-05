@@ -28,6 +28,8 @@ parameters:
         - lib/webhooks.php
         - lib/widgets.php
     paths:
+        - lib/session_security.php
+        - lib/reservation_booking_validation.php
         - admin/content_reference_picker.php
         - admin/layout.php
         - admin/settings_shared.php

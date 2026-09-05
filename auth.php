@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/lib/session_security.php';
+
 function isSocialPreviewCrawler(): bool
 {
     $userAgent = strtolower(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')));
@@ -1298,30 +1300,6 @@ function requireLogin(string $loginUrl = '/admin/login.php'): void
         exit;
     }
 
-    // Upgrade staré session (bez user_id) na nový formát s cms_users
-    if (!isset($_SESSION['cms_user_id'])) {
-        try {
-            $u = db_connect()->query(
-                "SELECT id, email, first_name, last_name, nickname, is_superadmin, role
-                 FROM cms_users WHERE is_superadmin = 1 LIMIT 1"
-            )->fetch();
-            if ($u) {
-                $name = $u['nickname'] !== '' ? $u['nickname']
-                      : trim($u['first_name'] . ' ' . $u['last_name']);
-                if ($name === '') {
-                    $name = $u['email'];
-                }
-                $_SESSION['cms_user_id']    = (int)$u['id'];
-                $_SESSION['cms_user_email'] = $u['email'];
-                $_SESSION['cms_user_name']  = $name;
-                $_SESSION['cms_superadmin'] = (bool)$u['is_superadmin'];
-                $_SESSION['cms_user_role']  = normalizeUserRole($u['role'] ?? 'admin');
-            }
-        } catch (\PDOException $e) {
-            // cms_users ještě neexistuje – ponecháme session beze změny
-        }
-    }
-
     if (str_contains($loginUrl, '/admin/')) {
         $requiredCapability = adminRouteCapability();
         if ($requiredCapability !== null && !currentUserHasCapability($requiredCapability)) {
@@ -1350,15 +1328,20 @@ function requireSuperAdmin(): void
 /**
  * Přihlásí uživatele – uloží data do session.
  */
-function loginUser(int $id, string $email, bool $superadmin, string $displayName, string $role = 'admin'): void
+function loginUser(int $id, string $email, bool $superadmin, string $displayName, string $role = 'admin', string $credentialFingerprint = ''): void
 {
+    if ($credentialFingerprint === '') {
+        throw new InvalidArgumentException('Login requires verified account credentials.');
+    }
     session_regenerate_id(true);
+    clearPendingTwoFactorSession();
     $_SESSION['cms_logged_in']  = true;
     $_SESSION['cms_user_id']    = $id;
     $_SESSION['cms_user_email'] = $email;
     $_SESSION['cms_superadmin'] = $superadmin;
     $_SESSION['cms_user_name']  = $displayName;
     $_SESSION['cms_user_role']  = normalizeUserRole($role);
+    $_SESSION['cms_auth_fingerprint'] = $credentialFingerprint;
 }
 
 function isPublicUser(): bool
@@ -1486,25 +1469,7 @@ function rateLimitApply(string $key, int $max, int $window, ?callable $onExceede
     try {
         $pdo = db_connect();
 
-        // Vyčistit expirované záznamy
-        $pdo->prepare("DELETE FROM cms_rate_limit
-                    WHERE window_start < DATE_SUB(NOW(), INTERVAL ? SECOND)")
-            ->execute([$window]);
-
-        // Atomický upsert – eliminuje TOCTOU race condition
-        $pdo->prepare(
-            "INSERT INTO cms_rate_limit (id, attempts, window_start) VALUES (?, 1, NOW())
-             ON DUPLICATE KEY UPDATE
-                attempts = IF(window_start < DATE_SUB(NOW(), INTERVAL ? SECOND), 1, attempts + 1),
-                window_start = IF(window_start < DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), window_start)"
-        )->execute([$key, $window, $window]);
-
-        // Zkontrolovat aktuální stav po upsertu
-        $stmt = $pdo->prepare("SELECT attempts FROM cms_rate_limit WHERE id = ?");
-        $stmt->execute([$key]);
-        $row = $stmt->fetch();
-
-        if ($row && (int)$row['attempts'] > $max) {
+        if (rateLimitRecordAttempt($pdo, $key, $window) > $max) {
             if ($onExceeded !== null) {
                 $onExceeded();
                 exit;
@@ -1535,6 +1500,37 @@ function rateLimit(string $action, int $max = 10, int $window = 60, ?callable $o
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     rateLimitApply(rateLimitKey($action, $ip), $max, $window, $onExceeded);
+}
+
+function rateLimitRecordAttempt(PDO $pdo, string $key, int $window): int
+{
+    $window = max(1, $window);
+    try {
+        // Update only this key; a short window must never reset another counter.
+        $pdo->prepare(
+            "INSERT INTO cms_rate_limit (id, attempts, window_start, expires_at)
+             VALUES (?, 1, NOW(), DATE_ADD(NOW(), INTERVAL ? SECOND))
+             ON DUPLICATE KEY UPDATE
+                attempts = IF(window_start <= DATE_SUB(NOW(), INTERVAL ? SECOND), 1, attempts + 1),
+                expires_at = IF(window_start <= DATE_SUB(NOW(), INTERVAL ? SECOND),
+                    DATE_ADD(NOW(), INTERVAL ? SECOND), DATE_ADD(window_start, INTERVAL ? SECOND)),
+                window_start = IF(window_start <= DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), window_start)"
+        )->execute([$key, $window, $window, $window, $window, $window, $window]);
+    } catch (PDOException $e) {
+        if ((string)$e->getCode() !== '42S22' || !str_contains($e->getMessage(), 'expires_at')) {
+            throw $e;
+        }
+        // Keep rate limiting active before the administrator runs the schema migration.
+        $pdo->prepare(
+            "INSERT INTO cms_rate_limit (id, attempts, window_start) VALUES (?, 1, NOW())
+             ON DUPLICATE KEY UPDATE
+                attempts = IF(window_start <= DATE_SUB(NOW(), INTERVAL ? SECOND), 1, attempts + 1),
+                window_start = IF(window_start <= DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), window_start)"
+        )->execute([$key, $window, $window]);
+    }
+    $stmt = $pdo->prepare('SELECT attempts FROM cms_rate_limit WHERE id = ?');
+    $stmt->execute([$key]);
+    return (int)$stmt->fetchColumn();
 }
 
 /**

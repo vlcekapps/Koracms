@@ -25,8 +25,13 @@ foreach (['q', 'misto', 'typ', 'period', 'scope', 'strana'] as $queryKey) {
 
 $pdo = db_connect();
 
-$previewToken = trim($_GET['preview'] ?? '');
+$previewInput = $_GET['preview'] ?? '';
+$previewToken = is_string($previewInput) ? trim($previewInput) : '__invalid_preview_token__';
 if ($previewToken !== '') {
+    sendNoStoreNoIndexHeaders();
+    if (!isValidArticlePreviewToken($previewToken)) {
+        $previewToken = '__invalid_preview_token__';
+    }
     if ($slug !== '') {
         $stmt = $pdo->prepare(
             "SELECT e.*,
@@ -136,12 +141,12 @@ if ($previewToken === '' && (string)($event['recurrence_group_id'] ?? '') !== ''
     );
 }
 
-if ($slug === '' && (string)$event['slug'] !== '') {
+if ($previewToken === '' && $slug === '' && (string)$event['slug'] !== '') {
     header('Location: ' . eventPublicPath($event, $listingQuery));
     exit;
 }
 
-if (!isset($_SESSION['cms_user_id'])) {
+if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
     trackPageView('event', (int)$event['id']);
 }
 

@@ -83,6 +83,7 @@ $galleryPhotoSource = schemaParityReadFile($projectRoot, 'gallery/photo.php', $i
 $sitemapSource = schemaParityReadFile($projectRoot, 'sitemap.php', $issues);
 $feedSource = schemaParityReadFile($projectRoot, 'feed.php', $issues);
 $dbSource = schemaParityReadFile($projectRoot, 'db.php', $issues);
+$cronSource = schemaParityReadFile($projectRoot, 'cron.php', $issues);
 
 $criticalInstallColumns = [
     'cms_pages.blog_id' => ['cms_pages', 'blog_id'],
@@ -632,6 +633,58 @@ foreach ($criticalMigrationSnippets as $snippet) {
         $issues
     );
 }
+
+$rateLimitSchemaSources = [
+    'install.php' => preg_replace('/\s+/', ' ', $installSource) ?? '',
+    'migrate.php' => preg_replace('/\s+/', ' ', $migrateSource) ?? '',
+];
+foreach ($rateLimitSchemaSources as $sourceName => $source) {
+    schemaParityRequire(
+        schemaParityTableContains($source, 'cms_rate_limit', 'expires_at DATETIME NULL DEFAULT NULL,'),
+        $sourceName . ' must define cms_rate_limit.expires_at as DATETIME NULL DEFAULT NULL.',
+        $issues
+    );
+    schemaParityRequire(
+        schemaParityTableContains($source, 'cms_rate_limit', 'INDEX idx_rate_limit_expires_at (expires_at)'),
+        $sourceName . ' must index cms_rate_limit.expires_at with idx_rate_limit_expires_at.',
+        $issues
+    );
+}
+$rateLimitMigrationSource = $rateLimitSchemaSources['migrate.php'];
+schemaParityRequire(
+    str_contains(
+        $rateLimitMigrationSource,
+        '\'cms_rate_limit.expires_at\' => "ALTER TABLE cms_rate_limit ADD COLUMN expires_at DATETIME NULL DEFAULT NULL"'
+    ),
+    'migrate.php must register the nullable cms_rate_limit.expires_at upgrade.',
+    $issues
+);
+schemaParityRequire(
+    str_contains(
+        $rateLimitMigrationSource,
+        'if (!$indexExists(\'cms_rate_limit\', \'idx_rate_limit_expires_at\')) { '
+        . '$pdo->exec("ALTER TABLE cms_rate_limit ADD INDEX idx_rate_limit_expires_at (expires_at)");'
+    ),
+    'migrate.php must idempotently add idx_rate_limit_expires_at to existing installations.',
+    $issues
+);
+schemaParityRequire(
+    str_contains(
+        $rateLimitMigrationSource,
+        'if ($columnExists(\'cms_rate_limit\', \'expires_at\')) { $pdo->exec( '
+        . '"UPDATE cms_rate_limit SET expires_at = DATE_ADD(window_start, INTERVAL 7 DAY) WHERE expires_at IS NULL"'
+    )
+    && preg_match('/\b(?:DELETE FROM|TRUNCATE(?: TABLE)?) cms_rate_limit\b/i', $rateLimitMigrationSource) !== 1,
+    'migrate.php must preserve rate-limit rows and backfill only unknown expiries from window_start plus 7 days.',
+    $issues
+);
+$normalizedCronSource = preg_replace('/\s+/', ' ', $cronSource) ?? '';
+preg_match_all('/\bDELETE FROM cms_rate_limit\b[^"\']*/i', $normalizedCronSource, $rateLimitCleanupMatches);
+schemaParityRequire(
+    $rateLimitCleanupMatches[0] === ['DELETE FROM cms_rate_limit WHERE expires_at <= NOW()'],
+    'cron.php must delete rate-limit rows only at their own expires_at deadline, preserving unknown expiries.',
+    $issues
+);
 
 $appmarketSoftwareColumns = [
     'cms_appmarket_apps.package_id' => ['MODIFY', 'VARCHAR(255) NULL DEFAULT NULL'],

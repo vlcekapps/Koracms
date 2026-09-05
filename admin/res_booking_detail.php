@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu rezervací nemáte potřebné oprávnění.');
 
 $pdo = db_connect();
@@ -51,26 +52,32 @@ $canComplete = in_array($booking['status'], ['pending', 'confirmed'], true) && $
 $statusKey = preg_replace('/[^a-z0-9_-]/', '', (string)($booking['status'] ?? '')) ?: 'unknown';
 $eventLabels = reservationBookingEventLabels();
 $bookingEvents = [];
-$statusActionError = trim((string)($_GET['error'] ?? '')) === 'status_confirm_required';
+$statusActionErrorCode = trim((string)($_GET['error'] ?? ''));
+$statusActionError = $statusActionErrorCode === 'status_confirm_required';
+$statusConflict = $statusActionErrorCode === 'status_conflict';
+$statusConflictFlash = $statusConflict ? reservationTakeStatusConflict($id) : null;
+$statusConflictNote = $statusConflictFlash['admin_note'] ?? '';
 $statusActionErrorParam = trim((string)($_GET['action'] ?? ''));
 $statusActionErrorAction = in_array($statusActionErrorParam, ['approve', 'reject', 'cancel', 'complete', 'no_show'], true)
     ? $statusActionErrorParam
     : '';
-$statusActionErrorMessage = $statusActionError
-    ? 'Změnu stavu rezervace nejde provést bez potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.'
-    : '';
+$statusActionErrorMessage = match ($statusActionErrorCode) {
+    'status_confirm_required' => 'Změnu stavu rezervace nejde provést bez potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.',
+    'status_conflict' => 'Rezervace byla mezitím změněna. Požadovaná změna se neprovedla a žádné oznámení se neodeslalo. Zkontrolujte aktuální stav níže; případnou další akci znovu potvrďte.',
+    default => '',
+};
 $statusActionFormErrorAttributes = static function (string $action) use ($statusActionErrorAction, $statusActionErrorMessage): string {
     return $statusActionErrorMessage !== '' && $statusActionErrorAction === $action
         ? ' aria-describedby="reservation-status-error"'
         : '';
 };
-$renderStatusConfirmation = static function (string $action, string $reviewText) use ($statusActionErrorAction): void {
+$renderStatusConfirmation = static function (string $action, string $reviewText) use ($statusActionError, $statusActionErrorAction): void {
     $actionId = str_replace('_', '-', $action);
     $fieldName = 'confirm_reservation_status_' . $action;
     $fieldId = 'confirm-reservation-status-' . $actionId;
     $reviewId = 'reservation-status-review-' . $actionId;
     $errorId = 'reservation-status-confirm-' . $actionId . '-error';
-    $fieldErrors = $statusActionErrorAction === $action ? [$fieldName] : [];
+    $fieldErrors = $statusActionError && $statusActionErrorAction === $action ? [$fieldName] : [];
     ?>
     <p id="<?= h($reviewId) ?>" class="field-help field-help--flush"><?= h($reviewText) ?></p>
     <label for="<?= h($fieldId) ?>" class="admin-checkbox-label">
@@ -96,13 +103,22 @@ try {
 
 adminHeader('Detail rezervace #' . (int)$booking['id']);
 ?>
-<?php if (isset($_GET['ok'])): ?>
+<?php if (isset($_GET['ok']) && $statusActionErrorMessage === ''): ?>
   <p role="status" class="success">Rezervace byla úspěšně aktualizována.</p>
 <?php endif; ?>
 <?php if ($statusActionErrorMessage !== ''): ?>
   <div class="error" role="alert" aria-atomic="true" aria-labelledby="reservation-status-error">
     <p id="reservation-status-error"><?= h($statusActionErrorMessage) ?></p>
   </div>
+<?php endif; ?>
+
+<?php if ($statusConflictNote !== ''): ?>
+  <section aria-labelledby="reservation-conflict-note-heading">
+    <h2 id="reservation-conflict-note-heading">Neuložená poznámka</h2>
+    <p id="reservation-conflict-note-help">Tato rozepsaná poznámka se kvůli souběžné změně neuložila. Zůstává zde pro vaši kontrolu, i když už původní akce není dostupná.</p>
+    <label for="reservation-conflict-note">Vaše rozepsaná poznámka</label>
+    <textarea id="reservation-conflict-note" rows="3" readonly class="res-booking-textarea--compact" aria-describedby="reservation-conflict-note-help"><?= h($statusConflictNote) ?></textarea>
+  </section>
 <?php endif; ?>
 
 <p><a href="<?= h($redirect) ?>">&larr; Zpět na přehled rezervací</a></p>
@@ -203,7 +219,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
         <legend>Zamítnutí</legend>
         <?php $renderStatusConfirmation('reject', 'Zamítnutí změní stav na Zamítnutá a odešle informační e-mail na kontakt rezervace, pokud je e-mail k dispozici.'); ?>
         <label for="admin_note_reject">Poznámka</label>
-        <textarea id="admin_note_reject" name="admin_note" rows="3" class="res-booking-textarea--reject" aria-describedby="admin-note-reject-help"></textarea>
+        <textarea id="admin_note_reject" name="admin_note" rows="3" class="res-booking-textarea--reject" aria-describedby="admin-note-reject-help"><?= h(($statusConflictFlash['action'] ?? '') === 'reject' ? $statusConflictNote : '') ?></textarea>
         <small id="admin-note-reject-help" class="field-help">Nepovinné pole.</small>
         <div class="res-booking-action-row">
           <button type="submit" class="btn btn-danger" data-confirm="Zamítnout rezervaci?">Zamítnout</button>
@@ -223,7 +239,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <legend>Zrušení rezervace</legend>
       <?php $renderStatusConfirmation('cancel', 'Zrušení změní stav na Zrušená, nastaví čas zrušení a odešle informační e-mail na kontakt rezervace, pokud je e-mail k dispozici.'); ?>
       <label for="admin_note_cancel">Poznámka</label>
-      <textarea id="admin_note_cancel" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-cancel-help"></textarea>
+      <textarea id="admin_note_cancel" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-cancel-help"><?= h(($statusConflictFlash['action'] ?? '') === 'cancel' ? $statusConflictNote : '') ?></textarea>
       <small id="admin-note-cancel-help" class="field-help">Nepovinné pole.</small>
       <div class="res-booking-action-row">
         <button type="submit" class="btn btn-danger" data-confirm="Zrušit rezervaci?">Zrušit</button>
@@ -260,7 +276,7 @@ adminHeader('Detail rezervace #' . (int)$booking['id']);
       <legend>Neomluvená absence</legend>
       <?php $renderStatusConfirmation('no_show', 'Označení absence změní stav na Neomluvená absence a zapíše změnu do historie rezervace.'); ?>
       <label for="admin_note_noshow">Poznámka</label>
-      <textarea id="admin_note_noshow" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-noshow-help"></textarea>
+      <textarea id="admin_note_noshow" name="admin_note" rows="2" class="res-booking-textarea--compact" aria-describedby="admin-note-noshow-help"><?= h(($statusConflictFlash['action'] ?? '') === 'no_show' ? $statusConflictNote : '') ?></textarea>
       <small id="admin-note-noshow-help" class="field-help">Nepovinné pole.</small>
       <div class="res-booking-action-row">
         <button type="submit" class="btn btn-danger"

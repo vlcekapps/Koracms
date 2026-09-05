@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 checkMaintenanceMode();
 
 if (!isModuleEnabled('reservations')) {
@@ -41,20 +42,17 @@ if (!$booking) {
     exit;
 }
 
-// Check cancellation window
-$bookingTs = strtotime($booking['booking_date'] . ' ' . $booking['start_time']);
-$nowTs     = time();
-$hours     = (int)$booking['cancellation_hours'];
-
-if (($bookingTs - $nowTs) < ($hours * 3600)) {
+if (!reservationBookingCanBeCancelled($booking)) {
     // Too late to cancel
     header('Location: ' . BASE_URL . '/reservations/my.php');
     exit;
 }
 
 // Cancel the booking
-$upd = $pdo->prepare("UPDATE cms_res_bookings SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW() WHERE id = ?");
-$upd->execute([$bookingId]);
+if (!reservationCancelBooking($pdo, $booking, $userId)) {
+    header('Location: ' . BASE_URL . '/reservations/my.php');
+    exit;
+}
 reservationRecordBookingEvent($pdo, $bookingId, 'cancelled', 'Rezervace byla zrušena přihlášeným uživatelem.', $userId);
 
 // Send cancellation email

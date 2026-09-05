@@ -6,6 +6,8 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 
 ## Obsah
 
+Přípravu dalšího vydání sleduje [RC audit ze září 2026](docs/rc-audit-2026-09.md). Obsahuje potvrzené nálezy, opravy, regresní důkazy a zbývající podmínky vydání; zelené CI samo o sobě není prohlášení o úplné bezpečnosti ani WCAG shodě. Nové izolované RC testy spouští `composer test:rc-core` (vývojové PHP s `pdo_sqlite` a Node.js 22), DB regresi `composer test:rc-runtime`. Produkční web Node.js ani SQLite nepotřebuje. Obě sady jsou zahrnuté v `composer ci:module-ready`.
+
 - [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)
@@ -864,7 +866,7 @@ server {
     add_header X-XSS-Protection "0" always;
     add_header X-Download-Options "noopen" always;
     add_header X-Permitted-Cross-Domain-Policies "none" always;
-    add_header Referrer-Policy "same-origin" always;
+    # Referrer-Policy a Cache-Control ponechat PHP: tokenové stránky jsou soukromé.
     add_header Cross-Origin-Opener-Policy "same-origin" always;
     add_header Origin-Agent-Cluster "?1" always;
     add_header Permissions-Policy "accelerometer=(), browsing-topics=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" always;
@@ -886,7 +888,12 @@ server {
     # Chráněné adresáře
     location ^~ /uploads/forms/ { deny all; }
     location ^~ /uploads/backups/ { deny all; }
-    location ~* ^/uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp)$ { deny all; }
+    location ^~ /uploads/gallery/ { deny all; }
+    location ^~ /uploads/places/ { deny all; }
+    location ^~ /uploads/podcasts/ { deny all; }
+    location ~* ^/uploads/downloads/(?!images/) { deny all; }
+    location ~* ^/uploads/media/(?!.*\.(jpg|jpeg|png|gif|webp|mp3|m4a|mp4|ogg|wav|aac|flac|webm|ogv|mov|pdf|zip|vtt|csv|doc|docx|xls|xlsx)$) { deny all; }
+    location ~* ^/uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp|html?|xhtml|shtml|xml|js|mjs)$ { deny all; }
 
     # Čisté URL – moduly
     location = /api/appmarket/v1/update { rewrite ^ /appmarket/update.php last; }

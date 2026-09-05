@@ -31,6 +31,8 @@ try {
            AND deleted_at IS NULL
            AND status = 'published'
            AND is_published = 1
+           AND (publish_at IS NULL OR publish_at <= NOW())
+           AND (unpublish_at IS NULL OR unpublish_at > NOW())
          ORDER BY blog_nav_order, title, id"
     );
     $blogPageStmt->execute([$blogId]);
@@ -183,7 +185,7 @@ try {
          FROM cms_articles a
          WHERE a.status = 'published'
            AND a.deleted_at IS NULL
-           AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+           AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
            AND a.blog_id = ?
          GROUP BY archive_key
          ORDER BY archive_key DESC"
@@ -205,7 +207,7 @@ try {
     koraLog('warning', 'blog index archives query failed', ['blog_id' => $blogId, 'exception' => $e]);
 }
 
-$where = "WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND a.blog_id = ?";
+$where = "WHERE a.status = 'published' AND a.deleted_at IS NULL AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW()) AND a.blog_id = ?";
 $params = [$blogId];
 $categorySlugSelect = $taxonomyLandingColumnsAvailable ? 'c.slug AS category_slug' : "'' AS category_slug";
 
@@ -275,7 +277,7 @@ if ($showFeaturedArticle) {
              LEFT JOIN cms_users u ON u.id = a.author_id
              WHERE a.status = 'published'
                AND a.deleted_at IS NULL
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
                AND a.blog_id = ?
                AND a.is_featured_in_blog = 1
              ORDER BY COALESCE(a.publish_at, a.created_at) DESC, a.id DESC

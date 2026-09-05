@@ -337,6 +337,16 @@ Multiblog je určený pro situace, kdy má jeden web více samostatných blogů 
 - [README.md](../README.md) popisuje, že Kora CMS multiblog umí a jak zapadá do celého systému.
 - Tento dokument popisuje, jak se multiblog skutečně spravuje v administraci a co jednotlivé volby dělají.
 
+### Bezpečnostní audit před RC (září 2026)
+
+Podrobný stav je v [RC registru](../docs/rc-audit-2026-09.md). Před nasazením nových souborů zálohujte databázi i uploady a poté spusťte `migrate.php`: rate-limity nově evidují vlastní expiraci, takže krátká ochrana ani cron nezruší delší limit. Existující počítadla se neruší; staré neznámé expirace dostanou konzervativní sedmidenní okno.
+
+Veřejné články a stránky respektují konec i začátek publikace přímo při čtení, nejen po běhu cronu. Záložní koncept vizuálního editoru zachovává samostatný perex a vícenásobný výběr. Odmítnutá změna média nebo podcastu nesmí odstranit původní soubor. Ke stažení se sdílí přes veřejný detail nebo kontrolovaný download endpoint, nikoli přímou cestou do `uploads/downloads/`.
+
+Po nasazení projděte neúspěšné i úspěšné uložení dlouhého formuláře, přístupnost chyb se čtečkou, soukromá/smazaná média a potvrzení rezervace ze starší otevřené záložky. Automatizované testy nenahrazují ruční NVDA/Firefox a vizuální reflow. Pokud není k dispozici testovací hosting, proveďte hostingový smoke test až po kontrolovaném nahrání balíčku a migraci; předem připravte zálohu souborů i databáze pro společný návrat při závažné chybě. Ověřte také e-maily a PHP log, protože dostupnost lokálního prostředí není důkazem stejného chování hostingu.
+
+Před aktualizací uložte rozepsané změny. Staré přihlášené relace budou vyžadovat nový login. Každý další požadavek kontroluje existenci a potvrzení účtu, heslo, roli a nastavení 2FA; změna těchto údajů zneplatní dosavadní přihlášení. Rozpracovaný druhý faktor platí deset minut a po vypršení nabídne srozumitelný návrat k přihlášení. Nejde o desetiminutový limit editace obsahu. Administrátor starší instalace bez pole potvrzení účtu se může přihlásit k migraci; výjimka neplatí pro veřejné účty ani pro účet s výslovně vypnutým potvrzením.
+
 ### Správa blogu
 
 U každého blogu lze nastavit:
@@ -1835,8 +1845,10 @@ Když se nové médium nahraje do kolekce, převezme její výchozí viditelnost
 
 - Nové SVG uploady jsou zakázané.
 - Starší SVG soubory zůstávají v knihovně, ale nechovají se jako obrázkové preview assety.
-- Soukromé soubory a SVG se servírují přes kontrolované endpointy `media/file.php` a `media/thumb.php`.
-- Přímé `/uploads/media/...` odkazy zůstávají jen pro veřejná ne-SVG média.
+- Soukromé soubory, SVG, TXT a historické aktivní přípony se servírují přes kontrolované endpointy; nebezpečné typy pouze jako příloha ke stažení, ne jako HTML stránka.
+- Přímé `/uploads/media/...` odkazy zůstávají jen pro povolené veřejné typy. Nové uploady používají příponu podle ověřeného MIME, nikoli libovolnou příponu z názvu uploadu.
+
+Náhrada a přesun nejprve připraví nové soubory v neveřejném úložišti, ověří odvozené obrázky a ponechá možnost návratu při chybě zápisu. Pokud selže i samotný rollback filesystemu, v soukromém úložišti zůstanou recovery kopie a log hlásí nutnost zásahu. Inventuru historických HTML/JS/SVG uploadů a opravu ručně vložených přímých odkazů musí provést správce před RC; samotný zákaz veřejné cesty jejich obsah z disku nemaže.
 
 ### Mazání a kontrola použití
 

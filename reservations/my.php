@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 header('Cache-Control: no-cache, no-store, must-revalidate');
 checkMaintenanceMode();
 
@@ -17,9 +18,7 @@ requirePublicLogin($currentUrl);
  */
 function canCancelBooking(array $booking, int $nowTs): bool
 {
-    $hours = (int)$booking['cancellation_hours'];
-    $bookingTs = strtotime($booking['booking_date'] . ' ' . $booking['start_time']);
-    return ($bookingTs - $nowTs) >= ($hours * 3600);
+    return reservationBookingCanBeCancelled($booking, $nowTs);
 }
 
 $pdo = db_connect();

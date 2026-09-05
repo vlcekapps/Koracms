@@ -629,6 +629,38 @@ function recipeDecodeStructureSnapshot(string $snapshotJson): ?array
 /**
  * @param array<string,mixed> $snapshot
  */
+function recipeStructureSnapshotIsPublishable(array $snapshot): bool
+{
+    $groups = is_array($snapshot['groups'] ?? null) ? $snapshot['groups'] : [];
+    $steps = is_array($snapshot['steps'] ?? null) ? $snapshot['steps'] : [];
+    $hasIngredient = false;
+    foreach ($groups as $group) {
+        if (!is_array($group) || !is_array($group['ingredients'] ?? null)) {
+            continue;
+        }
+        foreach ($group['ingredients'] as $ingredient) {
+            $name = is_array($ingredient) ? ($ingredient['name'] ?? '') : '';
+            if (is_scalar($name) && trim((string)$name) !== '') {
+                $hasIngredient = true;
+                break 2;
+            }
+        }
+    }
+    if (!$hasIngredient) {
+        return false;
+    }
+    foreach ($steps as $step) {
+        $instruction = is_array($step) ? ($step['instruction'] ?? '') : '';
+        if (is_scalar($instruction) && trim((string)$instruction) !== '') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @param array<string,mixed> $snapshot
+ */
 function recipeRestoreStructure(PDO $pdo, int $recipeId, array $snapshot): bool
 {
     if (
@@ -644,6 +676,20 @@ function recipeRestoreStructure(PDO $pdo, int $recipeId, array $snapshot): bool
         $pdo->beginTransaction();
     }
     try {
+        $recipeStatement = $pdo->prepare('SELECT status FROM cms_recipes WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
+        $recipeStatement->execute([$recipeId]);
+        $recipeStatus = $recipeStatement->fetchColumn();
+        if ($recipeStatus === false) {
+            if ($ownsTransaction) {
+                $pdo->rollBack();
+            }
+            return false;
+        }
+        // Validate the entries restoration actually keeps, not array counts.
+        // The row lock keeps concurrent publication/deletion outside this change.
+        if ($recipeStatus === 'published' && !recipeStructureSnapshotIsPublishable($snapshot)) {
+            throw new DomainException('Zveřejněný recept musí mít alespoň jednu ingredienci a jeden krok postupu. Pro obnovení neúplné verze nejprve přepněte recept na koncept.');
+        }
         $pdo->prepare('DELETE FROM cms_recipe_steps WHERE recipe_id = ?')->execute([$recipeId]);
         $pdo->prepare('DELETE FROM cms_recipe_ingredients WHERE recipe_id = ?')->execute([$recipeId]);
         $pdo->prepare('DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ?')->execute([$recipeId]);
@@ -668,10 +714,10 @@ function recipeRestoreStructure(PDO $pdo, int $recipeId, array $snapshot): bool
             $groupId = (int)$pdo->lastInsertId();
             $ingredients = is_array($group['ingredients'] ?? null) ? $group['ingredients'] : [];
             foreach ($ingredients as $ingredient) {
-                if (!is_array($ingredient)) {
+                if (!is_array($ingredient) || !is_scalar($ingredient['name'] ?? null)) {
                     continue;
                 }
-                $name = mb_substr(trim((string)($ingredient['name'] ?? '')), 0, 255);
+                $name = mb_substr(trim((string)$ingredient['name']), 0, 255);
                 if ($name === '') {
                     continue;
                 }
@@ -701,10 +747,10 @@ function recipeRestoreStructure(PDO $pdo, int $recipeId, array $snapshot): bool
              VALUES (?, ?, ?, ?, ?, ?)'
         );
         foreach ($snapshot['steps'] as $step) {
-            if (!is_array($step)) {
+            if (!is_array($step) || !is_scalar($step['instruction'] ?? null)) {
                 continue;
             }
-            $instruction = trim((string)($step['instruction'] ?? ''));
+            $instruction = trim((string)$step['instruction']);
             if ($instruction === '') {
                 continue;
             }

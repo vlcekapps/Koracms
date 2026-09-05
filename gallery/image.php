@@ -18,7 +18,7 @@ if ($photoId === null) {
 
 $pdo = db_connect();
 $stmt = $pdo->prepare(
-    "SELECT p.id, p.filename,
+    "SELECT p.id, p.filename, p.deleted_at AS photo_deleted_at, a.deleted_at AS album_deleted_at,
             COALESCE(p.status, 'published') AS photo_status,
             COALESCE(p.is_published, 1) AS photo_published,
             COALESCE(a.status, 'published') AS album_status,
@@ -35,7 +35,9 @@ if ($photo === null) {
     sendFileDownloadNotFound();
 }
 
-$isPublic = (string)$photo['photo_status'] === 'published'
+$isPublic = $photo['photo_deleted_at'] === null
+    && $photo['album_deleted_at'] === null
+    && (string)$photo['photo_status'] === 'published'
     && (int)$photo['photo_published'] === 1
     && (string)$photo['album_status'] === 'published'
     && (int)$photo['album_published'] === 1;

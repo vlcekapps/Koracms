@@ -67,7 +67,9 @@ $q = trim((string)($q ?? ''));
             </div>
           </fieldset>
         </form>
-      <?php elseif ($resultsVisible): ?>
+      <?php endif; ?>
+
+      <?php if ($resultsVisible): ?>
         <section aria-labelledby="poll-results-title">
           <h2 id="poll-results-title" class="section-title section-title--compact">Výsledky</h2>
 
@@ -105,7 +107,7 @@ $q = trim((string)($q ?? ''));
             <p class="poll-note">U této ankety už jste hlasoval/a.</p>
           <?php endif; ?>
         </section>
-      <?php else: ?>
+      <?php elseif (!$showForm): ?>
         <section aria-labelledby="poll-results-hidden-title">
           <h2 id="poll-results-hidden-title" class="section-title section-title--compact">Výsledky nejsou veřejné</h2>
           <?php if ($voted || $hasVoted): ?>

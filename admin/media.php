@@ -419,18 +419,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
 
-            $stored = mediaStoreUploadedFile($singleFile, $uploadVisibility);
-            if (!$stored['ok']) {
-                $errors[] = ($singleFile['name'] !== '' ? $singleFile['name'] : 'Soubor') . ': ' . $stored['error'];
-                continue;
-            }
-
-            $pdo->prepare(
-                "INSERT INTO cms_media
+            $stored = mediaStoreUploadedFile($singleFile, $uploadVisibility, null, static function (array $stored) use ($pdo, $uploadCollection, $uploadVisibility): bool {
+                return $pdo->prepare(
+                    "INSERT INTO cms_media
                  (filename, original_name, mime_type, file_size, folder, collection_id, alt_text, caption, description,
                   credit, license_label, license_url, visibility, uploaded_by)
                  VALUES (?, ?, ?, ?, 'media', ?, '', '', '', ?, ?, ?, ?, ?)"
-            )->execute([
+                )->execute([
                 $stored['filename'],
                 $stored['original_name'],
                 $stored['mime_type'],
@@ -441,7 +436,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $uploadCollection !== null ? normalizeMediaLicenseUrl((string)($uploadCollection['default_license_url'] ?? '')) : '',
                 $uploadVisibility,
                 currentUserId(),
-            ]);
+                ]);
+            });
+            if (!$stored['ok']) {
+                $errors[] = ($singleFile['name'] !== '' ? $singleFile['name'] : 'Soubor') . ': ' . $stored['error'];
+                continue;
+            }
             $uploadedCount++;
         }
 
@@ -480,14 +480,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mediaAdminRedirectWithFlash($target);
         }
 
-        if ($newVisibility !== normalizeMediaVisibility((string)($media['visibility'] ?? 'public'))) {
-            $switchResult = mediaSwitchVisibility($media, $newVisibility);
-            if (!$switchResult['ok']) {
-                mediaFlashSet('error', (string)$switchResult['error']);
-                mediaAdminRedirectWithFlash($target);
-            }
-        }
-
         $collectionId = inputInt('post', 'collection_id') ?? 0;
         if ($collectionId > 0 && mediaCollectionById($pdo, $collectionId) === null) {
             mediaFlashSet('error', 'Vybraná kolekce nebyla nalezena.');
@@ -500,12 +492,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mediaAdminRedirectWithFlash($target);
         }
 
-        $pdo->prepare(
-            "UPDATE cms_media
+        $saveMetadata = static function () use ($pdo, $collectionId, $licenseUrl, $newVisibility, $mediaId): bool {
+            return $pdo->prepare(
+                "UPDATE cms_media
              SET collection_id = ?, alt_text = ?, caption = ?, description = ?, credit = ?,
                  license_label = ?, license_url = ?, visibility = ?, updated_at = NOW()
              WHERE id = ?"
-        )->execute([
+            )->execute([
             $collectionId > 0 ? $collectionId : null,
             trim((string)($_POST['alt_text'] ?? '')),
             trim((string)($_POST['caption'] ?? '')),
@@ -515,7 +508,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $licenseUrl,
             $newVisibility,
             $mediaId,
-        ]);
+            ]);
+        };
+        $switchResult = mediaSwitchVisibility($media, $newVisibility, $saveMetadata);
+        if (!$switchResult['ok']) {
+            mediaFlashSet('error', (string)($switchResult['error'] ?? 'Metadata se nepodařilo bezpečně uložit.'));
+            mediaAdminRedirectWithFlash($target);
+        }
 
         mediaFlashSet('success', 'Metadata média byla uložena.');
         logAction('media_update', 'id=' . $mediaId);
@@ -533,25 +532,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stored = mediaStoreUploadedFile(
             $_FILES['replacement_file'] ?? [],
             normalizeMediaVisibility((string)($media['visibility'] ?? 'public')),
-            $media
+            $media,
+            static function (array $stored) use ($pdo, $mediaId): bool {
+                return $pdo->prepare(
+                    "UPDATE cms_media
+             SET filename = ?, original_name = ?, mime_type = ?, file_size = ?, updated_at = NOW()
+             WHERE id = ?"
+                )->execute([
+            $stored['filename'],
+            $stored['original_name'],
+            $stored['mime_type'],
+            (int)$stored['file_size'],
+            $mediaId,
+                ]);
+            }
         );
         if (!$stored['ok']) {
             mediaFlashSet('error', $mediaReplacementFileErrorMessage . ' Detail: ' . (string)$stored['error']);
             mediaFlashSetFieldError('replacement_file', $mediaReplacementFileErrorMessage);
             mediaAdminRedirectWithFlash($target);
         }
-
-        $pdo->prepare(
-            "UPDATE cms_media
-             SET filename = ?, original_name = ?, mime_type = ?, file_size = ?, updated_at = NOW()
-             WHERE id = ?"
-        )->execute([
-            $stored['filename'],
-            $stored['original_name'],
-            $stored['mime_type'],
-            (int)$stored['file_size'],
-            $mediaId,
-        ]);
 
         mediaFlashSet('success', 'Soubor byl nahrazen bez změny jeho ID.');
         logAction('media_replace', 'id=' . $mediaId);
@@ -580,11 +580,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mediaAdminRedirectWithFlash($target);
         }
 
-        if (!mediaDeletePhysicalFiles($media)) {
+        if (!mediaDeletePhysicalFiles($media, null, null, static fn (): bool => $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]))) {
             mediaFlashSet('error', $mediaDeleteFilesystemErrorMessage);
             mediaAdminRedirectWithFlash($target);
         }
-        $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]);
         mediaFlashSet('success', 'Soubor byl smazán.');
         logAction('media_delete', 'id=' . $mediaId);
         mediaAdminRedirectWithFlash($target);
@@ -622,12 +621,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mediaId = (int)$media['id'];
             if ($bulkAction === 'make_public') {
                 if (normalizeMediaVisibility((string)($media['visibility'] ?? 'public')) !== 'public') {
-                    $switchResult = mediaSwitchVisibility($media, 'public');
+                    $switchResult = mediaSwitchVisibility($media, 'public', static fn (): bool => $pdo->prepare("UPDATE cms_media SET visibility = 'public' WHERE id = ?")->execute([$mediaId]));
                     if (!$switchResult['ok']) {
                         $blockedCount++;
                         continue;
                     }
-                    $pdo->prepare("UPDATE cms_media SET visibility = 'public' WHERE id = ?")->execute([$mediaId]);
                     $updatedCount++;
                 }
                 continue;
@@ -639,12 +637,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
                 if (normalizeMediaVisibility((string)($media['visibility'] ?? 'public')) !== 'private') {
-                    $switchResult = mediaSwitchVisibility($media, 'private');
+                    $switchResult = mediaSwitchVisibility($media, 'private', static fn (): bool => $pdo->prepare("UPDATE cms_media SET visibility = 'private' WHERE id = ?")->execute([$mediaId]));
                     if (!$switchResult['ok']) {
                         $blockedCount++;
                         continue;
                     }
-                    $pdo->prepare("UPDATE cms_media SET visibility = 'private' WHERE id = ?")->execute([$mediaId]);
                     $updatedCount++;
                 }
                 continue;
@@ -681,11 +678,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $blockedCount++;
                     continue;
                 }
-                if (!mediaDeletePhysicalFiles($media)) {
+                if (!mediaDeletePhysicalFiles($media, null, null, static fn (): bool => $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]))) {
                     $blockedCount++;
                     continue;
                 }
-                $pdo->prepare("DELETE FROM cms_media WHERE id = ?")->execute([$mediaId]);
                 $deletedCount++;
             }
         }

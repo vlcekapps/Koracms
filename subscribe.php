@@ -3,6 +3,28 @@
 require_once __DIR__ . '/db.php';
 checkMaintenanceMode();
 
+function newsletterRequestSubscription(PDO $pdo, string $email): string
+{
+    $token = bin2hex(random_bytes(32));
+    $pdo->prepare(
+        "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 0)
+         ON DUPLICATE KEY UPDATE email = cms_subscribers.email"
+    )->execute([$email, $token]);
+    $statement = $pdo->prepare('SELECT email, token, confirmed FROM cms_subscribers WHERE email = ?');
+    $statement->execute([$email]);
+    $subscriber = $statement->fetch();
+    if (!is_array($subscriber)) {
+        throw new RuntimeException('Registrovanou adresu se nepodařilo načíst.');
+    }
+    if ((int)$subscriber['confirmed'] === 1) {
+        return 'ok';
+    }
+
+    // Reuse the persisted token: retries must not invalidate links already sent.
+    return sendNewsletterSubscriptionConfirmation((string)$subscriber['email'], (string)$subscriber['token'])
+        ? 'ok' : 'mail_error';
+}
+
 if (!isModuleEnabled('newsletter')) {
     header('Location: ' . BASE_URL . '/index.php');
     exit;
@@ -32,20 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($errors === []) {
+            rateLimitSubject('subscribe_email', $email, 3, 3600);
             $pdo   = db_connect();
-            $token = bin2hex(random_bytes(32));
 
             try {
-                $pdo->prepare(
-                    "INSERT INTO cms_subscribers (email, token, confirmed) VALUES (?, ?, 0)"
-                )->execute([$email, $token]);
-                if (!sendNewsletterSubscriptionConfirmation($email, $token)) {
-                    $state = 'mail_error';
-                } else {
-                    $state = 'ok';
+                $state = newsletterRequestSubscription($pdo, $email);
+                if ($state === 'mail_error') {
+                    $state = 'error';
+                    $errors[] = 'Potvrzovací e-mail se nepodařilo odeslat. Zkuste přihlášení prosím znovu později.';
                 }
             } catch (\PDOException $e) {
-                $state = 'ok';
+                koraLog('warning', 'newsletter subscription save failed', ['exception' => $e]);
+                $state = 'error';
+                $errors[] = 'Přihlášení se nepodařilo uložit. Zkuste to prosím později.';
             }
         } else {
             $state = 'error';

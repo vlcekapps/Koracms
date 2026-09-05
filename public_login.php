@@ -14,6 +14,10 @@ if (isLoggedIn()) {
 
 $siteName     = getSetting('site_name', 'Kora CMS');
 $errors       = [];
+if (!empty($_SESSION['auth_session_notice'])) {
+    $errors[] = (string)$_SESSION['auth_session_notice'];
+    unset($_SESSION['auth_session_notice']);
+}
 $notConfirmed = false;
 $publicRegistrationEnabled = publicRegistrationEnabled();
 $redirect     = internalRedirectTarget(trim($_GET['redirect'] ?? $_POST['redirect'] ?? ''), '');
@@ -31,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $pdo  = db_connect();
         $stmt = $pdo->prepare(
-            "SELECT id, email, password, first_name, last_name, is_superadmin, is_confirmed
+            "SELECT *
              FROM cms_users
              WHERE email = ? AND role = 'public'"
         );
@@ -43,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passwordOk = password_verify($password, $storedHash);
 
         if ($userRow && $passwordOk) {
-            if (!(int)$userRow['is_confirmed']) {
+            if (!userSessionAccountIsConfirmed($userRow)) {
                 $notConfirmed = true;
             } else {
                 $displayName = trim($userRow['first_name'] . ' ' . $userRow['last_name']);
@@ -56,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $userRow['email'],
                     (bool)$userRow['is_superadmin'],
                     $displayName,
-                    'public'
+                    'public',
+                    userSessionFingerprint($userRow)
                 );
 
                 $target = internalRedirectTarget($redirect, BASE_URL . '/public_profile.php');

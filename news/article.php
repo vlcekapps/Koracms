@@ -17,8 +17,13 @@ if ($id === null && $slug === '') {
 
 $pdo = db_connect();
 
-$previewToken = trim($_GET['preview'] ?? '');
+$previewInput = $_GET['preview'] ?? '';
+$previewToken = is_string($previewInput) ? trim($previewInput) : '__invalid_preview_token__';
 if ($previewToken !== '') {
+    sendNoStoreNoIndexHeaders();
+    if (!isValidArticlePreviewToken($previewToken)) {
+        $previewToken = '__invalid_preview_token__';
+    }
     if ($slug !== '') {
         $stmt = $pdo->prepare(
             "SELECT n.id, n.title, n.slug, n.content, n.meta_title, n.meta_description, n.created_at, n.updated_at,
@@ -26,7 +31,7 @@ if ($previewToken !== '') {
                     u.author_public_enabled, u.author_slug, u.role AS author_role
              FROM cms_news n
              LEFT JOIN cms_users u ON u.id = n.author_id
-             WHERE n.slug = ? AND n.preview_token = ?
+             WHERE n.slug = ? AND n.preview_token = ? AND n.deleted_at IS NULL
              LIMIT 1"
         );
         $stmt->execute([$slug, $previewToken]);
@@ -37,7 +42,7 @@ if ($previewToken !== '') {
                     u.author_public_enabled, u.author_slug, u.role AS author_role
              FROM cms_news n
              LEFT JOIN cms_users u ON u.id = n.author_id
-             WHERE n.id = ? AND n.preview_token = ?
+             WHERE n.id = ? AND n.preview_token = ? AND n.deleted_at IS NULL
              LIMIT 1"
         );
         $stmt->execute([$id, $previewToken]);
@@ -83,12 +88,12 @@ if (!$news) {
 
 $news = hydrateNewsPresentation($news);
 
-if ($slug === '' && !empty($news['slug'])) {
+if ($previewToken === '' && $slug === '' && !empty($news['slug'])) {
     header('Location: ' . newsPublicPath($news), true, 302);
     exit;
 }
 
-if (!isset($_SESSION['cms_user_id'])) {
+if ($previewToken === '' && !isset($_SESSION['cms_user_id'])) {
     trackPageView('news', (int)$news['id']);
 }
 

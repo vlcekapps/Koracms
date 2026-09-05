@@ -13,6 +13,19 @@ function pollIpHash(int $pollId): string
     return pollVoterHash((string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), $pollId);
 }
 
+/**
+ * @param array<string,mixed> $poll
+ * @return array{voted:bool, showForm:bool, resultsVisible:bool}
+ */
+function pollDetailInteractionState(array $poll, bool $hasVoted, bool $successRequested): array
+{
+    return [
+        'voted' => $hasVoted && $successRequested,
+        'showForm' => (string)($poll['state'] ?? '') === 'active' && !$hasVoted,
+        'resultsVisible' => pollResultsAreVisible($poll, $hasVoted),
+    ];
+}
+
 $pdo = db_connect();
 $siteName = getSetting('site_name', 'Kora CMS');
 $pollId = inputInt('get', 'id');
@@ -240,8 +253,10 @@ if ($detailRequested) {
     }
 
     $isActive = (string)($poll['state'] ?? '') === 'active';
-    $showForm = $isActive && !$hasVoted && !$voted;
-    $resultsVisible = pollResultsAreVisible($poll, $hasVoted, $voted);
+    $interactionState = pollDetailInteractionState($poll, $hasVoted, $voted);
+    $voted = $interactionState['voted'];
+    $showForm = $interactionState['showForm'];
+    $resultsVisible = $interactionState['resultsVisible'];
 
     if (!isset($_SESSION['cms_user_id'])) {
         trackPageView('poll', (int)$poll['id']);

@@ -49,10 +49,14 @@ sitemapWriteUrl(siteUrl('/'), 'daily', '1.0');
 
 try {
     $pages = $pdo->query(
-        "SELECT slug, COALESCE(updated_at, created_at) AS sitemap_lastmod
-         FROM cms_pages
-         WHERE status = 'published' AND is_published = 1
-         ORDER BY nav_order, title"
+        "SELECT p.id, p.slug, p.blog_id, b.slug AS blog_slug, COALESCE(p.updated_at, p.created_at) AS sitemap_lastmod
+         FROM cms_pages p LEFT JOIN cms_blogs b ON b.id = p.blog_id
+         WHERE p.status = 'published' AND p.is_published = 1 AND p.deleted_at IS NULL
+           AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+           AND (p.unpublish_at IS NULL OR p.unpublish_at > NOW())
+           AND (p.blog_id IS NULL OR b.id IS NOT NULL)"
+         . (isModuleEnabled('blog') ? '' : ' AND p.blog_id IS NULL') . "
+         ORDER BY p.nav_order, p.title"
     )->fetchAll();
     foreach ($pages as $page) {
         sitemapWriteUrl(pagePublicUrl($page), 'monthly', '0.8', sitemapLastmod((string)($page['sitemap_lastmod'] ?? '')));
@@ -89,7 +93,7 @@ if (isModuleEnabled('blog')) {
             "SELECT a.id, a.slug, a.updated_at, b.slug AS blog_slug
              FROM cms_articles a
              LEFT JOIN cms_blogs b ON b.id = a.blog_id
-             WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+             WHERE a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              ORDER BY COALESCE(a.publish_at, a.created_at) DESC, a.id DESC"
         )->fetchAll();
         foreach ($articles as $article) {
@@ -113,7 +117,7 @@ if (isModuleEnabled('blog')) {
                 AND (a.category_id = c.id OR a.category_id = child.id)
                 AND a.deleted_at IS NULL
                 AND a.status = 'published'
-                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+                AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              WHERE c.slug <> ''
              GROUP BY c.id, c.name, c.slug, c.blog_id, b.slug, b.sort_order, c.created_at, c.updated_at
              ORDER BY b.sort_order ASC, c.name ASC"
@@ -144,7 +148,7 @@ if (isModuleEnabled('blog')) {
                 AND a.blog_id = t.blog_id
                 AND a.deleted_at IS NULL
                 AND a.status = 'published'
-                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+                AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              WHERE t.slug <> ''
              GROUP BY t.id, t.name, t.slug, t.blog_id, b.slug, b.sort_order, t.created_at, t.updated_at
              ORDER BY b.sort_order ASC, t.name ASC"
@@ -175,7 +179,7 @@ if (isModuleEnabled('blog')) {
                    WHERE si.series_id = s.id
                      AND a.deleted_at IS NULL
                      AND a.status = 'published'
-                     AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+                     AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
                )
              ORDER BY b.sort_order ASC, s.sort_order ASC, s.title ASC"
         )->fetchAll();
@@ -200,7 +204,7 @@ if (isModuleEnabled('blog')) {
              INNER JOIN cms_blogs b ON b.id = a.blog_id
              WHERE a.deleted_at IS NULL
                AND a.status = 'published'
-               AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
              GROUP BY archive_key, a.blog_id, b.slug, b.sort_order
              ORDER BY b.sort_order ASC, archive_key DESC"
         )->fetchAll();

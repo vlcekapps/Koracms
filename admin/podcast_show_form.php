@@ -38,6 +38,8 @@ if ($id !== null) {
 }
 
 $show = hydratePodcastShowPresentation($show);
+$formValues = adminEditorFormFlashTake('podcast_show', $id);
+$show = array_replace($show, $formValues);
 $backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . '/admin/podcast_shows.php');
 $categories = $pdo->query(
     "SELECT DISTINCT category FROM cms_podcast_shows WHERE category <> '' ORDER BY category"
@@ -154,7 +156,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
         <label for="feed_episode_limit">Počet epizod v RSS feedu</label>
         <input type="number" id="feed_episode_limit" name="feed_episode_limit" min="1" max="1000"
                <?= adminFieldAttributes('feed_episode_limit', $err, $fieldErrorMap, ['podcast-show-feed-limit-help']) ?>
-               value="<?= (int)$show['feed_episode_limit'] ?>">
+               value="<?= h($formValues['feed_episode_limit'] ?? (string)(int)$show['feed_episode_limit']) ?>">
         <small id="podcast-show-feed-limit-help" class="field-help">Běžné podcast hostingy omezují feed na poslední epizody. Zadejte počet od 1 do 1000.</small>
         <?php adminRenderFieldError('feed_episode_limit', $err, $fieldErrorMap, $fieldErrorMessages['feed_episode_limit']); ?>
       </div>
@@ -243,7 +245,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
     <?php if ((string)$show['cover_image'] !== ''): ?>
       <div class="admin-field-row">
         <label for="cover_image_delete" class="admin-checkbox-label">
-          <input type="checkbox" id="cover_image_delete" name="cover_image_delete" value="1">
+          <input type="checkbox" id="cover_image_delete" name="cover_image_delete" value="1"<?= !empty($show['cover_image_delete']) ? ' checked' : '' ?>>
           Odebrat stávající cover obrázek
         </label>
       </div>
@@ -281,7 +283,7 @@ adminHeader($id !== null ? 'Upravit podcast' : 'Nový podcast');
 (function () {
     const titleInput = document.getElementById('title');
     const slugInput = document.getElementById('slug');
-    let slugManual = <?= $id !== null && !empty($show['slug']) ? 'true' : 'false' ?>;
+    let slugManual = <?= !empty($show['slug']) ? 'true' : 'false' ?>;
 
     const slugify = (value) => value
         .toLowerCase()

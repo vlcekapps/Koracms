@@ -40,7 +40,7 @@ if (isModuleEnabled('blog')) {
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
          LEFT JOIN cms_blogs b ON b.id = a.blog_id
-         WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+         WHERE a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
          ORDER BY a.view_count DESC, a.created_at DESC, a.id DESC
          LIMIT 1"
     );
@@ -61,7 +61,7 @@ if (isModuleEnabled('blog') && $homeBlogCount > 0) {
          LEFT JOIN cms_categories c ON c.id = a.category_id
          LEFT JOIN cms_users u ON u.id = a.author_id
          LEFT JOIN cms_blogs b ON b.id = a.blog_id
-         WHERE a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+         WHERE a.deleted_at IS NULL AND a.status = 'published' AND (a.publish_at IS NULL OR a.publish_at <= NOW()) AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
          ORDER BY a.created_at DESC LIMIT ?"
     );
     $stmt->execute([$homeBlogCount]);

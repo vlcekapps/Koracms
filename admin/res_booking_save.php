@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu rezervací nemáte potřebné oprávnění.');
 requireModuleEnabled('reservations');
 verifyCsrf();
@@ -38,6 +39,16 @@ $detailRedirect = internalRedirectTarget(
     BASE_URL . '/admin/res_booking_detail.php?id=' . $bookingId
 );
 
+$redirectStatusConflict = static function () use ($bookingId, $action, $adminNote): void {
+    reservationRememberStatusConflict($bookingId, $action, $adminNote);
+    header('Location: ' . appendUrlQuery(BASE_URL . '/admin/res_booking_detail.php', [
+        'id' => $bookingId,
+        'error' => 'status_conflict',
+        'action' => $action,
+    ]));
+    exit;
+};
+
 // ── Validace přechodu stavů ──
 $allowed = [
     'approve'  => ['pending'],
@@ -48,8 +59,7 @@ $allowed = [
 ];
 
 if (!in_array($booking['status'], $allowed[$action], true)) {
-    header('Location: ' . $detailRedirect);
-    exit;
+    $redirectStatusConflict();
 }
 
 // Dokončit lze až po uplynutí end_time rezervace
@@ -82,27 +92,21 @@ $statusMap = [
 ];
 $newStatus = $statusMap[$action];
 
-// ── UPDATE ──
-$setClauses = ['status = ?', 'updated_at = NOW()'];
-$setParams  = [$newStatus];
-
-if ($adminNote !== '') {
-    $setClauses[] = 'admin_note = ?';
-    $setParams[]  = $adminNote;
-}
-
-if ($action === 'cancel') {
-    $setClauses[] = 'cancelled_at = NOW()';
-}
+$calendarToken = null;
 if ($action === 'approve' && trim((string)($booking['calendar_token'] ?? '')) === '') {
-    $setClauses[] = 'calendar_token = ?';
-    $setParams[] = reservationCalendarToken();
+    $calendarToken = reservationCalendarToken();
 }
 
-$setParams[] = $bookingId;
-$pdo->prepare(
-    "UPDATE cms_res_bookings SET " . implode(', ', $setClauses) . " WHERE id = ?"
-)->execute($setParams);
+if (!reservationCompareAndSetBookingStatus(
+    $pdo,
+    $bookingId,
+    (string)$booking['status'],
+    $newStatus,
+    $adminNote,
+    $calendarToken
+)) {
+    $redirectStatusConflict();
+}
 
 logAction('booking_' . $action, "id={$bookingId}, new_status={$newStatus}");
 

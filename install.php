@@ -383,7 +383,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_rate_limit (
             id           VARCHAR(64) NOT NULL PRIMARY KEY,
             attempts     INT         NOT NULL DEFAULT 1,
-            window_start DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+            window_start DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at   DATETIME    NULL DEFAULT NULL,
+            INDEX idx_rate_limit_expires_at (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS cms_log (

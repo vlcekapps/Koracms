@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu FAQ nemáte potřebné oprávnění.');
 requireModuleEnabled('faq');
 verifyCsrf();
@@ -16,9 +16,14 @@ $answer = $_POST['answer'] ?? '';
 $categoryId = inputInt('post', 'category_id');
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
-if ($question === '' || trim($answer) === '') {
-    header('Location: faq_form.php?err=required' . ($id ? '&id=' . $id : ''));
+$redirectToForm = static function (string $errorCode) use ($id): void {
+    adminEditorFormFlashStore('faq', $id, $_POST);
+    header('Location: faq_form.php?err=' . rawurlencode($errorCode) . ($id ? '&id=' . $id : ''));
     exit;
+};
+
+if ($question === '' || trim($answer) === '') {
+    $redirectToForm('required');
 }
 
 $existingFaq = null;
@@ -34,14 +39,12 @@ if ($id !== null) {
 
 $slug = faqSlug($submittedSlug !== '' ? $submittedSlug : $question);
 if ($slug === '') {
-    header('Location: faq_form.php?err=slug' . ($id ? '&id=' . $id : ''));
-    exit;
+    $redirectToForm('slug');
 }
 
 $uniqueSlug = uniqueFaqSlug($pdo, $slug, $id);
 if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
-    header('Location: faq_form.php?err=slug' . ($id ? '&id=' . $id : ''));
-    exit;
+    $redirectToForm('slug');
 }
 $slug = $uniqueSlug;
 

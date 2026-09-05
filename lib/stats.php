@@ -1117,7 +1117,9 @@ function siteNav(string $current = ''): string
                    AND show_in_nav = 1
                    AND is_published = 1
                    AND COALESCE(status,'published') = 'published'
-                   AND deleted_at IS NULL"
+                   AND deleted_at IS NULL
+                   AND (publish_at IS NULL OR publish_at <= NOW())
+                   AND (unpublish_at IS NULL OR unpublish_at > NOW())"
             )->fetchAll();
             foreach ($pageRows as $p) {
                 $pagesMap[(int)$p['id']] = $p;
@@ -1238,6 +1240,9 @@ function siteNav(string $current = ''): string
                  WHERE blog_id IS NULL
                    AND show_in_nav = 1
                    AND is_published = 1
+                   AND status = 'published' AND deleted_at IS NULL
+                   AND (publish_at IS NULL OR publish_at <= NOW())
+                   AND (unpublish_at IS NULL OR unpublish_at > NOW())
                  ORDER BY nav_order, title"
             )->fetchAll();
             foreach ($pages as $p) {

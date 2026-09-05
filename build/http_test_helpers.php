@@ -346,6 +346,29 @@ if (!function_exists('extractHiddenInputValue')) {
     }
 }
 
+if (!function_exists('koraBindTestSessionCredentials')) {
+    function koraBindTestSessionCredentials(): void
+    {
+        if (!function_exists('userSessionFingerprint') || !function_exists('db_connect')) {
+            return;
+        }
+        foreach (['cms_user_id' => 'cms_auth_fingerprint', '2fa_pending_user_id' => '2fa_pending_fingerprint'] as $idKey => $fingerprintKey) {
+            if (!isset($_SESSION[$idKey]) || array_key_exists($fingerprintKey, $_SESSION)) {
+                continue;
+            }
+            $stmt = db_connect()->prepare('SELECT * FROM cms_users WHERE id = ?');
+            $stmt->execute([(int)$_SESSION[$idKey]]);
+            $account = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($account) {
+                $_SESSION[$fingerprintKey] = userSessionFingerprint($account);
+                if ($idKey === '2fa_pending_user_id' && !array_key_exists('2fa_pending_issued_at', $_SESSION)) {
+                    $_SESSION['2fa_pending_issued_at'] = time();
+                }
+            }
+        }
+    }
+}
+
 if (!function_exists('koraPrimeTestSession')) {
     /**
      * @param array<string,mixed> $sessionData
@@ -364,6 +387,12 @@ if (!function_exists('koraPrimeTestSession')) {
         foreach ($sessionData as $key => $value) {
             $_SESSION[$key] = $value;
         }
+        foreach (['cms_user_id' => 'cms_auth_fingerprint', '2fa_pending_user_id' => '2fa_pending_fingerprint'] as $idKey => $fingerprintKey) {
+            if (array_key_exists($idKey, $sessionData) && !array_key_exists($fingerprintKey, $sessionData)) {
+                unset($_SESSION[$fingerprintKey]);
+            }
+        }
+        koraBindTestSessionCredentials();
         $csrfToken = function_exists('csrfToken') ? csrfToken() : '';
         session_write_close();
 

@@ -4,6 +4,48 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu receptů nemáte potřebné oprávnění.');
 requireModuleEnabled('recipes');
 
+function recipeContentDeletePart(PDO $pdo, int $recipeId, string $part, int $partId, ?int $actorId): bool
+{
+    $definitions = [
+        'group' => ['cms_recipe_ingredient_groups', 'Před smazáním skupiny ingrediencí'],
+        'ingredient' => ['cms_recipe_ingredients', 'Před smazáním ingredience'],
+        'step' => ['cms_recipe_steps', 'Před smazáním kroku postupu'],
+    ];
+    if (!isset($definitions[$part]) || $partId <= 0) {
+        return false;
+    }
+    [$table, $label] = $definitions[$part];
+    $pdo->beginTransaction();
+    try {
+        // Serialize destructive structure edits before checking publication.
+        $recipeStatement = $pdo->prepare('SELECT status FROM cms_recipes WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
+        $recipeStatement->execute([$recipeId]);
+        $status = $recipeStatement->fetchColumn();
+        $partStatement = $pdo->prepare("SELECT id FROM {$table} WHERE id = ? AND recipe_id = ?");
+        $partStatement->execute([$partId, $recipeId]);
+        if ($status === false || !$partStatement->fetchColumn()) {
+            $pdo->rollBack();
+            return false;
+        }
+        recipeSaveStructureSnapshot($pdo, $recipeId, $label, $actorId);
+        if ($part === 'group') {
+            $pdo->prepare('DELETE FROM cms_recipe_ingredients WHERE recipe_id = ? AND group_id = ?')
+                ->execute([$recipeId, $partId]);
+        }
+        $pdo->prepare("DELETE FROM {$table} WHERE id = ? AND recipe_id = ?")->execute([$partId, $recipeId]);
+        if ($status === 'published' && !recipeHasPublishableStructure($pdo, $recipeId)) {
+            throw new DomainException('Zveřejněný recept musí mít alespoň jednu ingredienci a jeden krok postupu. Před jejich smazáním přepněte recept na koncept.');
+        }
+        $pdo->commit();
+        return true;
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $exception;
+    }
+}
+
 $pdo = db_connect();
 $recipeId = inputInt('get', 'id') ?? inputInt('post', 'recipe_id');
 if ($recipeId === null) {
@@ -324,48 +366,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $confirmed = (string)($_POST['confirm_action'] ?? '') === '1';
         if (!$confirmed) {
             $error = 'Smazání vyžaduje potvrzení kontroly dopadu.';
-        } elseif ($action === 'delete_group') {
-            $groupId = inputInt('post', 'group_id');
-            if ($groupBelongs($groupId)) {
-                $pdo->beginTransaction();
-                try {
-                    $snapshotBeforeChange('Před smazáním skupiny ingrediencí');
-                    $pdo->prepare(
-                        'DELETE FROM cms_recipe_ingredients WHERE recipe_id = ? AND group_id = ?'
-                    )->execute([$recipeId, $groupId]);
-                    $pdo->prepare(
-                        'DELETE FROM cms_recipe_ingredient_groups WHERE recipe_id = ? AND id = ?'
-                    )->execute([$recipeId, $groupId]);
-                    $pdo->commit();
-                } catch (Throwable $exception) {
-                    if ($pdo->inTransaction()) {
-                        $pdo->rollBack();
-                    }
-                    throw $exception;
-                }
-                logAction('recipe_group_delete', "recipe={$recipeId} group={$groupId}");
-            }
-            $redirectToContent('deleted');
-        } elseif ($action === 'delete_ingredient') {
-            $ingredientId = inputInt('post', 'ingredient_id');
-            if ($ingredientForRecipe($ingredientId) !== null) {
-                $snapshotBeforeChange('Před smazáním ingredience');
-                $pdo->prepare(
-                    'DELETE FROM cms_recipe_ingredients WHERE id = ? AND recipe_id = ?'
-                )->execute([$ingredientId, $recipeId]);
-                logAction('recipe_ingredient_delete', "recipe={$recipeId} ingredient={$ingredientId}");
-            }
-            $redirectToContent('deleted');
         } else {
-            $stepId = inputInt('post', 'step_id');
-            if ($stepForRecipe($stepId) !== null) {
-                $snapshotBeforeChange('Před smazáním kroku postupu');
-                $pdo->prepare(
-                    'DELETE FROM cms_recipe_steps WHERE id = ? AND recipe_id = ?'
-                )->execute([$stepId, $recipeId]);
-                logAction('recipe_step_delete', "recipe={$recipeId} step={$stepId}");
+            $part = substr($action, strlen('delete_'));
+            $partId = inputInt('post', $part . '_id') ?? 0;
+            try {
+                if (recipeContentDeletePart($pdo, $recipeId, $part, $partId, currentUserId())) {
+                    logAction('recipe_' . $part . '_delete', "recipe={$recipeId} {$part}={$partId}");
+                }
+                $redirectToContent('deleted');
+            } catch (DomainException $exception) {
+                $error = $exception->getMessage();
             }
-            $redirectToContent('deleted');
         }
     }
 

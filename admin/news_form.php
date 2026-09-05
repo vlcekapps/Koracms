@@ -29,23 +29,27 @@ if ($item) {
 }
 
 $err = trim((string)($_GET['err'] ?? ''));
+$newsPublishAtErrorMessage = 'Plánované publikování musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné pro okamžité zveřejnění.';
 $newsUnpublishAtErrorMessage = 'Plánované zrušení publikace musí být platné datum a čas. Vyberte hodnotu v poli datum a čas nebo pole nechte prázdné.';
 $formError = match ($err) {
     'required' => 'Novinku nejde uložit bez titulku a textu. U obou polí je konkrétní nápověda.',
     'slug' => 'Slug novinky není použitelný nebo už existuje. U pole Slug (URL novinky) je konkrétní nápověda.',
     'unpublish_at' => $newsUnpublishAtErrorMessage,
+    'publish_at' => $newsPublishAtErrorMessage,
     default => '',
 };
 $fieldErrorMap = [
     'required' => ['title', 'content'],
     'slug' => ['slug'],
     'unpublish_at' => ['unpublish_at'],
+    'publish_at' => ['publish_at'],
 ];
 $fieldErrorMessages = [
     'title' => 'Doplňte krátký titulek novinky, například Uzavírka knihovny.',
     'content' => 'Doplňte text novinky. Pokud ještě není hotová, uložte ji jako koncept.',
     'slug' => 'Použijte jedinečný slug z malých písmen, číslic a pomlček, nebo upravte titulek pro automatické vytvoření.',
     'unpublish_at' => $newsUnpublishAtErrorMessage,
+    'publish_at' => $newsPublishAtErrorMessage,
 ];
 
 $authorName = '';
@@ -72,7 +76,9 @@ if ($item && !empty($item['author_id'])) {
     $authorName = currentUserDisplayName();
 }
 
-adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
+$formValues = adminEditorFormFlashTake('news', $id);
+$item = array_replace($item ?? [], $formValues);
+adminHeader($id !== null ? 'Upravit novinku' : 'Přidat novinku');
 ?>
 
 <?php if ($contentLockWarning !== null): ?>
@@ -84,7 +90,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   </div>
 <?php endif; ?>
 
-<?php if ($item): ?>
+<?php if ($id !== null): ?>
   <p><a href="revisions.php?type=news&amp;id=<?= (int)$item['id'] ?>">Historie revizí</a></p>
 <?php endif; ?>
 
@@ -100,7 +106,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 
 <form method="post" action="news_save.php" novalidate<?= $formError !== '' ? ' aria-describedby="form-error"' : '' ?>>
   <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-  <?php if ($item): ?>
+  <?php if ($id !== null): ?>
     <input type="hidden" name="id" value="<?= (int)$item['id'] ?>">
   <?php endif; ?>
 
@@ -155,7 +161,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
     <p>
       <small>
         Novinka se po uložení zobrazí pod vlastním odkazem. Datum vytvoření se ukládá automaticky
-        <?= $item ? '(původní datum zůstane zachované).' : '(datum a čas přidání).' ?>
+        <?= $id !== null ? '(původní datum zůstane zachované).' : '(datum a čas přidání).' ?>
       </small>
     </p>
 
@@ -174,10 +180,12 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       type="datetime-local"
       id="publish_at"
       name="publish_at"
+      <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['publish-at-help']) ?>
       class="admin-input-auto"
-      value="<?= h(!empty($item['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['publish_at'])) : '') ?>"
+      value="<?= h(adminEditorDateTimeValue($item['publish_at'] ?? '')) ?>"
     >
-    <small class="field-help">Nechte prázdné, pokud se má novinka zveřejnit hned.</small>
+    <small id="publish-at-help" class="field-help">Nechte prázdné, pokud se má novinka zveřejnit hned.</small>
+    <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input
@@ -186,7 +194,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
       name="unpublish_at"
       <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['unpublish-at-help']) ?>
       class="admin-input-auto"
-      value="<?= h(!empty($item['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$item['unpublish_at'])) : '') ?>"
+      value="<?= h(adminEditorDateTimeValue($item['unpublish_at'] ?? '')) ?>"
     >
     <small id="unpublish-at-help" class="field-help">Volitelné. Obsah se v zadaný čas automaticky skryje z veřejného webu.</small>
     <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
@@ -228,14 +236,14 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
   </fieldset>
 
   <div class="button-row admin-fieldset-spaced">
-    <button type="submit"><?= $item ? 'Uložit změny' : 'Přidat novinku' ?></button>
+    <button type="submit"><?= $id !== null ? 'Uložit změny' : 'Přidat novinku' ?></button>
     <a href="news.php">Zrušit</a>
-    <?php if ($item && ($item['status'] ?? 'published') === 'published'): ?>
+    <?php if ($id !== null && ($item['status'] ?? 'published') === 'published'): ?>
       <a href="<?= h(newsPublicPath($item)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
-    <?php if ($item && !empty($item['preview_token'])): ?>
+    <?php if ($id !== null && !empty($item['preview_token'])): ?>
       <a href="<?= h(newsPreviewPath($item)) ?>" target="_blank" rel="noopener noreferrer">Náhled<?= newWindowLinkSrOnlySuffix() ?></a>
-    <?php elseif ($item): ?>
+    <?php elseif ($id !== null): ?>
       <small class="field-help field-help--flush">(Uložte pro aktivaci odkazu „Náhled")</small>
     <?php endif; ?>
   </div>
@@ -267,7 +275,7 @@ adminHeader($item ? 'Upravit novinku' : 'Přidat novinku');
 })();
 </script>
 
-<?php if ($item): ?>
+<?php if ($id !== null): ?>
 <?php adminRenderContentLockRefreshScript('news', $id); ?>
 <?php endif; ?>
 

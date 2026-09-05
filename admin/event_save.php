@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu událostí nemáte potřebné oprávnění.');
 requireModuleEnabled('events');
 verifyCsrf();
@@ -27,6 +27,7 @@ $deleteImage = isset($_POST['event_image_delete']);
 
 $redirectBase = BASE_URL . '/admin/event_form.php';
 $redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
+    adminEditorFormFlashStore('event', $id, $_POST);
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);

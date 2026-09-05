@@ -623,6 +623,7 @@ $_SESSION['cms_superadmin'] = true;
 $_SESSION['cms_user_id'] = 1;
 $_SESSION['cms_user_name'] = 'Runtime Audit';
 $_SESSION['cms_user_role'] = 'admin';
+koraBindTestSessionCredentials();
 $adminCsrfToken = csrfToken();
 $auditSessionId = session_id();
 session_write_close();
@@ -640,6 +641,7 @@ $_SESSION['cms_superadmin'] = false;
 $_SESSION['cms_user_id'] = (int)$publicUserRow['id'];
 $_SESSION['cms_user_name'] = trim(((string)$publicUserRow['first_name']) . ' ' . ((string)$publicUserRow['last_name'])) ?: (string)$publicUserRow['email'];
 $_SESSION['cms_user_role'] = 'public';
+koraBindTestSessionCredentials();
 $publicAuditSessionId = session_id();
 session_write_close();
 
@@ -678,6 +680,7 @@ foreach ($roleAuditUsers as $roleKey => $roleAuditUser) {
     $_SESSION['cms_user_id'] = (int)$roleAuditUser['id'];
     $_SESSION['cms_user_name'] = $roleAuditUser['name'];
     $_SESSION['cms_user_role'] = $roleKey;
+    koraBindTestSessionCredentials();
     $roleAuditSessionId = session_id();
     session_write_close();
     $roleAuditSessions[$roleKey] = $roleAuditSessionId;
@@ -7830,9 +7833,9 @@ try {
     }
 
     $pdo->prepare(
-        "INSERT INTO cms_rate_limit (id, attempts, window_start)
-         VALUES (?, 1, DATE_SUB(NOW(), INTERVAL 2 HOUR))
-         ON DUPLICATE KEY UPDATE attempts = VALUES(attempts), window_start = VALUES(window_start)"
+        "INSERT INTO cms_rate_limit (id, attempts, window_start, expires_at)
+         VALUES (?, 1, DATE_SUB(NOW(), INTERVAL 2 HOUR), DATE_SUB(NOW(), INTERVAL 1 HOUR))
+         ON DUPLICATE KEY UPDATE attempts = VALUES(attempts), window_start = VALUES(window_start), expires_at = VALUES(expires_at)"
     )->execute([$cronRateLimitId]);
 
     saveSetting('chat_retention_days', '1');
@@ -9046,7 +9049,7 @@ $foundationChecks = [
         && str_contains($htaccessSource, 'RewriteRule ^\.cursor - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^vendor/ - [F,L]')
         && str_contains($htaccessSource, 'RewriteRule ^node_modules/ - [F,L]'),
-    'uploads htaccess blocks executable script extensions' => str_contains($uploadsHtaccessSource, '<FilesMatch "\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp)$">')
+    'uploads htaccess blocks executable script extensions' => str_contains($uploadsHtaccessSource, '<FilesMatch "(?i)\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp|html?|xhtml|shtml|xml|js|mjs)$">')
         && str_contains($uploadsHtaccessSource, 'Require all denied'),
     'release zip excludes dev tooling and metadata' => str_contains($releaseScriptSource, "'vendor'")
         && str_contains($releaseScriptSource, "'node_modules'")
@@ -10430,6 +10433,15 @@ if ($authRateLimitIssues === []) {
 
 echo "=== session_security_guardrails ===\n";
 $sessionSecurityIssues = [];
+$sessionCredentialsSource = (string)file_get_contents(dirname(__DIR__) . '/lib/session_security.php');
+if (!str_contains((string)file_get_contents(dirname(__DIR__) . '/db.php'), 'refreshAuthenticatedSession();')
+    || !str_contains($sessionCredentialsSource, 'authenticatedAccountMatchesSession($_SESSION, $account ?: null)')
+    || !str_contains($sessionCredentialsSource, '$now - $issuedAt < 600')
+    || !str_contains($adminLogin2faSource, 'pendingTwoFactorSessionIsValid($_SESSION, $account ?: null, time())')
+    || !str_contains($adminLoginSource, 'userSessionFingerprint($userRow)')
+    || str_contains($adminAuthSource, 'FROM cms_users WHERE is_superadmin = 1 LIMIT 1')) {
+    $sessionSecurityIssues[] = 'authenticated sessions and pending 2FA must remain bound to current account credentials with a finite challenge lifetime';
+}
 $adminLayoutSource = (string)file_get_contents(dirname(__DIR__) . '/admin/layout.php');
 $blogFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/blog_form.php');
 $pageFormSource = (string)file_get_contents(dirname(__DIR__) . '/admin/page_form.php');
@@ -12946,17 +12958,17 @@ if (str_contains($blogArticleViewSource, 'aria-label="Tagy článku"')) {
 if (
     !str_contains($htaccessSource, 'KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'SetEnvIfNoCase User-Agent')
-    || !str_contains($htaccessSource, 'Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER')
-    || !str_contains($htaccessSource, 'Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER')
+    || str_contains($htaccessSource, 'Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER')
+    || str_contains($htaccessSource, 'Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header merge Vary "User-Agent" env=KORA_SOCIAL_CRAWLER')
-    || !str_contains($htaccessSource, 'Header always unset Pragma env=KORA_SOCIAL_CRAWLER')
-    || !str_contains($htaccessSource, 'Header always unset Expires env=KORA_SOCIAL_CRAWLER')
+    || str_contains($htaccessSource, 'Header always unset Pragma env=KORA_SOCIAL_CRAWLER')
+    || str_contains($htaccessSource, 'Header always unset Expires env=KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'KORA_NO_STORE_NO_INDEX')
     || !str_contains($htaccessSource, '!KORA_SOCIAL_CRAWLER')
     || !str_contains($htaccessSource, 'Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX')
     || !str_contains($htaccessSource, 'Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=KORA_NO_STORE_NO_INDEX')
 ) {
-    $blogPublicIssues[] = '.htaccess is missing Apache-level social crawler cache override or sensitive URL exception';
+    $blogPublicIssues[] = '.htaccess must preserve PHP private-response cache headers and sensitive URL exceptions';
 }
 foreach (['og:image:secure_url', 'og:image:type', 'og:image:width', 'og:image:height', 'og:image:alt', 'og:updated_time'] as $socialMetaFragment) {
     if (!str_contains($uiSource, $socialMetaFragment)) {
@@ -13389,8 +13401,10 @@ if (!str_contains($downloadSaveSource, 'download_series_id')
     || !str_contains($downloadSaveSource, 'SELECT id, slug FROM cms_download_series WHERE id = ?')) {
     $downloadsSourceIssues[] = 'download save is missing managed series validation or single-current-version enforcement';
 }
-if (!str_contains($downloadSaveSource, "\$storedFilename === '' && \$externalUrl === ''")
-    || !str_contains($downloadSaveSource, "\$redirectWithError('source')")) {
+if (!str_contains($downloadSaveSource, 'downloadPrepareFileMutation(')
+    || !str_contains($downloadSaveSource, "\$redirectWithError((string)\$prepared['error'])")
+    || !str_contains((string)file_get_contents(__DIR__ . '/../lib/presentation.php'), "&& !koraUploadHasFile(\$file) && \$externalUrl === ''")
+    || !str_contains((string)file_get_contents(__DIR__ . '/../lib/presentation.php'), "return ['ok' => false, 'error' => 'source'];")) {
     $downloadsSourceIssues[] = 'download save must reject only items missing both local file and external URL';
 }
 if (!str_contains($downloadAdminListSourceForGuard, 'Externí zdroj bez lokálního souboru')
@@ -13881,7 +13895,9 @@ foreach ([
 if (str_contains($uploadHelperSource, '@mkdir(') || str_contains($uploadHelperSource, '@unlink(')) {
     $mediaLibraryIssues[] = 'shared upload helper uses suppressed filesystem operations instead of structured logging';
 }
-if (!str_contains($mediaHelperSource, 'koraInspectUploadedFile(') || !str_contains($mediaHelperSource, 'koraStoreInspectedUpload(')) {
+if (!str_contains($mediaHelperSource, 'koraInspectUploadedFile(')
+    || !str_contains($mediaHelperSource, 'mediaPrepareFileSet(')
+    || !str_contains($mediaHelperSource, 'mediaApplyFileChanges(')) {
     $mediaLibraryIssues[] = 'media library upload path is not using shared upload helpers';
 }
 if (!str_contains($publicFormsSource, 'koraInspectUploadedFile(') || !str_contains($publicFormsSource, 'koraStoreInspectedUpload(')) {
@@ -13892,7 +13908,7 @@ if (!str_contains($presentationUploadSource, 'function storePresentationUploaded
 }
 foreach ([
     'admin/board_save.php' => [$boardSaveSourceForUploads, 'uploadBoardStoredFile('],
-    'admin/download_save.php' => [$downloadSaveSourceForUploads, 'uploadDownloadStoredFile('],
+    'admin/download_save.php' => [$downloadSaveSourceForUploads, 'downloadPrepareFileMutation('],
     'admin/gallery_photo_save.php' => [$galleryPhotoSaveSourceForUploads, 'uploadGalleryPhotoImage('],
     'admin/wp_import.php' => [$wpImportSourceForUploads, 'koraStoreInspectedUpload('],
     'admin/estranky_import.php' => [$estrankyImportSourceForUploads, 'koraInspectUploadedFile('],
@@ -13985,15 +14001,15 @@ if (str_contains($mediaAdminSource, 'title="Použité médium nelze smazat."')) 
     $mediaLibraryIssues[] = 'media admin delete disabled button still uses title instead of hidden button text';
 }
 $mediaDeleteConfirmPosition = strpos($mediaAdminSource, "\$confirmFieldName = 'confirm_media_delete_' . \$mediaId;");
-$mediaDeletePhysicalPosition = strpos($mediaAdminSource, 'mediaDeletePhysicalFiles($media)');
+$mediaDeletePhysicalPosition = strpos($mediaAdminSource, 'mediaDeletePhysicalFiles($media,');
 if ($mediaDeleteConfirmPosition === false
     || $mediaDeletePhysicalPosition === false
     || $mediaDeleteConfirmPosition > $mediaDeletePhysicalPosition
     || !str_contains($mediaAdminSource, '$mediaDeleteConfirmErrorMessage')
     || !str_contains($mediaAdminSource, '$mediaDeleteFilesystemErrorMessage')
-    || !str_contains($mediaHelperSource, 'function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null): bool')
-    || !str_contains($mediaHelperSource, 'return $deleted;')
-    || !str_contains($mediaAdminSource, 'if (!mediaDeletePhysicalFiles($media))')
+    || !str_contains($mediaHelperSource, 'function mediaDeletePhysicalFiles(array $media, ?string $visibilityOverride = null, ?string $filenameOverride = null, ?callable $persist = null): bool')
+    || !str_contains($mediaHelperSource, 'return mediaApplyFileChanges([], mediaPhysicalPaths($media, $visibilityOverride, $filenameOverride), $persist);')
+    || !str_contains($mediaAdminSource, 'if (!mediaDeletePhysicalFiles($media, null, null,')
     || !str_contains($mediaAdminSource, "mediaFlashSetFieldError(\$confirmFieldName, \$mediaDeleteConfirmErrorMessage)")
     || !str_contains($mediaAdminSource, 'role="alert" aria-atomic="true"')
     || !str_contains($mediaAdminSource, "'confirm_media_delete_' . \$mediaId")
@@ -18313,7 +18329,7 @@ foreach ([
             '$err = \'Rezervaci pro hosta nejde vytvořit bez jména. U pole Jméno hosta je konkrétní nápověda.\';',
             '$err = \'Rezervaci nejde vytvořit bez data a času. U zvýrazněných polí je konkrétní nápověda.\';',
             '$err = \'Čas rezervace není použitelný. U polí Začátek a Konec je konkrétní nápověda.\';',
-            '$err = \'V daném čase už existuje jiná rezervace pro tento zdroj. U data a času je konkrétní nápověda.\';',
+            '$err = reservationBookingValidationMessage($validation[\'error\']);',
             '\'resource_id\' => \'Vyberte aktivní rezervační zdroj, pro který má rezervace vzniknout.\',',
             '\'guest_name\' => \'Doplňte jméno hosta, aby šla rezervace dohledat a potvrdit.\',',
             '<p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($err) ?></p>',

@@ -1042,7 +1042,9 @@ $tables = [
     'cms_rate_limit' => "CREATE TABLE IF NOT EXISTS cms_rate_limit (
         id           VARCHAR(64) NOT NULL PRIMARY KEY,
         attempts     INT         NOT NULL DEFAULT 1,
-        window_start DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+        window_start DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at   DATETIME    NULL DEFAULT NULL,
+        INDEX idx_rate_limit_expires_at (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
     'cms_log' => "CREATE TABLE IF NOT EXISTS cms_log (
@@ -1594,6 +1596,7 @@ $chatStatusWasMissing = !$columnExists('cms_chat', 'status');
 $chatPublicVisibilityWasMissing = !$columnExists('cms_chat', 'public_visibility');
 
 $addColumns = [
+    'cms_rate_limit.expires_at' => "ALTER TABLE cms_rate_limit ADD COLUMN expires_at DATETIME NULL DEFAULT NULL",
     // cms_articles
     'cms_articles.image_file'        => "ALTER TABLE cms_articles ADD COLUMN image_file VARCHAR(255) NOT NULL DEFAULT ''",
     'cms_articles.publish_at'        => "ALTER TABLE cms_articles ADD COLUMN publish_at DATETIME NULL DEFAULT NULL",
@@ -2012,6 +2015,23 @@ foreach ($addColumns as $tableCol => $sql) {
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
     }
+}
+
+// Legacy rows contain no window length (the key is a hash). Current bundled
+// callers use at most 3600 seconds (appmarket/publish.php, board/subscribe.php).
+// Preserve unknown/custom windows conservatively for 7 days from window_start;
+// never rewrite known expiries or extend them on a repeated migration run.
+try {
+    if ($columnExists('cms_rate_limit', 'expires_at')) {
+        $pdo->exec(
+            "UPDATE cms_rate_limit
+             SET expires_at = DATE_ADD(window_start, INTERVAL 7 DAY)
+             WHERE expires_at IS NULL"
+        );
+        $log[] = 'Expirace starších rate-limit záznamů doplněna s ochranným oknem 7 dní.';
+    }
+} catch (\PDOException $e) {
+    $log[] = 'CHYBA: Doplnění expirace rate-limit záznamů: ' . h($e->getMessage());
 }
 
 try {
@@ -3959,6 +3979,15 @@ $indexExists = static function (string $tableName, string $indexName) use ($pdo)
     $stmt->execute([$tableName, $indexName]);
     return (int)$stmt->fetchColumn() > 0;
 };
+
+try {
+    if (!$indexExists('cms_rate_limit', 'idx_rate_limit_expires_at')) {
+        $pdo->exec("ALTER TABLE cms_rate_limit ADD INDEX idx_rate_limit_expires_at (expires_at)");
+        $log[] = 'Index expirace rate-limit záznamů přidán.';
+    }
+} catch (\PDOException $e) {
+    $log[] = 'CHYBA: Index expirace rate-limit záznamů: ' . h($e->getMessage());
+}
 
 try {
     if ($columnExists('cms_poll_votes', 'vote_session_id')) {

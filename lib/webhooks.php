@@ -32,50 +32,37 @@ function formWebhookEventLabel(string $event): string
 
 function formWebhookIpAllowed(string $ip): bool
 {
-    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+    return serverFetchIpAllowed(trim($ip, '[]'));
 }
 
 function formWebhookHostAllowed(string $host): bool
 {
-    $host = strtolower(rtrim(trim($host), '.'));
-    if ($host === '' || $host === 'localhost') {
-        return false;
-    }
+    return serverFetchResolvedAddresses($host) !== [];
+}
 
-    if (preg_match('/(^|\.)localhost$/', $host)) {
-        return false;
-    }
-
-    foreach (['.local', '.localdomain', '.internal', '.lan', '.home', '.test'] as $suffix) {
-        if (str_ends_with($host, $suffix)) {
-            return false;
-        }
-    }
-
-    if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-        return formWebhookIpAllowed($host);
-    }
-
-    if (!str_contains($host, '.')) {
-        return false;
-    }
-
-    if (function_exists('dns_get_record')) {
-        $dnsRecords = @dns_get_record($host, DNS_A | DNS_AAAA);
-        if (is_array($dnsRecords) && $dnsRecords !== []) {
-            foreach ($dnsRecords as $dnsRecord) {
-                $resolvedIp = trim((string)($dnsRecord['ip'] ?? $dnsRecord['ipv6'] ?? ''));
-                if ($resolvedIp === '') {
-                    continue;
-                }
-                if (!formWebhookIpAllowed($resolvedIp)) {
-                    return false;
-                }
-            }
-        }
-    }
-
-    return true;
+/**
+ * @param list<string> $headers
+ * @return array<string,array<string,mixed>>
+ */
+function formWebhookRequestOptions(string $host, array $headers, string $payload): array
+{
+    return [
+        'http' => [
+            'method' => 'POST',
+            'header' => implode("\r\n", $headers),
+            'content' => $payload,
+            'timeout' => 8,
+            'ignore_errors' => true,
+            'follow_location' => 0,
+            'max_redirects' => 0,
+        ],
+        'ssl' => [
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+            'peer_name' => trim($host, '[]'),
+            'SNI_enabled' => true,
+        ],
+    ];
 }
 
 function normalizeFormWebhookUrl(string $url): string
@@ -349,17 +336,22 @@ function dispatchFormWebhook(
         $headers[] = 'X-Kora-Signature: ' . formWebhookSignature($secret, $payload);
     }
 
-    $contextOptions = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => implode("\r\n", $headers),
-            'content' => $payload,
-            'timeout' => 8,
-            'ignore_errors' => true,
-        ],
-    ]);
-
-    $response = @file_get_contents($webhookUrl, false, $contextOptions);
+    $parts = parse_url($webhookUrl);
+    $host = (string)($parts['host'] ?? '');
+    $addresses = serverFetchResolvedAddresses($host);
+    if ($addresses === []) {
+        formWebhookLogFailure($form, $event, $webhookUrl, 'unsafe_address');
+        return false;
+    }
+    // Connect to the validated address, keeping the original TLS identity and Host.
+    $address = $addresses[0];
+    $authority = str_contains($address, ':') ? '[' . $address . ']' : $address;
+    $port = isset($parts['port']) ? ':' . (int)$parts['port'] : '';
+    $pinnedUrl = 'https://' . $authority . $port . ($parts['path'] ?? '/')
+        . (isset($parts['query']) ? '?' . $parts['query'] : '');
+    $headers[] = 'Host: ' . $host . $port;
+    $contextOptions = stream_context_create(formWebhookRequestOptions($host, $headers, $payload));
+    $response = @file_get_contents($pinnedUrl, false, $contextOptions, 0, 65536);
     $statusLine = $http_response_header[0] ?? '';
     if (!preg_match('#\s(\d{3})\s#', $statusLine, $matches)) {
         formWebhookLogFailure($form, $event, $webhookUrl, 'invalid_http_response');

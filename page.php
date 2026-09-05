@@ -10,8 +10,13 @@ if ($slug === '') {
 }
 
 $pdo  = db_connect();
-$previewToken = trim($_GET['preview'] ?? '');
+$previewInput = $_GET['preview'] ?? '';
+$previewToken = is_string($previewInput) ? trim($previewInput) : '__invalid_preview_token__';
 if ($previewToken !== '') {
+    sendNoStoreNoIndexHeaders();
+    if (!isValidArticlePreviewToken($previewToken)) {
+        $previewToken = '__invalid_preview_token__';
+    }
     $stmt = $pdo->prepare(
         "SELECT * FROM cms_pages
          WHERE slug = ?
@@ -28,7 +33,8 @@ if ($previewToken !== '') {
            AND deleted_at IS NULL
            AND status = 'published'
            AND is_published = 1
-           AND (publish_at IS NULL OR publish_at <= NOW())"
+           AND (publish_at IS NULL OR publish_at <= NOW())
+           AND (unpublish_at IS NULL OR unpublish_at > NOW())"
     );
     $stmt->execute([$slug]);
 }

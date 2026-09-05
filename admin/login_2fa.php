@@ -12,28 +12,34 @@ $userId = (int)$_SESSION['2fa_pending_user_id'];
 $redirect = adminLoginRedirectTarget((string)($_SESSION['2fa_pending_redirect'] ?? ''), BASE_URL . '/admin/index.php');
 $backToLoginUrl = BASE_URL . '/admin/login.php?cancel_2fa=1&redirect=' . urlencode($redirect);
 
+$pdo = db_connect();
+$stmt = $pdo->prepare('SELECT * FROM cms_users WHERE id = ?');
+$stmt->execute([$userId]);
+$account = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!pendingTwoFactorSessionIsValid($_SESSION, $account ?: null, time())) {
+    clearPendingTwoFactorSession();
+    $_SESSION['auth_session_notice'] = 'Platnost dvoufázového přihlášení skončila nebo se změnilo zabezpečení účtu. Přihlaste se prosím znovu.';
+    header('Location: ' . $backToLoginUrl);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     rateLimit('login_2fa', 5, 300);
     verifyCsrf();
     rateLimitSubject('login_2fa_user', (string)$userId, 5, 300);
 
     $code = trim($_POST['totp_code'] ?? '');
-    $pdo = db_connect();
-    $stmt = $pdo->prepare("SELECT totp_secret FROM cms_users WHERE id = ?");
-    $stmt->execute([$userId]);
-    $secret = $stmt->fetchColumn();
+    $secret = (string)$account['totp_secret'];
 
     if ($secret && totpVerify($secret, $code)) {
         loginUser(
             $userId,
-            $_SESSION['2fa_pending_email'],
-            $_SESSION['2fa_pending_superadmin'],
-            $_SESSION['2fa_pending_name'],
-            $_SESSION['2fa_pending_role']
+            (string)$account['email'],
+            (bool)$account['is_superadmin'],
+            userSessionDisplayName($account),
+            userSessionAccountRole($account),
+            userSessionFingerprint($account)
         );
-        unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_pending_email'],
-            $_SESSION['2fa_pending_superadmin'], $_SESSION['2fa_pending_name'],
-            $_SESSION['2fa_pending_role'], $_SESSION['2fa_pending_redirect']);
         header('Location: ' . $redirect);
         exit;
     }

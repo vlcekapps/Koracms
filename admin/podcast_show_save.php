@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 requireModuleEnabled('podcast');
 verifyCsrf();
@@ -27,6 +27,7 @@ $backUrl = internalRedirectTarget((string)($_POST['redirect'] ?? ''), BASE_URL .
 
 $redirectBase = BASE_URL . '/admin/podcast_show_form.php';
 $redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $backUrl): void {
+    adminEditorFormFlashStore('podcast_show', $id, $_POST);
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);

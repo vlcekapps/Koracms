@@ -81,6 +81,8 @@ $event = array_merge([
     'status' => 'published',
 ], $event ?? []);
 $event = hydrateEventPresentation($event);
+$formValues = adminEditorFormFlashTake('event', $id);
+$event = array_replace($event, array_diff_key($formValues, array_flip(['event_date', 'event_time', 'event_end_date', 'event_end_time'])));
 
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $currentEventKind = normalizeEventKind((string)($event['event_kind'] ?? 'general'));
@@ -242,7 +244,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
         <label for="event_date">Začátek <span aria-hidden="true">*</span></label>
         <input type="date" id="event_date" name="event_date" required aria-required="true" class="admin-input-auto"
                <?= adminFieldAttributes('event_date', $err, $fieldErrorMap, [], 'event-dates-error') ?>
-               value="<?= !empty($event['event_date']) ? h(date('Y-m-d', strtotime((string)$event['event_date']))) : '' ?>">
+               value="<?= h($formValues['event_date'] ?? (!empty($event['event_date']) ? date('Y-m-d', strtotime((string)$event['event_date'])) : '')) ?>">
         <?php if (adminFieldHasError('event_date', $err, $fieldErrorMap)): ?>
           <small id="event-dates-error" class="field-help field-error">
             <?= h($err === 'required' ? $fieldErrorMessages['event_date'] : $fieldErrorMessages['dates']) ?>
@@ -253,20 +255,20 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
         <label for="event_time">Čas začátku</label>
         <input type="time" id="event_time" name="event_time" class="admin-input-auto"
                <?= adminFieldAttributes('event_time', $err, $fieldErrorMap, ['event-time-help'], 'event-dates-error') ?>
-               value="<?= !empty($event['event_date']) ? h(date('H:i', strtotime((string)$event['event_date']))) : '' ?>">
+               value="<?= h($formValues['event_time'] ?? (!empty($event['event_date']) ? date('H:i', strtotime((string)$event['event_date'])) : '')) ?>">
         <small id="event-time-help" class="field-help">Nechte prázdné jen tehdy, pokud nevadí výchozí čas 00:00.</small>
       </div>
       <div>
         <label for="event_end_date">Konec</label>
         <input type="date" id="event_end_date" name="event_end_date" class="admin-input-auto"
                <?= adminFieldAttributes('event_end_date', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
-               value="<?= !empty($event['event_end']) ? h(date('Y-m-d', strtotime((string)$event['event_end']))) : '' ?>">
+               value="<?= h($formValues['event_end_date'] ?? (!empty($event['event_end']) ? date('Y-m-d', strtotime((string)$event['event_end'])) : '')) ?>">
       </div>
       <div>
         <label for="event_end_time">Čas konce</label>
         <input type="time" id="event_end_time" name="event_end_time" class="admin-input-auto"
                <?= adminFieldAttributes('event_end_time', $err, $fieldErrorMap, ['event-end-help'], 'event-dates-error') ?>
-               value="<?= !empty($event['event_end']) ? h(date('H:i', strtotime((string)$event['event_end']))) : '' ?>">
+               value="<?= h($formValues['event_end_time'] ?? (!empty($event['event_end']) ? date('H:i', strtotime((string)$event['event_end'])) : '')) ?>">
       </div>
     </div>
     <small id="event-end-help" class="field-help">Vyplňte, pokud má akce jasný konec nebo trvá více dní. Probíhající akce se pak správně zobrazí i na veřejném webu.</small>
@@ -280,19 +282,19 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
         <div class="form-group">
           <label for="recurrence_frequency">Opakování</label>
           <select id="recurrence_frequency" name="recurrence_frequency"<?= adminFieldAttributes('recurrence_frequency', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
-            <option value="none">Žádné</option>
-            <option value="daily">Denně</option>
-            <option value="weekly">Týdně</option>
-            <option value="monthly">Měsíčně</option>
+            <option value="none"<?= ($event['recurrence_frequency'] ?? 'none') === 'none' ? ' selected' : '' ?>>Žádné</option>
+            <option value="daily"<?= ($event['recurrence_frequency'] ?? '') === 'daily' ? ' selected' : '' ?>>Denně</option>
+            <option value="weekly"<?= ($event['recurrence_frequency'] ?? '') === 'weekly' ? ' selected' : '' ?>>Týdně</option>
+            <option value="monthly"<?= ($event['recurrence_frequency'] ?? '') === 'monthly' ? ' selected' : '' ?>>Měsíčně</option>
           </select>
         </div>
         <div class="form-group">
           <label for="recurrence_interval">Interval</label>
-          <input type="number" id="recurrence_interval" name="recurrence_interval" min="1" max="12" value="1"<?= adminFieldAttributes('recurrence_interval', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
+          <input type="number" id="recurrence_interval" name="recurrence_interval" min="1" max="12" value="<?= h($event['recurrence_interval'] ?? '1') ?>"<?= adminFieldAttributes('recurrence_interval', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
         </div>
         <div class="form-group">
           <label for="recurrence_count">Počet termínů</label>
-          <input type="number" id="recurrence_count" name="recurrence_count" min="2" max="52" value="2"<?= adminFieldAttributes('recurrence_count', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
+          <input type="number" id="recurrence_count" name="recurrence_count" min="2" max="52" value="<?= h($event['recurrence_count'] ?? '2') ?>"<?= adminFieldAttributes('recurrence_count', $err, $fieldErrorMap, ['event-recurrence-help'], 'event-recurrence-error') ?>>
         </div>
       </div>
       <?php if (adminFieldHasError('recurrence_frequency', $err, $fieldErrorMap)): ?>
@@ -370,7 +372,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
       <small id="event-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
       <div class="admin-field-row">
         <label class="admin-checkbox-label">
-          <input type="checkbox" id="event_image_delete" name="event_image_delete" value="1">
+          <input type="checkbox" id="event_image_delete" name="event_image_delete" value="1"<?= !empty($event['event_image_delete']) ? ' checked' : '' ?>>
           Smazat aktuální obrázek
         </label>
       </div>
@@ -388,14 +390,14 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     <label for="publish_at">Plánované publikování</label>
     <input type="datetime-local" id="publish_at" name="publish_at" class="admin-input-auto"
            <?= adminFieldAttributes('publish_at', $err, $fieldErrorMap, ['event-publish-help']) ?>
-           value="<?= h(!empty($event['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['publish_at'])) : '') ?>">
+           value="<?= h(adminEditorDateTimeValue($event['publish_at'] ?? '')) ?>">
     <small id="event-publish-help" class="field-help">Nechte prázdné pro okamžité zveřejnění.</small>
     <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $fieldErrorMessages['publish_at']); ?>
 
     <label for="unpublish_at">Plánované zrušení publikace</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at" class="admin-input-auto"
            <?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap, ['event-unpublish-help']) ?>
-           value="<?= h(!empty($event['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$event['unpublish_at'])) : '') ?>">
+           value="<?= h(adminEditorDateTimeValue($event['unpublish_at'] ?? '')) ?>">
     <small id="event-unpublish-help" class="field-help">Volitelné. V zadaný čas se událost skryje z veřejného webu, ale zůstane v administraci.</small>
     <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $fieldErrorMessages['unpublish_at']); ?>
   </fieldset>
@@ -441,7 +443,7 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
     const eventKindInput = document.getElementById('event_type_id');
     const eventKindHelp = document.getElementById('event-kind-help');
     const eventKindHelpMap = <?= json_encode($eventTypeHelpMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    let slugManual = <?= $id !== null && !empty($event['slug']) ? 'true' : 'false' ?>;
+    let slugManual = <?= !empty($event['slug']) ? 'true' : 'false' ?>;
 
     const slugify = (value) => value
         .toLowerCase()

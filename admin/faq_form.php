@@ -55,6 +55,8 @@ $faq = $faq ?: [
     'status' => 'published',
 ];
 
+$formValues = adminEditorFormFlashTake('faq', $id);
+$faq = array_replace($faq, $formValues);
 $categories = $pdo->query("SELECT id, name FROM cms_faq_categories ORDER BY sort_order, name")->fetchAll();
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $err = trim($_GET['err'] ?? '');

@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 requireCapability('bookings_manage', 'Přístup odepřen. Pro správu rezervací nemáte potřebné oprávnění.');
+requireModuleEnabled('reservations');
 
 $pdo = db_connect();
 
@@ -15,6 +17,7 @@ $users = $pdo->query(
 )->fetchAll();
 
 $err = '';
+$newId = null;
 $fieldErrors = [];
 $fieldErrorMessages = [
     'resource_id' => 'Vyberte aktivní rezervační zdroj, pro který má rezervace vzniknout.',
@@ -23,6 +26,7 @@ $fieldErrorMessages = [
     'booking_date' => 'Vyberte skutečné datum rezervace.',
     'start_time' => 'Zadejte čas začátku rezervace.',
     'end_time' => 'Zadejte čas konce pozdější než začátek.',
+    'party_size' => 'Počet osob musí být kladný a nesmí překročit kapacitu zdroje.',
 ];
 
 // ── Zpracování POST ──
@@ -61,44 +65,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($startTime >= $endTime) {
         $err = 'Čas rezervace není použitelný. U polí Začátek a Konec je konkrétní nápověda.';
         $fieldErrors = ['start_time', 'end_time'];
-    } else {
-        // Kontrola dostupnosti (konflikty)
-        $stmtConflict = $pdo->prepare(
-            "SELECT COUNT(*) FROM cms_res_bookings
-             WHERE resource_id = ?
-               AND booking_date = ?
-               AND status IN ('pending','confirmed')
-               AND start_time < ? AND end_time > ?"
-        );
-        $stmtConflict->execute([$resourceId, $bookingDate, $endTime, $startTime]);
-        if ((int)$stmtConflict->fetchColumn() > 0) {
-            $err = 'V daném čase už existuje jiná rezervace pro tento zdroj. U data a času je konkrétní nápověda.';
-            $fieldErrors = ['booking_date', 'start_time', 'end_time'];
-        }
     }
 
     if ($err === '') {
-        $calendarToken = reservationCalendarToken();
-        $pdo->prepare(
-            "INSERT INTO cms_res_bookings
+        try {
+            $pdo->beginTransaction();
+            $validation = reservationValidateBookingInsert(
+                $pdo,
+                $resourceId,
+                $bookingDate,
+                $startTime,
+                $endTime,
+                $partySize,
+                false
+            );
+            if ($validation['error'] !== '') {
+                $pdo->rollBack();
+                $err = reservationBookingValidationMessage($validation['error']);
+                $fieldErrors = match ($validation['error']) {
+                    'resource' => ['resource_id'],
+                    'party_size' => ['party_size'],
+                    'date', 'closed' => ['booking_date'],
+                    default => ['start_time', 'end_time'],
+                };
+                foreach ($fieldErrors as $field) {
+                    $fieldErrorMessages[$field] = $err;
+                }
+            } else {
+                $startTime = $validation['start_time'];
+                $endTime = $validation['end_time'];
+                $calendarToken = reservationCalendarToken();
+                $pdo->prepare(
+                    "INSERT INTO cms_res_bookings
              (resource_id, user_id, guest_name, guest_email, guest_phone,
               booking_date, start_time, end_time, party_size, notes, status, calendar_token, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, NOW(), NOW())"
-        )->execute([
-            $resourceId,
-            $userId,
-            $guestName ?: null,
-            $guestEmail ?: null,
-            $guestPhone ?: null,
-            $bookingDate,
-            $startTime,
-            $endTime,
-            $partySize,
-            $notes ?: null,
-            $calendarToken,
-        ]);
+                )->execute([
+                    $resourceId,
+                    $userId,
+                    $guestName ?: null,
+                    $guestEmail ?: null,
+                    $guestPhone ?: null,
+                    $bookingDate,
+                    $startTime,
+                    $endTime,
+                    $partySize,
+                    $notes ?: null,
+                    $calendarToken,
+                ]);
 
-        $newId = (int)$pdo->lastInsertId();
+                $newId = (int)$pdo->lastInsertId();
+                $pdo->commit();
+            }
+        } catch (Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            koraLog('warning', 'admin reservation insert failed', ['exception' => $exception]);
+            $err = 'Rezervaci se nepodařilo uložit. Zkuste to prosím znovu.';
+        }
+    }
+
+    if ($err === '' && $newId !== null) {
         reservationRecordBookingEvent($pdo, $newId, 'created', 'Rezervace byla vytvořena administrátorem.', currentUserId());
         $notificationBooking = reservationBookingForNotification($pdo, $newId);
         if ($notificationBooking !== null && reservationBookingContactEmail($notificationBooking) !== '') {
@@ -227,7 +255,8 @@ $notes       = $_POST['notes'] ?? '';
     </div>
 
     <label for="party_size">Počet osob</label>
-    <input type="number" id="party_size" name="party_size" min="1" value="<?= h($partySize) ?>" class="res-booking-party-size">
+    <input type="number" id="party_size" name="party_size" min="1" value="<?= h($partySize) ?>" class="res-booking-party-size"<?= adminFieldAttributes('party_size', $fieldErrors) ?>>
+    <?php adminRenderFieldError('party_size', $fieldErrors, [], $fieldErrorMessages['party_size']); ?>
 
     <label for="notes">Poznámka</label>
     <textarea id="notes" name="notes" rows="3" class="res-booking-note" aria-describedby="booking-notes-help"><?= h($notes) ?></textarea>

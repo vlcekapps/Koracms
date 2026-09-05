@@ -5,14 +5,7 @@ $redirect = adminLoginRedirectTarget(trim($_GET['redirect'] ?? $_POST['redirect'
 $cancel2fa = ($_GET['cancel_2fa'] ?? '') === '1';
 
 if ($cancel2fa) {
-    unset(
-        $_SESSION['2fa_pending_user_id'],
-        $_SESSION['2fa_pending_email'],
-        $_SESSION['2fa_pending_superadmin'],
-        $_SESSION['2fa_pending_role'],
-        $_SESSION['2fa_pending_name'],
-        $_SESSION['2fa_pending_redirect']
-    );
+    clearPendingTwoFactorSession();
 }
 
 if (isLoggedIn()) {
@@ -24,7 +17,8 @@ if (isLoggedIn()) {
     exit;
 }
 
-$error = '';
+$error = (string)($_SESSION['auth_session_notice'] ?? '');
+unset($_SESSION['auth_session_notice']);
 $showReturnNotice = $redirect !== BASE_URL . '/admin/index.php';
 $loginDescriptionIds = [];
 if ($showReturnNotice) {
@@ -45,46 +39,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo  = db_connect();
         $stmt = $pdo->prepare(
-            "SELECT id, password, first_name, last_name, nickname, is_superadmin, role, totp_secret
+            "SELECT *
              FROM cms_users WHERE email = ? LIMIT 1"
         );
         $stmt->execute([$inputEmail]);
         $userRow = $stmt->fetch();
 
-        if ($userRow && password_verify($inputPass, $userRow['password'])) {
-            $role = $userRow['role'] ?? 'admin';
+        if ($userRow && userSessionAccountIsConfirmed($userRow) && password_verify($inputPass, $userRow['password'])) {
+            $role = userSessionAccountRole($userRow);
             // Veřejní uživatelé se nemohou přihlásit do administrace
             if ($role === 'public') {
                 $error = 'Tento účet nemá přístup do administrace. Použijte veřejné přihlášení.';
             } elseif (!empty($userRow['totp_secret'])) {
                 // 2FA aktivní – uložit do session a přesměrovat na ověření
+                session_regenerate_id(true);
+                clearPendingTwoFactorSession();
                 $_SESSION['2fa_pending_user_id'] = (int)$userRow['id'];
+                $_SESSION['2fa_pending_issued_at'] = time();
+                $_SESSION['2fa_pending_fingerprint'] = userSessionFingerprint($userRow);
                 $_SESSION['2fa_pending_email'] = $inputEmail;
                 $_SESSION['2fa_pending_superadmin'] = (bool)$userRow['is_superadmin'];
                 $_SESSION['2fa_pending_role'] = $role;
                 $_SESSION['2fa_pending_redirect'] = $redirect;
-                $name = $userRow['nickname'] !== '' ? $userRow['nickname']
-                      : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
-                $_SESSION['2fa_pending_name'] = $name !== '' ? $name : $inputEmail;
+                $_SESSION['2fa_pending_name'] = userSessionDisplayName($userRow);
                 header('Location: ' . BASE_URL . '/admin/login_2fa.php');
                 exit;
             } else {
-                $name = $userRow['nickname'] !== '' ? $userRow['nickname']
-                      : trim($userRow['first_name'] . ' ' . $userRow['last_name']);
-                if ($name === '') {
-                    $name = $inputEmail;
-                }
-                loginUser((int)$userRow['id'], $inputEmail, (bool)$userRow['is_superadmin'], $name, $role);
+                $name = userSessionDisplayName($userRow);
+                loginUser((int)$userRow['id'], (string)$userRow['email'], (bool)$userRow['is_superadmin'], $name, $role, userSessionFingerprint($userRow));
                 $authenticated = true;
             }
         }
     } catch (\PDOException $e) {
-        // cms_users ještě neexistuje – fallback na admin_password ze settings
-        $adminEmail = getSetting('admin_email', '');
-        $hash       = getSetting('admin_password', '');
-        if ($inputEmail === $adminEmail && $hash !== '' && password_verify($inputPass, $hash)) {
-            loginUser(0, $inputEmail, true, $inputEmail);
-            $authenticated = true;
+        // Do not fall back to legacy credentials on unrelated schema/connection failures.
+        if ((string)$e->getCode() === '42S02') {
+            $adminEmail = getSetting('admin_email', '');
+            $hash       = getSetting('admin_password', '');
+            if ($inputEmail === $adminEmail && $hash !== '' && password_verify($inputPass, $hash)) {
+                loginUser(0, $inputEmail, true, $inputEmail, 'admin', legacyUserSessionFingerprint($adminEmail, $hash));
+                $authenticated = true;
+            }
         }
     }
 

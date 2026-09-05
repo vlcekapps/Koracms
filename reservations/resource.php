@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../lib/reservation_booking_validation.php';
 header('Cache-Control: no-cache, no-store, must-revalidate');
 checkMaintenanceMode();
 
@@ -54,12 +55,7 @@ function dayAvailability(
         }
 
         foreach ($slots as $slot) {
-            $booked = 0;
-            foreach ($dayBookings as $booking) {
-                if ($booking['start_time'] < $slot['end_time'] && $booking['end_time'] > $slot['start_time']) {
-                    $booked++;
-                }
-            }
+            $booked = reservationBookingPeakOverlap($dayBookings, $slot['start_time'], $slot['end_time']);
             if ($booked < (int)$slot['max_bookings']) {
                 return 'available';
             }
@@ -83,14 +79,9 @@ function dayAvailability(
                 break;
             }
 
-            $overlap = 0;
             $currentStr = $current->format('H:i:s');
             $endStr = $slotEnd->format('H:i:s');
-            foreach ($dayBookings as $booking) {
-                if ($booking['start_time'] < $endStr && $booking['end_time'] > $currentStr) {
-                    $overlap++;
-                }
-            }
+            $overlap = reservationBookingPeakOverlap($dayBookings, $currentStr, $endStr);
             if ($overlap < $maxConcurrent) {
                 return 'available';
             }
@@ -105,12 +96,7 @@ function dayAvailability(
         $windowEnd = (clone $current)->modify('+30 minutes');
         $currentStr = $current->format('H:i:s');
         $endStr = $windowEnd->format('H:i:s');
-        $overlap = 0;
-        foreach ($dayBookings as $booking) {
-            if ($booking['start_time'] < $endStr && $booking['end_time'] > $currentStr) {
-                $overlap++;
-            }
-        }
+        $overlap = reservationBookingPeakOverlap($dayBookings, $currentStr, $endStr);
         if ($overlap < $maxConcurrent) {
             return 'available';
         }

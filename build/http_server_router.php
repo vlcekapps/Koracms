@@ -69,7 +69,12 @@ function isProtectedRequest(string $path): bool
         return true;
     }
 
-    if (preg_match('#^uploads/media/.+\.svg$#i', $trimmedPath) === 1) {
+    if (preg_match('#^uploads/media/(?!.*\.(?:jpg|jpeg|png|gif|webp|mp3|m4a|mp4|ogg|wav|aac|flac|webm|ogv|mov|pdf|zip|vtt|csv|doc|docx|xls|xlsx)$)#i', $trimmedPath) === 1) {
+        return true;
+    }
+
+    if (preg_match('#^uploads/downloads/(?!images/)#i', $trimmedPath) === 1
+        || preg_match('#^uploads/.+\.(?:php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp|html?|xhtml|shtml|xml|js|mjs)$#i', $trimmedPath) === 1) {
         return true;
     }
 

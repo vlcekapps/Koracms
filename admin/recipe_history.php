@@ -4,6 +4,35 @@ require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu receptů nemáte potřebné oprávnění.');
 requireModuleEnabled('recipes');
 
+/**
+ * @param array<string,mixed> $snapshot
+ */
+function recipeHistoryRestoreSnapshot(PDO $pdo, int $recipeId, array $snapshot, ?int $actorId): string
+{
+    $pdo->beginTransaction();
+    try {
+        $recipeStatement = $pdo->prepare('SELECT id FROM cms_recipes WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
+        $recipeStatement->execute([$recipeId]);
+        if ($recipeStatement->fetchColumn() === false) {
+            throw new DomainException('Recept již není dostupný. Historickou verzi nelze obnovit.');
+        }
+        recipeSaveStructureSnapshot($pdo, $recipeId, 'Před obnovením historické verze', $actorId);
+        if (!recipeRestoreStructure($pdo, $recipeId, $snapshot)) {
+            throw new DomainException('Historickou verzi se nepodařilo obnovit.');
+        }
+        $pdo->commit();
+        return '';
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($exception instanceof DomainException) {
+            return $exception->getMessage();
+        }
+        throw $exception;
+    }
+}
+
 $pdo = db_connect();
 $recipeId = inputInt('get', 'id') ?? inputInt('post', 'recipe_id');
 if ($recipeId === null) {
@@ -39,30 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($snapshot === null) {
             $error = 'Vybraná historická verze je neúplná a nelze ji bezpečně obnovit.';
         } else {
-            $pdo->beginTransaction();
-            try {
-                recipeSaveStructureSnapshot(
-                    $pdo,
-                    $recipeId,
-                    'Před obnovením historické verze',
-                    currentUserId()
-                );
-                if (!recipeRestoreStructure($pdo, $recipeId, $snapshot)) {
-                    throw new RuntimeException('Historickou verzi se nepodařilo obnovit.');
-                }
-                $pdo->commit();
-            } catch (Throwable $exception) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                throw $exception;
+            $error = recipeHistoryRestoreSnapshot($pdo, $recipeId, $snapshot, currentUserId());
+            if ($error === '') {
+                logAction('recipe_structure_restore', "recipe={$recipeId} snapshot={$snapshotId}");
+                header('Location: ' . appendUrlQuery(
+                    BASE_URL . '/admin/recipe_history.php',
+                    ['id' => $recipeId, 'msg' => 'restored']
+                ));
+                exit;
             }
-            logAction('recipe_structure_restore', "recipe={$recipeId} snapshot={$snapshotId}");
-            header('Location: ' . appendUrlQuery(
-                BASE_URL . '/admin/recipe_history.php',
-                ['id' => $recipeId, 'msg' => 'restored']
-            ));
-            exit;
         }
     }
 }

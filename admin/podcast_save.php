@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu podcastů nemáte potřebné oprávnění.');
 requireModuleEnabled('podcast');
 verifyCsrf();
@@ -42,6 +42,7 @@ if ($showId === null || $showId < 1) {
 
 $redirectBase = BASE_URL . '/admin/podcast_form.php';
 $redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $showId, $backUrl): void {
+    adminEditorFormFlashStore('podcast', $id, $_POST, $showId);
     $query = '?show_id=' . $showId . '&err=' . rawurlencode($errorCode);
     if ($id !== null) {
         $query .= '&id=' . $id;
@@ -105,27 +106,36 @@ if ($audioFileSizeInput !== '' && (preg_match('/^\d+$/', $audioFileSizeInput) !=
     $redirectWithError('audio_size');
 }
 
-$audioFilename = (string)$existing['audio_file'];
-$audioUpload = uploadPodcastAudioFile($_FILES['audio_file'] ?? [], $audioFilename);
+$publishAt = null;
+if (!empty($_POST['publish_at'])) {
+    $publishAtInput = trim((string)$_POST['publish_at']);
+    $publishAt = validateDateTimeLocal($publishAtInput);
+    if ($publishAt === null) {
+        $redirectWithError('publish_at');
+    }
+}
+
+// Stage replacements without passing the old name: upload helpers delete it otherwise.
+$audioUpload = uploadPodcastAudioFile($_FILES['audio_file'] ?? []);
 if ($audioUpload['error'] !== '') {
     $redirectWithError('audio');
 }
-$audioFilename = $audioUpload['filename'];
+$audioFilename = $audioUpload['uploaded'] ? $audioUpload['filename'] : (string)$existing['audio_file'];
 
 if ($deleteAudioFile && empty($_FILES['audio_file']['name']) && $audioFilename !== '') {
-    deletePodcastAudioFile($audioFilename);
     $audioFilename = '';
 }
 
-$imageFilename = (string)$existing['image_file'];
-$imageUpload = uploadPodcastEpisodeImage($_FILES['image_file'] ?? [], $imageFilename);
+$imageUpload = uploadPodcastEpisodeImage($_FILES['image_file'] ?? []);
 if ($imageUpload['error'] !== '') {
+    if ($audioUpload['uploaded']) {
+        deletePodcastAudioFile($audioUpload['filename']);
+    }
     $redirectWithError('image');
 }
-$imageFilename = $imageUpload['filename'];
+$imageFilename = $imageUpload['uploaded'] ? $imageUpload['filename'] : (string)$existing['image_file'];
 
 if ($deleteImageFile && empty($_FILES['image_file']['name']) && $imageFilename !== '') {
-    deletePodcastEpisodeImageFile($imageFilename);
     $imageFilename = '';
 }
 
@@ -141,132 +151,150 @@ if ($audioFilename !== '') {
     $audioFileSize = 0;
 }
 
-$publishAt = null;
-if (!empty($_POST['publish_at'])) {
-    $publishAtInput = trim((string)$_POST['publish_at']);
-    $publishAt = validateDateTimeLocal($publishAtInput);
-    if ($publishAt === null) {
-        $redirectWithError('publish_at');
-    }
-}
+$notifyPending = false;
+try {
+    $pdo->beginTransaction();
+    if ($id !== null) {
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $oldData['status'] ?? 'published';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
+        }
 
-if ($id !== null) {
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = $oldData['status'] ?? 'published';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = (($oldData['status'] ?? '') === 'published') ? 'published' : 'pending';
-    }
+        saveRevision(
+            $pdo,
+            'podcast_episode',
+            $id,
+            podcastEpisodeRevisionSnapshot($oldData),
+            podcastEpisodeRevisionSnapshot([
+                'title' => $title,
+                'slug' => $uniqueSlug,
+                'description' => $description,
+                'transcript' => $transcript,
+                'audio_url' => $audioUrl,
+                'audio_mime_type' => $audioMimeType,
+                'audio_file_size' => $audioFileSize,
+                'subtitle' => $subtitle,
+                'duration' => $duration,
+                'episode_num' => $episodeNum,
+                'season_num' => $seasonNum,
+                'episode_type' => $episodeType,
+                'explicit_mode' => $explicitMode,
+                'block_from_feed' => $blockFromFeed,
+                'publish_at' => $publishAt,
+                'status' => $requestedStatus,
+            ])
+        );
 
-    saveRevision(
-        $pdo,
-        'podcast_episode',
-        $id,
-        podcastEpisodeRevisionSnapshot($oldData),
-        podcastEpisodeRevisionSnapshot([
-            'title' => $title,
-            'slug' => $uniqueSlug,
-            'description' => $description,
-            'transcript' => $transcript,
-            'audio_url' => $audioUrl,
-            'audio_mime_type' => $audioMimeType,
-            'audio_file_size' => $audioFileSize,
-            'subtitle' => $subtitle,
-            'duration' => $duration,
-            'episode_num' => $episodeNum,
-            'season_num' => $seasonNum,
-            'episode_type' => $episodeType,
-            'explicit_mode' => $explicitMode,
-            'block_from_feed' => $blockFromFeed,
-            'publish_at' => $publishAt,
-            'status' => $requestedStatus,
-        ])
-    );
+        // Při první publikaci aktualizovat created_at
+        $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
+        $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
 
-    // Při první publikaci aktualizovat created_at
-    $publishingNow = $requestedStatus === 'published' && ($oldData['status'] ?? '') !== 'published';
-    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
-
-    $oldPath = podcastEpisodePublicPath([
-        'show_slug' => (string)($show['slug'] ?? ''),
-        'slug' => (string)($oldData['slug'] ?? ''),
-    ]);
-    $pdo->prepare(
-        "UPDATE cms_podcasts
+        $oldPath = podcastEpisodePublicPath([
+            'show_slug' => (string)($show['slug'] ?? ''),
+            'slug' => (string)($oldData['slug'] ?? ''),
+        ]);
+        $pdo->prepare(
+            "UPDATE cms_podcasts
          SET show_id = ?, title = ?, slug = ?, description = ?, transcript = ?, audio_file = ?, image_file = ?, audio_url = ?,
              audio_mime_type = ?, audio_file_size = ?,
              subtitle = ?, duration = ?, episode_num = ?, season_num = ?, episode_type = ?, explicit_mode = ?,
              block_from_feed = ?, publish_at = ?, status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
-    )->execute([
-        $showId,
-        $title,
-        $uniqueSlug,
-        $description,
-        $transcript,
-        $audioFilename,
-        $imageFilename,
-        $audioUrl,
-        $audioMimeType,
-        $audioFileSize,
-        $subtitle,
-        $duration,
-        $episodeNum,
-        $seasonNum,
-        $episodeType,
-        $explicitMode,
-        $blockFromFeed,
-        $publishAt,
-        $requestedStatus,
-        $id,
-    ]);
-    upsertPathRedirect($pdo, $oldPath, podcastEpisodePublicPath([
-        'show_slug' => (string)$show['slug'],
-        'slug' => $uniqueSlug,
-    ]));
-    logAction('podcast_edit', "id={$id} show_id={$showId} slug={$uniqueSlug}");
-} else {
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = 'draft';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = 'pending';
-    }
-    $status = $requestedStatus;
-    $pdo->prepare(
-        "INSERT INTO cms_podcasts
+        )->execute([
+            $showId,
+            $title,
+            $uniqueSlug,
+            $description,
+            $transcript,
+            $audioFilename,
+            $imageFilename,
+            $audioUrl,
+            $audioMimeType,
+            $audioFileSize,
+            $subtitle,
+            $duration,
+            $episodeNum,
+            $seasonNum,
+            $episodeType,
+            $explicitMode,
+            $blockFromFeed,
+            $publishAt,
+            $requestedStatus,
+            $id,
+        ]);
+        upsertPathRedirect($pdo, $oldPath, podcastEpisodePublicPath([
+            'show_slug' => (string)$show['slug'],
+            'slug' => $uniqueSlug,
+        ]));
+        logAction('podcast_edit', "id={$id} show_id={$showId} slug={$uniqueSlug}");
+    } else {
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
+        $pdo->prepare(
+            "INSERT INTO cms_podcasts
          (show_id, title, slug, description, transcript, audio_file, image_file, audio_url, audio_mime_type, audio_file_size, feed_guid, subtitle, duration, episode_num, season_num,
           episode_type, explicit_mode, block_from_feed, publish_at, status)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    )->execute([
-        $showId,
-        $title,
-        $uniqueSlug,
-        $description,
-        $transcript,
-        $audioFilename,
-        $imageFilename,
-        $audioUrl,
-        $audioMimeType,
-        $audioFileSize,
-        newPodcastFeedGuid(),
-        $subtitle,
-        $duration,
-        $episodeNum,
-        $seasonNum,
-        $episodeType,
-        $explicitMode,
-        $blockFromFeed,
-        $publishAt,
-        $status,
-    ]);
-    $id = (int)$pdo->lastInsertId();
-    logAction('podcast_add', "id={$id} show_id={$showId} slug={$uniqueSlug} status={$status}");
-    if ($status === 'pending') {
-        notifyPendingContent('Podcast', $title, '/admin/podcast.php');
+        )->execute([
+            $showId,
+            $title,
+            $uniqueSlug,
+            $description,
+            $transcript,
+            $audioFilename,
+            $imageFilename,
+            $audioUrl,
+            $audioMimeType,
+            $audioFileSize,
+            newPodcastFeedGuid(),
+            $subtitle,
+            $duration,
+            $episodeNum,
+            $seasonNum,
+            $episodeType,
+            $explicitMode,
+            $blockFromFeed,
+            $publishAt,
+            $status,
+        ]);
+        $id = (int)$pdo->lastInsertId();
+        logAction('podcast_add', "id={$id} show_id={$showId} slug={$uniqueSlug} status={$status}");
+        $notifyPending = $status === 'pending';
     }
+
+    $pdo->commit();
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    if ($audioUpload['uploaded']) {
+        deletePodcastAudioFile($audioUpload['filename']);
+    }
+    if ($imageUpload['uploaded']) {
+        deletePodcastEpisodeImageFile($imageUpload['filename']);
+    }
+    koraLog('error', 'Podcast episode save failed', ['exception' => $e]);
+    $redirectWithError('save');
+}
+
+if ((string)$existing['audio_file'] !== '' && $existing['audio_file'] !== $audioFilename) {
+    deletePodcastAudioFile((string)$existing['audio_file']);
+}
+if ((string)$existing['image_file'] !== '' && $existing['image_file'] !== $imageFilename) {
+    deletePodcastEpisodeImageFile((string)$existing['image_file']);
+}
+
+if ($notifyPending) {
+    notifyPendingContent('Podcast', $title, '/admin/podcast.php');
 }
 
 header('Location: ' . $backUrl);

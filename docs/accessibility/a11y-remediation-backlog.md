@@ -17,7 +17,7 @@ Tuto úplnost a shodu s aktuální WCAG maticí hlídá `build/accessibility_con
 
 ## Vysoká priorita
 
-Po uzavření vratného mazání Míst a individuálního mazání článků zde není evidované další potvrzené P1 riziko. Nový P1 nález musí být zapsán hned při inventuře; další automatizované kolo pokračuje systematickou kontrolou zbývajících datově dopadajících akcí, zatímco ruční scénáře zůstávají ve střední prioritě.
+Audit 2026-09-05 opravil potvrzené P1 problémy: autosave mohl zaměnit perex a tělo, odmítnuté změny médií/podcastů mohly smazat originály nebo předčasně změnit jejich veřejnost. Opravená je také ztráta hodnot po odmítnutí editorů a chybné hlášení schránky. Stav každého nálezu a automatizované důkazy jsou v [RC registru](../rc-audit-2026-09.md), zejména RC-10/11/18/19/20/25/26/27/30/40. Změna platnosti přihlášení a 2FA (RC-02/03, WCAG 2.2.1) byla výslovně schválena; před aktualizací je nutné uložit rozepsaný obsah, protože staré relace vyžadují nové přihlášení. Otevřenou podmínkou RC zůstává ruční průchod obnovy editorů, chybových stavů a opakovaného přihlášení s NVDA/Firefox a klávesnicí. Zelené automatické testy samy o sobě neuzavírají globální WCAG/ACR kritéria.
 
 ## Střední priorita
 

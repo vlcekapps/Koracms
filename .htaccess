@@ -52,13 +52,8 @@ Options -Indexes
     Header always setifempty Referrer-Policy "same-origin"
     Header unset Set-Cookie env=KORA_SOCIAL_CRAWLER
     Header always unset Set-Cookie env=KORA_SOCIAL_CRAWLER
-    Header unset Cache-Control env=KORA_SOCIAL_CRAWLER
-    Header always unset Cache-Control env=KORA_SOCIAL_CRAWLER
-    Header always set Cache-Control "public, max-age=300, s-maxage=300" env=KORA_SOCIAL_CRAWLER
-    Header unset Pragma env=KORA_SOCIAL_CRAWLER
-    Header always unset Pragma env=KORA_SOCIAL_CRAWLER
-    Header unset Expires env=KORA_SOCIAL_CRAWLER
-    Header always unset Expires env=KORA_SOCIAL_CRAWLER
+    # PHP owns crawler caching and knows when a preview or response is private.
+    # Never overwrite its no-store policy based only on a spoofable User-Agent.
     Header always set Cache-Control "no-store, max-age=0" env=KORA_NO_STORE_NO_INDEX
     Header merge Vary "User-Agent" env=KORA_SOCIAL_CRAWLER
     Header always set Pragma "no-cache" env=KORA_NO_STORE_NO_INDEX
@@ -80,12 +75,16 @@ Options -Indexes
     RewriteRule ^uploads/backups/ - [F,L,NC]
     # Fotografie galerie se zobrazují jen přes gallery/image.php
     RewriteRule ^uploads/gallery/ - [F,L,NC]
+    # Download blobs are served only after checking their record visibility.
+    RewriteRule ^uploads/downloads/(?!images/) - [F,L,NC]
     # Obrázky míst se zobrazují jen přes places/image.php
     RewriteRule ^uploads/places/ - [F,L,NC]
     # Podcast audio a artwork se vydávají jen přes podcast/*.php endpointy
     RewriteRule ^uploads/podcasts/ - [F,L,NC]
     # SVG z knihovny médií se nikdy neservírují přímo z uploads/media
     RewriteRule ^uploads/media/.+\.svg$ - [F,L,NC]
+    # Historical unexpected extensions use the attachment endpoint, never static HTML.
+    RewriteRule ^uploads/media/(?!.*\.(jpg|jpeg|png|gif|webp|mp3|m4a|mp4|ogg|wav|aac|flac|webm|ogv|mov|pdf|zip|vtt|csv|doc|docx|xls|xlsx)$) - [F,L,NC]
 
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
