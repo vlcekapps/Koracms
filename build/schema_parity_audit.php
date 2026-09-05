@@ -210,6 +210,13 @@ $criticalInstallColumns = [
     'cms_appmarket_releases.app_id' => ['cms_appmarket_releases', 'app_id'],
     'cms_appmarket_releases.version_name' => ['cms_appmarket_releases', 'version_name'],
     'cms_appmarket_releases.version_code' => ['cms_appmarket_releases', 'version_code'],
+    'cms_appmarket_releases.platform' => ['cms_appmarket_releases', 'platform'],
+    'cms_appmarket_releases.system_requirements' => ['cms_appmarket_releases', 'system_requirements'],
+    'cms_appmarket_releases.file_storage_name' => ['cms_appmarket_releases', 'file_storage_name'],
+    'cms_appmarket_releases.file_original_name' => ['cms_appmarket_releases', 'file_original_name'],
+    'cms_appmarket_releases.file_size' => ['cms_appmarket_releases', 'file_size'],
+    'cms_appmarket_releases.file_sha256' => ['cms_appmarket_releases', 'file_sha256'],
+    'cms_appmarket_releases.file_extension' => ['cms_appmarket_releases', 'file_extension'],
     'cms_appmarket_releases.package_id_snapshot' => ['cms_appmarket_releases', 'package_id_snapshot'],
     'cms_appmarket_releases.apk_storage_name' => ['cms_appmarket_releases', 'apk_storage_name'],
     'cms_appmarket_releases.apk_size' => ['cms_appmarket_releases', 'apk_size'],
@@ -503,6 +510,13 @@ $criticalMigrationSnippets = [
     'uq_appmarket_certificate_fingerprint',
     'idx_appmarket_certificates_active',
     'cms_appmarket_releases',
+    'cms_appmarket_releases.platform',
+    'cms_appmarket_releases.system_requirements',
+    'cms_appmarket_releases.file_storage_name',
+    'cms_appmarket_releases.file_original_name',
+    'cms_appmarket_releases.file_size',
+    'cms_appmarket_releases.file_sha256',
+    'cms_appmarket_releases.file_extension',
     'uq_appmarket_release_version',
     'idx_appmarket_releases_public',
     'idx_appmarket_releases_compatible',
@@ -617,6 +631,56 @@ foreach ($criticalMigrationSnippets as $snippet) {
         'migrate.php upgrade schema is missing critical migration guard ' . $snippet . '.',
         $issues
     );
+}
+
+$appmarketSoftwareColumns = [
+    'cms_appmarket_apps.package_id' => ['MODIFY', 'VARCHAR(255) NULL DEFAULT NULL'],
+    'cms_appmarket_releases.platform' => ['ADD', "VARCHAR(32) NOT NULL DEFAULT 'android'"],
+    'cms_appmarket_releases.system_requirements' => ['ADD', 'TEXT NULL'],
+    'cms_appmarket_releases.file_storage_name' => ['ADD', "VARCHAR(255) NOT NULL DEFAULT ''"],
+    'cms_appmarket_releases.file_original_name' => ['ADD', "VARCHAR(255) NOT NULL DEFAULT ''"],
+    'cms_appmarket_releases.file_size' => ['ADD', 'BIGINT UNSIGNED NOT NULL DEFAULT 0'],
+    'cms_appmarket_releases.file_sha256' => ['ADD', "CHAR(64) NOT NULL DEFAULT ''"],
+    'cms_appmarket_releases.file_extension' => ['ADD', "VARCHAR(32) NOT NULL DEFAULT ''"],
+    'cms_appmarket_releases.metadata_source' => ['MODIFY', "ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk'"],
+];
+$appmarketSchemaSources = [
+    'install.php' => preg_replace('/\s+/', ' ', $installSource) ?? '',
+    'migrate.php' => preg_replace('/\s+/', ' ', $migrateSource) ?? '',
+];
+foreach ($appmarketSoftwareColumns as $label => [$operation, $definition]) {
+    [$tableName, $columnName] = explode('.', $label, 2);
+    foreach ($appmarketSchemaSources as $sourceName => $source) {
+        schemaParityRequire(
+            schemaParityTableContains($source, $tableName, $columnName . ' ' . $definition . ','),
+            $sourceName . ' Appmarket software schema has an incompatible definition for ' . $label . '.',
+            $issues
+        );
+    }
+    schemaParityRequire(
+        str_contains(
+            $appmarketSchemaSources['migrate.php'],
+            'ALTER TABLE ' . $tableName . ' ' . $operation . ' COLUMN ' . $columnName . ' ' . $definition
+        ),
+        'migrate.php must upgrade the Appmarket software column ' . $label . '.',
+        $issues
+    );
+}
+foreach ($appmarketSchemaSources as $sourceName => $source) {
+    foreach (['uq_appmarket_apps_slug (slug)', 'uq_appmarket_apps_package (package_id)'] as $uniqueKey) {
+        schemaParityRequire(
+            schemaParityTableContains($source, 'cms_appmarket_apps', 'UNIQUE KEY ' . $uniqueKey),
+            $sourceName . ' must preserve Appmarket uniqueness: ' . $uniqueKey . '.',
+            $issues
+        );
+    }
+    foreach (['package_id_snapshot', 'apk_storage_name', 'apk_original_name', 'apk_size', 'apk_sha256'] as $legacyColumn) {
+        schemaParityRequire(
+            schemaParityTableContains($source, 'cms_appmarket_releases', $legacyColumn),
+            $sourceName . ' must preserve the legacy Appmarket column ' . $legacyColumn . '.',
+            $issues
+        );
+    }
 }
 
 schemaParityRequire(

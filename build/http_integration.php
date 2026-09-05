@@ -53,6 +53,7 @@ $createdAppmarketReleaseIds = [];
 $createdAppmarketCertificateIds = [];
 $createdAppmarketTokenIds = [];
 $createdAppmarketStoredFiles = [];
+$createdAppmarketSoftwareFiles = [];
 $createdFoodIds = [];
 $createdFoodSectionIds = [];
 $createdFoodItemIds = [];
@@ -429,6 +430,91 @@ function httpIntegrationSelectHasSelectedValue(string $html, string $fieldId, st
 function httpIntegrationInputHasAttributes(string $html, string $fieldId, array $attributes): bool
 {
     return httpIntegrationElementHasAttributes($html, 'input', $fieldId, $attributes);
+}
+
+/** @return list<string> */
+function httpIntegrationAppmarketCatalogFormIssues(string $html, bool $editing, bool $missingFile = false): array
+{
+    $issues = [];
+    foreach (['version_name', 'platform', 'system_requirements', 'release_file', 'release_notes', 'release_channel', 'status'] as $field) {
+        if (!str_contains($html, '<label for="' . $field . '">')
+            || !str_contains($html, 'id="' . $field . '"')) {
+            $issues[] = 'obecný editor nemá propojený label pro ' . $field;
+        }
+    }
+    if (substr_count($html, '<fieldset>') < 3 || substr_count($html, '<legend>') < 3
+        || preg_match('/<input\b[^>]*id="version_name"[^>]*\brequired\b/', $html) !== 1
+        || (preg_match('/<input\b[^>]*id="release_file"[^>]*\brequired\b/', $html) === 1) !== (!$editing || $missingFile)
+        || !httpIntegrationInputHasAttributes($html, 'release_file', ['type' => 'file', 'name' => 'release_file'])
+        || !str_contains($html, '.tar.gz') || !str_contains($html, '.exe')) {
+        $issues[] = 'obecný editor nemá správná seskupení, povinnou verzi nebo volitelnou náhradu souboru';
+    }
+    preg_match_all('/\baria-(?:describedby|labelledby)="([^"]+)"/', $html, $references);
+    foreach ($references[1] as $referenceList) {
+        foreach (preg_split('/\s+/', trim($referenceList)) ?: [] as $reference) {
+            if (!str_contains($html, 'id="' . $reference . '"')) {
+                $issues[] = 'obecný editor odkazuje na neexistující ARIA popis ' . $reference;
+            }
+        }
+    }
+    return $issues;
+}
+
+/** @param array<string,string> $fields */
+function httpIntegrationAppmarketCatalogRetainsText(string $html, array $fields): bool
+{
+    if (!httpIntegrationInputHasAttributes($html, 'version_name', ['value' => h($fields['version_name'])])) {
+        return false;
+    }
+    foreach (['system_requirements', 'release_notes'] as $field) {
+        if (preg_match('/<textarea\b[^>]*id="' . $field . '"[^>]*>(.*?)<\/textarea>/s', $html, $matches) !== 1
+            || html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8') !== $fields[$field]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Teardown only: callers must supply an app and release created by this test run.
+ * @param array{id:string,cookie:string,csrf:string} $adminSession
+ * @return list<string>
+ */
+function httpIntegrationDeleteAppmarketReleaseFixture(PDO $pdo, string $baseUrl, array $adminSession, int $appId, int $releaseId): array
+{
+    $stmt = $pdo->prepare('SELECT apk_storage_name, file_storage_name FROM cms_appmarket_releases WHERE id = ? AND app_id = ?');
+    $stmt->execute([$releaseId, $appId]);
+    $artifact = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($artifact)) {
+        return [];
+    }
+    // All behavioral assertions are finished for this fixture; the existing authorized delete action accepts drafts only.
+    $pdo->prepare("UPDATE cms_appmarket_releases SET status = 'draft' WHERE id = ? AND app_id = ?")
+        ->execute([$releaseId, $appId]);
+    $response = postUrl($baseUrl . BASE_URL . '/admin/appmarket_release_action.php', [
+        'csrf_token' => $adminSession['csrf'], 'release_id' => (string)$releaseId,
+        'action' => 'delete', 'confirm_action' => 'delete',
+    ], $adminSession['cookie'], 0);
+    $stmt->execute([$releaseId, $appId]);
+    $issues = [];
+    if (httpIntegrationStatusCode($response) !== 302 || $stmt->fetch(PDO::FETCH_ASSOC) !== false) {
+        $issues[] = sprintf('autorizovaný HTTP úklid nesmazal testovací vydání %d (HTTP %d)', $releaseId, httpIntegrationStatusCode($response));
+    }
+    foreach ([
+        'apk_storage_name' => appmarketPrivateApkPath((string)($artifact['apk_storage_name'] ?? '')),
+        'file_storage_name' => appmarketSoftwarePath((string)($artifact['file_storage_name'] ?? '')),
+    ] as $column => $path) {
+        if ($path === '') {
+            continue;
+        }
+        $references = $pdo->prepare('SELECT COUNT(*) FROM cms_appmarket_releases WHERE ' . $column . ' = ?');
+        $references->execute([(string)$artifact[$column]]);
+        clearstatcache(true, $path);
+        if ((int)$references->fetchColumn() === 0 && is_file($path)) {
+            $issues[] = 'autorizovaný HTTP úklid ponechal nepoužívaný testovací blob: ' . (string)$artifact[$column];
+        }
+    }
+    return $issues;
 }
 
 function httpIntegrationAuthHtmlHasNoCaptchaChallenge(string $html): bool
@@ -19951,6 +20037,478 @@ try {
     clearSettingsCache();
 
     $appmarketToken = bin2hex(random_bytes(6));
+    $softwareIssues = [];
+    $softwareApps = [];
+    foreach (['primary', 'secondary'] as $softwareAppKey) {
+        $softwareSlug = 'http-software-' . $softwareAppKey . '-' . $appmarketToken;
+        $softwareAppForm = fetchUrl($baseUrl . BASE_URL . '/admin/appmarket_form.php', $adminSession['cookie'], 0);
+        $softwareAppFields = [
+            'csrf_token' => extractHiddenInputValue($softwareAppForm['body'], 'csrf_token'),
+            'name' => 'HTTP software ' . $softwareAppKey . ' ' . $appmarketToken,
+            'slug' => $softwareSlug, 'short_description' => 'Software bez Android applicationId.',
+            'description' => 'Obecný katalog instalačních souborů.',
+        ];
+        if ($softwareAppKey === 'secondary') {
+            $softwareAppFields['package_id'] = '';
+        }
+        $softwareAppSave = postUrl($baseUrl . BASE_URL . '/admin/appmarket_save.php', $softwareAppFields, $adminSession['cookie'], 0);
+        $softwareAppStmt = $pdo->prepare('SELECT * FROM cms_appmarket_apps WHERE slug = ?');
+        $softwareAppStmt->execute([$softwareSlug]);
+        $softwareApp = $softwareAppStmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($softwareApp)) {
+            $createdAppmarketAppIds[] = (int)$softwareApp['id'];
+            $softwareApps[$softwareAppKey] = $softwareApp;
+        }
+        if (httpIntegrationStatusCode($softwareAppForm) !== 200
+            || httpIntegrationStatusCode($softwareAppSave) !== 302 || !is_array($softwareApp)
+            || $softwareApp['package_id'] !== null || $softwareApp['status'] !== 'draft') {
+            $softwareIssues[] = 'appmarket_save nevytvořil aplikaci s chybějícím nebo prázdným package_id jako SQL NULL: ' . $softwareAppKey;
+        }
+    }
+    $softwarePost = static function (array $fields, ?array $artifact = null, ?array $session = null) use (
+        $baseUrl, $adminSession, &$createdTempFiles, &$createdAppmarketSoftwareFiles
+    ): array {
+        $session ??= $adminSession;
+        $files = [];
+        if ($artifact !== null) {
+            $path = httpIntegrationCreateTempFile('kora-software-', $artifact['bytes'], $createdTempFiles);
+            $createdAppmarketSoftwareFiles[] = appmarketSoftwareStorageName(hash('sha256', $artifact['bytes']));
+            $files['release_file'] = ['path' => $path, 'filename' => $artifact['name'], 'type' => 'application/octet-stream'];
+        }
+        return postMultipartUrl($baseUrl . BASE_URL . '/admin/appmarket_release_save.php',
+            ['csrf_token' => $session['csrf']] + $fields, $files, $session['cookie'], 0);
+    };
+    $softwareFindRelease = static function (int $appId, string $version, string $platform) use (
+        $pdo, &$createdAppmarketReleaseIds, &$createdAppmarketSoftwareFiles
+    ): ?array {
+        $stmt = $pdo->prepare('SELECT * FROM cms_appmarket_releases WHERE app_id = ? AND version_name = ? AND platform = ? ORDER BY id DESC LIMIT 1');
+        $stmt->execute([$appId, $version, $platform]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            return null;
+        }
+        $createdAppmarketReleaseIds[] = (int)$row['id'];
+        $createdAppmarketSoftwareFiles[] = (string)($row['file_storage_name'] ?? '');
+        return $row;
+    };
+    if (count($softwareApps) === 2) {
+        $softwareAppId = (int)$softwareApps['primary']['id'];
+        $softwareOtherAppId = (int)$softwareApps['secondary']['id'];
+        $softwareSlug = (string)$softwareApps['primary']['slug'];
+        $softwareSnapshot = static function () use ($pdo, $softwareAppId, $softwareOtherAppId): array {
+            $snapshot = [];
+            foreach (['cms_appmarket_apps' => 'id', 'cms_appmarket_releases' => 'app_id'] as $table => $column) {
+                $stmt = $pdo->prepare('SELECT * FROM ' . $table . ' WHERE ' . $column . ' IN (?, ?) ORDER BY id');
+                $stmt->execute([$softwareAppId, $softwareOtherAppId]);
+                $snapshot[$table] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            return $snapshot;
+        };
+        $softwareFormUrl = $baseUrl . BASE_URL . '/admin/appmarket_release_form.php?app_id=' . $softwareAppId;
+        $softwareForm = fetchUrl($softwareFormUrl, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($softwareForm) !== 200) {
+            $softwareIssues[] = 'formulář prvního obecného vydání není dostupný';
+        }
+        $softwareIssues = array_merge($softwareIssues, httpIntegrationAppmarketCatalogFormIssues($softwareForm['body'], false));
+        $softwareFields = [
+            'app_id' => (string)$softwareAppId, 'version_name' => '1.0.0', 'platform' => 'windows',
+            'system_requirements' => 'Windows 10, 4 GB RAM', 'release_notes' => 'První obecné vydání.',
+            'status' => 'published', 'release_channel' => 'stable',
+        ];
+        // Intentionally opaque bytes, not signed APKs or archives that the server should extract.
+        $softwareArtifacts = [
+            'zip' => ['name' => 'desktop.zip', 'bytes' => "PK\x03\x04\0HTTP-SOFTWARE-ZIP-" . $appmarketToken],
+            'exe' => ['name' => 'desktop.exe', 'bytes' => "MZ\0\xffHTTP-SOFTWARE-EXE-" . $appmarketToken],
+            'tar.gz' => ['name' => 'desktop.tar.gz', 'bytes' => "\x1f\x8b\x08\0HTTP-SOFTWARE-TAR-" . $appmarketToken],
+        ];
+        $softwareReleases = [];
+        foreach (['zip' => ['1.0.0', 'windows', 'stable'], 'exe' => ['2.0.0', 'windows', 'stable'], 'tar.gz' => ['2.0.0', 'linux', 'beta']] as $extension => [$version, $platform, $channel]) {
+            $fields = array_replace($softwareFields, ['version_name' => $version, 'platform' => $platform, 'release_channel' => $channel]);
+            $response = $softwarePost($fields, $softwareArtifacts[$extension]);
+            $release = $softwareFindRelease($softwareAppId, $version, $platform);
+            if ($release !== null) {
+                $softwareReleases[$extension] = $release;
+            }
+            if (httpIntegrationStatusCode($response) !== 302 || $release === null
+                || !httpIntegrationHeaderContains($response, 'Location', 'appmarket.php?app_id=' . $softwareAppId)
+                || $release['metadata_source'] !== 'manual' || $release['status'] !== 'published'
+                || $release['file_extension'] !== $extension || $release['release_channel'] !== $channel
+                || $release['file_original_name'] !== $softwareArtifacts[$extension]['name']
+                || $release['file_sha256'] !== hash('sha256', $softwareArtifacts[$extension]['bytes'])
+                || (int)$release['file_size'] !== strlen($softwareArtifacts[$extension]['bytes'])
+                || $release['file_storage_name'] !== $release['file_sha256'] . '.bin'
+                || (string)($release['apk_storage_name'] ?? '') !== ''
+                || (int)($release['certificate_id'] ?? 0) !== 0) {
+                $softwareIssues[] = 'HTTP upload obecného souboru neuložil nezávislá metadata bez Android SDK: ' . $extension;
+                continue;
+            }
+            $softwareDownloadUrl = $baseUrl . appmarketDownloadPath($softwareSlug, (int)$release['version_code']);
+            $counterBefore = (int)$release['download_count'];
+            $head = requestRawUrl('HEAD', $softwareDownloadUrl, '', 'text/plain', '', 0);
+            $counterAfter = (int)$pdo->query('SELECT download_count FROM cms_appmarket_releases WHERE id = ' . (int)$release['id'])->fetchColumn();
+            $download = fetchUrl($softwareDownloadUrl, '', 0);
+            $range = fetchUrlWithHeaders($softwareDownloadUrl, ['Range: bytes=2-8'], '', 0);
+            $badRange = fetchUrlWithHeaders($softwareDownloadUrl, ['Range: bytes=99999-'], '', 0);
+            if (httpIntegrationStatusCode($head) !== 200 || $head['body'] !== '' || $counterAfter !== $counterBefore
+                || httpIntegrationHeaderValue($head, 'Content-Length') !== (string)$release['file_size']
+                || !httpIntegrationHeaderContains($head, 'Accept-Ranges', 'bytes')
+                || !httpIntegrationHeaderContains($head, 'Content-Type', 'application/octet-stream')
+                || !httpIntegrationHeaderContains($head, 'Content-Disposition', 'attachment')
+                || !httpIntegrationHeaderContains($head, 'Content-Disposition', '.' . $extension)
+                || !httpIntegrationHeaderContains($head, 'X-Content-Type-Options', 'nosniff')
+                || !httpIntegrationHeaderContains($head, 'ETag', (string)$release['file_sha256'])
+                || httpIntegrationHeaderValue($head, 'Set-Cookie') !== ''
+                || httpIntegrationStatusCode($download) !== 200 || $download['body'] !== $softwareArtifacts[$extension]['bytes']
+                || hash('sha256', $download['body']) !== $release['file_sha256']
+                || httpIntegrationStatusCode($range) !== 206 || $range['body'] !== substr($softwareArtifacts[$extension]['bytes'], 2, 7)
+                || httpIntegrationHeaderValue($range, 'Content-Range') !== 'bytes 2-8/' . $release['file_size']
+                || httpIntegrationStatusCode($badRange) !== 416) {
+                $softwareIssues[] = 'obecný download porušil binární obsah, hash, HEAD nebo Range kontrakt: ' . $extension;
+            }
+        }
+        if (count($softwareReleases) === 3) {
+            $firstSoftwareRelease = $softwareReleases['zip'];
+            $currentSoftwareRelease = $softwareReleases['exe'];
+            $firstSoftwareId = (int)$firstSoftwareRelease['id'];
+            $currentSoftwareId = (int)$currentSoftwareRelease['id'];
+            $firstAgain = $softwareFindRelease($softwareAppId, '1.0.0', 'windows');
+            $oldDownload = fetchUrl($baseUrl . appmarketDownloadPath($softwareSlug, (int)$firstSoftwareRelease['version_code']), '', 0);
+            if ($firstAgain === null || (int)$firstAgain['id'] !== $firstSoftwareId
+                || $firstAgain['file_storage_name'] !== $firstSoftwareRelease['file_storage_name']
+                || $firstAgain['system_requirements'] !== $firstSoftwareRelease['system_requirements']
+                || (int)$currentSoftwareRelease['version_code'] <= (int)$firstSoftwareRelease['version_code']
+                || httpIntegrationStatusCode($oldDownload) !== 200 || $oldDownload['body'] !== $softwareArtifacts['zip']['bytes']) {
+                $softwareIssues[] = 'nová verze přepsala původní vydání nebo jeho download';
+            }
+            $preferredSoftware = appmarketPreferredPublicReleasesByPlatform($pdo, $softwareAppId);
+            $preferredSoftwareIds = array_column($preferredSoftware, 'id', 'platform');
+            if (count($preferredSoftware) !== 2 || (int)($preferredSoftwareIds['windows'] ?? 0) !== $currentSoftwareId
+                || (int)($preferredSoftwareIds['linux'] ?? 0) !== (int)$softwareReleases['tar.gz']['id']) {
+                $softwareIssues[] = 'výběr aktuálního vydání nevrátil nejnovější verzi zvlášť pro každou platformu';
+            }
+            $editForm = fetchUrl($softwareFormUrl . '&id=' . $currentSoftwareId, $adminSession['cookie'], 0);
+            $softwareIssues = array_merge($softwareIssues, httpIntegrationAppmarketCatalogFormIssues($editForm['body'], true));
+            if (extractHiddenInputValue($editForm['body'], 'revision') !== appmarketCatalogRevision($currentSoftwareRelease)) {
+                $softwareIssues[] = 'editor nevložil aktuální revizi uloženého vydání';
+            }
+            $editFields = array_replace($softwareFields, [
+                'id' => (string)$currentSoftwareId, 'version_name' => '2.0.0',
+                'system_requirements' => 'Windows 11, 8 GB RAM', 'release_notes' => 'Upravené požadavky bez nového souboru.',
+                'revision' => appmarketCatalogRevision($currentSoftwareRelease),
+            ]);
+            fetchUrl($baseUrl . appmarketDownloadPath($softwareSlug, (int)$currentSoftwareRelease['version_code']), '', 0);
+            $retainedResponse = $softwarePost($editFields);
+            $retainedRelease = $softwareFindRelease($softwareAppId, '2.0.0', 'windows');
+            if (httpIntegrationStatusCode($retainedResponse) !== 302 || $retainedRelease === null
+                || $retainedRelease['file_storage_name'] !== $currentSoftwareRelease['file_storage_name']
+                || $retainedRelease['system_requirements'] !== $editFields['system_requirements']
+                || $retainedRelease['release_notes'] !== $editFields['release_notes']) {
+                $softwareIssues[] = 'editace bez uploadu nezachovala soubor a nové požadavky';
+            }
+            if ($retainedRelease !== null) {
+                $replacementArtifact = ['name' => 'desktop-updated.exe', 'bytes' => "MZ\0HTTP-REPLACEMENT-" . $appmarketToken];
+                $editFields['revision'] = appmarketCatalogRevision($retainedRelease);
+                $editFields['system_requirements'] = 'Windows 11 <64-bit> & 16 GB RAM';
+                $replacementResponse = $softwarePost($editFields, $replacementArtifact);
+                $replacementRelease = $softwareFindRelease($softwareAppId, '2.0.0', 'windows');
+                $replacementDownload = fetchUrl($baseUrl . appmarketDownloadPath($softwareSlug, (int)$currentSoftwareRelease['version_code']), '', 0);
+                $replacedSoftwarePath = appmarketSoftwarePath((string)$currentSoftwareRelease['file_storage_name']);
+                clearstatcache(true, $replacedSoftwarePath);
+                if (httpIntegrationStatusCode($replacementResponse) !== 302 || $replacementRelease === null
+                    || (int)$replacementRelease['id'] !== $currentSoftwareId
+                    || $replacementRelease['file_sha256'] !== hash('sha256', $replacementArtifact['bytes'])
+                    || $replacementRelease['file_original_name'] !== $replacementArtifact['name']
+                    || $replacementRelease['system_requirements'] !== $editFields['system_requirements']
+                    || httpIntegrationStatusCode($replacementDownload) !== 200
+                    || $replacementDownload['body'] !== $replacementArtifact['bytes']
+                    || file_exists($replacedSoftwarePath)) {
+                    $softwareIssues[] = 'náhrada souboru nepoužila nový neměnný blob nebo neodstranila původní nepoužívaný soubor';
+                }
+                $historySoftwarePath = appmarketSoftwarePath((string)$firstSoftwareRelease['file_storage_name']);
+                clearstatcache(true, $historySoftwarePath);
+                $historyAfterReplacement = fetchUrl($baseUrl . appmarketDownloadPath($softwareSlug, (int)$firstSoftwareRelease['version_code']), '', 0);
+                if (!is_file($historySoftwarePath)) {
+                    $softwareIssues[] = 'úklid po náhradě odstranil blob historického vydání: ' . $firstSoftwareRelease['file_storage_name'];
+                }
+                // Read through the download endpoint: uploaded private blobs may be readable only by the web-server identity.
+                if (httpIntegrationStatusCode($historyAfterReplacement) !== 200
+                    || hash('sha256', $historyAfterReplacement['body']) !== $firstSoftwareRelease['file_sha256']
+                    || $historyAfterReplacement['body'] !== $softwareArtifacts['zip']['bytes']) {
+                    $softwareIssues[] = sprintf('historický HTTP download po náhradě souboru neodpovídá původnímu vydání (HTTP %d, SHA-256 %s)',
+                        httpIntegrationStatusCode($historyAfterReplacement), hash('sha256', $historyAfterReplacement['body']));
+                }
+                $softwarePublic = fetchUrl($baseUrl . appmarketReleasePath($softwareSlug, (int)$currentSoftwareRelease['version_code']), '', 0);
+                if (httpIntegrationStatusCode($softwarePublic) !== 200
+                    || !str_contains($softwarePublic['body'], h($editFields['system_requirements']))
+                    || str_contains($softwarePublic['body'], $editFields['system_requirements'])
+                    || !str_contains($softwarePublic['body'], hash('sha256', $replacementArtifact['bytes']))
+                    || str_contains($softwarePublic['body'], 'SHA-256 certifikátu')) {
+                    $softwareIssues[] = 'obecný veřejný detail nezobrazil bezpečně požadavky a hash bez certifikátu APK';
+                }
+            }
+            $currentForErrors = appmarketFindRelease($pdo, $currentSoftwareId);
+            $errorFields = array_replace($softwareFields, [
+                'version_name' => '3.0.0', 'system_requirements' => 'Zachovat <požadavky> & paměť.',
+                'release_notes' => "Zachovat změny <script>alert('test')</script>\nDruhý řádek.",
+            ]);
+            $negativeCases = [
+                'missing version' => [['version_name' => ''], $softwareArtifacts['zip'], 'version_name'],
+                'missing file' => [[], null, 'release_file'],
+                'invalid extension' => [[], ['name' => 'software.zip.php', 'bytes' => 'HTTP-INVALID-' . $appmarketToken], 'release_file'],
+                'invalid platform' => [['platform' => 'invalid'], $softwareArtifacts['zip'], 'platform'],
+                'invalid channel' => [['release_channel' => 'invalid'], null, 'release_channel'],
+                'invalid status' => [['status' => 'withdrawn'], null, 'status'],
+                'duplicate version/platform' => [['version_name' => '1.0.0'], $softwareArtifacts['exe'], 'version_name'],
+                'duplicate while editing' => [[
+                    'id' => (string)$currentSoftwareId, 'version_name' => '1.0.0',
+                    'revision' => appmarketCatalogRevision($currentForErrors ?? []),
+                ], null, 'version_name'],
+                'stale revision' => [[
+                    'id' => (string)$currentSoftwareId, 'version_name' => '2.0.0',
+                    'revision' => appmarketCatalogRevision($currentSoftwareRelease),
+                ], $softwareArtifacts['zip'], 'form'],
+                'cross-app release id' => [[
+                    'app_id' => (string)$softwareOtherAppId, 'id' => (string)$firstSoftwareId,
+                    'revision' => appmarketCatalogRevision($firstSoftwareRelease),
+                ], $softwareArtifacts['exe'], 'form'],
+            ];
+            foreach ($negativeCases as $case => [$overrides, $artifact, $errorField]) {
+                $submitted = array_replace($errorFields, $overrides);
+                $before = $softwareSnapshot();
+                $rejected = $softwarePost($submitted, $artifact);
+                if ($softwareSnapshot() !== $before) {
+                    $softwareIssues[] = 'odmítnutý požadavek změnil databázi: ' . $case;
+                }
+                $location = httpIntegrationHeaderValue($rejected, 'Location');
+                if (str_starts_with($location, 'appmarket_release_form.php?')) {
+                    $location = BASE_URL . '/admin/' . $location;
+                }
+                if (httpIntegrationStatusCode($rejected) !== 302
+                    || !str_starts_with($location, BASE_URL . '/admin/appmarket_release_form.php?')) {
+                    $softwareIssues[] = 'chyba nevrátila interní formulář pro opravu: ' . $case;
+                    continue;
+                }
+                $errorForm = fetchUrl($baseUrl . $location, $adminSession['cookie'], 0);
+                if ($case === 'cross-app release id') {
+                    // A forged resource reference must not expose another app's editable recovery form.
+                    if (httpIntegrationStatusCode($errorForm) !== 404
+                        || str_contains($errorForm['body'], 'name="release_file"')
+                        || str_contains($errorForm['body'], 'id="appmarket-release-errors"')
+                        || str_contains($errorForm['body'], h($submitted['system_requirements']))
+                        || $softwareSnapshot() !== $before) {
+                        $softwareIssues[] = 'cizí ID vydání nevrátilo 404 bez editoru a změny databáze';
+                    }
+                    continue;
+                }
+                if (httpIntegrationStatusCode($errorForm) !== 200
+                    || !str_contains($errorForm['body'], 'id="appmarket-release-errors"')
+                    || !str_contains($errorForm['body'], 'role="alert"')
+                    || !httpIntegrationAppmarketCatalogRetainsText($errorForm['body'], $submitted)
+                    || str_contains($errorForm['body'], "<script>alert('test')</script>")
+                    || ($errorField !== 'form' && !httpIntegrationFieldHasAriaInvalid($errorForm['body'], $errorField))) {
+                    $softwareIssues[] = 'chyba nemá přístupnou vazbu nebo nezachovala bezpečně zadané texty: ' . $case;
+                }
+                if (httpIntegrationStatusCode($errorForm) === 200) {
+                    $softwareIssues = array_merge($softwareIssues, httpIntegrationAppmarketCatalogFormIssues(
+                        $errorForm['body'], extractHiddenInputValue($errorForm['body'], 'id') !== ''
+                    ));
+                }
+            }
+            $csrfSnapshot = $softwareSnapshot();
+            // postUrl/postMultipartUrl replace supplied CSRF tokens, so use a raw request for the forged token.
+            $badCsrf = postRawUrl($baseUrl . BASE_URL . '/admin/appmarket_release_save.php', http_build_query(
+                array_replace($errorFields, ['csrf_token' => 'forged-' . $appmarketToken, 'id' => (string)$currentSoftwareId])
+            ), 'application/x-www-form-urlencoded', $adminSession['cookie'], 0);
+            $missingCsrfPath = httpIntegrationCreateTempFile('kora-software-csrf-', 'CSRF-' . $appmarketToken, $createdTempFiles);
+            $createdAppmarketSoftwareFiles[] = appmarketSoftwareStorageName(hash_file('sha256', $missingCsrfPath));
+            $missingCsrf = postMultipartUrl($baseUrl . BASE_URL . '/admin/appmarket_release_save.php', $errorFields, [
+                'release_file' => ['path' => $missingCsrfPath, 'filename' => 'csrf.zip'],
+            ], $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($badCsrf) !== 403 || httpIntegrationStatusCode($missingCsrf) !== 403
+                || $softwareSnapshot() !== $csrfSnapshot) {
+                $softwareIssues[] = 'neplatné nebo chybějící CSRF změnilo databázi nebo nebylo odmítnuto 403';
+            }
+
+            $pdo->prepare("INSERT INTO cms_users (email, password, first_name, last_name, role, is_superadmin, is_confirmed, created_at)
+                VALUES (?, ?, 'HTTP', 'Software manager', 'admin', 0, 1, NOW())")
+                ->execute(['http-software-manager-' . $appmarketToken . '@example.test', password_hash(bin2hex(random_bytes(20)), PASSWORD_DEFAULT)]);
+            $softwareManagerId = (int)$pdo->lastInsertId();
+            $createdUsers[] = $softwareManagerId;
+            $softwareManagerSession = koraPrimeTestSession([
+                'cms_logged_in' => true, 'cms_superadmin' => false, 'cms_user_id' => $softwareManagerId,
+                'cms_user_name' => 'HTTP software manager', 'cms_user_role' => 'admin',
+            ], 'kora-http-software-manager-' . $appmarketToken);
+            $managerForm = fetchUrl($baseUrl . BASE_URL . '/admin/appmarket_release_form.php?app_id=' . $softwareOtherAppId, $softwareManagerSession['cookie'], 0);
+            $managerFields = array_replace($softwareFields, [
+                'app_id' => (string)$softwareOtherAppId, 'version_name' => '0.1.0', 'platform' => 'cross_platform', 'status' => 'draft',
+            ]);
+            $managerCreate = $softwarePost($managerFields, $softwareArtifacts['zip'], $softwareManagerSession);
+            $managerDraft = $softwareFindRelease($softwareOtherAppId, '0.1.0', 'cross_platform');
+            if (httpIntegrationStatusCode($managerForm) !== 200 || httpIntegrationStatusCode($managerCreate) !== 302
+                || $managerDraft === null || $managerDraft['status'] !== 'draft'
+                || (int)$managerDraft['created_by_user_id'] !== $softwareManagerId
+                || $managerDraft['file_storage_name'] !== $firstSoftwareRelease['file_storage_name']) {
+                $softwareIssues[] = 'běžný správce nemůže vytvořit koncept nebo se stejný obsah bezpečně nesdílí';
+            }
+            if ($managerDraft !== null) {
+                $managerFields['id'] = (string)$managerDraft['id'];
+                $managerFields['revision'] = appmarketCatalogRevision($managerDraft);
+                $managerFields['system_requirements'] = 'Linux nebo Windows, 2 GB RAM';
+                $managerEdit = $softwarePost($managerFields, null, $softwareManagerSession);
+                $managerEdited = $softwareFindRelease($softwareOtherAppId, '0.1.0', 'cross_platform');
+                if (httpIntegrationStatusCode($managerEdit) !== 302 || $managerEdited === null
+                    || $managerEdited['status'] !== 'draft'
+                    || $managerEdited['system_requirements'] !== $managerFields['system_requirements']
+                    || $managerEdited['file_storage_name'] !== $managerDraft['file_storage_name']) {
+                    $softwareIssues[] = 'běžný správce nemůže upravit koncept bez výměny souboru';
+                }
+                $draftDownload = fetchUrl($baseUrl . appmarketDownloadPath((string)$softwareApps['secondary']['slug'], (int)$managerDraft['version_code']), '', 0);
+                if (httpIntegrationStatusCode($draftDownload) !== 404) {
+                    $softwareIssues[] = 'nepublikovaný obecný soubor je veřejně dostupný';
+                }
+                $privilegeSnapshot = $softwareSnapshot();
+                $managerPublishedForm = fetchUrl($softwareFormUrl . '&id=' . $currentSoftwareId, $softwareManagerSession['cookie'], 0);
+                $managerPublish = $softwarePost(array_replace($managerFields, [
+                    'revision' => appmarketCatalogRevision($managerEdited ?? $managerDraft), 'status' => 'published',
+                ]), null, $softwareManagerSession);
+                $managerNewPublish = $softwarePost(array_replace($softwareFields, ['version_name' => 'manager-publish']), $softwareArtifacts['exe'], $softwareManagerSession);
+                $managerPublishedEdit = $softwarePost(array_replace($softwareFields, [
+                    'id' => (string)$currentSoftwareId, 'version_name' => '2.0.0', 'status' => 'draft',
+                    'revision' => appmarketCatalogRevision(appmarketFindRelease($pdo, $currentSoftwareId) ?? []),
+                ]), $softwareArtifacts['zip'], $softwareManagerSession);
+                $managerLegacyAction = postUrl($baseUrl . BASE_URL . '/admin/appmarket_release_action.php', [
+                    'csrf_token' => $softwareManagerSession['csrf'], 'release_id' => (string)$currentSoftwareId,
+                    'action' => 'withdraw', 'confirm_action' => 'withdraw',
+                ], $softwareManagerSession['cookie'], 0);
+                foreach (['published form' => $managerPublishedForm, 'publish draft' => $managerPublish,
+                    'new published release' => $managerNewPublish, 'published edit as draft' => $managerPublishedEdit,
+                    'legacy release action' => $managerLegacyAction] as $guard => $guardResponse) {
+                    if (httpIntegrationStatusCode($guardResponse) !== 403) {
+                        $softwareIssues[] = 'běžný správce obešel superadmin hranici: ' . $guard;
+                    }
+                }
+                if ($softwareSnapshot() !== $privilegeSnapshot) {
+                    $softwareIssues[] = 'zamítnutá publikační nebo editační akce běžného správce změnila data';
+                }
+                $manualGuardSnapshot = $softwareSnapshot();
+                foreach (['publish' => (int)$managerDraft['id'], 'distribution' => $currentSoftwareId] as $legacyAction => $manualReleaseId) {
+                    $legacyManualResponse = postUrl($baseUrl . BASE_URL . '/admin/appmarket_release_action.php', [
+                        'csrf_token' => $adminSession['csrf'], 'release_id' => (string)$manualReleaseId,
+                        'action' => $legacyAction, 'confirm_action' => $legacyAction,
+                        'update_priority' => 'normal', 'release_channel' => 'stable', 'rollout_percentage' => '25',
+                    ], $adminSession['cookie'], 0);
+                    $manualActionAppId = $legacyAction === 'publish' ? $softwareOtherAppId : $softwareAppId;
+                    $legacyManualNotice = fetchUrl($baseUrl . BASE_URL . '/admin/appmarket.php?app_id=' . $manualActionAppId, $adminSession['cookie'], 0);
+                    if (httpIntegrationStatusCode($legacyManualResponse) !== 302
+                        || httpIntegrationStatusCode($legacyManualNotice) !== 200
+                        || !str_contains($legacyManualNotice['body'], 'Obecné vydání spravujte v editoru verzí, nikoli přes Android distribuční akce.')) {
+                        $softwareIssues[] = 'legacy akce výslovně neodmítla ruční vydání: ' . $legacyAction;
+                    }
+                }
+                $legacyManualPublication = appmarketPublishRelease($pdo, (int)$managerDraft['id'], $adminUserId);
+                if ($legacyManualPublication['ok'] !== false
+                    || !in_array('Obecné vydání zveřejněte přes jeho editor s kontrolou aktuální revize.', $legacyManualPublication['errors'], true)) {
+                    $softwareIssues[] = 'legacy publikační helper neodmítl ruční koncept před validací APK';
+                }
+                $unconfirmedManualDelete = postUrl($baseUrl . BASE_URL . '/admin/appmarket_release_action.php', [
+                    'csrf_token' => $adminSession['csrf'], 'release_id' => (string)$managerDraft['id'], 'action' => 'delete',
+                ], $adminSession['cookie'], 0);
+                if (httpIntegrationStatusCode($unconfirmedManualDelete) !== 302
+                    || appmarketDeleteCatalogDraft($pdo, $currentSoftwareId) !== false
+                    || $softwareSnapshot() !== $manualGuardSnapshot) {
+                    $softwareIssues[] = 'legacy akce nebo smazání konceptu změnily chráněná ruční vydání';
+                }
+                // The locked draft-delete helper must retain a blob referenced by the primary app's history.
+                if (!appmarketDeleteCatalogDraft($pdo, (int)$managerDraft['id'])
+                    || appmarketFindRelease($pdo, (int)$managerDraft['id']) !== null) {
+                    $softwareIssues[] = 'zamčené smazání ručního konceptu neodstranilo jeho řádek';
+                }
+                if (!is_file(appmarketSoftwarePath((string)$firstSoftwareRelease['file_storage_name']))) {
+                    $softwareIssues[] = 'úklid smazal software stále používaný jiným vydáním';
+                }
+            }
+            $filelessFields = array_replace($softwareFields, [
+                'app_id' => (string)$softwareOtherAppId, 'version_name' => 'fileless-1.0.0', 'platform' => 'other',
+                'status' => 'draft', 'system_requirements' => 'Zachovat požadavky importovaného konceptu.',
+            ]);
+            $filelessCreate = $softwarePost($filelessFields, $softwareArtifacts['zip']);
+            $filelessRelease = $softwareFindRelease($softwareOtherAppId, 'fileless-1.0.0', 'other');
+            if (httpIntegrationStatusCode($filelessCreate) !== 302 || $filelessRelease === null) {
+                $softwareIssues[] = 'test nevytvořil koncept pro obnovu chybějícího souboru';
+            } else {
+                // Simulate an imported metadata-only draft without touching any shared physical blob.
+                $pdo->prepare("UPDATE cms_appmarket_releases SET file_storage_name = '' WHERE id = ? AND app_id = ?")
+                    ->execute([(int)$filelessRelease['id'], $softwareOtherAppId]);
+                $filelessRelease = appmarketFindRelease($pdo, (int)$filelessRelease['id']) ?? $filelessRelease;
+                $filelessFormUrl = $baseUrl . BASE_URL . '/admin/appmarket_release_form.php?app_id=' . $softwareOtherAppId . '&id=' . (int)$filelessRelease['id'];
+                $filelessForm = fetchUrl($filelessFormUrl, $adminSession['cookie'], 0);
+                $softwareIssues = array_merge($softwareIssues, httpIntegrationAppmarketCatalogFormIssues($filelessForm['body'], true, true));
+                if (httpIntegrationStatusCode($filelessForm) !== 200
+                    || !str_contains($filelessForm['body'], 'U tohoto vydání chybí soubor, například po importu. Před uložením jej nahrajte.')) {
+                    $softwareIssues[] = 'editor konceptu bez souboru nevysvětlil povinný nový upload';
+                }
+                $filelessFields['id'] = (string)$filelessRelease['id'];
+                $filelessFields['revision'] = appmarketCatalogRevision($filelessRelease);
+                $filelessSnapshot = $softwareSnapshot();
+                $filelessSave = $softwarePost($filelessFields);
+                $filelessErrorForm = fetchUrl($filelessFormUrl, $adminSession['cookie'], 0);
+                if (httpIntegrationStatusCode($filelessSave) !== 302 || $softwareSnapshot() !== $filelessSnapshot
+                    || httpIntegrationStatusCode($filelessErrorForm) !== 200
+                    || !httpIntegrationFieldHasAriaInvalid($filelessErrorForm['body'], 'release_file')
+                    || !httpIntegrationAppmarketCatalogRetainsText($filelessErrorForm['body'], $filelessFields)) {
+                    $softwareIssues[] = 'koncept bez souboru neodmítl prázdný upload se zachováním textů a databáze';
+                }
+                $filelessRepair = $softwarePost($filelessFields, $softwareArtifacts['zip']);
+                $filelessRepaired = appmarketFindRelease($pdo, (int)$filelessRelease['id']);
+                if (httpIntegrationStatusCode($filelessRepair) !== 302 || $filelessRepaired === null
+                    || $filelessRepaired['status'] !== 'draft'
+                    || $filelessRepaired['file_storage_name'] !== $firstSoftwareRelease['file_storage_name']) {
+                    $softwareIssues[] = 'nový upload neopravil importovaný koncept bez změny jeho identity';
+                }
+                $softwareIssues = array_merge($softwareIssues, httpIntegrationDeleteAppmarketReleaseFixture(
+                    $pdo, $baseUrl, $adminSession, $softwareOtherAppId, (int)$filelessRelease['id']
+                ));
+                $sharedHistoryAfterDelete = fetchUrl($baseUrl . appmarketDownloadPath($softwareSlug, (int)$firstSoftwareRelease['version_code']), '', 0);
+                if (httpIntegrationStatusCode($sharedHistoryAfterDelete) !== 200
+                    || $sharedHistoryAfterDelete['body'] !== $softwareArtifacts['zip']['bytes']
+                    || hash('sha256', $sharedHistoryAfterDelete['body']) !== $firstSoftwareRelease['file_sha256']) {
+                    $softwareIssues[] = 'HTTP smazání opraveného konceptu poškodilo sdílený historický download';
+                }
+            }
+            $manualOnlyPackageId = 'cz.koracms.http.manual' . $appmarketToken;
+            $packageSave = postUrl($baseUrl . BASE_URL . '/admin/appmarket_save.php', [
+                'csrf_token' => $adminSession['csrf'], 'id' => (string)$softwareAppId,
+                'name' => (string)$softwareApps['primary']['name'], 'slug' => $softwareSlug,
+                'short_description' => (string)$softwareApps['primary']['short_description'],
+                'description' => (string)$softwareApps['primary']['description'], 'package_id' => $manualOnlyPackageId,
+            ], $adminSession['cookie'], 0);
+            $manualAndroid = $softwarePost(array_replace($softwareFields, [
+                'version_name' => '9.0.0', 'platform' => 'android',
+            ]), ['name' => 'manual.apk', 'bytes' => "PK\x03\x04HTTP-MANUAL-ANDROID-" . $appmarketToken]);
+            $manualAndroidRelease = $softwareFindRelease($softwareAppId, '9.0.0', 'android');
+            $manualOnlyPackageStmt = $pdo->prepare('SELECT package_id FROM cms_appmarket_apps WHERE id = ?');
+            $manualOnlyPackageStmt->execute([$softwareAppId]);
+            if (httpIntegrationStatusCode($packageSave) !== 302 || $manualOnlyPackageStmt->fetchColumn() !== $manualOnlyPackageId
+                || httpIntegrationStatusCode($manualAndroid) !== 302 || $manualAndroidRelease === null
+                || $manualAndroidRelease['metadata_source'] !== 'manual') {
+                $softwareIssues[] = 'ruční Android vydání nebo volitelné applicationId nebylo uloženo';
+            }
+            foreach ([1 => '', 2 => '&sdk_int=34', 3 => '&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=0'] as $apiVersion => $parameters) {
+                $manualApi = fetchUrl($baseUrl . BASE_URL . '/api/appmarket/v' . $apiVersion . '/update?package_id='
+                    . rawurlencode($manualOnlyPackageId) . '&version_code=1' . $parameters, '', 0);
+                $manualPayload = json_decode($manualApi['body'], true);
+                if (httpIntegrationStatusCode($manualApi) !== 200 || !is_array($manualPayload)
+                    || ($manualPayload['update_available'] ?? null) !== false
+                    || !array_key_exists('latest', $manualPayload) || $manualPayload['latest'] !== null
+                    || str_contains($manualApi['body'], 'file_storage_name')
+                    || httpIntegrationHeaderValue($manualApi, 'Set-Cookie') !== '') {
+                    $softwareIssues[] = 'API V' . $apiVersion . ' nabídlo obecné nebo ruční Android vydání';
+                }
+            }
+        }
+    }
+    httpIntegrationPrintResult('appmarket_generic_software_http', $softwareIssues, $failures);
+
     $appmarketSlug = 'http-appmarket-' . $appmarketToken;
     $appmarketPackageId = 'cz.koracms.http.app' . $appmarketToken;
     $appmarketName = 'HTTP Appmarket ' . $appmarketToken;
@@ -20117,8 +20675,9 @@ try {
         if (httpIntegrationStatusCode($appmarketDetailResponse) !== 200
             || !str_contains($appmarketDetailResponse['body'], 'O aplikaci')
             || !str_contains($appmarketDetailResponse['body'], 'Verze 1.0.0')
-            || !str_contains($appmarketDetailResponse['body'], 'Stáhnout stabilní')
-            || !str_contains($appmarketDetailResponse['body'], 'verzi 1.0.0')
+            || !str_contains($appmarketDetailResponse['body'], 'Stáhnout APK pro Android')
+            || !str_contains($appmarketDetailResponse['body'], 'verze 1.0.0')
+            || !str_contains($appmarketDetailResponse['body'], appmarketDownloadPath($appmarketSlug, 100))
             || !str_contains($appmarketDetailResponse['body'], 'aria-labelledby="appmarket-releases-heading"')) {
             $appmarketIssues[] = 'detail aplikace nezobrazil popis, vydání a přístupnou sekci';
         }
@@ -20660,32 +21219,24 @@ try {
                         $bundleArchive->addFromString('release-notes.md', $bundleReleaseNotes);
                         $bundleArchive->close();
 
-                        $bundleFormResponse = fetchUrl(
-                            $baseUrl . BASE_URL . '/admin/appmarket_release_form.php?app_id='
-                                . $appmarketAppId,
-                            $adminSession['cookie'],
-                            0
-                        );
-                        $bundleCsrf = extractHiddenInputValue(
-                            $bundleFormResponse['body'],
-                            'csrf_token'
-                        );
+                        // Signed Android bundles remain supported by the publisher API, not the generic catalog editor.
                         $bundleUploadResponse = postMultipartUrl(
-                            $baseUrl . BASE_URL . '/admin/appmarket_release_save.php',
+                            $baseUrl . BASE_URL . '/api/appmarket/v1/releases',
                             [
-                                'csrf_token' => $bundleCsrf,
-                                'app_id' => (string)$appmarketAppId,
+                                'metadata' => $bundleManifestJson,
+                                'attestation_signature' => base64_encode($bundleManifestSignature),
                                 'release_notes' => '',
                             ],
                             [
-                                'release_file' => [
+                                'apk' => [
                                     'path' => $bundlePath,
                                     'filename' => $appmarketSlug . '-1.2.0.kora-app-release.zip',
                                     'type' => 'application/zip',
                                 ],
                             ],
-                            $adminSession['cookie'],
-                            0
+                            '',
+                            0,
+                            ['Authorization: Bearer ' . $publishToken['token']]
                         );
                         $bundleReleaseStmt = $pdo->prepare(
                             'SELECT id FROM cms_appmarket_releases WHERE app_id = ? AND version_code = 120 LIMIT 1'
@@ -20695,9 +21246,13 @@ try {
                         $bundleRelease = $bundleReleaseId > 0
                             ? appmarketFindRelease($pdo, $bundleReleaseId)
                             : null;
-                        if (httpIntegrationStatusCode($bundleUploadResponse) !== 302
+                        $bundleUploadPayload = json_decode($bundleUploadResponse['body'], true);
+                        if (httpIntegrationStatusCode($bundleUploadResponse) !== 201
+                            || ($bundleUploadPayload['status'] ?? '') !== 'draft'
+                            || (int)($bundleUploadPayload['release_id'] ?? 0) !== $bundleReleaseId
                             || $bundleRelease === null
                             || (string)$bundleRelease['metadata_source'] !== 'publisher_attestation'
+                            || (int)$bundleRelease['publisher_token_id'] !== $appmarketPublisherTokenId
                             || trim((string)$bundleRelease['release_notes'])
                                 !== trim($bundleReleaseNotes)
                         ) {
@@ -20811,7 +21366,7 @@ try {
                                     || (int)($legacyAfterBetaPayload['latest']['version_code'] ?? 0) !== 100
                                     || !str_contains(
                                         $publicAfterBetaResponse['body'],
-                                        'Stáhnout stabilní'
+                                        appmarketDownloadPath($appmarketSlug, 100)
                                     )
                                     || !str_contains(
                                         $publicAfterBetaResponse['body'],
@@ -20870,6 +21425,51 @@ try {
                     $appmarketIssues[] = 'publisher attestation přijala jiné APK než podepsaný manifest';
                 }
             }
+        }
+
+        $manualMixedQueries = [
+            'v1' => '/api/appmarket/v1/update?version_code=1',
+            'v2' => '/api/appmarket/v2/update?version_code=1&sdk_int=34',
+            'v3 stable' => '/api/appmarket/v3/update?version_code=1&sdk_int=34&channel=stable&abi=arm64-v8a&rollout_bucket=0',
+            'v3 beta' => '/api/appmarket/v3/update?version_code=1&sdk_int=34&channel=beta&abi=arm64-v8a&rollout_bucket=0',
+        ];
+        $manualMixedBefore = [];
+        foreach ($manualMixedQueries as $api => $query) {
+            $response = fetchUrl($baseUrl . BASE_URL . $query . '&package_id=' . rawurlencode($appmarketPackageId), '', 0);
+            $manualMixedBefore[$api] = json_decode($response['body'], true);
+            if (httpIntegrationStatusCode($response) !== 200 || empty($manualMixedBefore[$api]['update_available'])) {
+                $appmarketIssues[] = 'výchozí Android vydání není dostupné pro test vyloučení manual: ' . $api;
+            }
+        }
+        $manualMixedResponse = $softwarePost([
+            'app_id' => (string)$appmarketAppId, 'version_name' => 'manual-newest', 'platform' => 'android',
+            'system_requirements' => 'Android', 'release_notes' => 'Ruční vydání nepatří do Android update API.',
+            'status' => 'published', 'release_channel' => 'stable',
+        ], ['name' => 'manual-newest.apk', 'bytes' => "PK\x03\x04HTTP-MIXED-MANUAL-" . $appmarketToken]);
+        $manualMixedRelease = $softwareFindRelease($appmarketAppId, 'manual-newest', 'android');
+        if (httpIntegrationStatusCode($manualMixedResponse) !== 302 || $manualMixedRelease === null
+            || $manualMixedRelease['metadata_source'] !== 'manual' || $manualMixedRelease['status'] !== 'published') {
+            $appmarketIssues[] = 'test nevytvořil obecné Android vydání vedle původních APK';
+        } else {
+            // Populate legacy evidence deliberately: only metadata_source may exclude this newer release.
+            $pdo->prepare("UPDATE cms_appmarket_releases SET apk_storage_name = ?, apk_original_name = ?,
+                apk_size = ?, apk_sha256 = ?, certificate_id = ?, certificate_fingerprint_sha256 = ?,
+                min_sdk = 1, supported_abis_json = '[]' WHERE id = ? AND app_id = ?")
+                ->execute([(string)$appmarketRelease['apk_storage_name'], 'legacy-evidence.apk', strlen($fakeApkBytes),
+                    $fakeApkHash, $appmarketCertificateId, $certificateHash, (int)$manualMixedRelease['id'], $appmarketAppId]);
+            foreach ($manualMixedQueries as $api => $query) {
+                $response = fetchUrl($baseUrl . BASE_URL . $query . '&package_id=' . rawurlencode($appmarketPackageId), '', 0);
+                $payload = json_decode($response['body'], true);
+                if (httpIntegrationStatusCode($response) !== 200 || !is_array($payload)
+                    || ($payload['latest'] ?? null) !== ($manualMixedBefore[$api]['latest'] ?? null)
+                    || str_contains($response['body'], 'manual-newest')
+                    || str_contains($response['body'], (string)$manualMixedRelease['file_storage_name'])) {
+                    $appmarketIssues[] = 'Android API vybralo manual místo staršího ověřeného APK: ' . $api;
+                }
+            }
+            $appmarketIssues = array_merge($appmarketIssues, httpIntegrationDeleteAppmarketReleaseFixture(
+                $pdo, $baseUrl, $adminSession, $appmarketAppId, (int)$manualMixedRelease['id']
+            ));
         }
 
         // The confirmed export above rotates the session CSRF token.
@@ -21516,32 +22116,70 @@ try {
         httpIntegrationRestoreSettings($originalSettings);
     }
 
+    $appmarketCleanupIssues = [];
+    if ($createdAppmarketAppIds !== [] && isset($adminSession)) {
+        $appmarketCleanupModule = getSetting('module_appmarket', '0');
+        try {
+            saveSetting('module_appmarket', '1');
+            clearSettingsCache();
+            foreach (array_unique($createdAppmarketAppIds) as $appmarketCleanupAppId) {
+                $cleanupReleases = $pdo->prepare('SELECT id, apk_storage_name, file_storage_name FROM cms_appmarket_releases WHERE app_id = ? ORDER BY id');
+                $cleanupReleases->execute([$appmarketCleanupAppId]);
+                foreach ($cleanupReleases->fetchAll(PDO::FETCH_ASSOC) as $cleanupRelease) {
+                    $createdAppmarketStoredFiles[] = (string)($cleanupRelease['apk_storage_name'] ?? '');
+                    $createdAppmarketSoftwareFiles[] = (string)($cleanupRelease['file_storage_name'] ?? '');
+                    $appmarketCleanupIssues = array_merge($appmarketCleanupIssues, httpIntegrationDeleteAppmarketReleaseFixture(
+                        $pdo, $baseUrl, $adminSession, (int)$appmarketCleanupAppId, (int)$cleanupRelease['id']
+                    ));
+                }
+            }
+        } catch (Throwable $e) {
+            $appmarketCleanupIssues[] = 'autorizovaný HTTP úklid testovacích vydání selhal: ' . $e->getMessage();
+        } finally {
+            saveSetting('module_appmarket', $appmarketCleanupModule);
+            clearSettingsCache();
+        }
+    }
+    httpIntegrationPrintResult('appmarket_fixture_cleanup_http', $appmarketCleanupIssues, $failures);
+
     foreach ($createdAppmarketTokenIds as $appmarketTokenIdToDelete) {
         $pdo->prepare('DELETE FROM cms_appmarket_publish_tokens WHERE id = ?')->execute([$appmarketTokenIdToDelete]);
     }
-    foreach ($createdAppmarketReleaseIds as $appmarketReleaseIdToDelete) {
+    foreach (array_unique($createdAppmarketReleaseIds) as $appmarketReleaseIdToDelete) {
         $releaseStorageStmt = $pdo->prepare(
-            'SELECT apk_storage_name FROM cms_appmarket_releases WHERE id = ? LIMIT 1'
+            'SELECT apk_storage_name, file_storage_name FROM cms_appmarket_releases WHERE id = ? LIMIT 1'
         );
         $releaseStorageStmt->execute([$appmarketReleaseIdToDelete]);
-        $releaseStorageName = (string)($releaseStorageStmt->fetchColumn() ?: '');
-        $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE id = ?')->execute([$appmarketReleaseIdToDelete]);
-        if ($releaseStorageName !== '') {
-            appmarketDeletePrivateApkIfUnused($pdo, $releaseStorageName);
+        $releaseStorage = $releaseStorageStmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($releaseStorage)) {
+            $createdAppmarketStoredFiles[] = (string)($releaseStorage['apk_storage_name'] ?? '');
+            $createdAppmarketSoftwareFiles[] = (string)($releaseStorage['file_storage_name'] ?? '');
         }
-    }
-    foreach ($createdAppmarketStoredFiles as $appmarketStoredFileToDelete) {
-        appmarketDeletePrivateApkIfUnused($pdo, (string)$appmarketStoredFileToDelete);
+        $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE id = ?')->execute([$appmarketReleaseIdToDelete]);
     }
     foreach ($createdAppmarketCertificateIds as $appmarketCertificateIdToDelete) {
         $pdo->prepare('DELETE FROM cms_appmarket_certificates WHERE id = ?')->execute([$appmarketCertificateIdToDelete]);
     }
     foreach ($createdAppmarketAppIds as $appmarketAppIdToDelete) {
+        // Also collect rows created by an HTTP request whose response failed before its ID was recorded.
+        $remainingArtifacts = $pdo->prepare('SELECT apk_storage_name, file_storage_name FROM cms_appmarket_releases WHERE app_id = ?');
+        $remainingArtifacts->execute([$appmarketAppIdToDelete]);
+        foreach ($remainingArtifacts->fetchAll(PDO::FETCH_ASSOC) as $artifact) {
+            $createdAppmarketStoredFiles[] = (string)($artifact['apk_storage_name'] ?? '');
+            $createdAppmarketSoftwareFiles[] = (string)($artifact['file_storage_name'] ?? '');
+        }
         $pdo->prepare('DELETE FROM cms_appmarket_screenshots WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
         $pdo->prepare('DELETE FROM cms_appmarket_publish_tokens WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
         $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
         $pdo->prepare('DELETE FROM cms_appmarket_certificates WHERE app_id = ?')->execute([$appmarketAppIdToDelete]);
         $pdo->prepare('DELETE FROM cms_appmarket_apps WHERE id = ?')->execute([$appmarketAppIdToDelete]);
+    }
+    // Remove references first, then let the helpers protect blobs still used outside these fixtures.
+    foreach (array_unique($createdAppmarketStoredFiles) as $appmarketStoredFileToDelete) {
+        appmarketDeletePrivateApkIfUnused($pdo, (string)$appmarketStoredFileToDelete);
+    }
+    foreach (array_unique($createdAppmarketSoftwareFiles) as $appmarketSoftwareFileToDelete) {
+        appmarketDeleteSoftwareIfUnused($pdo, (string)$appmarketSoftwareFileToDelete);
     }
 
     foreach ($createdWidgetIds as $widgetIdToDelete) {

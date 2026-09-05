@@ -31,14 +31,7 @@ $releases = array_map(
     static fn (array $release): array => appmarketHydrateReleasePresentation($release),
     $releaseStmt->fetchAll()
 );
-$latestRelease = null;
-foreach ($releases as $candidateRelease) {
-    if ((string)$candidateRelease['release_channel'] === 'stable') {
-        $latestRelease = $candidateRelease;
-        break;
-    }
-}
-$latestRelease ??= $releases[0] ?? null;
+$preferredReleases = appmarketPreferredPublicReleasesByPlatform($pdo, (int)$app['id']);
 
 $screenshotStmt = $pdo->prepare(
     "SELECT s.*, m.filename, m.original_name, m.mime_type, m.visibility,
@@ -85,7 +78,7 @@ renderPublicPage([
     'view' => 'modules/appmarket-app',
     'view_data' => [
         'app' => $app,
-        'latestRelease' => $latestRelease,
+        'preferredReleases' => $preferredReleases,
         'releases' => $releases,
         'screenshots' => $screenshots,
     ],

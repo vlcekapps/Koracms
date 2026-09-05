@@ -32,6 +32,19 @@ $form = [
 if ($form['slug'] === '' && $form['name'] !== '') {
     $form['slug'] = appmarketAppSlug($form['name']);
 }
+$submittedForm = $form;
+foreach ([
+    'name', 'slug', 'package_id', 'short_description', 'description',
+    'website_url', 'support_url', 'privacy_url', 'license_label',
+] as $fieldName) {
+    $submittedForm[$fieldName] = (string)($_POST[$fieldName] ?? '');
+}
+$packageId = $form['package_id'];
+$form['package_id'] = $packageId !== '' ? $packageId : null;
+$formTarget = internalRedirectTarget(
+    BASE_URL . '/admin/appmarket_form.php' . ($id !== null ? '?id=' . $id : ''),
+    BASE_URL . '/admin/appmarket_form.php'
+);
 
 $errors = [];
 $addError = static function (string $field, string $message) use (&$errors): void {
@@ -43,8 +56,8 @@ if ($form['name'] === '') {
 if ($form['slug'] === '') {
     $addError('slug', 'Doplňte použitelný slug z malých písmen, číslic a pomlček.');
 }
-if ($form['package_id'] === '') {
-    $addError('package_id', 'Zadejte platné Android applicationId, například cz.example.aplikace.');
+if (trim($submittedForm['package_id']) !== '' && $packageId === '') {
+    $addError('package_id', 'Zadejte platné Android applicationId, například cz.example.aplikace, nebo ponechte pole prázdné.');
 }
 if ($form['short_description'] === '') {
     $addError('short_description', 'Doplňte krátký popis aplikace.');
@@ -68,26 +81,30 @@ if ($form['slug'] !== '' && $slugStmt->fetch()) {
     $addError('slug', 'Tento slug už používá jiná aplikace.');
 }
 
-$packageStmt = $pdo->prepare(
-    'SELECT id FROM cms_appmarket_apps WHERE package_id = ?' . ($id !== null ? ' AND id <> ?' : '') . ' LIMIT 1'
-);
-$packageParams = [$form['package_id']];
-if ($id !== null) {
-    $packageParams[] = $id;
-}
-$packageStmt->execute($packageParams);
-if ($form['package_id'] !== '' && $packageStmt->fetch()) {
-    $addError('package_id', 'Toto applicationId už používá jiná aplikace.');
+if ($packageId !== '') {
+    $packageStmt = $pdo->prepare(
+        'SELECT id FROM cms_appmarket_apps WHERE package_id = ?' . ($id !== null ? ' AND id <> ?' : '') . ' LIMIT 1'
+    );
+    $packageParams = [$packageId];
+    if ($id !== null) {
+        $packageParams[] = $id;
+    }
+    $packageStmt->execute($packageParams);
+    if ($packageStmt->fetch()) {
+        $addError('package_id', 'Toto applicationId už používá jiná aplikace.');
+    }
 }
 if ($existing !== null
-    && $form['package_id'] !== (string)$existing['package_id']
+    && $packageId !== (string)$existing['package_id']
 ) {
-    $releaseCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_appmarket_releases WHERE app_id = ?');
+    $releaseCountStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM cms_appmarket_releases WHERE app_id = ? AND COALESCE(metadata_source, '') <> 'manual'"
+    );
     $releaseCountStmt->execute([(int)$existing['id']]);
     if ((int)$releaseCountStmt->fetchColumn() > 0) {
         $addError(
             'package_id',
-            'ApplicationId nelze po nahrání prvního vydání změnit. Založte samostatnou aplikaci.'
+            'ApplicationId nelze změnit ani odstranit, protože aplikace má původní Android vydání. Založte samostatnou aplikaci.'
         );
     }
 }
@@ -98,7 +115,6 @@ if ($form['icon_media_id'] !== null) {
     );
     $mediaStmt->execute([$form['icon_media_id']]);
     if (!$mediaStmt->fetch()) {
-        $form['icon_media_id'] = null;
         $addError('icon_media_id', 'Vybraná ikona není veřejný obrázek z knihovny médií.');
     }
 }
@@ -143,6 +159,7 @@ if ($screenshotIds !== []) {
 
 if ($id !== null && isSuperAdmin()) {
     $requestedStatus = appmarketNormalizeAppStatus((string)($_POST['status'] ?? $form['status']));
+    $submittedForm['status'] = $requestedStatus;
     if ($requestedStatus === 'published') {
         $publishedStmt = $pdo->prepare(
             "SELECT COUNT(*) FROM cms_appmarket_releases WHERE app_id = ? AND status = 'published'"
@@ -160,7 +177,8 @@ if ($id !== null && isSuperAdmin()) {
 
 if ($errors !== []) {
     $_SESSION['appmarket_form_flash'] = [
-        'form' => $form,
+        'app_id' => $id,
+        'form' => $submittedForm,
         'errors' => $errors,
         'field_errors' => array_values(array_unique(array_map(
             static fn (array $error): string => (string)$error['field'],
@@ -168,12 +186,34 @@ if ($errors !== []) {
         ))),
         'screenshots' => $screenshotIds,
     ];
-    header('Location: appmarket_form.php' . ($id !== null ? '?id=' . $id : ''));
+    header('Location: ' . $formTarget);
     exit;
 }
 
 try {
     $pdo->beginTransaction();
+    $savedAppId = $id;
+    if ($id !== null) {
+        $lockStmt = $pdo->prepare('SELECT package_id, status FROM cms_appmarket_apps WHERE id = ? FOR UPDATE');
+        $lockStmt->execute([$id]);
+        $lockedApp = $lockStmt->fetch();
+        if (!$lockedApp) {
+            throw new RuntimeException('Aplikace již neexistuje.');
+        }
+        if ($packageId !== (string)$lockedApp['package_id']) {
+            $legacyStmt = $pdo->prepare(
+                "SELECT id FROM cms_appmarket_releases
+                 WHERE app_id = ? AND COALESCE(metadata_source, '') <> 'manual' LIMIT 1 FOR UPDATE"
+            );
+            $legacyStmt->execute([$id]);
+            if ($legacyStmt->fetch()) {
+                throw new DomainException('ApplicationId nelze změnit ani odstranit, protože aplikace má původní Android vydání.');
+            }
+        }
+        if (!isSuperAdmin()) {
+            $form['status'] = (string)$lockedApp['status'];
+        }
+    }
     if ($id === null) {
         $pdo->prepare(
             "INSERT INTO cms_appmarket_apps
@@ -196,7 +236,7 @@ try {
             $form['sort_order'],
             currentUserId(),
         ]);
-        $id = (int)$pdo->lastInsertId();
+        $savedAppId = (int)$pdo->lastInsertId();
     } else {
         $pdo->prepare(
             "UPDATE cms_appmarket_apps
@@ -224,7 +264,17 @@ try {
         ]);
     }
 
-    $pdo->prepare('DELETE FROM cms_appmarket_screenshots WHERE app_id = ?')->execute([$id]);
+    // Retained screenshots keep their existing descriptions and captions.
+    $screenshotStmt = $pdo->prepare('SELECT media_id FROM cms_appmarket_screenshots WHERE app_id = ? FOR UPDATE');
+    $screenshotStmt->execute([$savedAppId]);
+    $existingScreenshotIds = array_map('intval', $screenshotStmt->fetchAll(PDO::FETCH_COLUMN));
+    $deleteScreenshotStmt = $pdo->prepare('DELETE FROM cms_appmarket_screenshots WHERE app_id = ? AND media_id = ?');
+    foreach (array_diff($existingScreenshotIds, $screenshotIds) as $screenshotId) {
+        $deleteScreenshotStmt->execute([$savedAppId, $screenshotId]);
+    }
+    $updateScreenshotStmt = $pdo->prepare(
+        'UPDATE cms_appmarket_screenshots SET sort_order = ? WHERE app_id = ? AND media_id = ?'
+    );
     $insertScreenshotStmt = $pdo->prepare(
         "INSERT INTO cms_appmarket_screenshots (app_id, media_id, alt_text, caption, sort_order)
          SELECT ?, id, alt_text, caption, ?
@@ -234,7 +284,14 @@ try {
            AND mime_type LIKE 'image/%'"
     );
     foreach ($screenshotIds as $sortOrder => $screenshotId) {
-        $insertScreenshotStmt->execute([$id, $sortOrder, $screenshotId]);
+        if (in_array($screenshotId, $existingScreenshotIds, true)) {
+            $updateScreenshotStmt->execute([$sortOrder, $savedAppId, $screenshotId]);
+        } else {
+            $insertScreenshotStmt->execute([$savedAppId, $sortOrder, $screenshotId]);
+            if ($insertScreenshotStmt->rowCount() !== 1) {
+                throw new RuntimeException('Vybraný snímek již není dostupný.');
+            }
+        }
     }
     $pdo->commit();
 } catch (Throwable $e) {
@@ -242,13 +299,18 @@ try {
         $pdo->rollBack();
     }
     koraLog('error', 'appmarket app save failed', ['app_id' => $id, 'exception' => $e]);
+    $errorField = $e instanceof DomainException ? 'package_id' : 'form';
     $_SESSION['appmarket_form_flash'] = [
-        'form' => $form,
-        'errors' => [['field' => 'form', 'message' => 'Aplikaci se nepodařilo uložit.']],
-        'field_errors' => [],
+        'app_id' => $id,
+        'form' => $submittedForm,
+        'errors' => [[
+            'field' => $errorField,
+            'message' => $e instanceof DomainException ? $e->getMessage() : 'Aplikaci se nepodařilo uložit. Zadané údaje zůstaly zachované; zkuste uložení znovu.',
+        ]],
+        'field_errors' => $errorField !== 'form' ? [$errorField] : [],
         'screenshots' => $screenshotIds,
     ];
-    header('Location: appmarket_form.php' . ($id !== null ? '?id=' . $id : ''));
+    header('Location: ' . $formTarget);
     exit;
 }
 

@@ -1,23 +1,20 @@
 <?php
 $releases = is_array($releases ?? null) ? $releases : [];
 $screenshots = is_array($screenshots ?? null) ? $screenshots : [];
-$latestRelease = is_array($latestRelease ?? null) ? $latestRelease : null;
+$preferredReleases = is_array($preferredReleases ?? null) ? $preferredReleases : [];
 ?>
 <div class="page-stack page-stack--detail">
   <article class="surface surface--hero" aria-labelledby="appmarket-app-title">
     <div class="article-shell article-shell--sidebar">
       <div class="article-shell__content">
-        <p class="section-kicker">Android aplikace</p>
+        <p class="section-kicker">Software ke stažení</p>
         <h1 id="appmarket-app-title" class="section-title section-title--hero"><?= h((string)$app['name']) ?></h1>
         <p class="section-subtitle"><?= h((string)$app['short_description']) ?></p>
-        <p class="meta-row"><span><code><?= h((string)$app['package_id']) ?></code></span><?php if ((string)$app['license_label'] !== ''): ?>, <span><?= h((string)$app['license_label']) ?></span><?php endif; ?></p>
-        <?php if ($latestRelease !== null): ?>
+        <?php if ((string)$app['license_label'] !== ''): ?><p class="meta-row"><span>Licence: <?= h((string)$app['license_label']) ?></span></p><?php endif; ?>
+        <?php if ($preferredReleases !== []): ?>
           <div class="button-row button-row--start">
-            <a class="btn" href="<?= h(appmarketDownloadPath($app, (int)$latestRelease['version_code'])) ?>">
-              Stáhnout <?= (string)$latestRelease['release_channel'] === 'stable' ? 'stabilní' : 'beta' ?>
-              verzi <?= h((string)$latestRelease['version_name']) ?>
-            </a>
-            <a class="btn btn-secondary" href="<?= h(appmarketReleasePath($app, (int)$latestRelease['version_code'])) ?>">Podrobnosti vydání</a>
+            <a class="btn" href="#appmarket-downloads-heading">Vybrat verzi ke stažení</a>
+            <a class="btn btn-secondary" href="#appmarket-releases-heading">Historie verzí</a>
           </div>
         <?php endif; ?>
       </div>
@@ -28,6 +25,38 @@ $latestRelease = is_array($latestRelease ?? null) ? $latestRelease : null;
       <?php endif; ?>
     </div>
   </article>
+
+  <?php if ($preferredReleases !== []): ?>
+    <section class="surface" aria-labelledby="appmarket-downloads-heading">
+      <div class="article-shell">
+        <h2 id="appmarket-downloads-heading" class="section-title">Stažení podle platformy</h2>
+        <p>Pro každou platformu nabízíme nejnovější stabilní vydání, případně beta vydání, pokud stabilní není dostupné. Před stažením zkontrolujte systémové požadavky.</p>
+        <div class="card-grid">
+          <?php foreach ($preferredReleases as $preferredRelease): ?>
+            <?php $platformHeadingId = 'appmarket-platform-' . (int)$preferredRelease['id']; ?>
+            <article class="card" aria-labelledby="<?= h($platformHeadingId) ?>">
+              <div class="card__body">
+                <h3 id="<?= h($platformHeadingId) ?>" class="card__title"><?= h((string)$preferredRelease['platform_label']) ?></h3>
+                <p class="meta-row meta-row--tight">
+                  <span>Verze <?= h((string)$preferredRelease['version_name']) ?></span>
+                  <span><?= h((string)$preferredRelease['release_channel_label']) ?> kanál</span>
+                  <span><?= h(strtoupper((string)$preferredRelease['file_extension'])) ?></span>
+                  <span><?= h(formatFileSize((int)$preferredRelease['file_size'])) ?></span>
+                  <span><?= h((string)$preferredRelease['download_count_label']) ?></span>
+                </p>
+                <h4>Systémové požadavky</h4>
+                <p class="break-long-token"><?= trim((string)$preferredRelease['system_requirements']) !== '' ? nl2br(h((string)$preferredRelease['system_requirements'])) : 'Požadavky nejsou uvedeny. Před instalací ověřte kompatibilitu u autora aplikace.' ?></p>
+                <div class="button-row button-row--start">
+                  <a class="btn" href="<?= h(appmarketDownloadPath($app, (int)$preferredRelease['version_code'])) ?>">Stáhnout <?= h(strtoupper((string)$preferredRelease['file_extension'])) ?> pro <?= h((string)$preferredRelease['platform_label']) ?><span class="sr-only">, verze <?= h((string)$preferredRelease['version_name']) ?></span></a>
+                  <a class="btn btn-secondary" href="<?= h(appmarketReleasePath($app, (int)$preferredRelease['version_code'])) ?>">Podrobnosti vydání<span class="sr-only"> <?= h((string)$preferredRelease['version_name']) ?> pro <?= h((string)$preferredRelease['platform_label']) ?></span></a>
+                </div>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </section>
+  <?php endif; ?>
 
   <section class="surface" aria-labelledby="appmarket-description-heading">
     <div class="article-shell">
@@ -72,16 +101,18 @@ $latestRelease = is_array($latestRelease ?? null) ? $latestRelease : null;
 
   <section class="surface" aria-labelledby="appmarket-releases-heading">
     <div class="article-shell">
-      <h2 id="appmarket-releases-heading" class="section-title">Vydání</h2>
+      <h2 id="appmarket-releases-heading" class="section-title">Historie verzí</h2>
+      <p>Všechna dostupná vydání seřazená od nejnovějšího. Platforma a distribuční kanál jsou uvedeny u každé verze.</p>
       <ul class="link-list">
         <?php foreach ($releases as $release): ?>
           <li class="link-list__item">
-            <a class="link-list__title" href="<?= h(appmarketReleasePath($app, (int)$release['version_code'])) ?>">Verze <?= h((string)$release['version_name']) ?></a>
+            <a class="link-list__title" href="<?= h(appmarketReleasePath($app, (int)$release['version_code'])) ?>">Verze <?= h((string)$release['version_name']) ?> pro <?= h((string)$release['platform_label']) ?></a>
             <p class="meta-row meta-row--tight">
               <span><?= h((string)$release['release_channel_label']) ?> kanál</span>
-              <span>versionCode <?= (int)$release['version_code'] ?></span>
+              <?php if (($release['metadata_source'] ?? 'apk') !== 'manual'): ?><span>versionCode <?= (int)$release['version_code'] ?></span><?php endif; ?>
               <?php if ((string)$release['published_at_label'] !== ''): ?><span><?= h((string)$release['published_at_label']) ?></span><?php endif; ?>
-              <span><?= h(formatFileSize((int)$release['apk_size'])) ?></span>
+              <span><?= h(strtoupper((string)$release['file_extension'])) ?></span>
+              <span><?= h(formatFileSize((int)$release['file_size'])) ?></span>
               <span><?= h((string)$release['download_count_label']) ?></span>
             </p>
           </li>

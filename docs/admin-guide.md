@@ -1078,21 +1078,30 @@ Upload souboru není povinný, pokud je vyplněný bezpečný externí odkaz ve 
 
 ---
 
-## Appmarket – vlastní katalog Android aplikací
+## Appmarket – katalog softwaru a správa verzí
 
-Appmarket slouží k bezpečné distribuci produkčních Android APK a k poskytování aktualizací vlastním aplikacím. Na rozdíl od obecného modulu **Ke stažení** pracuje se stabilním Android `applicationId`, číselným `versionCode`, podpisovým certifikátem a anonymním update API. Modul není omezený na předem známé projekty ani počet aplikací.
+Appmarket nabízí libovolný počet aplikací pro Windows, Linux, macOS, Android a další platformy. Základní ruční publikování nevyžaduje Android SDK, certifikát ani publisher klíč. Licence, podpisy a ověření bezpečnosti souborů jsou odpovědností správce; CMS balíčky neanalyzuje jako antivirus.
 
 ### Základní workflow
 
-1. V **Obecných nastaveních → Správa modulů** zapněte `Appmarket`.
-2. Na počítači, ze kterého budete publikovat, zpřístupněte Android SDK nástroje `apkanalyzer` a `apksigner` přes `PATH`, `ANDROID_SDK_ROOT` nebo `ANDROID_HOME`. Na hostingu tyto nástroje být nemusí; server potřebuje PHP rozšíření OpenSSL.
-3. V administraci Appmarketu vytvořte aplikaci. Slug můžete nechat prázdný, CMS jej vytvoří z názvu. `Application ID`, například `cz.example.mojeaplikace`, musí odpovídat produkčnímu Android balíčku. Po prvním vydání už jej nelze změnit. Screenshot lze vybrat jen z veřejného obrázku s doplněným alt textem v knihovně médií.
-4. Vygenerujte samostatný publisher klíč, vytvořte publikační token svázaný s jeho veřejnou částí a použijte lokální publisher. Publisher může koncept odeslat přímo přes API, nebo vytvořit podepsaný `.kora-app-release.zip` pro ruční upload. Samostatné nepodepsané APK lze nahrát jen na serveru, který Android SDK nástroje má.
-5. Nově zjištěný podpisový certifikát APK nejprve zkontrolujte a aktivujte. CMS ukládá jen jeho veřejný SHA-256 fingerprint; Android keystore, privátní publisher klíč ani jejich hesla do CMS nepatří.
-6. Otevřete samostatnou kontrolu konceptu a porovnejte package ID, `versionName`, `versionCode`, SDK, podporované ABI, SHA-256 APK, nová a odebraná oprávnění proti předchozímu vydání, bezpečně vykreslené poznámky k vydání a podpisový certifikát.
-7. Zvolte stabilní nebo beta kanál, počáteční rollout 0–100 %, naléhavost aktualizace a případně hranici `versionCode`; instalace s nižší verzí pak dostanou příznak povinné aktualizace. Vydání publikujte vědomou potvrzenou akcí. CMS znovu ověří uložený soubor a buď serverovou Android analýzu, nebo kryptografický podpis lokálního publisheru. Teprve potom se vydání objeví ve veřejném katalogu a update API. Procento rolloutu lze později potvrzenou akcí změnit; nula pozastaví update API, ale neruší veřejné ruční stažení.
+1. V **Obecných nastaveních → Správa modulů** zapněte `Appmarket`. Po aktualizaci kódu nejdříve zálohujte databázi a spusťte `migrate.php`.
+2. Založte aplikaci s názvem a krátkým popisem. Slug se může vygenerovat automaticky. Ikonu a snímky vyberte z veřejných médií; snímky potřebují výstižný alt text.
+3. V přehledu použijte **Aktualizovat verzi**. Zadejte číslo verze, platformu, případné požadavky na systém a changelog, vyberte soubor a stabilní/beta kanál.
+4. Uložte koncept, nebo jako superadmin zvolte **Zveřejnit**. Zveřejněné vydání současně zpřístupní aplikaci v katalogu.
+5. Další **Aktualizovat verzi** vytvoří nové vydání podle posledního. Číslo změňte a přiložte nový soubor; předchozí verze i jejich odkazy zůstanou v historii.
+6. **Upravit verzi** v historii opravuje konkrétní ruční vydání: lze změnit číslo, changelog, systémové požadavky i soubor. Bez uploadu zůstane dosavadní soubor. Zveřejněná vydání upravuje jen superadmin. Současnou editaci jiným správcem CMS rozpozná a odmítne přepsat jeho změny.
 
-APK se ukládají do privátního `KORA_STORAGE_DIR`, nikoli do veřejného webrootu. Veřejné stažení vede přes serverový endpoint, který podporuje `GET`, `HEAD` a jeden HTTP Range, při každém požadavku ověřuje velikost i SHA-256 uloženého souboru, nevytváří session cookie a nepoužívá neměnnou roční cache. Fyzickou cestu neposílá do odpovědi ani logu. Zneplatnění podpisového certifikátu automaticky stáhne všechna jeho zveřejněná vydání a aplikaci skryje, pokud už nemá jiné veřejné vydání.
+Stejná verze je povolená pro různé platformy, ne dvakrát v téže platformě jedné aplikace. Číslo může mít tvar `1.2.0` nebo `2026.09-beta`; CMS neodhaduje jeho význam ani nevyžaduje Android versionCode. Veřejné adresy vydání používají stabilní interní pořadí, takže oprava čitelného čísla nerozbije odkaz. Při validaci zůstanou texty ve formuláři; výběr souboru je kvůli pravidlům prohlížeče potřeba opakovat.
+
+Povolené jsou ZIP/7z, EXE/MSI/MSIX/MSIXBUNDLE, RPM/DEB, DMG/PKG, TAR včetně gzip, xz, bzip2, zstd, lzip a lzma variant, TGZ/TXZ/TBZ/TBZ2/TZST, AppImage, Flatpak/Flatpakref, Snap, APK/AAB a RUN/SH. Přesný seznam uvádí upload pole. Soubory se **nikdy nespouštějí ani nerozbalují na hostingu**. Ukládají se do soukromého `KORA_STORAGE_DIR` mimo webroot a stahují jako příloha po kontrole velikosti a SHA-256. Upload omezuje nastavení CMS a nezávisle také PHP či hosting. Součástí zálohy musí být i toto soukromé úložiště.
+
+Historická vydání ponechávají své soubory. Při náhradě jsou soubory neměnné a obsahově adresované; původní soubor se uklidí až po úspěšném zápisu a jen pokud jej nepoužívá žádné jiné vydání. Ukládání i úklid sdílejí soukromý zámek, aby souběžný upload nepřišel o data. Záznam konceptu lze smazat potvrzenou akcí; veřejné vydání lze stáhnout z nabídky.
+
+### Kompatibilita původních Android aktualizací
+
+Volitelné `Android applicationId` je skryté mezi pokročilými nastaveními aplikace. Pro běžný katalog jej nevyplňujte. U existující aplikace s původními Android vydáními jej nelze změnit. Původní APK data a URL zůstávají zachované. Staré update API V1/V2/V3 nikdy nenabídne ruční katalogové vydání; automatické aktualizace původních Android klientů vyžadují původní podepsaný publisher postup níže.
+
+Pouze v této kompatibilní cestě superadmin spravuje podpisové certifikáty a tokeny, ověřuje koncept a publikuje jej přes samostatnou kontrolní obrazovku. Zneplatnění certifikátu stáhne příslušná původní vydání. Ruční katalog nemá tuto závislost.
 
 ### Lokální publisher
 
@@ -1133,7 +1142,7 @@ $env:KORA_APPMARKET_SIGNING_KEY = 'C:\bezpecne-klice\publisher-private.pem'
 Remove-Item Env:KORA_APPMARKET_SIGNING_KEY
 ```
 
-Balíček obsahuje právě APK, `release.json`, `release.sig` a `release-notes.md`. Nahrajte jej v administraci přes **Nové vydání**; seznam změn lze ve formuláři nechat prázdný, protože CMS jej převezme z podepsaného balíčku. Hosting potřebuje PHP OpenSSL a pro tuto ruční variantu také rozšíření ZIP, nikoli Android SDK.
+Balíček obsahuje právě APK, `release.json`, `release.sig` a `release-notes.md`. Přenosný balíček je pozůstatek původního publisher workflow. Nový ruční editor ho neanalyzuje: ZIP uloží jako obyčejný soubor ke stažení. Pro stávající automatické Android aktualizace používejte přímé publikační API s podpisem, nikoli upload tohoto ZIPu v obecném katalogu.
 
 ### Update API
 
@@ -1163,7 +1172,7 @@ GET /api/appmarket/v3/update?package_id=cz.example.mojeaplikace&version_code=12&
 
 ### Přenos dat a přístupnost
 
-JSON export/import přenáší konfiguraci aplikací, metadata vydání, ABI, distribuční kanál, rollout, politiku aktualizací a veřejné fingerprinty certifikátů. Nepřenáší APK, publikační tokeny, veřejné publisher klíče ani jejich vazby; importované aplikace a vydání zůstávají bezpečně neaktivní nebo jako koncepty bez APK, dokud je správce nezkontroluje.
+JSON export/import přenáší konfiguraci aplikací, platformu, systémové požadavky, changelogy a metadata souboru, u původních Android vydání i ABI, distribuční kanál, rollout, politiku aktualizací a veřejné fingerprinty certifikátů. Nepřenáší soubory, publikační tokeny, veřejné publisher klíče ani jejich vazby. Importované aplikace a vydání zůstávají koncepty bez souboru; u ručních vydání jej doplníte přes Upravit verzi. Starší exporty bez obecných polí zůstávají kompatibilní s původními Android metadaty.
 
 Veřejný katalog i administrace používají skutečné nadpisy, pojmenované oblasti, tabulkové popisky, field-level chyby a serverově ověřená potvrzení rizikových akcí. Seznam změn podporuje bezpečný Markdown, ale vložené HTML se nevykonává. CMS zajišťuje strukturu a technické popisky, správce obsahu odpovídá za srozumitelný název aplikace, popis, poznámky k vydání a případné odkazy. Podrobný modulový report je v [docs/accessibility/modules/appmarket.md](accessibility/modules/appmarket.md).
 

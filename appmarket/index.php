@@ -26,43 +26,33 @@ $stmt = $pdo->prepare(
             m.original_name AS icon_original_name,
             m.mime_type AS icon_mime_type,
             m.visibility AS icon_visibility,
-            m.alt_text AS icon_alt_text,
-            r.version_name, r.version_code, r.apk_size, r.download_count,
-            r.release_channel, r.published_at AS release_published_at
+            m.alt_text AS icon_alt_text
      FROM cms_appmarket_apps a
-     INNER JOIN cms_appmarket_releases r
-       ON r.id = (
-         SELECT latest.id
-         FROM cms_appmarket_releases latest
-         WHERE latest.app_id = a.id
-           AND " . appmarketReleasePublicVisibilitySql('latest') . "
-         ORDER BY CASE WHEN latest.release_channel = 'stable' THEN 0 ELSE 1 END,
-                  latest.version_code DESC, latest.id DESC
-         LIMIT 1
-       )
      LEFT JOIN cms_media m ON m.id = a.icon_media_id
      WHERE " . implode(' AND ', $where) . "
+       AND EXISTS (
+         SELECT 1
+         FROM cms_appmarket_releases r
+         WHERE r.app_id = a.id
+           AND " . appmarketReleasePublicVisibilitySql('r') . "
+       )
      ORDER BY a.is_featured DESC, a.sort_order, a.name, a.id"
 );
 $stmt->execute($params);
 $apps = array_map(
-    static function (array $app): array {
+    static function (array $app) use ($pdo): array {
         $app = appmarketHydrateAppPresentation($app);
-        $app['download_count_label'] = appmarketDownloadCountLabel((int)($app['download_count'] ?? 0));
-        $app['release_channel'] = appmarketNormalizeReleaseChannel(
-            (string)($app['release_channel'] ?? 'stable')
-        );
-        $app['release_channel_label'] = appmarketReleaseChannelDefinitions()[$app['release_channel']];
+        $app['preferred_releases'] = appmarketPreferredPublicReleasesByPlatform($pdo, (int)$app['id']);
         return $app;
     },
     $stmt->fetchAll()
 );
 
 renderPublicPage([
-    'title' => 'Aplikace - ' . $siteName,
+    'title' => 'Katalog softwaru - ' . $siteName,
     'meta' => [
-        'title' => 'Aplikace - ' . $siteName,
-        'description' => 'Bezpečné produkční verze Android aplikací, seznam změn a kontrolní součty.',
+        'title' => 'Katalog softwaru - ' . $siteName,
+        'description' => 'Software ke stažení podle platformy, systémové požadavky, historie verzí a kontrolní součty souborů.',
         'url' => siteUrl('/aplikace'),
     ],
     'view' => 'modules/appmarket-index',

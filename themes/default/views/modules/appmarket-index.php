@@ -6,8 +6,9 @@ $query = (string)($query ?? '');
   <section class="surface" aria-labelledby="appmarket-title">
     <div class="section-heading">
       <div>
-        <p class="section-kicker">Android aplikace</p>
-        <h1 id="appmarket-title" class="section-title section-title--hero">Aplikace</h1>
+        <p class="section-kicker">Software ke stažení</p>
+        <h1 id="appmarket-title" class="section-title section-title--hero">Katalog softwaru</h1>
+        <p class="section-subtitle">Vyberte aplikaci a vydání pro svou platformu. U každého vydání najdete požadavky, seznam změn a kontrolní součet souboru.</p>
       </div>
     </div>
 
@@ -16,7 +17,7 @@ $query = (string)($query ?? '');
       <fieldset class="filter-bar__fieldset">
         <legend id="appmarket-search-legend" class="filter-bar__legend">Hledat v aplikacích</legend>
         <div class="form-group">
-          <label for="appmarket-query">Název, účel nebo applicationId</label>
+          <label for="appmarket-query">Název, účel nebo identifikátor aplikace</label>
           <input class="form-control" type="search" id="appmarket-query" name="q" value="<?= h($query) ?>">
         </div>
         <div class="button-row button-row--start">
@@ -44,15 +45,27 @@ $query = (string)($query ?? '');
               <?php if ((int)$app['is_featured'] === 1): ?><p class="card__eyebrow">Doporučená aplikace</p><?php endif; ?>
               <h2 id="<?= h($headingId) ?>" class="card__title"><a href="<?= h(appmarketAppPath($app)) ?>"><?= h((string)$app['name']) ?></a></h2>
               <p class="card__description"><?= h((string)$app['short_description']) ?></p>
-              <p class="meta-row meta-row--tight">
-                <span><?= h((string)$app['release_channel_label']) ?> kanál</span>
-                <span>Verze <?= h((string)$app['version_name']) ?></span>
-                <span><?= h(formatFileSize((int)$app['apk_size'])) ?></span>
-                <span><?= h((string)$app['download_count_label']) ?></span>
-              </p>
+              <h3>Vydání podle platformy</h3>
+              <ul class="link-list">
+                <?php foreach ($app['preferred_releases'] as $preferredRelease): ?>
+                  <li class="link-list__item">
+                    <p class="meta-row meta-row--tight">
+                      <span><?= h((string)$preferredRelease['platform_label']) ?></span>
+                      <span>Verze <?= h((string)$preferredRelease['version_name']) ?></span>
+                      <span><?= h((string)$preferredRelease['release_channel_label']) ?> kanál</span>
+                      <span><?= h(strtoupper((string)$preferredRelease['file_extension'])) ?></span>
+                      <span><?= h(formatFileSize((int)$preferredRelease['file_size'])) ?></span>
+                      <span><?= h((string)$preferredRelease['download_count_label']) ?></span>
+                    </p>
+                    <div class="card__actions">
+                      <a class="section-link" href="<?= h(appmarketDownloadPath($app, (int)$preferredRelease['version_code'])) ?>">Stáhnout <?= h(strtoupper((string)$preferredRelease['file_extension'])) ?> pro <?= h((string)$preferredRelease['platform_label']) ?><span class="sr-only">: <?= h((string)$app['name']) ?> <?= h((string)$preferredRelease['version_name']) ?></span></a>
+                      <a class="section-link" href="<?= h(appmarketReleasePath($app, (int)$preferredRelease['version_code'])) ?>">Požadavky a podrobnosti<span class="sr-only">: <?= h((string)$app['name']) ?> <?= h((string)$preferredRelease['version_name']) ?> pro <?= h((string)$preferredRelease['platform_label']) ?></span></a>
+                    </div>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
               <div class="card__actions">
-                <a class="section-link" href="<?= h(appmarketAppPath($app)) ?>">Detail aplikace <span aria-hidden="true">→</span></a>
-                <a class="section-link" href="<?= h(appmarketDownloadPath($app, (int)$app['version_code'])) ?>">Stáhnout APK <span aria-hidden="true">→</span></a>
+                <a class="section-link" href="<?= h(appmarketAppPath($app)) ?>">Detail aplikace a historie verzí<span class="sr-only">: <?= h((string)$app['name']) ?></span> <span aria-hidden="true">→</span></a>
               </div>
             </div>
           </article>

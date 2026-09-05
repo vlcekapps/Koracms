@@ -335,10 +335,12 @@ CREATE TABLE IF NOT EXISTS cms_downloads (
 CREATE TABLE IF NOT EXISTS cms_appmarket_apps (
   id INT,
   slug VARCHAR(150),
-  package_id VARCHAR(255),
+  package_id VARCHAR(255) NULL DEFAULT NULL,
   short_description VARCHAR(500),
   icon_media_id INT,
-  status VARCHAR(20)
+  status VARCHAR(20),
+  UNIQUE KEY uq_appmarket_apps_slug (slug),
+  UNIQUE KEY uq_appmarket_apps_package (package_id)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS cms_appmarket_certificates (
   id INT,
@@ -351,8 +353,16 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
   app_id INT,
   version_name VARCHAR(100),
   version_code BIGINT,
+  platform VARCHAR(32) NOT NULL DEFAULT 'android',
+  system_requirements TEXT NULL,
+  file_storage_name VARCHAR(255) NOT NULL DEFAULT '',
+  file_original_name VARCHAR(255) NOT NULL DEFAULT '',
+  file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  file_sha256 CHAR(64) NOT NULL DEFAULT '',
+  file_extension VARCHAR(32) NOT NULL DEFAULT '',
   package_id_snapshot VARCHAR(255),
   apk_storage_name VARCHAR(255),
+  apk_original_name VARCHAR(255),
   apk_size BIGINT,
   apk_sha256 CHAR(64),
   certificate_id INT,
@@ -360,7 +370,7 @@ CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
   permissions_json LONGTEXT,
   supported_abis_json LONGTEXT,
   analysis_json LONGTEXT,
-  metadata_source VARCHAR(20),
+  metadata_source ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk',
   publisher_token_id INT,
   update_priority VARCHAR(20),
   required_below_version_code BIGINT,
@@ -702,6 +712,46 @@ PHP,
 // uq_appmarket_certificate_fingerprint
 // idx_appmarket_certificates_active
 // cms_appmarket_releases
+// cms_appmarket_releases.platform
+// cms_appmarket_releases.system_requirements
+// cms_appmarket_releases.file_storage_name
+// cms_appmarket_releases.file_original_name
+// cms_appmarket_releases.file_size
+// cms_appmarket_releases.file_sha256
+// cms_appmarket_releases.file_extension
+CREATE TABLE IF NOT EXISTS cms_appmarket_apps (
+  id INT,
+  slug VARCHAR(150),
+  package_id VARCHAR(255) NULL DEFAULT NULL,
+  UNIQUE KEY uq_appmarket_apps_slug (slug),
+  UNIQUE KEY uq_appmarket_apps_package (package_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS cms_appmarket_releases (
+  id INT,
+  platform VARCHAR(32) NOT NULL DEFAULT 'android',
+  system_requirements TEXT NULL,
+  file_storage_name VARCHAR(255) NOT NULL DEFAULT '',
+  file_original_name VARCHAR(255) NOT NULL DEFAULT '',
+  file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  file_sha256 CHAR(64) NOT NULL DEFAULT '',
+  file_extension VARCHAR(32) NOT NULL DEFAULT '',
+  package_id_snapshot VARCHAR(255),
+  apk_storage_name VARCHAR(255),
+  apk_original_name VARCHAR(255),
+  apk_size BIGINT,
+  apk_sha256 CHAR(64),
+  metadata_source ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk',
+  status VARCHAR(20)
+) ENGINE=InnoDB;
+ALTER TABLE cms_appmarket_apps MODIFY COLUMN package_id VARCHAR(255) NULL DEFAULT NULL;
+ALTER TABLE cms_appmarket_releases ADD COLUMN platform VARCHAR(32) NOT NULL DEFAULT 'android';
+ALTER TABLE cms_appmarket_releases ADD COLUMN system_requirements TEXT NULL;
+ALTER TABLE cms_appmarket_releases ADD COLUMN file_storage_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE cms_appmarket_releases ADD COLUMN file_original_name VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE cms_appmarket_releases ADD COLUMN file_size BIGINT UNSIGNED NOT NULL DEFAULT 0;
+ALTER TABLE cms_appmarket_releases ADD COLUMN file_sha256 CHAR(64) NOT NULL DEFAULT '';
+ALTER TABLE cms_appmarket_releases ADD COLUMN file_extension VARCHAR(32) NOT NULL DEFAULT '';
+ALTER TABLE cms_appmarket_releases MODIFY COLUMN metadata_source ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk';
 // uq_appmarket_release_version
 // idx_appmarket_releases_public
 // idx_appmarket_releases_compatible
@@ -928,6 +978,102 @@ $validFiles = validSchemaParityFixture();
 
 assertSchemaParityAuditPasses('Clean schema parity fixture', $validFiles);
 
+$appmarketColumnMutations = [
+    'cms_appmarket_apps.package_id' => [
+        'MODIFY', 'VARCHAR(255) NULL DEFAULT NULL', "VARCHAR(255) NOT NULL DEFAULT ''",
+    ],
+    'cms_appmarket_releases.platform' => [
+        'ADD', "VARCHAR(32) NOT NULL DEFAULT 'android'", "VARCHAR(32) NOT NULL DEFAULT 'other'",
+    ],
+    'cms_appmarket_releases.system_requirements' => [
+        'ADD', 'TEXT NULL', 'TEXT NOT NULL',
+    ],
+    'cms_appmarket_releases.file_storage_name' => [
+        'ADD', "VARCHAR(255) NOT NULL DEFAULT ''", "VARCHAR(500) NOT NULL DEFAULT ''",
+    ],
+    'cms_appmarket_releases.file_original_name' => [
+        'ADD', "VARCHAR(255) NOT NULL DEFAULT ''", "VARCHAR(100) NOT NULL DEFAULT ''",
+    ],
+    'cms_appmarket_releases.file_size' => [
+        'ADD', 'BIGINT UNSIGNED NOT NULL DEFAULT 0', 'BIGINT NOT NULL DEFAULT 0',
+    ],
+    'cms_appmarket_releases.file_sha256' => [
+        'ADD', "CHAR(64) NOT NULL DEFAULT ''", "VARCHAR(64) NOT NULL DEFAULT ''",
+    ],
+    'cms_appmarket_releases.file_extension' => [
+        'ADD', "VARCHAR(32) NOT NULL DEFAULT ''", "VARCHAR(16) NOT NULL DEFAULT ''",
+    ],
+    'cms_appmarket_releases.metadata_source' => [
+        'MODIFY',
+        "ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk'",
+        "ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk'",
+    ],
+];
+$appmarketMutationCount = 0;
+foreach ($appmarketColumnMutations as $columnLabel => [$operation, $definition, $incompatibleDefinition]) {
+    [$tableName, $columnName] = explode('.', $columnLabel, 2);
+    foreach (['install.php', 'migrate.php'] as $sourceName) {
+        foreach (['missing' => '', 'incompatible' => '  ' . $columnName . ' ' . $incompatibleDefinition . ','] as $mutation => $replacement) {
+            $mutatedFiles = $validFiles;
+            $mutatedFiles[$sourceName] = str_replace(
+                '  ' . $columnName . ' ' . $definition . ',',
+                $replacement,
+                $mutatedFiles[$sourceName]
+            );
+            assertSchemaParityAuditFails(
+                'Appmarket ' . $sourceName . ' ' . $mutation . ' column ' . $columnLabel,
+                $mutatedFiles,
+                $sourceName . ' Appmarket software schema has an incompatible definition for ' . $columnLabel . '.'
+            );
+            $appmarketMutationCount++;
+        }
+    }
+
+    $missingUpgradeFiles = $validFiles;
+    $missingUpgradeFiles['migrate.php'] = str_replace(
+        'ALTER TABLE ' . $tableName . ' ' . $operation . ' COLUMN ' . $columnName . ' ' . $definition . ';',
+        '',
+        $missingUpgradeFiles['migrate.php']
+    );
+    assertSchemaParityAuditFails(
+        'Appmarket existing installation upgrade ' . $columnLabel,
+        $missingUpgradeFiles,
+        'migrate.php must upgrade the Appmarket software column ' . $columnLabel . '.'
+    );
+    $appmarketMutationCount++;
+}
+
+foreach (['install.php', 'migrate.php'] as $sourceName) {
+    foreach (['uq_appmarket_apps_slug (slug)', 'uq_appmarket_apps_package (package_id)'] as $uniqueKey) {
+        $missingUniqueKeyFiles = $validFiles;
+        $missingUniqueKeyFiles[$sourceName] = str_replace(
+            'UNIQUE KEY ' . $uniqueKey,
+            '',
+            $missingUniqueKeyFiles[$sourceName]
+        );
+        assertSchemaParityAuditFails(
+            'Appmarket ' . $sourceName . ' uniqueness ' . $uniqueKey,
+            $missingUniqueKeyFiles,
+            $sourceName . ' must preserve Appmarket uniqueness: ' . $uniqueKey . '.'
+        );
+        $appmarketMutationCount++;
+    }
+    foreach (['package_id_snapshot', 'apk_storage_name', 'apk_original_name', 'apk_size', 'apk_sha256'] as $legacyColumn) {
+        $missingLegacyColumnFiles = $validFiles;
+        $missingLegacyColumnFiles[$sourceName] = preg_replace(
+            '/^\s+' . $legacyColumn . '\s+[^\r\n]+/m',
+            '',
+            $missingLegacyColumnFiles[$sourceName]
+        ) ?? '';
+        assertSchemaParityAuditFails(
+            'Appmarket ' . $sourceName . ' legacy compatibility ' . $legacyColumn,
+            $missingLegacyColumnFiles,
+            $sourceName . ' must preserve the legacy Appmarket column ' . $legacyColumn . '.'
+        );
+        $appmarketMutationCount++;
+    }
+}
+
 $missingInstallColumnFiles = $validFiles;
 $missingInstallColumnFiles['install.php'] = str_replace([
     "  slug_scope_id INT GENERATED ALWAYS AS (IFNULL(blog_id, 0)) STORED,\n",
@@ -995,4 +1141,5 @@ assertSchemaParityAuditFails(
     'feed.php must keep articleExcerpt() available through db.php presentation helpers.'
 );
 
+echo 'Appmarket schema mutations rejected: ' . $appmarketMutationCount . "\n";
 echo "Schema parity audit self-test OK\n";

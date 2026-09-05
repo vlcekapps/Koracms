@@ -23,7 +23,7 @@ $app = [
     'is_featured' => 0,
     'sort_order' => 0,
 ];
-$hasReleases = false;
+$hasLegacyReleases = false;
 
 if ($id !== null) {
     $existing = appmarketFindApp($pdo, $id);
@@ -32,15 +32,23 @@ if ($id !== null) {
         exit;
     }
     $app = array_merge($app, $existing);
-    $releaseCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_appmarket_releases WHERE app_id = ?');
+    $releaseCountStmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM cms_appmarket_releases WHERE app_id = ? AND COALESCE(metadata_source, '') <> 'manual'"
+    );
     $releaseCountStmt->execute([$id]);
-    $hasReleases = (int)$releaseCountStmt->fetchColumn() > 0;
+    $hasLegacyReleases = (int)$releaseCountStmt->fetchColumn() > 0;
 }
 
 $flash = is_array($_SESSION['appmarket_form_flash'] ?? null) ? $_SESSION['appmarket_form_flash'] : [];
 unset($_SESSION['appmarket_form_flash']);
+if (($flash['app_id'] ?? null) !== $id) {
+    $flash = [];
+}
 if (isset($flash['form']) && is_array($flash['form'])) {
     $app = array_merge($app, $flash['form']);
+}
+if ($hasLegacyReleases && isset($existing)) {
+    $app['package_id'] = $existing['package_id'];
 }
 $errors = isset($flash['errors']) && is_array($flash['errors']) ? $flash['errors'] : [];
 $fieldErrors = isset($flash['field_errors']) && is_array($flash['field_errors'])
@@ -71,6 +79,45 @@ if (isset($flash['screenshots']) && is_array($flash['screenshots'])) {
     $selectedScreenshots = array_values(array_unique(array_map('intval', $flash['screenshots'])));
 }
 
+// Include selected media beyond the recent-media window so an edit cannot silently remove them.
+$mediaById = [];
+foreach ($mediaRows as $media) {
+    $mediaById[(int)$media['id']] = $media;
+}
+$selectedMediaIds = $selectedScreenshots;
+if ((int)($app['icon_media_id'] ?? 0) > 0) {
+    $selectedMediaIds[] = (int)$app['icon_media_id'];
+}
+$missingMediaIds = array_values(array_diff(array_unique($selectedMediaIds), array_keys($mediaById)));
+if ($missingMediaIds !== []) {
+    $placeholders = implode(',', array_fill(0, count($missingMediaIds), '?'));
+    $selectedMediaStmt = $pdo->prepare(
+        "SELECT id, original_name, alt_text, mime_type FROM cms_media
+         WHERE id IN ({$placeholders}) AND visibility = 'public' AND mime_type LIKE 'image/%'"
+    );
+    $selectedMediaStmt->execute($missingMediaIds);
+    foreach ($selectedMediaStmt->fetchAll() as $media) {
+        $mediaById[(int)$media['id']] = $media;
+    }
+}
+$orderedMedia = [];
+foreach ($selectedScreenshots as $mediaId) {
+    $orderedMedia[$mediaId] = $mediaById[$mediaId] ?? [
+        'id' => $mediaId,
+        'original_name' => 'Nedostupný vybraný snímek #' . $mediaId . ' (zrušte výběr nebo obnovte veřejné médium)',
+        'alt_text' => '',
+        'mime_type' => '',
+    ];
+}
+$mediaRows = array_values($orderedMedia + $mediaById);
+$errorFieldTargets = array_fill_keys([
+    'name', 'slug', 'package_id', 'short_description', 'website_url', 'support_url',
+    'privacy_url', 'icon_media_id', 'screenshots',
+], true);
+if ($id !== null && isSuperAdmin()) {
+    $errorFieldTargets['status'] = true;
+}
+
 $fieldMessage = static function (string $fieldName) use ($errors): string {
     foreach ($errors as $error) {
         if (is_array($error) && (string)($error['field'] ?? '') === $fieldName) {
@@ -83,13 +130,21 @@ $fieldMessage = static function (string $fieldName) use ($errors): string {
 adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
 ?>
 <p><a href="appmarket.php"><span aria-hidden="true">←</span> Zpět na Appmarket</a></p>
+<p class="admin-description">Společné údaje softwaru pro všechny platformy. Verzi, platformu, systémové požadavky, soubor a seznam změn zadáte samostatně při aktualizaci verze.</p>
 
 <?php if ($errors !== []): ?>
-  <div class="error" role="alert" id="appmarket-form-errors" aria-atomic="true">
-    <p><strong>Aplikaci se nepodařilo uložit.</strong></p>
+  <div class="error" role="alert" id="appmarket-form-errors" aria-atomic="true" aria-labelledby="appmarket-form-errors-heading" tabindex="-1">
+    <h2 id="appmarket-form-errors-heading">Aplikaci se nepodařilo uložit.</h2>
     <ul>
       <?php foreach ($errors as $error): ?>
-        <li><?= h(is_array($error) ? (string)($error['message'] ?? '') : (string)$error) ?></li>
+        <?php $errorField = is_array($error) ? (string)($error['field'] ?? '') : ''; ?>
+        <li>
+          <?php if (isset($errorFieldTargets[$errorField])): ?>
+            <a href="#<?= h($errorField) ?>"><?= h((string)($error['message'] ?? '')) ?></a>
+          <?php else: ?>
+            <?= h(is_array($error) ? (string)($error['message'] ?? '') : (string)$error) ?>
+          <?php endif; ?>
+        </li>
       <?php endforeach; ?>
     </ul>
   </div>
@@ -104,7 +159,7 @@ adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
   <fieldset>
     <legend>Základní údaje aplikace</legend>
 
-    <label for="name">Název <span aria-hidden="true">*</span></label>
+    <label for="name">Název (povinné)</label>
     <input type="text" id="name" name="name" required aria-required="true" maxlength="255"
            value="<?= h((string)$app['name']) ?>"<?= adminFieldAttributes('name', $fieldErrors, $fieldErrorMap) ?>>
     <?php adminRenderFieldError('name', $fieldErrors, $fieldErrorMap, $fieldMessage('name')); ?>
@@ -116,17 +171,7 @@ adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
     <small id="appmarket-slug-help" class="field-help">Prázdný slug se vytvoří z názvu. Použijte malá písmena, číslice a pomlčky.</small>
     <?php adminRenderFieldError('slug', $fieldErrors, $fieldErrorMap, $fieldMessage('slug')); ?>
 
-    <label for="package_id">Android applicationId <span aria-hidden="true">*</span></label>
-    <input type="text" id="package_id" name="package_id" required aria-required="true" maxlength="255"
-           value="<?= h((string)$app['package_id']) ?>"<?= $hasReleases ? ' readonly' : '' ?>
-           <?= adminFieldAttributes('package_id', $fieldErrors, $fieldErrorMap, ['appmarket-package-help']) ?>>
-    <small id="appmarket-package-help" class="field-help">
-      Například <code>cz.vlcekapps.minirec</code>. Všechna vydání se proti této hodnotě ověřují.
-      <?php if ($hasReleases): ?>Po nahrání prvního vydání už identitu aplikace nelze změnit.<?php endif; ?>
-    </small>
-    <?php adminRenderFieldError('package_id', $fieldErrors, $fieldErrorMap, $fieldMessage('package_id')); ?>
-
-    <label for="short_description">Krátký popis <span aria-hidden="true">*</span></label>
+    <label for="short_description">Krátký popis (povinné)</label>
     <textarea id="short_description" name="short_description" rows="3" maxlength="500" required aria-required="true"
               <?= adminFieldAttributes('short_description', $fieldErrors, $fieldErrorMap, ['appmarket-short-description-help']) ?>><?= h((string)$app['short_description']) ?></textarea>
     <small id="appmarket-short-description-help" class="field-help">Stručné vysvětlení účelu aplikace pro katalog a výsledky hledání.</small>
@@ -170,7 +215,13 @@ adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
     <select id="icon_media_id" name="icon_media_id"
             <?= adminFieldAttributes('icon_media_id', $fieldErrors, $fieldErrorMap, ['appmarket-icon-help']) ?>>
       <option value="">Bez ikony</option>
+      <?php if ((int)($app['icon_media_id'] ?? 0) > 0 && !isset($mediaById[(int)$app['icon_media_id']])): ?>
+        <option value="<?= (int)$app['icon_media_id'] ?>" selected>Nedostupná vybraná ikona #<?= (int)$app['icon_media_id'] ?> (vyberte jinou nebo Bez ikony)</option>
+      <?php endif; ?>
       <?php foreach ($mediaRows as $media): ?>
+        <?php if (!isset($mediaById[(int)$media['id']])) {
+            continue;
+        } ?>
         <option value="<?= (int)$media['id'] ?>"<?= (int)($app['icon_media_id'] ?? 0) === (int)$media['id'] ? ' selected' : '' ?>>
           <?= h((string)$media['original_name']) ?>
         </option>
@@ -179,9 +230,9 @@ adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
     <small id="appmarket-icon-help" class="field-help">Nabízejí se jen veřejné obrázky. Alt text se převezme z knihovny médií.</small>
     <?php adminRenderFieldError('icon_media_id', $fieldErrors, $fieldErrorMap, $fieldMessage('icon_media_id')); ?>
 
-    <fieldset<?= adminFieldAttributes('screenshots', $fieldErrors, $fieldErrorMap, ['appmarket-screenshots-help']) ?>>
+    <fieldset id="screenshots" tabindex="-1"<?= adminFieldAttributes('screenshots', $fieldErrors, $fieldErrorMap, ['appmarket-screenshots-help']) ?>>
       <legend>Snímky obrazovky, nejvýše 12</legend>
-      <p id="appmarket-screenshots-help" class="field-help">Pořadí odpovídá pořadí médií v seznamu. Vybrat lze jen snímky s výstižným alt textem doplněným v knihovně médií.</p>
+      <p id="appmarket-screenshots-help" class="field-help">Vybrané snímky jsou uvedené první ve svém uloženém pořadí. Nově vybrané snímky se přidají za ně podle seznamu. Vybrat lze jen veřejné snímky s výstižným alt textem doplněným v knihovně médií.</p>
       <?php if ($mediaRows === []): ?>
         <p>V knihovně médií zatím není žádný veřejný obrázek.</p>
       <?php else: ?>
@@ -200,6 +251,23 @@ adminHeader($id !== null ? 'Upravit aplikaci' : 'Nová aplikace');
     </fieldset>
     <?php adminRenderFieldError('screenshots', $fieldErrors, $fieldErrorMap, $fieldMessage('screenshots')); ?>
   </fieldset>
+
+  <details<?= trim((string)$app['package_id']) !== '' || in_array('package_id', $fieldErrors, true) ? ' open' : '' ?>>
+    <summary>Pokročilé: kompatibilita s Android update API (volitelné)</summary>
+    <fieldset>
+      <legend>Identita pro původní Android aktualizace</legend>
+      <label for="package_id">Android applicationId (volitelné)</label>
+      <input type="text" id="package_id" name="package_id" maxlength="255" spellcheck="false"
+             value="<?= h((string)$app['package_id']) ?>"<?= $hasLegacyReleases ? ' readonly' : '' ?>
+             <?= adminFieldAttributes('package_id', $fieldErrors, $fieldErrorMap, ['appmarket-package-help']) ?>>
+      <small id="appmarket-package-help" class="field-help">
+        Pro běžný software nechte prázdné, a to i pro ručně spravovaná vydání pro Android.
+        Například <code>cz.example.aplikace</code> vyplňte jen pro původní Android update API.
+        <?php if ($hasLegacyReleases): ?>Aplikace má původní Android vydání, proto tuto identitu nelze změnit ani odstranit.<?php endif; ?>
+      </small>
+      <?php adminRenderFieldError('package_id', $fieldErrors, $fieldErrorMap, $fieldMessage('package_id')); ?>
+    </fieldset>
+  </details>
 
   <fieldset>
     <legend>Zobrazení</legend>

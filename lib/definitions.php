@@ -345,7 +345,7 @@ function coreModuleDefinitions(): array
         ],
         'appmarket' => [
             'label' => 'Appmarket',
-            'settings_label' => 'Appmarket',
+            'settings_label' => 'Appmarket (katalog softwaru)',
             'nav_label' => 'Aplikace',
             'widget_label' => 'Aplikace',
             'admin_label' => 'Appmarket',

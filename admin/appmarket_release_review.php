@@ -14,6 +14,10 @@ if ($release === null) {
 }
 
 $analysis = json_decode((string)($release['analysis_json'] ?? ''), true);
+if ($release['metadata_source'] === 'manual') {
+    header('Location: appmarket_release_form.php?app_id=' . (int)$release['app_id'] . '&id=' . (int)$release['id']);
+    exit;
+}
 $analysis = is_array($analysis) ? $analysis : [];
 $permissions = json_decode((string)($release['permissions_json'] ?? ''), true);
 $permissions = is_array($permissions)

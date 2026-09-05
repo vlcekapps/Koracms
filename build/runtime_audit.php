@@ -23103,7 +23103,7 @@ foreach ([
         $appmarketIssues[] = $schemaLabel . ' must create Appmarket signing certificates as inactive by default';
     }
     foreach ([
-        "metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk'",
+        "metadata_source    ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk'",
         'publisher_token_id INT',
         "attestation_algorithm VARCHAR(32) NOT NULL DEFAULT 'rsa-sha256'",
         'attestation_public_key TEXT',
@@ -23207,7 +23207,7 @@ foreach ([
     "requireCapability('appmarket_manage'",
     "requireModuleEnabled('appmarket')",
     'aria-labelledby="appmarket-overview-heading"',
-    'aria-labelledby="appmarket-foundation-heading"',
+    'aria-labelledby="appmarket-app-heading"',
     '<caption>Aplikace spravované Appmarketem</caption>',
     'appmarket_release_review.php?release_id=',
     'name="confirm_action" value="delete"',
@@ -23227,15 +23227,15 @@ if (!str_contains($adminAppmarketFormSource, '<fieldset>')
     || !str_contains($adminAppmarketFormSource, 'aria-describedby="appmarket-description-help"')
     || !str_contains($adminAppmarketFormSource, "adminFieldAttributes('status'")
     || !str_contains($adminAppmarketSaveSource, 'appmarket_form_flash')
-    || !str_contains($adminAppmarketSaveSource, 'ApplicationId nelze po nahrání prvního vydání změnit.')
+    || !str_contains($adminAppmarketSaveSource, 'ApplicationId nelze změnit ani odstranit, protože aplikace má původní Android vydání.')
     || !str_contains($adminAppmarketSaveSource, 'Každý vybraný snímek musí mít v knihovně médií výstižný alt text.')) {
     $appmarketIssues[] = 'Appmarket application editor must retain input and expose field-level accessible errors';
 }
-if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Produkční balíček</legend>')
+if (!str_contains($adminAppmarketReleaseFormSource, '<legend>Soubor a seznam změn</legend>')
     || !str_contains($adminAppmarketReleaseFormSource, 'aria-invalid="true"')
     || !str_contains(
         $adminAppmarketReleaseFormSource,
-        'Hosting pracuje v plně podporovaném režimu bez Android nástrojů.'
+        'Android SDK není potřeba.'
     )
     || !str_contains($adminAppmarketReleaseFormSource, 'maxlength="<?= appmarketReleaseNotesMaxLength() ?>"')
     || !str_contains($adminAppmarketReleaseActionSource, "requireHttpMethods(['POST'])")
@@ -23331,7 +23331,7 @@ if (!str_contains($appmarketDownloadSource, '$isHeadRequest = requireReadOnlyHtt
     || !str_contains($appmarketDownloadSource, 'session_write_close();')
     || !str_contains($appmarketDownloadSource, "header_remove('Set-Cookie');")
     || !str_contains($appmarketDownloadSource, 'appmarketFindPublicRelease(')
-    || !str_contains($appmarketDownloadSource, 'appmarketPrivateApkPath(')
+    || !str_contains($appmarketDownloadSource, 'appmarketReleaseFilePath(')
     || !str_contains($appmarketDownloadSource, 'appmarketPrivateStorageIsSafe()')
     || !str_contains($appmarketDownloadSource, "hash_file('sha256', \$path)")
     || !str_contains($appmarketDownloadSource, 'sendStoredFileRangeDownload(')
@@ -23494,7 +23494,7 @@ foreach ([
 foreach ([
     'Appmarket – aplikace importovány jako koncepty.',
     'Appmarket – podpisové certifikáty importovány jako neaktivní.',
-    'Appmarket – metadata vydání importována jako koncepty bez APK.',
+    'Appmarket – metadata vydání importována jako koncepty bez souborů.',
     "VALUES (?,?,?,?,?,?,0,?,?,?)",
     'update_priority, required_below_version_code',
     'supported_abis_json',
@@ -23524,6 +23524,42 @@ foreach ([
 ] as $appmarketAccessibilityFragment) {
     if (!str_contains($appmarketAccessibilitySource, $appmarketAccessibilityFragment)) {
         $appmarketIssues[] = 'Appmarket accessibility report is missing fragment: ' . $appmarketAccessibilityFragment;
+    }
+}
+$appmarketCatalogSaveSource = (string)file_get_contents(__DIR__ . '/../admin/appmarket_release_save.php');
+foreach ([
+    "requireCapability('appmarket_manage'", "requireModuleEnabled('appmarket')",
+    "requireHttpMethods(['POST'])", 'verifyCsrf();', 'requireSuperAdmin();',
+    'appmarketSaveCatalogRelease(', 'appmarket_catalog_flash',
+] as $fragment) {
+    if (!str_contains($appmarketCatalogSaveSource, $fragment)) {
+        $appmarketIssues[] = 'Software catalog save is missing authorization, CSRF or input recovery: ' . $fragment;
+    }
+}
+foreach (['appmarketSoftwareExtensions', 'appmarketStoreSoftwareUpload', 'appmarketCatalogRevision',
+    'appmarketCatalogPublicationIssues', 'appmarketReleaseFilePath', 'appmarketSoftwarePath',
+    'appmarketPreferredPublicReleasesByPlatform', 'FOR UPDATE', 'koraInspectUploadedFile(',
+    'appmarketAcquireSoftwareLock', 'flock($lock, LOCK_EX)', 'appmarketDeleteSoftwareIfUnused', 'appmarketDeleteCatalogDraft',
+    'appmarketLegacyArtifactVisibilitySql', 'file_storage_name', 'file_sha256', 'system_requirements'] as $fragment) {
+    if (!str_contains($appmarketHelperSource, $fragment)) {
+        $appmarketIssues[] = 'Software catalog helper is missing safety or metadata: ' . $fragment;
+    }
+}
+foreach (['Verze a požadavky na systém', 'name="platform"', 'name="system_requirements"',
+    'name="revision"', 'aria-describedby="release-file-help', 'id="release-file-error"',
+    'aria-describedby="version-name-help', 'id="version-name-error"', 'role="alert"'] as $fragment) {
+    if (!str_contains($adminAppmarketReleaseFormSource, $fragment)) {
+        $appmarketIssues[] = 'Software release editor is missing accessible field semantics: ' . $fragment;
+    }
+}
+if (!str_contains($adminAppmarketSource, 'Aktualizovat verzi')
+    || !str_contains($appmarketAppViewSource, 'platform_label')
+    || !str_contains($appmarketReleaseViewSource, 'system_requirements')) {
+    $appmarketIssues[] = 'Software catalog must expose version updates, platforms and requirements';
+}
+foreach (['platform', 'system_requirements', 'file_size', 'file_sha256', 'file_extension', 'file_original_name'] as $fragment) {
+    if (!str_contains($adminExportSource, $fragment) || !str_contains($adminImportSource, $fragment)) {
+        $appmarketIssues[] = 'Software catalog metadata is missing in export/import: ' . $fragment;
     }
 }
 if ($appmarketIssues === []) {

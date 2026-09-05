@@ -661,7 +661,7 @@ $tables = [
         id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name              VARCHAR(255) NOT NULL,
         slug              VARCHAR(150) NOT NULL,
-        package_id        VARCHAR(255) NOT NULL,
+        package_id        VARCHAR(255) NULL DEFAULT NULL,
         short_description VARCHAR(500) NOT NULL DEFAULT '',
         description       MEDIUMTEXT,
         icon_media_id     INT          NULL DEFAULT NULL,
@@ -704,6 +704,13 @@ $tables = [
         version_name       VARCHAR(100) NOT NULL,
         version_code       BIGINT UNSIGNED NOT NULL,
         release_notes      MEDIUMTEXT,
+        platform           VARCHAR(32) NOT NULL DEFAULT 'android',
+        system_requirements TEXT NULL,
+        file_storage_name  VARCHAR(255) NOT NULL DEFAULT '',
+        file_original_name VARCHAR(255) NOT NULL DEFAULT '',
+        file_size          BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        file_sha256        CHAR(64) NOT NULL DEFAULT '',
+        file_extension     VARCHAR(32) NOT NULL DEFAULT '',
         min_sdk            INT          NULL DEFAULT NULL,
         target_sdk         INT          NULL DEFAULT NULL,
         package_id_snapshot VARCHAR(255) NOT NULL,
@@ -716,7 +723,7 @@ $tables = [
         permissions_json   LONGTEXT,
         supported_abis_json LONGTEXT NULL DEFAULT NULL,
         analysis_json      LONGTEXT,
-        metadata_source    ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk',
+        metadata_source    ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk',
         publisher_token_id INT          NULL DEFAULT NULL,
         update_priority    ENUM('normal','important','critical') NOT NULL DEFAULT 'normal',
         required_below_version_code BIGINT UNSIGNED NULL DEFAULT NULL,
@@ -1786,6 +1793,13 @@ $addColumns = [
     'cms_downloads.is_featured'      => "ALTER TABLE cms_downloads ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER external_click_count",
     'cms_downloads.updated_at'       => "ALTER TABLE cms_downloads ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
     // cms_appmarket
+    'cms_appmarket_releases.platform' => "ALTER TABLE cms_appmarket_releases ADD COLUMN platform VARCHAR(32) NOT NULL DEFAULT 'android' AFTER release_notes",
+    'cms_appmarket_releases.system_requirements' => "ALTER TABLE cms_appmarket_releases ADD COLUMN system_requirements TEXT NULL AFTER platform",
+    'cms_appmarket_releases.file_storage_name' => "ALTER TABLE cms_appmarket_releases ADD COLUMN file_storage_name VARCHAR(255) NOT NULL DEFAULT '' AFTER system_requirements",
+    'cms_appmarket_releases.file_original_name' => "ALTER TABLE cms_appmarket_releases ADD COLUMN file_original_name VARCHAR(255) NOT NULL DEFAULT '' AFTER file_storage_name",
+    'cms_appmarket_releases.file_size' => "ALTER TABLE cms_appmarket_releases ADD COLUMN file_size BIGINT UNSIGNED NOT NULL DEFAULT 0 AFTER file_original_name",
+    'cms_appmarket_releases.file_sha256' => "ALTER TABLE cms_appmarket_releases ADD COLUMN file_sha256 CHAR(64) NOT NULL DEFAULT '' AFTER file_size",
+    'cms_appmarket_releases.file_extension' => "ALTER TABLE cms_appmarket_releases ADD COLUMN file_extension VARCHAR(32) NOT NULL DEFAULT '' AFTER file_sha256",
     'cms_appmarket_releases.publisher_token_id' => "ALTER TABLE cms_appmarket_releases ADD COLUMN publisher_token_id INT NULL DEFAULT NULL AFTER metadata_source",
     'cms_appmarket_releases.update_priority' => "ALTER TABLE cms_appmarket_releases ADD COLUMN update_priority ENUM('normal','important','critical') NOT NULL DEFAULT 'normal' AFTER publisher_token_id",
     'cms_appmarket_releases.required_below_version_code' => "ALTER TABLE cms_appmarket_releases ADD COLUMN required_below_version_code BIGINT UNSIGNED NULL DEFAULT NULL AFTER update_priority",
@@ -2017,13 +2031,21 @@ try {
 }
 
 try {
+    if ($columnExists('cms_appmarket_apps', 'package_id')) {
+        $pdo->exec(
+            "ALTER TABLE cms_appmarket_apps
+             MODIFY COLUMN package_id VARCHAR(255) NULL DEFAULT NULL"
+        );
+        $pdo->exec("UPDATE cms_appmarket_apps SET package_id = NULL WHERE TRIM(package_id) = ''");
+        $log[] = '✓ Appmarket podporuje aplikace bez Android package ID – OK';
+    }
     if ($columnExists('cms_appmarket_releases', 'metadata_source')) {
         $pdo->exec(
             "ALTER TABLE cms_appmarket_releases
              MODIFY COLUMN metadata_source
-             ENUM('apk','publisher_attestation') NOT NULL DEFAULT 'apk'"
+             ENUM('apk','publisher_attestation','manual') NOT NULL DEFAULT 'apk'"
         );
-        $log[] = '✓ Appmarket podporuje serverové ověření i podepsanou publisher attestation – OK';
+        $log[] = '✓ Appmarket podporuje serverové ověření, publisher attestation i ruční katalog – OK';
     }
     foreach ([
         'idx_appmarket_releases_publisher_token' => [

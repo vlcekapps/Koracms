@@ -27,20 +27,35 @@ if ($app === null || $release === null) {
     ]);
 }
 
-$latestRelease = appmarketLatestPublishedReleaseForChannel(
-    $pdo,
-    (int)$app['id'],
-    (string)$release['release_channel']
+$latestStmt = $pdo->prepare(
+    "SELECT r.*
+     FROM cms_appmarket_releases r
+     WHERE r.app_id = ?
+       AND r.release_channel = ?
+       AND " . appmarketReleasePublicVisibilitySql('r') . "
+     ORDER BY r.version_code DESC, r.id DESC"
 );
+$latestStmt->execute([(int)$app['id'], (string)$release['release_channel']]);
+$latestRelease = null;
+while ($candidateRelease = $latestStmt->fetch()) {
+    $candidateRelease = appmarketHydrateReleasePresentation($candidateRelease);
+    if ((string)$candidateRelease['platform'] === (string)$release['platform']) {
+        $latestRelease = $candidateRelease;
+        break;
+    }
+}
 if (!isset($_SESSION['cms_user_id'])) {
     trackPageView('appmarket_release', (int)$release['id']);
 }
 $siteName = getSetting('site_name', 'Kora CMS');
 renderPublicPage([
-    'title' => (string)$app['name'] . ' ' . (string)$release['version_name'] . ' - ' . $siteName,
+    'title' => (string)$app['name'] . ' ' . (string)$release['version_name']
+        . ' (' . (string)$release['platform_label'] . ') - ' . $siteName,
     'meta' => [
-        'title' => (string)$app['name'] . ' ' . (string)$release['version_name'] . ' - ' . $siteName,
-        'description' => 'Vydání Android aplikace ' . (string)$app['name'] . ', SHA-256 a seznam změn.',
+        'title' => (string)$app['name'] . ' ' . (string)$release['version_name']
+            . ' (' . (string)$release['platform_label'] . ') - ' . $siteName,
+        'description' => 'Vydání aplikace ' . (string)$app['name'] . ' pro ' . (string)$release['platform_label']
+            . ': systémové požadavky, SHA-256 souboru a seznam změn.',
         'url' => siteUrl(str_replace(
             BASE_URL,
             '',

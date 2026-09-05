@@ -16,6 +16,11 @@ if ($release === null) {
 }
 
 $returnUrl = 'appmarket.php?app_id=' . (int)$release['app_id'];
+if ($release['metadata_source'] === 'manual' && in_array($action, ['publish', 'distribution'], true)) {
+    $_SESSION['appmarket_notice_error'] = 'Obecné vydání spravujte v editoru verzí, nikoli přes Android distribuční akce.';
+    header('Location: ' . $returnUrl);
+    exit;
+}
 if (in_array($action, ['publish', 'distribution', 'withdraw', 'delete'], true)
     && trim((string)($_POST['confirm_action'] ?? '')) !== $action
 ) {
@@ -128,11 +133,22 @@ if ($action === 'publish') {
         $_SESSION['appmarket_notice_error'] = 'Vydání se nepodařilo bezpečně stáhnout.';
     }
 } elseif ($action === 'delete' && (string)$release['status'] === 'draft') {
-    $storageName = (string)$release['apk_storage_name'];
-    $pdo->prepare("DELETE FROM cms_appmarket_releases WHERE id = ? AND status = 'draft'")
-        ->execute([(int)$release['id']]);
-    appmarketDeletePrivateApkIfUnused($pdo, $storageName);
-    $_SESSION['appmarket_notice'] = 'Koncept vydání byl odstraněn.';
+    try {
+        if ($release['metadata_source'] === 'manual') {
+            if (!appmarketDeleteCatalogDraft($pdo, (int)$release['id'])) {
+                throw new RuntimeException('release is no longer an editable catalog draft');
+            }
+        } else {
+            $storageName = (string)$release['apk_storage_name'];
+            $pdo->prepare("DELETE FROM cms_appmarket_releases WHERE id = ? AND status = 'draft'")
+                ->execute([(int)$release['id']]);
+            appmarketDeletePrivateApkIfUnused($pdo, $storageName);
+        }
+        $_SESSION['appmarket_notice'] = 'Koncept vydání byl odstraněn.';
+    } catch (Throwable $e) {
+        koraLog('error', 'appmarket draft deletion failed', ['release_id' => (int)$release['id'], 'exception' => $e]);
+        $_SESSION['appmarket_notice_error'] = 'Koncept se nepodařilo odstranit. Obnovte přehled a zkontrolujte jeho aktuální stav.';
+    }
 } else {
     $_SESSION['appmarket_notice_error'] = 'Tuto akci nelze pro aktuální stav vydání provést.';
 }

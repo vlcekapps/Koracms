@@ -1,5 +1,27 @@
 # Appmarket: Accessibility Conformance Report
 
+## Obecný katalog softwaru (2026-09-05)
+
+Tento blok nahrazuje Android-only předpoklady staršího hodnocení níže pro běžný katalog. Původní certifikáty, offline publisher balíček, podepsaný manifest, OpenSSL a update API V1/V2/V3 zůstávají jen jako kompatibilní rozhraní. Nejde o prohlášení plné shody ani o náhradu ručního ověření čtečkou.
+
+- **Rozsah**: přehled aplikací, založení aplikace bez Android ID, Aktualizovat verzi, Upravit verzi, veřejný katalog, výběr vydání podle platformy, detail vydání a download.
+- **1.3.1, 2.4.6, 3.3.2**: editor má fieldsety Verze a požadavky na systém / Soubor a seznam změn / Zveřejnění; nativní popisky a textová nápověda rozlišují novou verzi od náhrady existujícího souboru. Přehled má tabulkové hlavičky a caption.
+- **1.3.2, 2.4.4**: platforma, verze, formát souboru a velikost jsou oddělené textově; každá platforma má vlastní srozumitelný download odkaz. Význam se nepřenáší jen barvou.
+- **2.1.1, 2.4.7**: nativní input, select, textarea, odkazy a tlačítka nevyžadují JavaScript; globální layout zachovává skip link i focus. Nový editor nepoužívá drag-and-drop ani dialog.
+- **3.3.1, 3.3.3, 4.1.2, 4.1.3**: souhrn chyb odkazuje na příslušná pole, chyby mají reálné ID a aria-describedby/aria-invalid. Texty se po validační chybě zachovají, soubor je nutné vybrat znovu; souhrn tuto skutečnost vysvětluje. Živé hlášení je pouze při výsledku odeslání, ne po každém znaku.
+- **3.3.4 (prevence chyb)**: výběr publikování je výslovný a omezený na superadmina. Nové vydání neodstraní historii, úprava bez uploadu zachová soubor, konflikt souběžné editace odmítne přepis. Stažení a mazání vyžadují existující potvrzení a CSRF.
+- **Chybějící soubor a souběh**: editor importovaného vydání výslovně požaduje nový soubor a označí pole jako povinné. Mazání konceptu znovu kontroluje jeho stav pod zámkem; staré Android akce nemohou obejít kontrolu revize nového editoru. HTTP testy ověřují tyto chybové stavy a zachování historických stažení.
+- **Odpovědnost CMS**: soukromé uložení, bezpečný download, escapované popisky, bezpečný Markdown changelogu, zachování formuláře, správná oprávnění a žádné ruční balíčky v Android update API.
+- **Odpovědnost správce obsahu**: pravdivé systémové požadavky, srozumitelné názvy a změny, alt texty snímků, licence a ověření distribuovaných balíčků včetně certifikátů. Samotný software ke stažení není tímto ACR hodnocen.
+
+### Automatizovaný důkaz nového workflow
+
+`build/unit_tests.php` pokrývá platformy, přípony včetně složených archivů, bezpečné cesty, metadata a otisk souběžné editace. `build/http_integration.php` pokrývá ruční upload, platformy, download, aktualizace, negativní validace a izolaci starého API. `build/runtime_audit.php` hlídá pojmenované sekce, field-level chyby, csrf a soukromé úložiště; `build/schema_parity_audit.php` hlídá shodu instalace a migrace. Výsledky konkrétního běhu uvádí předávací zpráva, nikoli odhad.
+
+### Ruční ověření nového workflow
+
+Před potvrzením plné podpory provést NVDA/Firefox a Chrome: založit aplikaci bez Android ID, otevřít Aktualizovat verzi, vyvolat chybu čísla/souboru, přejít z chybového souhrnu na pole, uložit koncept a jako superadmin publikovat. Poté nahradit soubor, ověřit historii a projít veřejný výběr platformy. Ověřit zoom 200–400 %, úzkou šířku a čitelnost dlouhých požadavků. Tyto asistivní a vizuální scénáře v tomto bloku nejsou vydávány za provedený ruční test.
+
 ## Stav dokumentu
 
 - Cíl: WCAG 2.2 AA.

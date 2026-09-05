@@ -1,5 +1,397 @@
 <?php
 
+/** @return array<string,string> */
+function appmarketPlatformDefinitions(): array
+{
+    return ['windows' => 'Windows', 'linux' => 'Linux', 'macos' => 'macOS',
+        'android' => 'Android', 'cross_platform' => 'Více platforem', 'other' => 'Jiná platforma'];
+}
+
+function appmarketNormalizePlatform(string $platform): string
+{
+    $platform = strtolower(trim($platform));
+    return isset(appmarketPlatformDefinitions()[$platform]) ? $platform : '';
+}
+
+/** @return list<string> */
+function appmarketSoftwareExtensions(): array
+{
+    return ['tar.gz', 'tar.xz', 'tar.bz2', 'tar.zst', 'tar.lz', 'tar.lzma',
+        'zip', 'exe', 'msi', 'msix', 'msixbundle', 'rpm', 'deb', 'dmg', 'pkg',
+        'tar', 'tgz', 'txz', 'tbz', 'tbz2', 'tzst', '7z', 'appimage', 'flatpak',
+        'flatpakref', 'snap', 'apk', 'aab', 'run', 'sh'];
+}
+
+function appmarketSoftwareExtension(string $filename): string
+{
+    if ($filename !== basename(str_replace('\\', '/', $filename))
+        || preg_match('/[\x00-\x1f\x7f]/', $filename)) {
+        return '';
+    }
+    foreach (appmarketSoftwareExtensions() as $extension) {
+        if (str_ends_with(strtolower($filename), '.' . $extension)) {
+            return $extension;
+        }
+    }
+    return '';
+}
+
+function appmarketSoftwareStorageName(string $sha256): string
+{
+    $hash = appmarketNormalizeSha256($sha256);
+    return $hash === '' ? '' : $hash . '.bin';
+}
+
+function appmarketSoftwarePath(string $storageName): string
+{
+    return preg_match('/\A[a-f0-9]{64}\.bin\z/', $storageName) === 1
+        ? koraStoragePath('appmarket/software/' . $storageName) : '';
+}
+
+/** @return resource */
+function appmarketAcquireSoftwareLock()
+{
+    $directory = koraStoragePath('appmarket/software');
+    if (!appmarketPrivateStorageIsSafe() || !koraEnsureDirectory($directory, 0750)) {
+        throw new RuntimeException('software storage unavailable');
+    }
+    $lock = fopen($directory . '/.catalog.lock', 'c');
+    if ($lock === false) {
+        throw new RuntimeException('software lock unavailable');
+    }
+    if (!flock($lock, LOCK_EX)) {
+        fclose($lock);
+        throw new RuntimeException('software lock failed');
+    }
+    return $lock;
+}
+
+/** @param array<string,mixed> $release */
+function appmarketReleaseFilePath(array $release): string
+{
+    return ($release['metadata_source'] ?? '') === 'manual'
+        ? appmarketSoftwarePath((string)($release['file_storage_name'] ?? ''))
+        : appmarketPrivateApkPath((string)($release['apk_storage_name'] ?? ''));
+}
+
+/**
+ * @param array<string,mixed> $app
+ * @param array<string,mixed> $release
+ */
+function appmarketReleaseDownloadName(array $app, array $release): string
+{
+    $extension = ($release['metadata_source'] ?? '') === 'manual'
+        ? (string)($release['file_extension'] ?? '') : 'apk';
+    if (!in_array($extension, appmarketSoftwareExtensions(), true)) {
+        $extension = 'bin';
+    }
+    return safeDownloadName(
+        (string)($app['slug'] ?? 'software') . '-' . (string)($release['version_name'] ?? '') . '.' . $extension,
+        'software.' . $extension
+    );
+}
+
+/** @param array<string,mixed> $release */
+function appmarketCatalogRevision(array $release): string
+{
+    $values = [];
+    foreach (['id', 'version_name', 'platform', 'system_requirements', 'release_notes',
+        'file_storage_name', 'file_original_name', 'file_size', 'file_sha256', 'file_extension', 'status', 'release_channel'] as $key) {
+        $values[] = (string)($release[$key] ?? '');
+    }
+    return hash('sha256', serialize($values));
+}
+
+/**
+ * @param array<string,mixed> $release
+ * @return list<string>
+ */
+function appmarketCatalogPublicationIssues(array $release): array
+{
+    $issues = [];
+    $path = appmarketReleaseFilePath($release);
+    $hash = appmarketNormalizeSha256((string)($release['file_sha256'] ?? ''));
+    if (appmarketNormalizeVersionName((string)($release['version_name'] ?? '')) === ''
+        || appmarketNormalizePlatform((string)($release['platform'] ?? '')) === '') {
+        $issues[] = 'Doplňte platné číslo verze a platformu.';
+    }
+    if (!in_array((string)($release['file_extension'] ?? ''), appmarketSoftwareExtensions(), true)) {
+        $issues[] = 'Nepodporovaný formát souboru.';
+    }
+    if (!appmarketPrivateStorageIsSafe() || $path === '' || !is_file($path) || !is_readable($path)
+        || (int)($release['file_size'] ?? 0) <= 0 || $hash === ''
+        || filesize($path) !== (int)$release['file_size']
+        || !hash_equals($hash, (string)hash_file('sha256', $path))) {
+        $issues[] = 'Uložený soubor není dostupný nebo nesouhlasí jeho velikost či kontrolní součet.';
+    }
+    return $issues;
+}
+
+/**
+ * Software packages are opaque downloads: never extract, include or execute them.
+ * @param array<string,mixed> $file
+ * @return array{ok:bool,error:string,file:array<string,mixed>}
+ */
+function appmarketStoreSoftwareUpload(array $file): array
+{
+    $failure = static fn (string $error): array => ['ok' => false, 'error' => $error, 'file' => []];
+    if (!is_string($file['name'] ?? null) || !is_string($file['tmp_name'] ?? null)
+        || !is_int($file['error'] ?? null) || !is_int($file['size'] ?? null)) {
+        return $failure('Vyberte jeden soubor vydání.');
+    }
+    $inspection = koraInspectUploadedFile($file, [
+        'max_bytes' => koraDefaultUploadMaxSizeBytes(),
+        'too_large_error' => 'Soubor překračuje nastavený limit ' . koraUploadMaxSizeLabel() . '.',
+    ]);
+    if (empty($inspection['ok'])) {
+        return $failure((string)($inspection['error'] ?? 'Soubor se nepodařilo nahrát.'));
+    }
+    $extension = appmarketSoftwareExtension($file['name']);
+    if ($extension === '') {
+        return $failure('Nepodporovaný formát. Vyberte některý z uvedených instalačních souborů nebo archivů.');
+    }
+    $sourcePath = (string)$inspection['tmp_path'];
+    $size = filesize($sourcePath);
+    if ($size === false || $size <= 0 || $size > koraDefaultUploadMaxSizeBytes()) {
+        return $failure('Soubor je prázdný nebo překračuje nastavený limit.');
+    }
+    $hash = (string)hash_file('sha256', $sourcePath);
+    $storageName = appmarketSoftwareStorageName($hash);
+    $targetPath = appmarketSoftwarePath($storageName);
+    if ($targetPath === '' || !appmarketPrivateStorageIsSafe()
+        || !koraEnsureDirectory(dirname($targetPath), 0750)) {
+        return $failure('Soubor nelze uložit do soukromého úložiště mimo veřejný adresář webu.');
+    }
+    if (is_file($targetPath)) {
+        if (filesize($targetPath) !== $size || !hash_equals($hash, (string)hash_file('sha256', $targetPath))) {
+            return $failure('V úložišti je poškozený soubor se stejným identifikátorem.');
+        }
+    } elseif (!move_uploaded_file($sourcePath, $targetPath)) {
+        return $failure('Soubor se nepodařilo bezpečně uložit.');
+    }
+    if (!chmod($targetPath, 0640)) {
+        return $failure('Nepodařilo se nastavit bezpečná oprávnění souboru.');
+    }
+    return ['ok' => true, 'error' => '', 'file' => [
+        'file_storage_name' => $storageName,
+        'file_original_name' => mb_substr(safeDownloadName((string)$file['name'], 'software.' . $extension), 0, 255),
+        'file_size' => $size, 'file_sha256' => $hash, 'file_extension' => $extension,
+    ]];
+}
+
+function appmarketDeleteSoftwareIfUnused(PDO $pdo, string $storageName): void
+{
+    $path = appmarketSoftwarePath($storageName);
+    if ($path === '') {
+        return;
+    }
+    $lock = appmarketAcquireSoftwareLock();
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM cms_appmarket_releases WHERE file_storage_name = ?');
+        $stmt->execute([$storageName]);
+        if ((int)$stmt->fetchColumn() === 0 && is_file($path)) {
+            koraUploadRunFilesystemOperation(static fn (): bool => unlink($path));
+        }
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+}
+
+/** @return list<array<string,mixed>> */
+function appmarketPreferredPublicReleasesByPlatform(PDO $pdo, int $appId): array
+{
+    $stmt = $pdo->prepare("SELECT r.* FROM cms_appmarket_releases r WHERE r.app_id = ? AND "
+        . appmarketReleasePublicVisibilitySql('r')
+        . " ORDER BY CASE WHEN r.release_channel = 'stable' THEN 0 ELSE 1 END, r.version_code DESC, r.id DESC");
+    $stmt->execute([$appId]);
+    $result = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $release = appmarketHydrateReleasePresentation($row);
+        $platform = (string)$release['platform'];
+        if (!isset($result[$platform])) {
+            $result[$platform] = $release;
+        }
+    }
+    return array_values($result);
+}
+
+function appmarketDeleteCatalogDraft(PDO $pdo, int $releaseId): bool
+{
+    $lock = appmarketAcquireSoftwareLock();
+    $storageName = '';
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare('SELECT * FROM cms_appmarket_releases WHERE id = ? FOR UPDATE');
+        $stmt->execute([$releaseId]);
+        $release = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($release) || $release['metadata_source'] !== 'manual' || $release['status'] !== 'draft') {
+            $pdo->rollBack();
+            return false;
+        }
+        $pdo->prepare('DELETE FROM cms_appmarket_releases WHERE id = ?')->execute([$releaseId]);
+        $pdo->commit();
+        $storageName = (string)$release['file_storage_name'];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+    try {
+        appmarketDeleteSoftwareIfUnused($pdo, $storageName);
+    } catch (Throwable $cleanupError) {
+        koraLog('warning', 'appmarket unused software cleanup failed', ['exception' => $cleanupError]);
+    }
+    return true;
+}
+
+/**
+ * The app row serializes release numbering and version duplicate checks.
+ * @param array<string,mixed> $form
+ * @param array<string,mixed> $upload
+ * @return array{ok:bool,id:int,errors:array<string,string>}
+ */
+function appmarketSaveCatalogRelease(PDO $pdo, int $appId, ?int $id, array $form, array $upload, int $userId, bool $canPublish = false): array
+{
+    $errors = [];
+    if (appmarketNormalizeVersionName((string)($form['version_name'] ?? '')) === '') {
+        $errors['version_name'] = 'Vyplňte číslo verze, nejvýše 100 znaků bez řídicích znaků.';
+    }
+    if (appmarketNormalizePlatform((string)($form['platform'] ?? '')) === '') {
+        $errors['platform'] = 'Vyberte platformu softwaru.';
+    }
+    if (mb_strlen((string)($form['system_requirements'] ?? '')) > 5000) {
+        $errors['system_requirements'] = 'Požadavky na systém mohou mít nejvýše 5 000 znaků.';
+    }
+    if (!appmarketReleaseNotesValid((string)($form['release_notes'] ?? ''))) {
+        $errors['release_notes'] = 'Seznam změn je příliš dlouhý.';
+    }
+    if (!in_array($form['status'] ?? '', ['draft', 'published'], true)) {
+        $errors['status'] = 'Vyberte koncept nebo zveřejnění.';
+    }
+    if (($form['status'] ?? '') === 'published' && !$canPublish) {
+        $errors['status'] = 'Zveřejnění smí provést pouze superadmin.';
+    }
+    if (!isset(appmarketReleaseChannelDefinitions()[(string)($form['release_channel'] ?? '')])) {
+        $errors['release_channel'] = 'Vyberte platný kanál vydání.';
+    }
+    if ($errors !== []) {
+        return ['ok' => false, 'id' => 0, 'errors' => $errors];
+    }
+    $storageLock = null;
+    $cleanupFiles = [];
+    try {
+        // Shared content-addressed files need a cross-app lock until the reference is committed.
+        $storageLock = appmarketAcquireSoftwareLock();
+        $pdo->beginTransaction();
+        $lock = $pdo->prepare('SELECT * FROM cms_appmarket_apps WHERE id = ? FOR UPDATE');
+        $lock->execute([$appId]);
+        $app = $lock->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($app)) {
+            throw new RuntimeException('missing app');
+        }
+        $existing = null;
+        if ($id !== null) {
+            $releaseLock = $pdo->prepare('SELECT * FROM cms_appmarket_releases WHERE id = ? FOR UPDATE');
+            $releaseLock->execute([$id]);
+            $row = $releaseLock->fetch(PDO::FETCH_ASSOC);
+            $existing = is_array($row) ? appmarketHydrateReleasePresentation($row) : null;
+        }
+        if ($id !== null && ($existing === null || (int)$existing['app_id'] !== $appId
+            || $existing['metadata_source'] !== 'manual' || $existing['status'] === 'withdrawn')) {
+            $errors['form'] = 'Toto vydání nelze upravit v editoru katalogu.';
+        } elseif ($existing !== null && !hash_equals(appmarketCatalogRevision($existing), (string)($form['revision'] ?? ''))) {
+            $errors['form'] = 'Vydání mezitím změnil jiný správce. Otevřete jeho aktuální podobu; vaše texty zůstaly ve formuláři.';
+        }
+        if ($existing !== null && $existing['status'] === 'published' && !$canPublish) {
+            $errors['form'] = 'Zveřejněné vydání smí měnit pouze superadmin.';
+        }
+        $duplicate = $pdo->prepare('SELECT id FROM cms_appmarket_releases WHERE app_id = ? AND platform = ? AND version_name = ? AND id <> ? LIMIT 1');
+        $duplicate->execute([$appId, $form['platform'], $form['version_name'], $id ?? 0]);
+        if ($duplicate->fetchColumn() !== false) {
+            $errors['version_name'] = 'Tato verze pro zvolenou platformu již existuje. Upravte stávající vydání nebo zadejte novou verzi.';
+        }
+        $artifact = $existing ?? [];
+        if ($existing !== null) {
+            $cleanupFiles[] = (string)($existing['file_storage_name'] ?? '');
+        }
+        if ($errors === []) {
+            if ($upload !== [] && ($upload['error'] ?? null) !== UPLOAD_ERR_NO_FILE) {
+                $stored = appmarketStoreSoftwareUpload($upload);
+                if (!$stored['ok']) {
+                    $errors['release_file'] = $stored['error'];
+                } else {
+                    $artifact = $stored['file'];
+                    $cleanupFiles[] = (string)$artifact['file_storage_name'];
+                }
+            } elseif ($existing === null || trim((string)($existing['file_storage_name'] ?? '')) === '') {
+                $errors['release_file'] = 'Vyberte soubor tohoto vydání.';
+            }
+        }
+        if ($errors === []) {
+            $issues = appmarketCatalogPublicationIssues(array_merge($artifact, $form, ['metadata_source' => 'manual']));
+            if ($issues !== []) {
+                $errors['release_file'] = implode(' ', $issues);
+            }
+        }
+        if ($errors !== []) {
+            $pdo->rollBack();
+            return ['ok' => false, 'id' => 0, 'errors' => $errors];
+        }
+        $values = [$form['version_name'], $form['platform'], $form['system_requirements'], $form['release_notes'],
+            $artifact['file_storage_name'], $artifact['file_original_name'], $artifact['file_size'],
+            $artifact['file_sha256'], $artifact['file_extension'], $form['status'], $form['release_channel']];
+        if ($existing === null) {
+            $sequence = appmarketLatestVersionCode($pdo, $appId) ?? 0;
+            if ($sequence >= PHP_INT_MAX) {
+                throw new RuntimeException('release sequence exhausted');
+            }
+            $pdo->prepare("INSERT INTO cms_appmarket_releases
+                (version_name, platform, system_requirements, release_notes, file_storage_name, file_original_name,
+                 file_size, file_sha256, file_extension, status, release_channel, app_id, version_code,
+                 package_id_snapshot, metadata_source, created_by_user_id)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'manual',?)")
+                ->execute(array_merge($values, [$appId, $sequence + 1, (string)($app['package_id'] ?? ''), $userId]));
+            $id = (int)$pdo->lastInsertId();
+        } else {
+            $pdo->prepare('UPDATE cms_appmarket_releases SET version_name = ?, platform = ?, system_requirements = ?,
+                release_notes = ?, file_storage_name = ?, file_original_name = ?, file_size = ?, file_sha256 = ?,
+                file_extension = ?, status = ?, release_channel = ? WHERE id = ? AND app_id = ?')
+                ->execute(array_merge($values, [$id, $appId]));
+        }
+        if ($form['status'] === 'published') {
+            $pdo->prepare('UPDATE cms_appmarket_releases SET published_at = COALESCE(published_at, NOW()), published_by_user_id = ? WHERE id = ?')
+                ->execute([$userId, $id]);
+            $pdo->prepare("UPDATE cms_appmarket_apps SET status = 'published', published_at = COALESCE(published_at, NOW()) WHERE id = ?")
+                ->execute([$appId]);
+        }
+        $pdo->commit();
+        return ['ok' => true, 'id' => (int)$id, 'errors' => []];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        koraLog('error', 'appmarket software release save failed', ['app_id' => $appId, 'exception' => $e]);
+        return ['ok' => false, 'id' => 0, 'errors' => ['form' => 'Vydání se nepodařilo uložit. Původní vydání zůstalo beze změny.']];
+    } finally {
+        if (is_resource($storageLock)) {
+            flock($storageLock, LOCK_UN);
+            fclose($storageLock);
+        }
+        foreach (array_unique($cleanupFiles) as $storageName) {
+            try {
+                appmarketDeleteSoftwareIfUnused($pdo, $storageName);
+            } catch (Throwable $cleanupError) {
+                koraLog('warning', 'appmarket unused software cleanup failed', ['exception' => $cleanupError]);
+            }
+        }
+    }
+}
+
 /**
  * @return array<string,string>
  */
@@ -721,7 +1113,18 @@ function appmarketAppPublicVisibilitySql(string $alias = 'a'): string
 function appmarketReleasePublicVisibilitySql(string $alias = 'r'): string
 {
     $prefix = $alias !== '' ? $alias . '.' : '';
-    return $prefix . "status = 'published'"
+    return $prefix . "status = 'published' AND (("
+        . $prefix . "metadata_source = 'manual'"
+        . ' AND ' . $prefix . "file_storage_name <> ''"
+        . ' AND ' . $prefix . 'file_size > 0'
+        . ' AND ' . $prefix . "file_sha256 <> ''"
+        . ') OR (' . appmarketLegacyArtifactVisibilitySql($alias) . '))';
+}
+
+function appmarketLegacyArtifactVisibilitySql(string $alias = 'r'): string
+{
+    $prefix = $alias !== '' ? $alias . '.' : '';
+    return $prefix . "metadata_source IN ('apk','publisher_attestation')"
         . ' AND ' . $prefix . "apk_storage_name <> ''"
         . ' AND ' . $prefix . 'apk_size > 0'
         . ' AND ' . $prefix . "apk_sha256 <> ''"
@@ -739,6 +1142,7 @@ function appmarketReleaseLegacyUpdateVisibilitySql(string $alias = 'r'): string
 {
     $prefix = $alias !== '' ? $alias . '.' : '';
     return appmarketReleasePublicVisibilitySql($alias)
+        . ' AND ' . appmarketLegacyArtifactVisibilitySql($alias)
         . ' AND ' . $prefix . "release_channel = 'stable'"
         . ' AND ' . $prefix . 'rollout_percentage = 100';
 }
@@ -805,6 +1209,16 @@ function appmarketHydrateReleasePresentation(array $release): array
         $release['published_at_label'] = formatCzechDate((string)$release['published_at']);
     }
 
+    $manual = ($release['metadata_source'] ?? '') === 'manual';
+    $release['platform'] = appmarketNormalizePlatform((string)($release['platform'] ?? 'android'));
+    $release['platform_label'] = appmarketPlatformDefinitions()[$release['platform']] ?? '';
+    $release['system_requirements'] = trim((string)($release['system_requirements'] ?? ''));
+    $release['file_size'] = $manual ? max(0, (int)($release['file_size'] ?? 0)) : $release['apk_size'];
+    $release['file_sha256'] = $manual
+        ? appmarketNormalizeSha256((string)($release['file_sha256'] ?? '')) : $release['apk_sha256'];
+    $release['file_extension'] = $manual ? (string)($release['file_extension'] ?? '') : 'apk';
+    $release['file_original_name'] = $manual
+        ? (string)($release['file_original_name'] ?? '') : (string)($release['apk_original_name'] ?? '');
     return $release;
 }
 
@@ -1168,6 +1582,7 @@ function appmarketLatestV3UpdateRelease(
          WHERE r.app_id = ?
            AND r.version_code > ?
            AND " . appmarketReleasePublicVisibilitySql('r') . "
+           AND " . appmarketLegacyArtifactVisibilitySql('r') . "
            AND (r.min_sdk IS NULL OR r.min_sdk <= ?)
            AND r.rollout_percentage > 0
            AND r.release_channel IN ('stable','beta')
@@ -1310,6 +1725,9 @@ function appmarketFindPublicRelease(PDO $pdo, int $appId, int $versionCode): ?ar
  */
 function appmarketReleasePublicationIssues(PDO $pdo, array $release): array
 {
+    if (($release['metadata_source'] ?? '') === 'manual') {
+        return appmarketCatalogPublicationIssues($release);
+    }
     $issues = [];
     if (appmarketNormalizePackageId((string)($release['package_id_snapshot'] ?? '')) === ''
         || (string)($release['package_id_snapshot'] ?? '') !== (string)($release['app_package_id'] ?? '')
@@ -2974,6 +3392,9 @@ function appmarketPublishRelease(
     $release = appmarketFindRelease($pdo, $releaseId);
     if ($release === null || (string)$release['status'] !== 'draft') {
         return ['ok' => false, 'errors' => ['Zveřejnit lze jen existující koncept vydání.']];
+    }
+    if ($release['metadata_source'] === 'manual') {
+        return ['ok' => false, 'errors' => ['Obecné vydání zveřejněte přes jeho editor s kontrolou aktuální revize.']];
     }
 
     $issues = appmarketReleasePublicationIssues($pdo, $release);

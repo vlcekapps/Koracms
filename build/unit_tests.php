@@ -440,6 +440,120 @@ assert_equals($appmarketHash, appmarketNormalizeSha256(strtoupper($appmarketHash
 assert_equals('', appmarketNormalizeSha256('abc'), 'Appmarket rejects incomplete SHA-256 values');
 assert_equals($appmarketHash . '.apk', appmarketApkStorageName($appmarketHash), 'Appmarket derives a safe content-addressed APK filename');
 assert_equals('', appmarketPrivateApkPath('../outside.apk'), 'Appmarket rejects a traversing private APK storage name');
+
+assert_equals(
+    ['windows', 'linux', 'macos', 'android', 'cross_platform', 'other'],
+    array_keys(appmarketPlatformDefinitions()),
+    'Appmarket exposes every supported software platform'
+);
+foreach (array_keys(appmarketPlatformDefinitions()) as $softwarePlatform) {
+    assert_equals($softwarePlatform, appmarketNormalizePlatform(' ' . strtoupper($softwarePlatform) . ' '), 'Appmarket normalizes platform ' . $softwarePlatform);
+}
+foreach (['', 'ios', 'windows/linux', "linux\nandroid"] as $invalidPlatform) {
+    assert_equals('', appmarketNormalizePlatform($invalidPlatform), 'Appmarket rejects an unsupported platform');
+}
+foreach (['zip', 'exe', 'msi', 'dmg', 'deb', 'rpm', 'appimage', 'apk', 'tar.gz', 'tar.xz', 'tar.bz2', 'tar.zst'] as $softwareExtension) {
+    assert_equals($softwareExtension, appmarketSoftwareExtension('Software.2026.' . strtoupper($softwareExtension)), 'Appmarket allows software extension ' . $softwareExtension);
+}
+foreach (['archive.gz', 'archive.tar.gz.php', 'setup.exe.html', 'setup.exe.', 'setup.exe ', 'file.php', 'file.phtml', 'file.svg', 'file.js', 'file', '../file.zip', 'dir/file.exe', 'dir\\file.zip', "file\0.zip", "file\r\n.zip", "file\x7f.zip"] as $invalidSoftwareName) {
+    assert_equals('', appmarketSoftwareExtension($invalidSoftwareName), 'Appmarket rejects unsafe or unsupported software filename ' . json_encode($invalidSoftwareName));
+}
+assert_equals($appmarketHash . '.bin', appmarketSoftwareStorageName(strtoupper($appmarketHash)), 'Appmarket stores every format under an immutable SHA-256 bin name');
+assert_equals('', appmarketSoftwareStorageName('bad-hash'), 'Appmarket rejects invalid software content hashes');
+$softwareUploadShape = ['name' => 'software.zip', 'tmp_name' => __FILE__, 'error' => UPLOAD_ERR_OK, 'size' => 1];
+$malformedSoftwareUploads = [
+    'missing metadata' => [],
+    'array filename' => array_replace($softwareUploadShape, ['name' => []]),
+    'array temporary path' => array_replace($softwareUploadShape, ['tmp_name' => []]),
+    'array upload error' => array_replace($softwareUploadShape, ['error' => []]),
+    'array file size' => array_replace($softwareUploadShape, ['size' => []]),
+    'numeric filename' => array_replace($softwareUploadShape, ['name' => 42]),
+    'null temporary path' => array_replace($softwareUploadShape, ['tmp_name' => null]),
+    'string upload error' => array_replace($softwareUploadShape, ['error' => '0']),
+    'string file size' => array_replace($softwareUploadShape, ['size' => '1']),
+];
+$softwareUploadWarnings = [];
+set_error_handler(static function (int $severity, string $message) use (&$softwareUploadWarnings): bool {
+    $softwareUploadWarnings[] = $severity . ': ' . $message;
+    return true;
+});
+try {
+    foreach ($malformedSoftwareUploads as $malformedCase => $malformedSoftwareUpload) {
+        $softwareUploadWarnings = [];
+        try {
+            $malformedSoftwareResult = appmarketStoreSoftwareUpload($malformedSoftwareUpload);
+            assert_false($malformedSoftwareResult['ok'], 'Appmarket rejects malformed upload metadata: ' . $malformedCase);
+            assert_equals([], $malformedSoftwareResult['file'], 'Appmarket malformed upload returns no stored artifact: ' . $malformedCase);
+            assert_true($malformedSoftwareResult['error'] !== '', 'Appmarket malformed upload returns a validation error: ' . $malformedCase);
+        } catch (Throwable $e) {
+            assert_true(false, 'Appmarket malformed upload must not throw: ' . $malformedCase . ' (' . get_class($e) . ')');
+        }
+        assert_equals([], $softwareUploadWarnings, 'Appmarket malformed upload emits no PHP warnings: ' . $malformedCase);
+    }
+} finally {
+    restore_error_handler();
+}
+assert_equals(koraStoragePath('appmarket/software/' . $appmarketHash . '.bin'), appmarketSoftwarePath($appmarketHash . '.bin'), 'Appmarket resolves software inside private storage');
+foreach (['../' . $appmarketHash . '.bin', '..\\' . $appmarketHash . '.bin', '/tmp/' . $appmarketHash . '.bin', 'C:\\tmp\\' . $appmarketHash . '.bin', $appmarketHash . '.exe', strtoupper($appmarketHash) . '.bin', $appmarketHash . ".bin\n", $appmarketHash . ".bin\0", $appmarketHash . '.bin:payload'] as $invalidSoftwarePath) {
+    assert_equals('', appmarketSoftwarePath($invalidSoftwarePath), 'Appmarket rejects noncanonical or traversing software paths');
+}
+$manualSoftwareRelease = [
+    'id' => '42', 'version_code' => '7', 'version_name' => ' 2026.09 ',
+    'metadata_source' => 'manual', 'platform' => ' LINUX ',
+    'system_requirements' => '  Linux x86_64, 4 GB RAM  ', 'release_notes' => 'New release',
+    'file_storage_name' => $appmarketHash . '.bin', 'file_original_name' => 'software.tar.gz',
+    'file_extension' => 'tar.gz', 'file_size' => '2048', 'file_sha256' => strtoupper($appmarketHash),
+    'apk_storage_name' => str_repeat('b', 64) . '.apk', 'apk_original_name' => 'legacy.apk',
+    'apk_size' => '512', 'apk_sha256' => str_repeat('b', 64),
+    'status' => 'published', 'release_channel' => 'stable', 'updated_at' => '2026-09-05 12:00:00',
+];
+$hydratedSoftwareRelease = appmarketHydrateReleasePresentation($manualSoftwareRelease);
+assert_equals('2026.09', $hydratedSoftwareRelease['version_name'], 'Appmarket hydrates a generic version name');
+assert_equals('linux', $hydratedSoftwareRelease['platform'], 'Appmarket hydrates a generic platform');
+assert_equals('Linux', $hydratedSoftwareRelease['platform_label'], 'Appmarket provides a readable platform label');
+assert_equals('Linux x86_64, 4 GB RAM', $hydratedSoftwareRelease['system_requirements'], 'Appmarket trims system requirements');
+assert_equals(2048, $hydratedSoftwareRelease['file_size'], 'Appmarket uses software size rather than legacy APK size');
+assert_equals($appmarketHash, $hydratedSoftwareRelease['file_sha256'], 'Appmarket uses normalized software SHA-256 rather than legacy APK hash');
+assert_equals('software.tar.gz', $hydratedSoftwareRelease['file_original_name'], 'Appmarket retains the generic original filename');
+assert_equals('tar.gz', $hydratedSoftwareRelease['file_extension'], 'Appmarket preserves compound extensions when hydrating');
+assert_equals(appmarketSoftwarePath($appmarketHash . '.bin'), appmarketReleaseFilePath($manualSoftwareRelease), 'Appmarket manual download never falls back to a legacy APK');
+assert_equals('', appmarketReleaseFilePath(array_replace($manualSoftwareRelease, ['file_storage_name' => '../bad.bin'])), 'Appmarket rejects an invalid manual path even with a valid legacy APK path');
+assert_equals('software-2026.09.tar.gz', appmarketReleaseDownloadName(['slug' => 'software'], $hydratedSoftwareRelease), 'Appmarket download name preserves tar.gz');
+assert_equals('software-2026.09.bin', appmarketReleaseDownloadName(['slug' => 'software'], array_replace($hydratedSoftwareRelease, ['file_extension' => 'php'])), 'Appmarket download name cannot acquire a non-whitelisted extension');
+foreach (['apk', 'publisher_attestation'] as $legacyMetadataSource) {
+    $legacySoftwareRelease = array_replace($manualSoftwareRelease, ['metadata_source' => $legacyMetadataSource, 'platform' => 'android']);
+    $legacySoftwarePresentation = appmarketHydrateReleasePresentation($legacySoftwareRelease);
+    assert_equals(512, $legacySoftwarePresentation['file_size'], 'Appmarket legacy hydration retains APK size');
+    assert_equals(str_repeat('b', 64), $legacySoftwarePresentation['file_sha256'], 'Appmarket legacy hydration retains APK hash');
+    assert_equals('legacy.apk', $legacySoftwarePresentation['file_original_name'], 'Appmarket legacy hydration retains APK filename');
+    assert_equals('apk', $legacySoftwarePresentation['file_extension'], 'Appmarket legacy hydration remains an APK');
+    assert_equals(appmarketPrivateApkPath(str_repeat('b', 64) . '.apk'), appmarketReleaseFilePath($legacySoftwareRelease), 'Appmarket legacy download still resolves private APK storage');
+}
+assert_equals('', appmarketHydrateAppPresentation(['package_id' => null])['package_id'], 'Appmarket presentation supports apps without an Android package ID');
+$softwareRevision = appmarketCatalogRevision($manualSoftwareRelease);
+assert_true(preg_match('/\A[a-f0-9]{64}\z/', $softwareRevision) === 1, 'Appmarket edit revision is a SHA-256 token');
+assert_equals($softwareRevision, appmarketCatalogRevision(array_reverse($manualSoftwareRelease, true)), 'Appmarket edit revision is independent of input key ordering');
+assert_equals($softwareRevision, appmarketCatalogRevision(array_replace($manualSoftwareRelease, ['id' => 42, 'file_size' => 2048])), 'Appmarket edit revision is stable across PDO scalar types');
+assert_equals($softwareRevision, appmarketCatalogRevision(array_replace($manualSoftwareRelease, ['download_count' => 99])), 'Appmarket edit revision ignores download counters');
+assert_equals($softwareRevision, appmarketCatalogRevision(array_replace($manualSoftwareRelease, ['updated_at' => '2026-09-06 12:00:00', 'download_count' => 100])), 'Appmarket downloads may update the timestamp without invalidating an open editor');
+foreach (['id', 'version_name', 'platform', 'system_requirements', 'release_notes', 'file_storage_name', 'file_original_name', 'file_size', 'file_sha256', 'file_extension', 'status', 'release_channel'] as $revisionField) {
+    assert_false(hash_equals($softwareRevision, appmarketCatalogRevision(array_replace($manualSoftwareRelease, [$revisionField => 'changed']))), 'Appmarket revision detects a concurrent change to ' . $revisionField);
+}
+foreach (['r', 'candidate', ''] as $visibilityAlias) {
+    $visibilityPrefix = $visibilityAlias !== '' ? $visibilityAlias . '.' : '';
+    $publicSoftwareSql = appmarketReleasePublicVisibilitySql($visibilityAlias);
+    $legacyArtifactSql = appmarketLegacyArtifactVisibilitySql($visibilityAlias);
+    $legacyUpdateSql = appmarketReleaseLegacyUpdateVisibilitySql($visibilityAlias);
+    assert_contains($visibilityPrefix . "metadata_source = 'manual'", $publicSoftwareSql, 'Appmarket catalog visibility includes manual software');
+    assert_contains($visibilityPrefix . "file_storage_name <> ''", $publicSoftwareSql, 'Appmarket catalog visibility requires a software artifact');
+    assert_contains($visibilityPrefix . "metadata_source IN ('apk','publisher_attestation')", $legacyArtifactSql, 'Appmarket Android API uses an explicit trusted metadata-source allowlist');
+    assert_false(str_contains($legacyArtifactSql, "'manual'"), 'Appmarket manual metadata is not Android API evidence');
+    assert_contains('appmarket_certificate.is_active = 1', $legacyArtifactSql, 'Appmarket legacy visibility still requires active certificates');
+    assert_contains('appmarket_certificate.app_id = ' . $visibilityPrefix . 'app_id', $legacyArtifactSql, 'Appmarket legacy visibility still scopes certificates to the app');
+    assert_contains(' AND ' . $legacyArtifactSql, $legacyUpdateSql, 'Appmarket V1/V2 require legacy artifact evidence outside the public catalog OR');
+    assert_contains($visibilityPrefix . "release_channel = 'stable'", $legacyUpdateSql, 'Appmarket V1/V2 retain stable-channel filtering');
+    assert_contains($visibilityPrefix . 'rollout_percentage = 100', $legacyUpdateSql, 'Appmarket V1/V2 retain complete-rollout filtering');
+}
 assert_true(appmarketReleaseVersionIsNewer(2, 1), 'Appmarket accepts a greater version code');
 assert_false(appmarketReleaseVersionIsNewer(1, 1), 'Appmarket rejects a duplicate version code');
 assert_equals([], appmarketNormalizeTokenScopes('unknown'), 'Appmarket rejects unknown publisher token scopes');

@@ -147,6 +147,7 @@ $tables = [
                                         valid_from, valid_to, is_active, notes, created_at, updated_at
                                  FROM cms_appmarket_certificates",
     'appmarket_releases' => "SELECT id, app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
+                                    platform, system_requirements, file_original_name, file_size, file_sha256, file_extension,
                                     package_id_snapshot, apk_original_name, apk_size, apk_sha256,
                                     certificate_id, certificate_fingerprint_sha256, permissions_json, supported_abis_json,
                                     analysis_json, metadata_source, update_priority, required_below_version_code,

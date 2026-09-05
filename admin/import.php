@@ -922,11 +922,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $summary[] = 'Knihovna médií importována.';
                 }
 
-                // Appmarket – katalogová metadata bez APK, tokenů a automatické důvěry certifikátům
+                // Appmarket – katalogová metadata bez souborů, tokenů a automatické důvěry certifikátům
                 $appmarketAppIdMap = [];
                 if (!empty($data['appmarket_apps']) && is_array($data['appmarket_apps'])) {
                     $findAppmarketAppStmt = $pdo->prepare(
                         'SELECT id FROM cms_appmarket_apps WHERE package_id = ? LIMIT 1'
+                    );
+                    $findAppmarketGenericAppStmt = $pdo->prepare(
+                        'SELECT id FROM cms_appmarket_apps WHERE slug = ? AND package_id IS NULL LIMIT 1'
                     );
                     $mediaExistsStmt = $pdo->prepare('SELECT id FROM cms_media WHERE id = ? LIMIT 1');
                     $insertAppmarketAppStmt = $pdo->prepare(
@@ -940,13 +943,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($data['appmarket_apps'] as $row) {
                         $sourceId = max(0, (int)($row['id'] ?? 0));
                         $name = trim((string)($row['name'] ?? ''));
-                        $packageId = appmarketNormalizePackageId((string)($row['package_id'] ?? ''));
+                        $rawPackageId = trim((string)($row['package_id'] ?? ''));
+                        $packageId = $rawPackageId !== '' ? appmarketNormalizePackageId($rawPackageId) : null;
                         if ($name === '' || $packageId === '') {
                             continue;
                         }
 
-                        $findAppmarketAppStmt->execute([$packageId]);
-                        $existingAppId = $findAppmarketAppStmt->fetchColumn();
+                        $slugCandidate = trim((string)($row['slug'] ?? ''));
+                        $slugCandidate = appmarketAppSlug($slugCandidate !== '' ? $slugCandidate : $name);
+                        if ($slugCandidate === '') {
+                            $slugCandidate = 'aplikace';
+                        }
+                        if ($packageId === null) {
+                            $findAppmarketGenericAppStmt->execute([$slugCandidate]);
+                            $existingAppId = $findAppmarketGenericAppStmt->fetchColumn();
+                        } else {
+                            $findAppmarketAppStmt->execute([$packageId]);
+                            $existingAppId = $findAppmarketAppStmt->fetchColumn();
+                        }
                         if ($existingAppId !== false) {
                             if ($sourceId > 0) {
                                 $appmarketAppIdMap[$sourceId] = (int)$existingAppId;
@@ -966,8 +980,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ?? date('Y-m-d H:i:s');
                         $updatedAt = appmarketNormalizeDateTime((string)($row['updated_at'] ?? ''))
                             ?? $createdAt;
-                        $slugCandidate = trim((string)($row['slug'] ?? ''));
-                        $slug = uniqueAppmarketAppSlug($pdo, $slugCandidate !== '' ? $slugCandidate : $name);
+                        $slug = uniqueAppmarketAppSlug($pdo, $slugCandidate);
 
                         $insertAppmarketAppStmt->execute([
                             mb_substr($name, 0, 255, 'UTF-8'),
@@ -1056,13 +1069,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insertAppmarketReleaseStmt = $pdo->prepare(
                         "INSERT INTO cms_appmarket_releases
                          (app_id, version_name, version_code, release_notes, min_sdk, target_sdk,
+                          platform, system_requirements, file_storage_name, file_original_name, file_size,
+                          file_sha256, file_extension,
                           package_id_snapshot, apk_storage_name, apk_original_name, apk_size, apk_sha256,
                           certificate_id, certificate_fingerprint_sha256, permissions_json, supported_abis_json,
                           analysis_json,
                           metadata_source, update_priority, required_below_version_code,
                           release_channel, rollout_percentage,
                           status, download_count, created_at, updated_at)
-                         VALUES (?,?,?,?,?,?,?,'',?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,?,?)"
+                         VALUES (?,?,?,?,?,?,?,?,'',?,?,?,?,?,'',?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,?,?)"
                     );
 
                     foreach ($data['appmarket_releases'] as $row) {
@@ -1070,7 +1085,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $appId = $appmarketAppIdMap[$sourceAppId] ?? null;
                         $versionName = appmarketNormalizeVersionName((string)($row['version_name'] ?? ''));
                         $versionCode = appmarketNormalizeVersionCode($row['version_code'] ?? null);
-                        if ($appId === null || $versionName === '' || $versionCode === null) {
+                        $platform = appmarketNormalizePlatform((string)($row['platform'] ?? 'android'));
+                        if ($appId === null || $versionName === '' || $versionCode === null || $platform === '') {
                             continue;
                         }
 
@@ -1080,10 +1096,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
 
                         $findAppmarketPackageStmt->execute([$appId]);
-                        $packageId = appmarketNormalizePackageId((string)$findAppmarketPackageStmt->fetchColumn());
-                        if ($packageId === '') {
+                        $importApp = $findAppmarketPackageStmt->fetch(PDO::FETCH_ASSOC);
+                        if (!is_array($importApp)) {
                             continue;
                         }
+                        $packageId = appmarketNormalizePackageId((string)($importApp['package_id'] ?? ''));
 
                         $sourceCertificateId = max(0, (int)($row['certificate_id'] ?? 0));
                         $certificateId = $appmarketCertificateIdMap[$sourceCertificateId] ?? null;
@@ -1105,6 +1122,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             && $row['supported_abis_json'] !== null
                             ? appmarketNormalizeJsonMetadata($row['supported_abis_json'])
                             : null;
+                        $fileOriginalName = basename(str_replace(
+                            '\\',
+                            '/',
+                            (string)($row['file_original_name'] ?? $row['apk_original_name'] ?? '')
+                        ));
+                        $fileOriginalName = mb_substr($fileOriginalName, 0, 255, 'UTF-8');
+                        $fileExtension = appmarketSoftwareExtension($fileOriginalName);
+                        if ($fileExtension === '' && !empty($row['file_extension'])) {
+                            $fileExtension = appmarketSoftwareExtension('file.' . (string)$row['file_extension']);
+                        }
+                        // Imported hashes and sizes are descriptive only; never attach a local binary by reference.
+                        $fileSha256 = appmarketNormalizeSha256((string)($row['file_sha256'] ?? $row['apk_sha256'] ?? ''));
+                        $fileSize = max(0, (int)($row['file_size'] ?? $row['apk_size'] ?? 0));
+                        $metadataSource = $packageId === '' || ($row['metadata_source'] ?? '') === 'manual'
+                            ? 'manual'
+                            : 'apk';
 
                         $insertAppmarketReleaseStmt->execute([
                             $appId,
@@ -1113,6 +1146,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (string)($row['release_notes'] ?? ''),
                             appmarketNormalizeSdkLevel($row['min_sdk'] ?? null),
                             appmarketNormalizeSdkLevel($row['target_sdk'] ?? null),
+                            $platform,
+                            isset($row['system_requirements']) ? (string)$row['system_requirements'] : null,
+                            $fileOriginalName,
+                            $fileSize,
+                            $fileSha256,
+                            $fileExtension,
                             $packageId,
                             basename((string)($row['apk_original_name'] ?? '')),
                             appmarketNormalizeSha256((string)($row['apk_sha256'] ?? '')),
@@ -1121,7 +1160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             appmarketNormalizeJsonMetadata($row['permissions_json'] ?? []),
                             $supportedAbisJson,
                             appmarketNormalizeJsonMetadata($row['analysis_json'] ?? []),
-                            'apk',
+                            $metadataSource,
                             $policy['priority'],
                             $policy['required_below_version_code'],
                             $policy['channel'],
@@ -1130,7 +1169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $updatedAt,
                         ]);
                     }
-                    $summary[] = 'Appmarket – metadata vydání importována jako koncepty bez APK.';
+                    $summary[] = 'Appmarket – metadata vydání importována jako koncepty bez souborů.';
                 }
 
                 if (!empty($data['appmarket_screenshots']) && is_array($data['appmarket_screenshots'])) {

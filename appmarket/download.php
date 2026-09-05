@@ -6,7 +6,7 @@ $isHeadRequest = requireReadOnlyHttpMethod();
 session_write_close();
 header_remove('Set-Cookie');
 if (!isModuleEnabled('appmarket')) {
-    sendFileDownloadNotFound('APK nebyl nalezen.', $isHeadRequest);
+    sendFileDownloadNotFound('Soubor nebyl nalezen.', $isHeadRequest);
 }
 
 $slug = appmarketAppSlug((string)($_GET['slug'] ?? ''));
@@ -17,26 +17,25 @@ $release = $app !== null && $versionCode !== false
     ? appmarketFindPublicRelease($pdo, (int)$app['id'], (int)$versionCode)
     : null;
 if ($app === null || $release === null) {
-    sendFileDownloadNotFound('APK nebyl nalezen.', $isHeadRequest);
+    sendFileDownloadNotFound('Soubor nebyl nalezen.', $isHeadRequest);
 }
 
-$path = appmarketPrivateApkPath((string)$release['apk_storage_name']);
-$actualSize = $path !== '' && is_file($path) ? filesize($path) : false;
-$actualHash = $path !== '' && is_file($path) ? hash_file('sha256', $path) : false;
-if (!appmarketPrivateStorageIsSafe()
-    || $path === ''
-    || !is_file($path)
-    || !is_readable($path)
+$path = appmarketReleaseFilePath($release);
+$fileReadable = appmarketPrivateStorageIsSafe() && $path !== '' && is_file($path) && is_readable($path);
+$actualSize = $fileReadable ? filesize($path) : false;
+$actualHash = $fileReadable ? hash_file('sha256', $path) : false;
+if (!$fileReadable
     || !is_int($actualSize)
-    || $actualSize !== (int)$release['apk_size']
+    || $actualSize <= 0
+    || $actualSize !== (int)$release['file_size']
     || !is_string($actualHash)
-    || !hash_equals((string)$release['apk_sha256'], strtolower($actualHash))
+    || !hash_equals((string)$release['file_sha256'], strtolower($actualHash))
 ) {
-    koraLog('warning', 'appmarket public APK is missing', [
+    koraLog('warning', 'appmarket public release file is missing or invalid', [
         'app_id' => (int)$app['id'],
         'release_id' => (int)$release['id'],
     ]);
-    sendFileDownloadNotFound('APK nebyl nalezen.', $isHeadRequest);
+    sendFileDownloadNotFound('Soubor nebyl nalezen.', $isHeadRequest);
 }
 
 $rangeHeader = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
@@ -48,12 +47,14 @@ if (!$isHeadRequest && ($rangeHeader === '' || str_starts_with($rangeHeader, 'by
     )->execute([(int)$release['id']]);
 }
 
-$downloadName = appmarketAppSlug((string)$app['slug'])
-    . '-' . preg_replace('/[^A-Za-z0-9._-]+/', '-', (string)$release['version_name']) . '.apk';
+$downloadName = appmarketReleaseDownloadName($app, $release);
+$mimeType = strtolower((string)$release['file_extension']) === 'apk'
+    ? 'application/vnd.android.package-archive'
+    : 'application/octet-stream';
 sendStoredFileRangeDownload(
     $path,
     $downloadName,
     $isHeadRequest,
-    'application/vnd.android.package-archive',
-    (string)$release['apk_sha256']
+    $mimeType,
+    (string)$release['file_sha256']
 );
