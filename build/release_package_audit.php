@@ -35,6 +35,9 @@ if (!is_file($releaseScriptPath)) {
         '.github',
         '.gitignore',
         '.gitattributes',
+        '.agents',
+        '.php-cs-fixer.cache',
+        '.integrity_snapshot.json',
         '.claude',
         '.codex',
         '.cursor',
@@ -143,6 +146,9 @@ if (!is_file($releaseSmokePath)) {
         "str_starts_with(\$entry, 'node_modules/')",
         "str_starts_with(\$entry, '.codex/')",
         "str_starts_with(\$entry, '.cursor/')",
+        "str_starts_with(\$entry, '.agents/')",
+        "'.php-cs-fixer.cache',",
+        "'.integrity_snapshot.json',",
         "str_starts_with(\$entry, 'dist/')",
         "Source archive unexpectedly contains user upload content",
         "Release smoke ZIP unexpectedly contains dev metadata",
@@ -161,6 +167,10 @@ if (!is_file($gitattributesPath)) {
     $gitattributesSource = (string) file_get_contents($gitattributesPath);
 
     $requiredExportIgnores = [
+        '.agents export-ignore',
+        '.agents/** export-ignore',
+        '.php-cs-fixer.cache export-ignore',
+        '.integrity_snapshot.json export-ignore',
         '.github export-ignore',
         '.github/** export-ignore',
         '.claude export-ignore',
@@ -229,6 +239,7 @@ if (!is_file($gitignorePath)) {
         '.claude/',
         '.codex/',
         '.cursor/',
+        '.agents/',
         '!docs/admin-guide.md',
     ];
 

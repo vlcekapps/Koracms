@@ -293,7 +293,7 @@ function New-ReleaseZip {
         [hashtable]$FileOverrides = @{}
     )
 
-    $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.claude', '.codex', '.cursor', 'uploads', 'build', 'dist', 'docs', 'vendor', 'node_modules', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
+    $exclude = @('.git', '.github', '.gitignore', '.gitattributes', '.agents', '.claude', '.codex', '.cursor', 'uploads', 'build', 'dist', 'docs', 'vendor', 'node_modules', 'config.php', 'aconfig.php', 'AGENTS.md', 'composer.json', 'composer.lock', 'phpstan.neon.dist', '.php-cs-fixer.dist.php', '.php-cs-fixer.cache', '.integrity_snapshot.json', '.DS_Store', 'Thumbs.db', '.vscode', '.idea')
     $adminGuideSource = Join-Path $ProjectRoot "docs\admin-guide.md"
     $uploadsHtaccessSource = Join-Path $ProjectRoot "uploads\.htaccess"
 
@@ -337,7 +337,12 @@ function New-ReleaseZip {
 
         Compress-ReleaseDirectory -SourceDir $tempDir -OutPath $OutPath
     } finally {
-        Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        $resolvedTempDir = (Resolve-Path -LiteralPath $tempDir).ProviderPath
+        $resolvedTempRoot = (Resolve-Path -LiteralPath ([System.IO.Path]::GetTempPath())).ProviderPath.TrimEnd([char][System.IO.Path]::DirectorySeparatorChar, [char][System.IO.Path]::AltDirectorySeparatorChar)
+        if ((Split-Path -Parent $resolvedTempDir) -ne $resolvedTempRoot -or (Split-Path -Leaf $resolvedTempDir) -notmatch '^koracms_[0-9a-f]{32}$') {
+            throw "Odmítám uklidit adresář mimo dočasný release workspace."
+        }
+        Remove-Item -LiteralPath $resolvedTempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 

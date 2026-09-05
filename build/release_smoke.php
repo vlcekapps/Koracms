@@ -325,6 +325,8 @@ $zipInspectScriptPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
 
 $excludedRootEntries = [
     '.git',
+    '.agents',
+    '.integrity_snapshot.json',
     '.claude',
     '.codex',
     '.cursor',
@@ -357,7 +359,17 @@ try {
     runCheckedCommand(['git', 'config', 'user.email', 'release-smoke@example.invalid'], $tempRoot);
     runCheckedCommand(['git', 'config', 'user.name', 'Kora CMS Release Smoke'], $tempRoot);
     runCheckedCommand(['git', 'config', 'commit.gpgsign', 'false'], $tempRoot);
+    // Seed non-production files so both ZIP and source-archive exclusions are exercised.
+    if (!mkdir($tempRoot . '/.agents', 0777, true)) {
+        fail('Cannot create local agent metadata fixture.');
+    }
+    foreach (['.agents/local.txt', '.php-cs-fixer.cache', '.integrity_snapshot.json'] as $localEntry) {
+        if (file_put_contents($tempRoot . '/' . $localEntry, "release smoke local fixture\n") === false) {
+            fail('Cannot create local artifact fixture: ' . $localEntry);
+        }
+    }
     runCheckedCommand(['git', 'add', '--all'], $tempRoot);
+    runCheckedCommand(['git', 'add', '--force', '.agents/local.txt', '.php-cs-fixer.cache', '.integrity_snapshot.json'], $tempRoot);
     runCheckedCommand(['git', 'commit', '--quiet', '-m', 'Release smoke snapshot'], $tempRoot);
 
     $snapshotVersion = trim((string) file_get_contents($tempRoot . DIRECTORY_SEPARATOR . 'VERSION'));
@@ -484,6 +496,9 @@ try {
     }
 
     foreach ($entries as $entry) {
+        if (str_starts_with($entry, '.agents/')) {
+            fail('Release smoke ZIP unexpectedly contains local agent metadata.');
+        }
         if (str_starts_with($entry, '.claude/')) {
             fail('Release smoke ZIP unexpectedly contains local Claude metadata.');
         }
@@ -524,6 +539,9 @@ try {
 
     foreach ([
         '.gitattributes',
+        '.agents',
+        '.php-cs-fixer.cache',
+        '.integrity_snapshot.json',
         '.gitignore',
         '.php-cs-fixer.dist.php',
         '.codex',
@@ -595,6 +613,9 @@ try {
     }
 
     foreach ($sourceEntries as $entry) {
+        if (str_starts_with($entry, '.agents/')) {
+            fail('Source archive unexpectedly contains local agent metadata.');
+        }
         if (str_starts_with($entry, '.claude/')) {
             fail('Source archive unexpectedly contains local Claude metadata: ' . $entry);
         }
@@ -635,6 +656,9 @@ try {
 
     foreach ([
         '.gitattributes',
+        '.agents',
+        '.php-cs-fixer.cache',
+        '.integrity_snapshot.json',
         '.gitignore',
         '.php-cs-fixer.dist.php',
         '.codex',

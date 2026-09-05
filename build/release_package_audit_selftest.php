@@ -216,6 +216,21 @@ if (!is_file($releasePackageAuditPath)) {
 
 assertReleasePackageAuditPasses('Clean release package fixture');
 
+foreach (['.agents', '.php-cs-fixer.cache', '.integrity_snapshot.json'] as $localEntry) {
+    assertReleasePackageAuditFails(
+        'Missing local release exclusion: ' . $localEntry,
+        static function (string $tempRoot) use ($localEntry): void {
+            releasePackageAuditSelfTestReplaceInFile(
+                $tempRoot . '/build/release.ps1',
+                ", '" . $localEntry . "'",
+                '',
+                'missing local release exclusion'
+            );
+        },
+        'build/release.ps1 does not exclude ' . $localEntry . '.'
+    );
+}
+
 assertReleasePackageAuditFails(
     'Missing release script vendor exclusion guard',
     static function (string $tempRoot): void {

@@ -6,6 +6,9 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+### Vydání
+- **5.0.0-rc.1**: první release candidate řady 5.0 zahrnuje obecný Appmarket, modulová rozšíření a opravy předrelease auditu. Distribuce je označená jako prerelease, nikoli stabilní vydání. Aktualizace vyžaduje zálohu souborů i databáze, migraci a nové přihlášení; provoz hostingu, doručování e-mailů a ruční přístupnost se ověřují po nasazení podle administrátorské příručky.
+
 ### Přidáno
 - **Appmarket jako obecný katalog softwaru**: aplikace už nevyžadují Android identitu, SDK ani certifikáty. Nový editor verzí podporuje Windows, Linux, macOS a další platformy, instalační soubory a archivy včetně EXE, RPM, DEB, DMG a TAR.GZ, changelog a požadavky na systém. Přehled nabízí přímé Aktualizovat verzi a historii s náhradou souboru konkrétního vydání. Původní Android API zůstává izolované od ručních balíčků. Instalace, migrace a bezpečný import/export zahrnují obecná metadata; přístupné chyby zachovají formulář a konflikt souběžné editace nepřepíše cizí změny. Soubory se ukládají mimo webroot a nikdy se na serveru nespouštějí; za jejich podpis a důvěryhodnost odpovídá správce.
 - **Food V4: cenové a porční varianty a přesnější poptávky** – strukturovaná položka může mít samostatně řazené varianty s vlastním názvem, porcí nebo objemem, cenou, měnou, poznámkou a dostupností; pokud varianty existují, veřejný lístek, JSON-LD i objednávka používají je místo základní ceny položky. Lístek může povolit osobní vyzvednutí, konzumaci na místě nebo doručení a volitelně vyžadovat požadovaný budoucí termín. Veřejný formulář ukládá adresu jen pro doručení, přijímá pouze serverem povolené volby a názvy, porce i ceny skládá z databáze do neměnného snapshotu. Správa variant je plně klávesnicová, používá field-level chyby a potvrzené mazání a modul má samostatnou WCAG 2.2 AA ACR přílohu.
@@ -18,6 +21,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Opraveno
 
+- **Čistý RC balíček**: release ZIP a source archive vynechávají také `.agents/`, cache formátovače a lokální integrity snapshot. Release smoke test obsahuje skutečné lokální testovací artefakty; úklid dočasného balicího adresáře před rekurzivním mazáním ověřuje jeho umístění.
 - **Přenositelnost RC regresí mezi verzemi PHP**: databázové testy rozlišují hodnotu identifikátoru od PDO reprezentace čísla jako řetězce. Izolovaná sada se nově opakuje i s vynucenými číselnými řetězci, bez oslabení kontrol stavů, časů, oprávnění nebo obsahu.
 - **Shoda lokálních kontrol s CI**: zdrojové audity kontrolují i nové neignorované soubory před `git add`. Opravený databázový test rezervací nepoužívá vyhrazené názvy konfiguračních proměnných; izolované testy hlídají nové soubory i zachování ochrany lokálních tajných konfigurací.
 - **Platnost přihlášení a 2FA**: změna hesla, role či zabezpečení účtu a smazání nebo zneplatnění účtu ukončí starou relaci; rozpracované 2FA platí deset minut. Po aktualizaci je potřeba nové přihlášení, proto před nasazením uložit rozepsané úpravy. Starší administrátorské účty bez sloupce potvrzení zůstávají použitelné pro migraci, explicitně nepotvrzené účty se dál odmítají. Apache už nepřepisuje soukromou cache náhledů podle identifikace sociálního crawleru.

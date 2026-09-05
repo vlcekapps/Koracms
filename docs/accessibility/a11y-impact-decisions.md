@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-09-05: vydání 5.0.0-rc.1 a čistota balíčku
+
+- Datum a rozsah: dokumentace nasazení RC, vynechání lokálních agentních metadat, cache a integrity snapshotu z distribuce a bezpečný úklid dočasného balicího adresáře.
+- Dotčená kritéria: bez nové změny uživatelského rozhraní; omezení předchozího RC auditu včetně přístupného opakovaného přihlášení zůstávají platná.
+- Rozhodnutí: RC je výslovně prerelease. Synchronizace `Version evaluated` release skriptem nepředstavuje nové ruční testování ani zvýšení stavu shody. Hosting lze ověřit až po nahrání; příručka uvádí kontrolu i návrat ze zálohy.
+- Automatizovaný důkaz: release package audit s negativními mutacemi a release smoke test skutečně vytvořených lokálních artefaktů v ZIPu i source archive; před vydáním je vyžadován `composer ci:full`.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox, klávesnice, zoom/reflow, kontrast vlastní šablony a produkční e-maily zůstávají otevřené. Nevydáváme certifikaci ani stabilní 5.0.0.
+
 ### 2026-09-05: RC audit editorů, médií a provozních akcí
 
 - Datum a rozsah: autosave a obnova editorů, validační návraty, publikace a náhledy, náhrady médií, rezervace, ankety, newsletter, schránka a přihlášení včetně starší instalace před migrací; podrobný registr RC-01 až RC-45 je v `docs/rc-audit-2026-09.md`.

@@ -30,6 +30,7 @@ Thumbs.db
 *.swp
 
 # Lokální AI/editor metadata
+.agents/
 .claude/
 .codex/
 .cursor/

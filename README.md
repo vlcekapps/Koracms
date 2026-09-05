@@ -6,7 +6,11 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 
 ## Obsah
 
-Přípravu dalšího vydání sleduje [RC audit ze září 2026](docs/rc-audit-2026-09.md). Obsahuje potvrzené nálezy, opravy, regresní důkazy a zbývající podmínky vydání; zelené CI samo o sobě není prohlášení o úplné bezpečnosti ani WCAG shodě. Nové izolované RC testy spouští `composer test:rc-core` (vývojové PHP s `pdo_sqlite` a Node.js 22), DB regresi `composer test:rc-runtime`. Produkční web Node.js ani SQLite nepotřebuje. Obě sady jsou zahrnuté v `composer ci:module-ready`.
+Přípravu vydání sleduje [RC audit ze září 2026](docs/rc-audit-2026-09.md). Obsahuje potvrzené nálezy, opravy, regresní důkazy a zbývající podmínky vydání; zelené CI samo o sobě není prohlášení o úplné bezpečnosti ani WCAG shodě. Nové izolované RC testy spouští `composer test:rc-core` (vývojové PHP s `pdo_sqlite` a Node.js 22), DB regresi `composer test:rc-runtime`. Produkční web Node.js ani SQLite nepotřebuje. Obě sady jsou zahrnuté v `composer ci:module-ready`.
+
+**5.0.0-rc.1 je release candidate, nikoli stabilní 5.0.0.** Nasazení na hosting vyžaduje zálohu databáze i souborů, spuštění `migrate.php` a následné ověření skutečného provozu. Staré přihlášené relace si vyžádají nový login; před aktualizací uložte rozepsané změny. Doručování e-mailů na hostingu a ruční NVDA/zoom kontrola nejsou automatickými testy potvrzené. Podrobný postup je v [administrátorské příručce](docs/admin-guide.md#nasazení-500-rc1). RC zůstává GitHub prerelease a nenahrazuje poslední stabilní vydání jako `latest`.
+
+Release ZIP ani source archive neobsahují lokální `.agents/`, `.php-cs-fixer.cache` ani instalačně specifický `.integrity_snapshot.json`. Jejich vyloučení se ověřuje i na skutečných testovacích souborech, nejen podle seznamu pravidel.
 
 Zdrojové repository, redirect, encoding, mojibake a whitespace audity zahrnují také nové neignorované soubory před `git add`, aby lokální kontrola nepřehlédla kód, který až po commitu uvidí CI. Ignorované lokální konfigurace a nástrojové cache se nenačítají; vynucené verzování tajné konfigurace repository audit dál odmítne.
 

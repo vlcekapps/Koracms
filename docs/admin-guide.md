@@ -339,6 +339,20 @@ Multiblog je určený pro situace, kdy má jeden web více samostatných blogů 
 
 ### Bezpečnostní audit před RC (září 2026)
 
+#### Nasazení 5.0.0-rc.1
+
+RC je kandidát k ověření, ne stabilní vydání ani potvrzení úplné WCAG shody. Pokud je jediným dostupným prostředím ostrý hosting, ověření se provede po nahrání a je podmínkou přijetí nasazení. Nulová aktuální návštěvnost nezaručuje, že během kopírování nepřijde požadavek návštěvníka, bota nebo cronu.
+
+1. Uložte rozepsané editory a pořiďte odpovídající zálohu celé databáze, souborů webu a soukromého úložiště `KORA_STORAGE_DIR`, pokud je mimo webroot. Připravte si i původní balíček a přístup pro obnovu nezávislý na administraci CMS.
+2. Pro krátké nahrávání a migraci je vhodné pozastavit cron a použít údržbu hostingu, aby návštěvník nenarazil na kombinaci starých a nových souborů. Při přímém nahrávání za provozu nelze bezvýpadkový průběh zaručit.
+3. Použijte instalační asset `koracms-5.0.0-rc.1.zip` a ověřte jeho `.sha256`. Zachovejte vlastní `config.php`, obsah uploadů, soukromé úložiště a úpravy vlastní šablony; nahrajte také ochranné `.htaccess` soubory z balíčku. Lokální agentní metadata, cache formátovače a integrity snapshot do distribuce nepatří.
+4. Znovu se přihlaste jako superadmin a spusťte `migrate.php`. Po dokončení zkontrolujte výsledek migrace i zobrazenou verzi. Desetiminutová platnost se týká jen nedokončeného 2FA, ne psaní obsahu.
+5. Ověřte homepage, blogový výpis/detail/stránku, přístup do administrace, uložení editoru, upload a stažení souboru, privátní náhled, formulář a newsletter. Podle používaných modulů vyzkoušejte i rezervaci nebo Appmarket. Zkontrolujte sitemap a feed.
+6. Ověřte skutečné doručení e-mailu, obnovte cron a sledujte PHP log i log aplikace. Lokální `smtp_connectivity = SKIP` není důkazem funkčního ani nefunkčního SMTP na hostingu. Zkontrolujte s NVDA alespoň login, chybu formuláře a opětovné uložení editoru; širší ruční ACR scénáře zůstávají otevřené.
+7. Při zásadní chybě zamezte novým zápisům a obnovte společně soubory i databázi ze stejné zálohy, nikoli pouze starý PHP kód nad novým schématem. Obnova DB zahodí nová data přijatá po záloze; před návratem je podle situace bezpečně uchovejte.
+
+#### Výsledky auditu
+
 Podrobný stav je v [RC registru](../docs/rc-audit-2026-09.md). Před nasazením nových souborů zálohujte databázi i uploady a poté spusťte `migrate.php`: rate-limity nově evidují vlastní expiraci, takže krátká ochrana ani cron nezruší delší limit. Existující počítadla se neruší; staré neznámé expirace dostanou konzervativní sedmidenní okno.
 
 Veřejné články a stránky respektují konec i začátek publikace přímo při čtení, nejen po běhu cronu. Záložní koncept vizuálního editoru zachovává samostatný perex a vícenásobný výběr. Odmítnutá změna média nebo podcastu nesmí odstranit původní soubor. Ke stažení se sdílí přes veřejný detail nebo kontrolovaný download endpoint, nikoli přímou cestou do `uploads/downloads/`.

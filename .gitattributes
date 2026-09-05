@@ -17,6 +17,10 @@ LICENSE text eol=lf
 **/.htaccess text eol=lf
 
 # Keep generated release/source archives focused on runtime files.
+.agents export-ignore
+.agents/** export-ignore
+.php-cs-fixer.cache export-ignore
+.integrity_snapshot.json export-ignore
 .github export-ignore
 .github/** export-ignore
 .claude export-ignore
