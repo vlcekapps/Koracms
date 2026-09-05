@@ -96,9 +96,10 @@ function runRepositoryGuardrailsSelfTestCommand(array $command, string $cwd): ar
 
 /**
  * @param array<string,string> $files
+ * @param array<string,string> $untrackedFiles
  * @return array{exitCode:int, output:string}
  */
-function runRepositoryGuardrailsAuditWithFixture(array $files): array
+function runRepositoryGuardrailsAuditWithFixture(array $files, array $untrackedFiles = [], ?string $auditPath = null): array
 {
     global $projectRoot, $repositoryGuardrailsAuditPath;
 
@@ -129,8 +130,15 @@ function runRepositoryGuardrailsAuditWithFixture(array $files): array
             repositoryGuardrailsSelfTestFail('Cannot stage fixture files.' . PHP_EOL . $gitAddResult['output']);
         }
 
+        foreach ($untrackedFiles as $relativePath => $contents) {
+            repositoryGuardrailsSelfTestWriteTextFile(
+                $tempRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath),
+                $contents
+            );
+        }
+
         return runRepositoryGuardrailsSelfTestCommand(
-            [PHP_BINARY, $repositoryGuardrailsAuditPath, $tempRoot],
+            [PHP_BINARY, $auditPath ?? $repositoryGuardrailsAuditPath, $tempRoot],
             $projectRoot
         );
     } finally {
@@ -240,4 +248,35 @@ assertRepositoryGuardrailsFails(
     'admin/example.php:3: reserved DB connection variable ' . repositoryGuardrailsSelfTestVariable('user')
 );
 
-echo "Repository guardrails audit self-test OK\n";
+$inventoryCases = [
+    'repository_guardrails_audit.php' => "<?php\nrequire_once __DIR__ . '/../db.php';\n"
+        . repositoryGuardrailsSelfTestVariable('user') . " = 'editor';\n",
+    'redirect_guardrails_audit.php' => "<?php\n\$target = (string)(\$_GET['redirect'] ?? '/');\nheader('Location: ' . \$target);\n",
+    'source_encoding_audit.php' => "<?php\n// Invalid byte: \xFF\n",
+    'mojibake_audit.php' => "<?php\n// Replacement character: \xEF\xBF\xBD\n",
+    'whitespace_audit.php' => "<?php\n// Trailing space. \n",
+];
+$newPath = 'admin/untracked file.php';
+$baseFiles = ['.gitignore' => "ignored/\nconfig.php\n"];
+foreach ($inventoryCases as $auditFile => $invalidSource) {
+    $auditPath = __DIR__ . DIRECTORY_SEPARATOR . $auditFile;
+    $result = runRepositoryGuardrailsAuditWithFixture($baseFiles, [$newPath => $invalidSource], $auditPath);
+    if ($result['exitCode'] === 0 || !str_contains($result['output'], $newPath)) {
+        repositoryGuardrailsSelfTestFail($auditFile . ' missed an untracked source file: ' . $result['output']);
+    }
+    $result = runRepositoryGuardrailsAuditWithFixture($baseFiles, [
+        $newPath => "<?php\n\$record = 'valid';\n",
+        'ignored/local.php' => $invalidSource,
+        'config.php' => $invalidSource,
+    ], $auditPath);
+    if ($result['exitCode'] !== 0) {
+        repositoryGuardrailsSelfTestFail($auditFile . ' must accept valid new code and ignore local files: ' . $result['output']);
+    }
+}
+assertRepositoryGuardrailsFails(
+    'Force-staged ignored configuration guard',
+    ['.gitignore' => "config.php\n", 'config.php' => "<?php\n"],
+    'config.php: sensitive local configuration must not be tracked'
+);
+
+echo "Repository guardrails audit self-test OK (including untracked files in five audits)\n";

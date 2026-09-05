@@ -53,6 +53,7 @@ Prošly kontrolou autentizace a oprávnění, rate-limity, instalace/migrace, im
 | RC-41 | P2 | Hledání, sitemap a navigace nedodržují viditelnost a blogový kontext stránek. | search.php, sitemap.php, lib/stats.php | Opraveno; veřejná HTTP matice prošla. |
 | RC-42 | P1 | Apache přepíše soukromou cache náhledu podle podvrhnutelného User-Agentu. | .htaccess, auth.php | Opraveno; skutečný Apache potvrzuje no-store náhledu a veřejnou cache homepage, doplněná HTTP regrese. |
 | RC-43 | P2 | Zpřísnění přihlášení může zablokovat migraci staré tabulky účtů bez is_confirmed. | lib/session_security.php, admin/login.php, admin/login_2fa.php, public_login.php | Opraveno v závěrečném review; 70 unit a 127 izolovaných PDO kontrol. Chybějící historický sloupec není explicitní nepotvrzení; veřejné a neznámé role výjimku nedostanou. |
+| RC-44 | P2 | Předcommitové zdrojové audity přehlížejí nové soubory mimo Git index. | build/*_audit.php, build/repository_guardrails_audit_selftest.php | Opraveno po GitHub kontrole: pět auditů zahrnuje neignorované nové soubory; izolovaná regrese ověřuje chybný i platný nový soubor, ignorovanou konfiguraci a zákaz jejího vynuceného verzování. |
 
 ## Ověření a podmínky RC
 
@@ -62,6 +63,7 @@ Prošly kontrolou autentizace a oprávnění, rate-limity, instalace/migrace, im
 - `composer audit --locked` nehlásí známá zranitelnostní upozornění vývojových závislostí; tato kontrola nenahrazuje audit vloženého knihovního kódu.
 - Souběh rezervací má navíc 26 kontrol na skutečném MySQL/InnoDB: dva PHP procesy, čekání na zámku zdroje před prvním vložením a následné odmítnutí přeplněného termínu po commitu. Test uklidí vlastní data a neodesílá e-maily.
 - `git diff --check` prošel. Samotná zelená statická kontrola není důkaz, že chyba runtime neexistuje.
+- První GitHub běhy nad `703e2ab3` odhalily použití vyhrazených názvů DB proměnných v novém souběhovém testu, které místní audit před přidáním souboru do indexu neviděl (RC-44). Test nyní používá lokální DB aliasy, 26 MySQL kontrol znovu prošlo a oprava rozšiřuje pokrytí repository/redirect/encoding/mojibake/whitespace auditů. Produkční funkce rezervací se tímto následným blokem nemění.
 - RC se v tomto kroku nevydává. Aktivace opravy relací/2FA byla výslovně schválena; po nasazení se dosavadní relace znovu přihlásí. Rozpracovaný druhý faktor platí deset minut, nikoli celý editor. Neuzavřený P1 je release blocker.
 - Před nasazením uložit rozepsané změny a zálohovat DB i soubory. Po nahrání balíčku spustit `migrate.php` (nová expirace rate-limitů), ověřit přihlášení, chyby editorů, nové i existující soubory, náhledy, e-maily a cron na hostingu. Staré sdílené přímé odkazy do `uploads/downloads/` nahradit kontrolovaným endpointem.
 - Hosting lze v tomto provozu ověřit až po nahrání. Tento smoke test není podmínkou commitu ani sestavení kandidáta, ale podmínkou přijetí nasazení; bez něj se hosting neoznačuje za ověřený. Při závažném selhání vrátit soubory i databázi z odpovídající zálohy, nikoli jen starý PHP kód nad nově změněnými daty.

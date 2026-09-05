@@ -8,6 +8,8 @@ Kora CMS je redakční systém v čistém PHP bez frameworku. Je určený pro os
 
 Přípravu dalšího vydání sleduje [RC audit ze září 2026](docs/rc-audit-2026-09.md). Obsahuje potvrzené nálezy, opravy, regresní důkazy a zbývající podmínky vydání; zelené CI samo o sobě není prohlášení o úplné bezpečnosti ani WCAG shodě. Nové izolované RC testy spouští `composer test:rc-core` (vývojové PHP s `pdo_sqlite` a Node.js 22), DB regresi `composer test:rc-runtime`. Produkční web Node.js ani SQLite nepotřebuje. Obě sady jsou zahrnuté v `composer ci:module-ready`.
 
+Zdrojové repository, redirect, encoding, mojibake a whitespace audity zahrnují také nové neignorované soubory před `git add`, aby lokální kontrola nepřehlédla kód, který až po commitu uvidí CI. Ignorované lokální konfigurace a nástrojové cache se nenačítají; vynucené verzování tajné konfigurace repository audit dál odmítne.
+
 - [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)

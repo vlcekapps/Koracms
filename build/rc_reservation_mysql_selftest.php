@@ -13,8 +13,11 @@ require_once dirname(__DIR__) . '/lib/reservation_booking_validation.php';
 
 function rcReservationMysqlConnect(): PDO
 {
-    global $server, $user, $pass, $database;
-    $pdo = new PDO("mysql:host={$server};dbname={$database};charset=utf8mb4", $user, $pass, [
+    $dbHost = (string)$GLOBALS['server'];
+    $dbName = (string)$GLOBALS['database'];
+    $dbUsername = (string)$GLOBALS['user'];
+    $dbPassword = (string)$GLOBALS['pass'];
+    $pdo = new PDO("mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4", $dbUsername, $dbPassword, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,

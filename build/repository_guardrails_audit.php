@@ -38,7 +38,7 @@ function trackedRepositoryGuardrailFiles(string $projectRoot): array
     ];
 
     $process = proc_open(
-        ['git', 'ls-files', '-z'],
+        ['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
         $descriptorSpec,
         $pipes,
         $projectRoot,
