@@ -8767,6 +8767,104 @@ try {
                 }
             }
 
+            $issueCreateUrl = $baseUrl . BASE_URL . '/admin/form_submission_issue.php';
+            $issueDetailUrl = $baseUrl . BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId;
+            $issueConfirmName = 'confirm_form_submission_issue_create_' . $issuePresetSubmissionId;
+            $issueConfirmId = 'confirm-form-submission-issue-create-' . $issuePresetSubmissionId;
+            $issueBridgeEnabledBefore = getSetting('github_issues_enabled', '0');
+            // Confirmed HTTP requests must never publish to a real GitHub repository.
+            saveSetting('github_issues_enabled', '0');
+            try {
+                $issueCleanDetail = fetchUrl($issueDetailUrl, $adminSession['cookie'], 0);
+                if (!httpIntegrationElementHasAttributes($issueCleanDetail['body'], 'form', 'github-issue-form', ['method' => 'post'])
+                    || str_contains($issueCleanDetail['body'], 'aria-describedby="github-issue-form-error"')
+                    || str_contains($issueCleanDetail['body'], 'webhook události <code>github_issue_created</code>')) {
+                    $formPresetIssues[] = 'čistý návrh GitHub issue má chybný form nebo neexistující chybu či neaktivní webhook';
+                }
+                $pdo->prepare("UPDATE cms_forms SET webhook_enabled = 1, webhook_url = 'https://example.com/hook', webhook_events = 'github_issue_created' WHERE id = ?")
+                    ->execute([$issuePresetFormId]);
+                $issueRowBeforeStmt = $pdo->prepare('SELECT * FROM cms_form_submissions WHERE id = ?');
+                $issueRowBeforeStmt->execute([$issuePresetSubmissionId]);
+                $issueRowBefore = $issueRowBeforeStmt->fetch();
+                $issueHistoryCountStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_form_submission_history WHERE submission_id = ?');
+                $issueHistoryCountStmt->execute([$issuePresetSubmissionId]);
+                $issueHistoryBefore = (int)$issueHistoryCountStmt->fetchColumn();
+                $issueLogBefore = (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action IN ('form_submission_github_issue_create', 'form_submission_github_issue_link')")->fetchColumn();
+                $issuePostFields = [
+                    'csrf_token' => extractHiddenInputValue($issueCleanDetail['body'], 'csrf_token'),
+                    'id' => (string)$issuePresetSubmissionId,
+                    'redirect' => BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId,
+                    'issue_action' => 'create',
+                    'repository' => 'owner/review-test',
+                    'title' => 'Upravený návrh "issue"',
+                    'body' => "Český návrh <script>bez spuštění</script>\nDruhý řádek.",
+                    'labels' => 'bug, vlastní štítek',
+                ];
+                foreach ([
+                    'missing_confirmation' => ['fields' => [], 'status' => 'confirm_required', 'invalid' => [$issueConfirmId]],
+                    'malformed_confirmation' => ['fields' => [$issueConfirmName => ['1']], 'status' => 'confirm_required', 'invalid' => [$issueConfirmId]],
+                    'other_submission_confirmation' => ['fields' => ['confirm_form_submission_issue_create_0' => '1'], 'status' => 'confirm_required', 'invalid' => [$issueConfirmId]],
+                    'invalid_title' => ['fields' => ['title' => ' ', $issueConfirmName => '1'], 'status' => 'invalid', 'invalid' => ['github-issue-title']],
+                    'confirmed_disabled_bridge' => ['fields' => [$issueConfirmName => '1'], 'status' => 'not_ready', 'invalid' => []],
+                ] as $issueCase => $issueScenario) {
+                    $issuePost = array_replace($issuePostFields, $issueScenario['fields']);
+                    $issuePostResponse = postUrl($issueCreateUrl, $issuePost, $adminSession['cookie'], 0);
+                    if (httpIntegrationStatusCode($issuePostResponse) !== 302
+                        || !str_contains(responseLocationHeaderValue($issuePostResponse['headers']), 'issue=' . $issueScenario['status'])) {
+                        $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': chybný PRG výsledek';
+                    }
+                    $issueErrorDetail = fetchUrl($issueDetailUrl . '&issue=' . $issueScenario['status'], $adminSession['cookie'], 0);
+                    $issueHtml = $issueErrorDetail['body'];
+                    if (httpIntegrationStatusCode($issueErrorDetail) !== 200
+                        || !httpIntegrationElementHasAttributes($issueHtml, 'form', 'github-issue-form', ['aria-describedby' => 'github-issue-form-error'])
+                        || !httpIntegrationElementHasAttributes($issueHtml, 'p', 'github-issue-form-error', ['role' => 'alert', 'aria-atomic' => 'true'])
+                        || !str_contains($issueHtml, 'webhook události <code>github_issue_created</code>')
+                        || !str_contains($issueHtml, 've veřejném repozitáři bude veřejně dostupný')
+                        || httpIntegrationCheckboxIsChecked($issueHtml, $issueConfirmId)) {
+                        $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': chybí review, atomický alert nebo nové potvrzení';
+                    }
+                    foreach (['repository', 'title', 'labels'] as $issueField) {
+                        if (!httpIntegrationInputHasAttributes($issueHtml, 'github-issue-' . $issueField, ['value' => h($issuePost[$issueField])])) {
+                            $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': ztracená hodnota ' . $issueField;
+                        }
+                    }
+                    if (!str_contains($issueHtml, '>' . h($issuePost['body']) . '</textarea>')) {
+                        $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': ztracené nebo neescapované tělo';
+                    }
+                    foreach (['github-issue-repository', 'github-issue-title', 'github-issue-body', $issueConfirmId] as $issueFieldId) {
+                        if (httpIntegrationFieldHasAriaInvalid($issueHtml, $issueFieldId) !== in_array($issueFieldId, $issueScenario['invalid'], true)) {
+                            $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': nepřesná field-level chyba ' . $issueFieldId;
+                        }
+                    }
+                    $issueDocument = new DOMDocument();
+                    $issuePreviousXmlErrors = libxml_use_internal_errors(true);
+                    $issueDocument->loadHTML('<?xml encoding="UTF-8">' . $issueHtml);
+                    libxml_clear_errors();
+                    libxml_use_internal_errors($issuePreviousXmlErrors);
+                    $issueXPath = new DOMXPath($issueDocument);
+                    foreach ($issueXPath->query('//form[@id="github-issue-form"]//*[@aria-describedby or @aria-labelledby] | //form[@id="github-issue-form"]') as $issueElement) {
+                        foreach (['aria-describedby', 'aria-labelledby'] as $issueAttribute) {
+                            foreach (preg_split('/\s+/', trim($issueElement->getAttribute($issueAttribute))) as $issueReference) {
+                                if ($issueReference !== '' && $issueXPath->query('//*[@id="' . $issueReference . '"]')->length !== 1) {
+                                    $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': nejednoznačný nebo chybějící ARIA cíl ' . $issueReference;
+                                }
+                            }
+                        }
+                    }
+                    $issueRowBeforeStmt->execute([$issuePresetSubmissionId]);
+                    $issueHistoryCountStmt->execute([$issuePresetSubmissionId]);
+                    if ($issueRowBeforeStmt->fetch() !== $issueRowBefore
+                        || (int)$issueHistoryCountStmt->fetchColumn() !== $issueHistoryBefore
+                        || (int)$pdo->query("SELECT COUNT(*) FROM cms_log WHERE action IN ('form_submission_github_issue_create', 'form_submission_github_issue_link')")->fetchColumn() !== $issueLogBefore) {
+                        $formPresetIssues[] = 'GitHub issue ' . $issueCase . ': odmítnutí změnilo data, historii nebo audit log';
+                    }
+                }
+            } finally {
+                saveSetting('github_issues_enabled', $issueBridgeEnabledBefore);
+                $pdo->prepare("UPDATE cms_forms SET webhook_enabled = 0, webhook_url = '', webhook_events = '' WHERE id = ?")
+                    ->execute([$issuePresetFormId]);
+            }
+
             $formReplyDetailUrl = $baseUrl . BASE_URL . '/admin/form_submission.php?id=' . $issuePresetSubmissionId;
             $formReplyDetail = fetchUrl($formReplyDetailUrl, $adminSession['cookie'], 0);
             $formReplyCsrf = extractHiddenInputValue($formReplyDetail['body'], 'csrf_token');

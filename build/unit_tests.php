@@ -2705,6 +2705,29 @@ $parsedIssueWithFragment = githubIssueParseUrl('https://github.com/vlcekapps/Kor
 assert_equals('https://github.com/vlcekapps/Koracms/issues/123', $parsedIssueWithFragment['url'] ?? '', 'issue URL with fragment parsed');
 assert_equals(null, githubIssueParseUrl('https://example.com/vlcekapps/Koracms/issues/123'), 'non-GitHub issue URL rejected');
 
+test_section('GitHub issue draft and confirmation');
+$issueDraft = ['repository' => 'owner/repo', 'title' => 'Český návrh "issue"', 'body' => "První řádek\nDruhý <řádek>", 'labels' => 'bug, review'];
+$issueConfirmField = 'confirm_form_submission_issue_create_17';
+assert_equals([], githubIssueDraftErrorFields($issueDraft, $issueConfirmField, '1'), 'valid confirmed draft accepted');
+foreach ([null, '', '0', 'on', 'true', 1, true, ['1']] as $confirmation) {
+    assert_equals([$issueConfirmField], githubIssueDraftErrorFields($issueDraft, $issueConfirmField, $confirmation), 'only explicit string 1 confirms issue creation');
+}
+foreach (['repository' => 'owner/repo/extra', 'title' => ' ', 'body' => "\n"] as $field => $value) {
+    assert_equals(['github_issue_' . $field], githubIssueDraftErrorFields(array_replace($issueDraft, [$field => $value]), $issueConfirmField, '1'), 'only invalid draft field identified: ' . $field);
+}
+assert_equals(['repository' => '', 'title' => '', 'body' => '', 'labels' => ''], githubIssueDraftValues(['repository' => ['owner/repo'], 'title' => false, 'body' => 1, 'labels' => ['bug']]), 'malformed arrays/scalars never become draft text');
+githubIssueDraftStore(17, $issueDraft, [$issueConfirmField]);
+githubIssueDraftStore(18, array_replace($issueDraft, ['title' => 'Jiná odpověď']));
+assert_equals([], githubIssueDraftPull(19), 'draft is scoped to the submission');
+$issueFlash = githubIssueDraftPull(17);
+assert_equals($issueDraft, $issueFlash['draft'] ?? [], 'all raw fields and UTF-8 survive a validation redirect');
+assert_equals([$issueConfirmField], $issueFlash['error_fields'] ?? [], 'precise error fields survive a redirect');
+assert_equals([], githubIssueDraftPull(17), 'draft consumed exactly once');
+assert_equals('Jiná odpověď', githubIssueDraftPull(18)['draft']['title'] ?? '', 'other submission draft remains available');
+assert_false(isset($_SESSION['github_issue_drafts']), 'empty flash bucket removed');
+$_SESSION['github_issue_drafts'] = 'malformed';
+assert_equals([], githubIssueDraftPull(17), 'malformed session bucket ignored');
+
 // ─── 13. userHas2FA() / userHasPasskey() ───────────────────────────────────
 
 test_section('userHas2FA() / userHasPasskey()');

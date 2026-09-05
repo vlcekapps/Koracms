@@ -7,7 +7,7 @@ Stav: interní draft podle VPAT 2.5Rev WCAG edition. Tento dokument není právn
 - Product: Kora CMS
 - Version evaluated: 5.0.0-rc.1
 - Report type: WCAG 2.2 A/AA product accessibility conformance draft
-- Report date: 2026-07-13
+- Report date: 2026-09-05
 - Evaluation methods: source inspection, automated guardrails, runtime audits, HTTP integration scenarios, theme view audit, the 55-criterion and change-aware `accessibility_conformance_audit.php`, its negative selftest, author-content checklist and manual protocol prepared in `manual-test-protocol.md`
 - Standards: WCAG 2.2 Level A and AA
 - Source references: W3C WCAG 2 Overview, W3C WCAG 2.2 Quick Reference, W3C WCAG-EM and ITI VPAT 2.5Rev WCAG edition.
@@ -185,6 +185,12 @@ Additional `3.3.4` ACR evidence, 2026-07-13: blog team management and one-time c
 Additional `3.3.3` and `3.3.4` ACR evidence, 2026-07-13: individual outbound replies from Contact, Chat and Form Builder now share an error-prevention contract. Each form identifies the recipient and irreversible mail effect; Form Builder also identifies internal-history storage and an enabled `reply_sent` webhook. A dynamic checkbox is validated on the server before mail, status mutation, history, audit logging or webhook dispatch. Missing content or confirmation returns through PRG with a text-backed atomic alert, exact field-level errors and the subject/body draft preserved; delivery failure also preserves the draft for a reviewed retry. Runtime `admin_field_error_guardrails` covers the shared flash/validation helpers, all three rendered forms, all three handlers and effect ordering. HTTP `contact_topics_and_reply_http`, `chat_topics_threads_support_http` and `form_issue_preset_http` cover invalid input, draft retention, no mutation without confirmation and the confirmed state/history/audit path. `3.3.4` remains `Partially Supports` pending the deferred NVDA/keyboard-only walkthrough and continued inventory of other externally impactful operations.
 
 Process evidence, 2026-07-10: a retrospective found that earlier podcast expansion commits added accessibility-sensitive forms and ordinary automated tests without a contemporaneous ACR impact record. `build/accessibility_conformance_audit.php` now validates all 55 A/AA rows, matrix/ACR status parity, partial-status traceability, report metadata and change impact. Its negative selftest reproduces a podcast form change with automated evidence but no accessibility review and requires the change to fail. A no-status-change decision must be recorded in `a11y-impact-decisions.md`.
+
+## Doplnění důkazů 2026-09-05: GitHub issue bridge
+
+Přímé vytvoření issue ve Form Builderu má serverově ověřené potvrzení pro konkrétní odpověď, kontrolu repozitáře, obsahu, štítků, veřejnosti a případného webhooku. Chyba zachová upravený návrh, označí pouze chybná pole a naváže formulář na existující atomický alert. Jde o důkaz pro `1.3.1`, `3.3.1`, `3.3.3`, `4.1.2` a produktové rozšíření prevence chyb související s `3.3.4`, nikoli o plošný požadavek WCAG na potvrzování běžného vytváření záznamů. Stav `3.3.4` zůstává `Partially Supports`.
+
+Unit, runtime a HTTP testy doplňuje izolovaný produkční handler v `build/rc2_modules_selftest.php`: odmítnutí nemá externí ani databázový účinek, chyba API zachová návrh a úspěšná testovací odpověď vede k zápisu odkazu do SQLite a přesně jednomu volání historie, logu a webhooku. Externí služby a záznamová volání jsou v tomto testu nahrazené; nejde o ověření skutečného GitHub doručení. Protokol obsahuje nový odložený NVDA/keyboard-only průchod. Backlog zvlášť sleduje souběžné vytvoření, nejednoznačný výsledek vzdáleného požadavku a webhook při připojování existujícího issue. Nové datum reportu označuje aktualizaci automatických důkazů, nikoli nový ruční audit všech kritérií.
 
 ## Current Summary
 

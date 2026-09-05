@@ -16064,7 +16064,7 @@ if (!str_contains($formSubmissionDetailSource, 'formWebhookWantsEvent($formMeta,
     $adminFieldErrorIssues[] = 'form submission reply is missing review or ordering guardrails for the reply_sent webhook effect';
 }
 foreach ([
-    '$issueFieldErrors = isset($_GET[\'issue\']) && $_GET[\'issue\'] === \'invalid\'',
+    '$issueFieldErrors = $issueHasFlash ? $issueFlash[\'error_fields\'] : match ($issueStatus)',
     '$existingIssueFieldErrors = isset($_GET[\'issue\']) && $_GET[\'issue\'] === \'invalid_link\'',
     '\'github_issue_repository\' => \'Zadejte repozitář ve formátu owner/repo',
     '\'github_issue_title\' => \'Doplňte název issue',
@@ -16087,6 +16087,40 @@ foreach ([
 ] as $formSubmissionIssueFieldErrorFragment) {
     if (!str_contains($formSubmissionDetailSource, $formSubmissionIssueFieldErrorFragment)) {
         $adminFieldErrorIssues[] = 'form submission GitHub issue bridge is missing field-level error fragment: ' . $formSubmissionIssueFieldErrorFragment;
+    }
+}
+$formSubmissionIssueSource = (string)file_get_contents(dirname(__DIR__) . '/admin/form_submission_issue.php');
+foreach ([
+    "'confirm_form_submission_issue_create_' . \$submissionId",
+    'githubIssueDraftErrorFields($issueDraft, $issueConfirmField, $_POST[$issueConfirmField] ?? null)',
+    'githubIssueDraftStore($submissionId, $issueDraft, $issueErrorFields)',
+    "['issue' => \$issueStatus]",
+    "['issue' => 'invalid_action']",
+    'githubIssueDraftPull($submissionId)',
+] as $issueCreateGuardrail) {
+    if (!str_contains($formSubmissionIssueSource, $issueCreateGuardrail)) {
+        $adminFieldErrorIssues[] = 'GitHub issue creation is missing guardrail: ' . $issueCreateGuardrail;
+    }
+}
+$issueValidationPosition = strpos($formSubmissionIssueSource, 'githubIssueDraftErrorFields(');
+$issueApiPosition = strpos($formSubmissionIssueSource, 'githubIssueCreate(');
+if (!is_int($issueValidationPosition) || !is_int($issueApiPosition) || $issueValidationPosition > $issueApiPosition
+    || substr_count($formSubmissionIssueSource, 'githubIssueDraftStore(') < 3) {
+    $adminFieldErrorIssues[] = 'GitHub issue creation must validate before API and preserve drafts on validation, unavailable bridge and API failure';
+}
+foreach ([
+    'githubIssueDraftPull($submissionId)',
+    "'confirm_form_submission_issue_create_' . \$submissionId",
+    "formWebhookWantsEvent(\$formMeta, 'github_issue_created')",
+    'webhook události <code>github_issue_created</code>',
+    've veřejném repozitáři bude veřejně dostupný',
+    'zda issue už nevzniklo',
+    'id="github-issue-form" novalidate',
+    'adminFieldAttributes($issueConfirmField, $issueFieldErrors, [], [$issueReviewId], $issueConfirmErrorId)',
+    'adminRenderFieldError($issueConfirmField, $issueFieldErrors',
+] as $issueReviewGuardrail) {
+    if (!str_contains($formSubmissionDetailSource, $issueReviewGuardrail)) {
+        $adminFieldErrorIssues[] = 'GitHub issue review is missing guardrail: ' . $issueReviewGuardrail;
     }
 }
 foreach ([

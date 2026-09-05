@@ -168,6 +168,8 @@ define('KORA_STORAGE_DIR', '/cesta/mimo/webroot/kora_storage');
 
 ### GitHub issue bridge
 
+Přímé vytvoření issue z odpovědi Form Builderu vyžaduje kontrolu cílového repozitáře, obsahu, štítků a případného webhooku a potvrzení na serveru. Při odmítnutí nebo chybě API zůstane upravený návrh zachovaný, potvrzení se neopakuje automaticky. Po nejistém výsledku nejdřív zkontrolujte GitHub, aby opakováním nevznikla duplicita. Podrobnosti a odložený ruční test jsou v ACR dokumentaci.
+
 Propojení formulářových odpovědí s GitHub Issues vyžaduje fine-grained token s oprávněním `Issues: Read and write`:
 
 ```php

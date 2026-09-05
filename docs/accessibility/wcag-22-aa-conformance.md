@@ -215,6 +215,14 @@ Poznámka k `3.3.3` a `3.3.4` z 2026-07-13: odeslání individuální e-mailové
 
 Procesní poznámka z 2026-07-10: retrospektiva Podcastů odhalila, že nové formuláře mohly projít běžnými testy bez současného ACR rozhodnutí. Nový conformance audit a jeho negativní selftest nyní reprodukují právě tento drift a blokují citlivou změnu bez úpravy hlavních accessibility dokumentů nebo záznamu v `a11y-impact-decisions.md` a bez automatizovaného důkazu.
 
+## Přímé vytvoření GitHub issue (2026-09-05)
+
+Form Builder nyní zachová repozitář, název, tělo a štítky po validační chybě, nedostupnosti bridge i neúspěšné odpovědi API. Označuje pouze skutečně chybná pole (`3.3.1`, `3.3.3`), formulář odkazuje na existující atomický alert a potvrzovací checkbox na existující kontrolní a chybový text (`1.3.1`, `4.1.2`). Potvrzení `confirm_form_submission_issue_create_<id>` musí server ověřit před GitHub API; nepřijímá pole ani potvrzení pro jiné hlášení. Neplatná akce už nemůže propadnout do vytvoření issue.
+
+Kontrola před odesláním popisuje veřejnost podle repozitáře, citlivé údaje, historii a případný webhook `github_issue_created`. Tato ochrana rozšiřuje produktovou prevenci závažných chyb v oblasti `3.3.4`; nejde o tvrzení, že každé vytvoření záznamu samo vyžaduje potvrzení podle WCAG. [Výklad W3C k 3.3.4](https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html) rozlišuje vratnost, kontrolu a potvrzení jako alternativy a výslovně nepožaduje potvrzování každého běžného uložení či vytvoření dat. Globální stav `3.3.4` zůstává `Partially Supports`.
+
+Důkazy: unit testy draftu a striktního potvrzení; runtime `admin_field_error_guardrails`; HTTP `form_issue_preset_http` se skutečnými odmítnutými POSTy, přesnými chybami, zachováním UTF-8 hodnot a kontrolou jedinečných ARIA cílů; izolovaný `build/rc2_modules_selftest.php` provádí produkční handler nad SQLite a testuje CSRF, oprávnění, chybu API, potvrzený zápis i opakovaný POST. GitHub a webhook jsou v izolovaném testu testovací náhrady; potvrzený HTTP scénář má bridge vypnutý. Testy nevytvářejí reálná issues a nedokazují doručení do externí služby. Ruční průchod, souběžné vytvoření a obnova po úspěšném API s neúspěšným lokálním zápisem zůstávají v backlogu.
+
 ## Baseline závěr
 
 Kora CMS má nadprůměrně silnou přístupnostní kostru: skip linky, heading-backed landmarky, formulářové vazby, dialog focus management, runtime a theme view guardrails. Největší rizika nejsou v jedné fatální chybě, ale v oblastech, které vyžadují ruční ověření: kvalita autorského obsahu, média a titulky, kontrast theme variant, klávesnice u dynamických prvků, target size v husté administraci, timeouts a širší workflow inventura redundant entry.

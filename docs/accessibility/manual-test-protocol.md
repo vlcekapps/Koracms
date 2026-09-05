@@ -204,6 +204,20 @@ V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání b
 4. V aktuálním formuláři potvrďte přidání, odebrání i změnu role. Ověřte jediný PRG status, přesně očekávané přístupy a to, že správce omezený na jeden blog nemůže změnit tým jiného blogu ani podvrženým `blog_id`.
 5. Jako globální správce otevřete starší blog bez evidovaného zakladatele. Review musí výslovně oznámit trvalý auditní údaj a to, že doplnění samo nepřidá členství. Bez `confirm_blog_creator_backfill` se údaj ani audit log nesmí změnit a výběr uživatele se musí zachovat s field-level chybou; po potvrzení se zakladatel uloží právě jednou, oznámí se PRG status a původní tým zůstane beze změny. Výsledek zapište k `3.3.4`.
 
+### Potvrzení při obnově lokálního konceptu
+
+Nález P2 z 2026-09-05 je zatím otevřený v backlogu. V testovacím editoru s kontrolou kritické akce zaškrtněte potvrzení a uložte lokální koncept. Po obnovení přes **Obnovit** má zůstat obsah i běžné datové checkboxy, ale potvrzení účinku se musí vyžadovat nově; stejný požadavek platí pro starší recovery koncept po vypršení relace. Ověřte bez skutečného rozesílání nebo mazání. Sdílený autosave zatím potvrzení od datových checkboxů neodděluje, takže tento výsledek nelze před opravou označit za splněný.
+
+### Přímé vytvoření GitHub issue
+
+Nový scénář z 2026-09-05, zatím ručně neprovedený. Kritéria: `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `4.1.2`. Použijte výhradně vlastní testovací repozitář a smyšlená data; skutečné zveřejnění a případný webhook musí tester předem vědomě schválit.
+
+1. V detailu odpovědi Form Builderu jako správce integrací upravte repozitář, název, text a štítky. S NVDA/Firefox i pouze klávesnicí přečtěte kontrolu přímého odeslání: veřejnost podle repozitáře, osobní údaje, neodvolatelná oznámení, historie a jen při zapnuté události také webhook `github_issue_created` s daty odpovědi. Otevření návrhu na GitHubu a kopírování nemají samy issue vytvořit a nevyžadují potvrzení přímého vytvoření.
+2. Při dostupném bridge odešlete bez `confirm_form_submission_issue_create_<id>`. NVDA má oznámit atomický alert a u nezaškrtnutého checkboxu chybu i kontrolní text. Nesmí vzniknout issue, vazba, historie ani webhook; všechny čtyři upravené hodnoty musí zůstat zachované i bez JavaScriptu.
+3. Potvrďte návrh, ale vymažte pouze název. Po odeslání má být chybné jen toto pole, nikoli správný repozitář či tělo. Ověřte konkrétní radu, logické pořadí fokusu a existující ARIA vazby. Potvrzení nesmí po návratu zůstat zaškrtnuté.
+4. Ověřte nedostupný bridge a bezpečně simulované selhání API. Návrh zůstane zachovaný; po nejednoznačném výsledku se má oznámit pokyn nejdřív zkontrolovat repozitář a existující issue připojit, ne slepě opakovat odeslání. Potvrzení vypnutého bridge se testuje vývojářským požadavkem, ne zapojením cizího produkčního účtu.
+5. Až při výslovně schváleném testu externí služby potvrďte platný návrh. Ověřte shodný obsah a štítky na GitHubu, jediný odkaz/historii v CMS a případný webhook. Výsledek, konfiguraci, datum, prohlížeč a NVDA verzi zapište zvlášť; izolovaný automatický test tento reálný průchod nenahrazuje. Vizuální focus, zoom a kontrast ověří vidící tester.
+
 ### Doplňkový průchod vratného mazání Míst
 
 1. Připravte veřejné místo s obrázkem a navázanou veřejnou událostí. V přehledu Míst odešlete řádkový přesun bez `confirm_place_delete_<id>`. NVDA má jednou oznámit atomický alert; checkbox má mít `aria-invalid` a popis přes existující review i field-level chybu. Místo, obrázek, událost ani audit log se nesmí změnit.

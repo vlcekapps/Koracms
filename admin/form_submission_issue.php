@@ -6,7 +6,12 @@ verifyCsrf();
 
 $submissionId = inputInt('post', 'id');
 $redirect = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), BASE_URL . '/admin/forms.php');
-$issueAction = trim((string)($_POST['issue_action'] ?? 'create'));
+$issueAction = is_string($_POST['issue_action'] ?? 'create') ? trim($_POST['issue_action'] ?? 'create') : '';
+
+if (!in_array($issueAction, ['create', 'link'], true)) {
+    header('Location: ' . appendUrlQuery($redirect, ['issue' => 'invalid_action']));
+    exit;
+}
 
 if ($submissionId === null) {
     header('Location: ' . appendUrlQuery($redirect, ['issue' => 'missing']));
@@ -107,26 +112,33 @@ if (formSubmissionHasGitHubIssue($submission)) {
     exit;
 }
 
-if (!githubIssueBridgeEnabled() || !githubIssueBridgeHasToken()) {
+$issueDraft = githubIssueDraftValues($_POST);
+$issueConfirmField = 'confirm_form_submission_issue_create_' . $submissionId;
+$issueErrorFields = githubIssueDraftErrorFields($issueDraft, $issueConfirmField, $_POST[$issueConfirmField] ?? null);
+if ($issueErrorFields !== []) {
+    githubIssueDraftStore($submissionId, $issueDraft, $issueErrorFields);
+    $issueStatus = array_diff($issueErrorFields, [$issueConfirmField]) !== [] ? 'invalid' : 'confirm_required';
+    header('Location: ' . appendUrlQuery($redirect, ['issue' => $issueStatus]));
+    exit;
+}
+
+if (!githubIssueBridgeReady()) {
+    githubIssueDraftStore($submissionId, $issueDraft);
     header('Location: ' . appendUrlQuery($redirect, ['issue' => 'not_ready']));
     exit;
 }
 
-$repository = normalizeGitHubRepository((string)($_POST['repository'] ?? ''));
-$title = trim((string)($_POST['title'] ?? ''));
-$body = trim((string)($_POST['body'] ?? ''));
+$repository = normalizeGitHubRepository($issueDraft['repository']);
+$title = trim($issueDraft['title']);
+$body = trim($issueDraft['body']);
 $labels = array_values(array_filter(
-    array_map('trim', explode(',', (string)($_POST['labels'] ?? ''))),
+    array_map('trim', explode(',', $issueDraft['labels'])),
     static fn (string $label): bool => $label !== ''
 ));
 
-if ($repository === '' || $title === '' || $body === '') {
-    header('Location: ' . appendUrlQuery($redirect, ['issue' => 'invalid']));
-    exit;
-}
-
 $result = githubIssueCreate($repository, $title, $body, $labels);
 if (!$result['ok']) {
+    githubIssueDraftStore($submissionId, $issueDraft);
     $errorMessage = trim((string)$result['error']);
     if ($errorMessage === '') {
         $errorMessage = 'GitHub issue se nepodařilo vytvořit.';
@@ -181,5 +193,6 @@ dispatchFormWebhook(
     ]
 );
 
+githubIssueDraftPull($submissionId);
 header('Location: ' . appendUrlQuery($redirect, ['issue' => 'created']));
 exit;

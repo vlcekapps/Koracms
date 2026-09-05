@@ -7,6 +7,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 ## [Unreleased]
 
 ### Opraveno
+- **ACR, GitHub issue bridge**: přímé vytvoření issue vyžaduje serverové potvrzení kontroly obsahu, cílového repozitáře a případného webhooku. Odmítnutí zachová upravený repozitář, název, text i štítky, označí jen chybná pole a vrátí atomický alert s existujícími ARIA vazbami. Neplatná akce nepropadne do vytvoření a nejednoznačná chyba API upozorní na kontrolu GitHubu před opakováním. Doplněny unit, runtime, HTTP a izolované testy handleru bez skutečného zveřejnění, ACR důkazy a ruční protokol; `3.3.4` zůstává `Partially Supports`.
 - **Modulový audit pro RC.2**: historie revizí respektuje oprávnění ke konkrétnímu obsahu, autorství, přístup do blogu a vypnuté moduly; přihlášení samo o sobě neopravňuje číst cizí neveřejné verze. Odkazy na historii Anket a Míst jsou funkční.
 - **Food**: neplatné množství ani mezitím nedostupná vybraná položka se tiše neoříznou či nevynechají; poptávka se odmítne s přístupnou chybou. Součet se nezobrazuje jako úplný, pokud některá položka nemá cenu. Food i Kontakt zobrazí také selhání e-mailového oznámení po úspěšném uložení, bez vybízení k duplicitnímu odeslání.
 - **Galerie a Ankety**: validační návrat zachová rozepsaná metadata, otázku, odpovědi i časy také bez JavaScriptu. Ankety odmítnou opakované a cizí identifikátory možností před změnou dat. Podrobné důkazy a rozsah jsou v `docs/rc2-module-audit-2026-09.md`; tato změna sama nevydává RC.2.

@@ -164,6 +164,24 @@ function normalizeHttpExternalUrl(string $url, bool $relative = false): string
 }
 function logAction(string $action, string $details): void
 {
+    $GLOBALS['issueEffects'][] = ['log', $action, $details];
+}
+function githubIssueBridgeReady(): bool
+{
+    return $GLOBALS['issueBridgeReady'];
+}
+function githubIssueCreate(string $repository, string $title, string $body, array $labels = []): array
+{
+    $GLOBALS['issueEffects'][] = ['api', $repository, $title, $body, $labels];
+    return $GLOBALS['issueApiResult'];
+}
+function formSubmissionHistoryCreate(PDO $pdo, int $id, ?int $actorId, string $event, string $message): void
+{
+    $GLOBALS['issueEffects'][] = ['history', $id, $event];
+}
+function dispatchFormWebhook(array $form, string $event, array $submission, array $fields, array $data, array $extra = []): void
+{
+    $GLOBALS['issueEffects'][] = ['webhook', $event, $submission['id']];
 }
 function koraLog(string $level, string $message, array $context = []): void
 {
@@ -350,6 +368,66 @@ try {
     same($xpath->query('//textarea[@name="description"]')->item(0)->textContent, $_POST['description'], 'Photo description survives redirect');
     same($xpath->query('//input[@name="is_published" and @checked]')->length, 0, 'Unchecked publication survives redirect');
     same(adminEditorFormFlashTake('gallery_photo', 1, 1), [], 'Metadata flash consumed once');
+    foreach (['githubIssueDraftValues', 'githubIssueDraftErrorFields', 'githubIssueDraftStore', 'githubIssueDraftPull',
+        'normalizeGitHubRepository', 'formSubmissionHasGitHubIssue'] as $function) {
+        loadFunction('lib/github.php', $function);
+    }
+    $testDb->sqliteCreateFunction('NOW', static fn (): string => '2026-09-05 12:00:00');
+    $testDb->exec('CREATE TABLE cms_forms (id INTEGER PRIMARY KEY, title TEXT, slug TEXT)');
+    $testDb->exec("INSERT INTO cms_forms VALUES (1, 'Issue test', 'issue-test')");
+    $testDb->exec('CREATE TABLE cms_form_submissions (id INTEGER PRIMARY KEY, form_id INTEGER, data TEXT,
+        github_issue_repository TEXT, github_issue_number INTEGER, github_issue_url TEXT, updated_at TEXT)');
+    $testDb->exec("INSERT INTO cms_form_submissions VALUES (17, 1, '{}', '', NULL, '', NULL)");
+    $testDb->exec('CREATE TABLE cms_form_fields (id INTEGER PRIMARY KEY, form_id INTEGER, name TEXT, sort_order INTEGER)');
+    $capabilities = ['settings_manage'];
+    $issueBridgeReady = true;
+    $issueApiResult = ['ok' => true, 'status' => 201, 'repository' => 'owner/repo', 'number' => 123, 'url' => 'https://github.com/owner/repo/issues/123'];
+    $post = ['csrf_token' => 'test-csrf', 'id' => '17', 'redirect' => '/admin/form_submission.php?id=17',
+        'issue_action' => 'create', 'repository' => 'owner/repo', 'title' => 'Můj návrh', 'body' => "Text\nissue", 'labels' => 'bug, review'];
+    $issueEffects = [];
+    $before = $testDb->query('SELECT * FROM cms_form_submissions')->fetchAll();
+    foreach ([[], ['confirm_form_submission_issue_create_17' => ['1']], ['confirm_form_submission_issue_create_18' => '1']] as $confirmation) {
+        $_POST = $post + $confirmation;
+        same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=confirm_required'), true, 'Unconfirmed issue rejected before API');
+        same($issueEffects, [], 'Rejection has no API, history, log or webhook effect');
+        same($testDb->query('SELECT * FROM cms_form_submissions')->fetchAll(), $before, 'Rejected issue leaves data untouched');
+        same(githubIssueDraftPull(17)['draft'], githubIssueDraftValues($post), 'Rejected issue preserves all fields');
+    }
+    $confirmed = $post + ['confirm_form_submission_issue_create_17' => '1'];
+    $_POST = array_replace($confirmed, ['csrf_token' => 'wrong']);
+    same(runFile('admin/form_submission_issue.php'), 'csrf-rejected', 'CSRF remains mandatory');
+    $_POST = $confirmed;
+    $capabilities = ['admin_access'];
+    same(runFile('admin/form_submission_issue.php'), 'forbidden', 'Confirmation does not bypass capability');
+    $capabilities = ['settings_manage'];
+    $_POST = array_replace($confirmed, ['issue_action' => 'unexpected']);
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=invalid_action'), true, 'Unknown action never falls through to creation');
+    $_POST = array_replace($confirmed, ['title' => ' ']);
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=invalid'), true, 'Confirmed but invalid draft is rejected');
+    same(githubIssueDraftPull(17)['error_fields'], ['github_issue_title'], 'Only invalid title is identified');
+    $_POST = $confirmed;
+    $issueBridgeReady = false;
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=not_ready'), true, 'Disabled bridge rejects even confirmed drafts');
+    same(githubIssueDraftPull(17)['draft'], githubIssueDraftValues($post), 'Disabled bridge retains draft');
+    same($issueEffects, [], 'All preflight failures remain effect-free');
+    $issueBridgeReady = true;
+    $issueApiResult = ['ok' => false, 'status' => 0, 'error' => 'Simulated timeout'];
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=failed'), true, 'API failure uses PRG');
+    same(array_column($issueEffects, 0), ['api'], 'Failed API cannot write history, log or dispatch webhook');
+    same($testDb->query('SELECT * FROM cms_form_submissions')->fetchAll(), $before, 'Failed API leaves link unchanged');
+    same(githubIssueDraftPull(17)['draft'], githubIssueDraftValues($post), 'Failed API retains draft');
+    $issueEffects = [];
+    $issueApiResult = ['ok' => true, 'status' => 201, 'repository' => 'owner/repo', 'number' => 123, 'url' => 'https://github.com/owner/repo/issues/123'];
+    githubIssueDraftStore(17, githubIssueDraftValues($post));
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=created'), true, 'Confirmed creation completes');
+    same($issueEffects[0], ['api', 'owner/repo', 'Můj návrh', "Text\nissue", ['bug', 'review']], 'API receives reviewed draft');
+    same(array_column($issueEffects, 0), ['api', 'history', 'log', 'webhook'], 'Confirmed effects happen once in order');
+    same($testDb->query('SELECT github_issue_url FROM cms_form_submissions WHERE id=17')->fetchColumn(), $issueApiResult['url'], 'Created issue is linked');
+    same(githubIssueDraftPull(17), [], 'Success clears old draft');
+    $issueEffects = [];
+    same(str_contains(runFile('admin/form_submission_issue.php'), 'issue=exists'), true, 'Repeat POST cannot create an already linked issue');
+    same($issueEffects, [], 'Repeat POST has no effects');
+
     echo 'RC2 module regressions OK: ' . $checks . " checks\n";
 } catch (\Throwable $error) {
     fwrite(STDERR, $error . PHP_EOL);

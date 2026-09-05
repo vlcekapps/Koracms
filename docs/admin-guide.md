@@ -139,6 +139,10 @@ Smazání celého formuláře je samostatně potvrzované v přehledu formulář
 
 ### GitHub issue bridge
 
+Před přímým vytvořením zkontrolujte repozitář, název, tělo a štítky v upravitelných polích. Ve veřejném repozitáři se obsah zveřejní; z návrhu odstraňte údaje, které se nemají sdílet. Pokud má formulář zapnutou událost `github_issue_created`, kontrolní text upozorní i na webhook s daty celé odpovědi do nastavené externí služby. Potvrďte kontrolu checkboxem, potom použijte **Vytvořit GitHub issue**. Server bez potvrzení nic nevytvoří.
+
+Při validační chybě, vypnutém bridge nebo chybě API se zachovají všechny čtyři hodnoty a u chybného pole se zobrazí konkrétní nápověda. Potvrzení je potřeba znovu zaškrtnout. Po přerušení spojení nejdřív ověřte, zda issue na GitHubu už nevzniklo, a případně připojte jeho adresu; CMS neumí odvolat odeslání ani oznámení GitHubu. Otevření návrhu a zkopírování zůstávají samostatné akce bez přímého vytvoření a tento checkbox nevyžadují.
+
 Z detailu odpovědi lze:
 
 - vytvořit nové GitHub issue

@@ -189,9 +189,27 @@ if ($replyHasFlash) {
     $replyMessage = (string)$replyFlash['message'];
 }
 $replyHasFormError = in_array($replyStatus, ['invalid', 'confirm_required', 'failed'], true);
-$issueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid'
-    ? ['github_issue_repository', 'github_issue_title', 'github_issue_body']
-    : [];
+$issueStatus = trim((string)($_GET['issue'] ?? ''));
+$issueConfirmField = 'confirm_form_submission_issue_create_' . $submissionId;
+$issueConfirmId = 'confirm-form-submission-issue-create-' . $submissionId;
+$issueReviewId = 'form-submission-issue-review-' . $submissionId;
+$issueConfirmErrorId = $issueConfirmId . '-error';
+$issueFormErrorId = 'github-issue-form-error';
+$issueHasFormError = in_array($issueStatus, ['invalid', 'confirm_required', 'not_ready', 'failed', 'invalid_action'], true);
+$issueFlash = $canManageFormIntegrations ? githubIssueDraftPull($submissionId) : [];
+$issueHasFlash = $issueHasFormError && $issueFlash !== [];
+$issueFieldErrors = $issueHasFlash ? $issueFlash['error_fields'] : match ($issueStatus) {
+    'invalid' => ['github_issue_repository', 'github_issue_title', 'github_issue_body'],
+    'confirm_required' => [$issueConfirmField],
+    default => [],
+};
+if ($issueHasFlash) {
+    $githubIssueDraftRepository = $issueFlash['draft']['repository'];
+    $githubIssueDraftTitle = $issueFlash['draft']['title'];
+    $githubIssueDraftBody = $issueFlash['draft']['body'];
+    $githubIssueDraftLabels = $issueFlash['draft']['labels'];
+}
+$issueWebhookEnabled = formWebhookWantsEvent($formMeta, 'github_issue_created');
 $existingIssueFieldErrors = isset($_GET['issue']) && $_GET['issue'] === 'invalid_link'
     ? ['existing_issue_url']
     : [];
@@ -205,6 +223,7 @@ $issueFieldErrorMessages = [
     'github_issue_title' => 'Doplňte název issue, aby šlo problém na GitHubu rychle rozpoznat.',
     'github_issue_body' => 'Doplňte text issue s popisem problému, očekávaným chováním nebo dalším krokem.',
     'existing_issue_url' => 'Zadejte úplnou adresu issue ve tvaru https://github.com/owner/repo/issues/123.',
+    $issueConfirmField => 'Před přímým odesláním potvrďte kontrolu repozitáře, názvu, textu, štítků a uvedených externích účinků.',
 ];
 $deleteError = trim((string)($_GET['delete_error'] ?? ''));
 $deleteConfirmError = $deleteError === 'confirm_required';
@@ -246,14 +265,18 @@ adminHeader('Detail odpovědi formuláře');
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'exists'): ?>
   <p class="error" role="alert">Toto hlášení už má GitHub issue připojené.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid'): ?>
-  <p class="error" role="alert" aria-atomic="true">Před vytvořením GitHub issue doplňte repozitář, název i text. U dotčených polí je konkrétní nápověda.</p>
+  <p id="<?= h($issueFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Před vytvořením GitHub issue doplňte repozitář, název i text. U dotčených polí a případného chybějícího potvrzení je konkrétní nápověda.</p>
+<?php elseif ($issueStatus === 'confirm_required'): ?>
+  <p id="<?= h($issueFormErrorId) ?>" class="error" role="alert" aria-atomic="true">GitHub issue nebylo odesláno. Potvrďte kontrolu návrhu a externích účinků; rozepsaná pole zůstala zachovaná.</p>
+<?php elseif ($issueStatus === 'invalid_action'): ?>
+  <p id="<?= h($issueFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Neplatná akce GitHub bridge. Vraťte se k návrhu a použijte tlačítko pro vytvoření nebo připojení issue.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'invalid_link'): ?>
   <p class="error" role="alert" aria-atomic="true">Zadejte platnou adresu existujícího GitHub issue. U pole je doplněná konkrétní nápověda.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'not_ready'): ?>
-  <p class="error" role="alert">Přímé vytvoření GitHub issue teď není dostupné. Zkontrolujte nastavení mostu a přístupový token.</p>
+  <p id="<?= h($issueFormErrorId) ?>" class="error" role="alert" aria-atomic="true">Přímé vytvoření GitHub issue teď není dostupné. Zkontrolujte nastavení mostu a přístupový token. Návrh zůstal zachovaný; odeslání je nutné znovu potvrdit.</p>
 <?php elseif (isset($_GET['issue']) && $_GET['issue'] === 'failed'): ?>
-  <p class="error" role="alert">
-    GitHub issue se nepodařilo vytvořit.
+  <p id="<?= h($issueFormErrorId) ?>" class="error" role="alert" aria-atomic="true">
+    Vytvoření GitHub issue se nepodařilo potvrdit. Návrh zůstal zachovaný. Před dalším pokusem zkontrolujte repozitář na GitHubu, zda issue už nevzniklo, a případně připojte jeho adresu níže. Zabráníte tak duplicitě po přerušení spojení.
     <?php if (trim((string)($_GET['issue_message'] ?? '')) !== ''): ?>
       Důvod: <?= h((string)$_GET['issue_message']) ?>.
     <?php endif; ?>
@@ -464,7 +487,7 @@ adminHeader('Detail odpovědi formuláře');
     <p class="field-help">Přímé vytvoření issue bude dostupné po doplnění konstanty <code>GITHUB_ISSUES_TOKEN</code> do <code>config.php</code>.</p>
   <?php endif; ?>
 
-  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" id="github-issue-form">
+  <form method="post" action="<?= BASE_URL ?>/admin/form_submission_issue.php" id="github-issue-form" novalidate<?= $issueHasFormError ? ' aria-describedby="' . h($issueFormErrorId) . '"' : '' ?>>
     <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
     <input type="hidden" name="id" value="<?= (int)$submission['id'] ?>">
     <input type="hidden" name="redirect" value="<?= h($selfRedirect) ?>">
@@ -476,6 +499,7 @@ adminHeader('Detail odpovědi formuláře');
         <input type="text"
                id="github-issue-repository"
                name="repository"
+               required aria-required="true"
                value="<?= h($githubIssueDraftRepository) ?>"
                placeholder="owner/repo"
                class="form-submission-control form-submission-control--sm"<?= adminFieldAttributes('github_issue_repository', $issueFieldErrors, [], ['github-issue-repository-help'], 'github-issue-repository-error') ?>>
@@ -488,6 +512,7 @@ adminHeader('Detail odpovědi formuláře');
         <input type="text"
                id="github-issue-title"
                name="title"
+               required aria-required="true"
                value="<?= h($githubIssueDraftTitle) ?>"
                maxlength="180"
                class="form-submission-control form-submission-control--md"<?= adminFieldAttributes('github_issue_title', $issueFieldErrors, [], [], 'github-issue-title-error') ?>>
@@ -509,11 +534,29 @@ adminHeader('Detail odpovědi formuláře');
         <label for="github-issue-body">Tělo issue</label>
         <textarea id="github-issue-body"
                   name="body"
+                  required aria-required="true"
                   rows="18"
                   class="form-submission-control form-submission-control--lg"<?= adminFieldAttributes('github_issue_body', $issueFieldErrors, [], ['github-issue-body-help'], 'github-issue-body-error') ?>><?= h($githubIssueDraftBody) ?></textarea>
         <small id="github-issue-body-help" class="field-help">Interní poznámka správce se do issue nevkládá automaticky. Pokud ji chcete zveřejnit, přidejte ji sem ručně.</small>
         <?php adminRenderFieldError('github_issue_body', $issueFieldErrors, [], $issueFieldErrorMessages['github_issue_body'], 'github-issue-body-error'); ?>
       </div>
+
+      <fieldset>
+        <legend>Kontrola přímého odeslání</legend>
+        <p id="<?= h($issueReviewId) ?>" class="field-help">
+          Zkontrolujte repozitář, název, text a štítky v polích výše. Přímé vytvoření odešle tento obsah na GitHub;
+          ve veřejném repozitáři bude veřejně dostupný. Odstraňte osobní údaje a tajné informace, které se nemají sdílet.
+          CMS uloží odkaz a záznam do historie, ale neumí odvolat odeslání ani případná oznámení GitHubu.
+          <?php if ($issueWebhookEnabled): ?>
+            Po vytvoření se navíc odešle webhook události <code>github_issue_created</code> s daty odpovědi formuláře do nastavené externí služby.
+          <?php endif; ?>
+        </p>
+        <label for="<?= h($issueConfirmId) ?>" class="checkbox-label">
+          <input type="checkbox" id="<?= h($issueConfirmId) ?>" name="<?= h($issueConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($issueConfirmField, $issueFieldErrors, [], [$issueReviewId], $issueConfirmErrorId) ?>>
+          Potvrzuji kontrolu návrhu a externích účinků přímého odeslání
+        </label>
+        <?php adminRenderFieldError($issueConfirmField, $issueFieldErrors, [], $issueFieldErrorMessages[$issueConfirmField], $issueConfirmErrorId); ?>
+      </fieldset>
 
       <div class="button-row">
         <?php if (githubIssueBridgeReady()): ?>

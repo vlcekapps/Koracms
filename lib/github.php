@@ -2,6 +2,77 @@
 
 // GitHub issue bridge helpery pro formuláře
 
+/**
+ * @param array<string, mixed> $values
+ * @return array{repository:string,title:string,body:string,labels:string}
+ */
+function githubIssueDraftValues(array $values): array
+{
+    return [
+        'repository' => is_string($values['repository'] ?? null) ? $values['repository'] : '',
+        'title' => is_string($values['title'] ?? null) ? $values['title'] : '',
+        'body' => is_string($values['body'] ?? null) ? $values['body'] : '',
+        'labels' => is_string($values['labels'] ?? null) ? $values['labels'] : '',
+    ];
+}
+
+/**
+ * @param array{repository:string,title:string,body:string,labels:string} $draft
+ * @return list<string>
+ */
+function githubIssueDraftErrorFields(array $draft, string $confirmField, mixed $confirmation): array
+{
+    return array_values(array_filter([
+        normalizeGitHubRepository($draft['repository']) === '' ? 'github_issue_repository' : null,
+        trim($draft['title']) === '' ? 'github_issue_title' : null,
+        trim($draft['body']) === '' ? 'github_issue_body' : null,
+        $confirmation !== '1' ? $confirmField : null,
+    ]));
+}
+
+/**
+ * @param array{repository:string,title:string,body:string,labels:string} $draft
+ * @param list<string> $errorFields
+ */
+function githubIssueDraftStore(int $submissionId, array $draft, array $errorFields = []): void
+{
+    if ($submissionId <= 0) {
+        return;
+    }
+    if (!is_array($_SESSION['github_issue_drafts'] ?? null)) {
+        $_SESSION['github_issue_drafts'] = [];
+    }
+    $_SESSION['github_issue_drafts'][$submissionId] = [
+        'draft' => githubIssueDraftValues($draft),
+        'error_fields' => $errorFields,
+    ];
+}
+
+/**
+ * @return array{draft:array{repository:string,title:string,body:string,labels:string},error_fields:list<string>}|array{}
+ */
+function githubIssueDraftPull(int $submissionId): array
+{
+    if (!is_array($_SESSION['github_issue_drafts'] ?? null)) {
+        unset($_SESSION['github_issue_drafts']);
+        return [];
+    }
+    $flash = $_SESSION['github_issue_drafts'][$submissionId] ?? null;
+    unset($_SESSION['github_issue_drafts'][$submissionId]);
+    if ($_SESSION['github_issue_drafts'] === []) {
+        unset($_SESSION['github_issue_drafts']);
+    }
+    if (!is_array($flash) || !is_array($flash['draft'] ?? null)) {
+        return [];
+    }
+    return [
+        'draft' => githubIssueDraftValues($flash['draft']),
+        'error_fields' => is_array($flash['error_fields'] ?? null)
+            ? array_values(array_filter($flash['error_fields'], 'is_string'))
+            : [],
+    ];
+}
+
 function githubIssueBridgeEnabled(): bool
 {
     return getSetting('github_issues_enabled', '0') === '1';
