@@ -206,7 +206,12 @@ V přehledu komentářů nejprve u jednoho řádku odešlete trvalé smazání b
 
 ### Potvrzení při obnově lokálního konceptu
 
-Nález P2 z 2026-09-05 je zatím otevřený v backlogu. V testovacím editoru s kontrolou kritické akce zaškrtněte potvrzení a uložte lokální koncept. Po obnovení přes **Obnovit** má zůstat obsah i běžné datové checkboxy, ale potvrzení účinku se musí vyžadovat nově; stejný požadavek platí pro starší recovery koncept po vypršení relace. Ověřte bez skutečného rozesílání nebo mazání. Sdílený autosave zatím potvrzení od datových checkboxů neodděluje, takže tento výsledek nelze před opravou označit za splněný.
+Implementace opravena 2026-09-05, nový ruční průchod zatím neproveden. Kritéria: `3.3.4`, `4.1.3`, s regresí zachování rozepsaných dat při re-auth (`2.2.1`). Použijte testovací formulář nebo newsletter se smyšlenými daty; neprovádějte skutečnou rozesílku ani mazání.
+
+1. Napište obsah, změňte běžné datové checkboxy a zaškrtněte potvrzení kritické akce. Vyčkejte na autosave. Aktuální potvrzení se nesmí samo zrušit a čtečka nemá při psaní ani průběžném ukládání hlásit novou výzvu. Nový lokální koncept nesmí obsahovat potvrzení akce.
+2. Nabídněte obnovu běžného i recovery konceptu z posledního odeslání. Samotné zobrazení nabídky ani akce **Zahodit** nesmí změnit rozpracovaný formulář. Po **Obnovit** se má vrátit text, běžné zaškrtnuté i nezaškrtnuté volby, radio a vícenásobné výběry, ale potvrzení se musí zrušit a vyžadovat znovu. S NVDA/Firefox ověřte jediné zdvořilé oznámení „Koncept byl obnoven. Před odesláním znovu potvrďte kontrolu akce.“ a přístup klávesnicí k obsahu i novému potvrzení. U formuláře bez potvrzovacích polí se tato výzva neoznamuje.
+3. S pomocí vývojáře připravte starší koncept s `__chk_confirm_newsletter_send_1: "1"` nebo jiným původním potvrzením. Obnova nesmí převzít souhlas ani přepsat odesílanou hodnotu checkboxu přímým starším klíčem; musí vyžadovat čerstvou kontrolu i při existujícím zaškrtnutí. Ověřte také vlastní název označený `data-autosave-confirmation` a potvrzení připojené atributem `form`; samostatné formuláře na stejné stránce nesmí změnit stav.
+4. Po obnově bez nového potvrzení vyvolejte pouze bezpečné serverové odmítnutí, například prázdné nebo nepotvrzené odeslání testovacího newsletteru. Musí se oznámit field-level chyba a nesmí vzniknout rozesílka ani historie. Zopakujte obnovu po návratu z přihlášení; ověřte zachovaný obsah, nepřevzaté potvrzení a možnost jej vědomě zaškrtnout znovu.
 
 ### Přímé vytvoření GitHub issue
 

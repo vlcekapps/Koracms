@@ -6,6 +6,7 @@ Tento projekt cílí na stabilní provoz, bezpečnost a přístupnost. Při kaž
 - V souborech, které načítají `db.php` nebo `config.php`, nepoužívejte lokální proměnné `$user`, `$pass`, `$server`, `$database` pro jiný účel než DB připojení.
 - Redirecty odvozené z requestu nebo formuláře vždy validujte přes `internalRedirectTarget()`.
 - U formulářů používejte `label`, `fieldset` a `legend`; `aria-describedby` a `aria-labelledby` smí odkazovat jen na reálně existující elementy.
+- Checkboxy a radio volby pro potvrzení kritické akce pojmenovávejte `confirm_*`; u odlišného názvu přidejte `data-autosave-confirmation`. Potvrzení není obsah konceptu: autosave ani vlastní obnova nesmí převzít starý souhlas, zatímco běžné datové checkboxy musí zachovat. Serverové ověření potvrzení zůstává povinné.
 - U textu a stavových indikací držte kontrast alespoň na úrovni WCAG 2.2 AA; nepřenášejte význam pouze barvou.
 - Na veřejných i admin stránkách zachovejte skip link a viditelný focus stav.
 - Každá změna formuláře, dialogu, ovládacího prvku, CSS, média, autentizace, exportu, mazání nebo jiné datově dopadající akce musí ve stejném commitu aktualizovat příslušný accessibility conformance dokument, nebo přidat výslovné rozhodnutí do `docs/accessibility/a11y-impact-decisions.md`, a zároveň doplnit automatizovaný důkaz. Guardrail `build/accessibility_conformance_audit.php` je součástí `composer ci:module-ready`.

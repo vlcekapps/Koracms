@@ -192,6 +192,12 @@ Přímé vytvoření issue ve Form Builderu má serverově ověřené potvrzení
 
 Unit, runtime a HTTP testy doplňuje izolovaný produkční handler v `build/rc2_modules_selftest.php`: odmítnutí nemá externí ani databázový účinek, chyba API zachová návrh a úspěšná testovací odpověď vede k zápisu odkazu do SQLite a přesně jednomu volání historie, logu a webhooku. Externí služby a záznamová volání jsou v tomto testu nahrazené; nejde o ověření skutečného GitHub doručení. Protokol obsahuje nový odložený NVDA/keyboard-only průchod. Backlog zvlášť sleduje souběžné vytvoření, nejednoznačný výsledek vzdáleného požadavku a webhook při připojování existujícího issue. Nové datum reportu označuje aktualizaci automatických důkazů, nikoli nový ruční audit všech kritérií.
 
+## Doplnění důkazů 2026-09-05: obnova konceptu bez starého souhlasu
+
+Sdílený autosave už nepřenáší potvrzení kritické akce jako obsah konceptu. Checkboxy/radio s názvem `confirm_*` nebo atributem `data-autosave-confirmation` neukládá a při obnově je v obnovovaném formuláři zruší i při čtení starého konceptu. Běžné datové volby a text zůstávají zachované. Průběžné ukládání ani submit recovery neruší aktivní potvrzení uživatele. Obnova formuláře s potvrzovacími poli oznámí potřebu nové kontroly existujícím zdvořilým live regionem.
+
+Důkaz pro `3.3.4`, `4.1.3` a zachování obnovy při re-auth (`2.2.1`) tvoří vykonávaný produkční JS v `build/rc_editor_autosave_selftest.js`, runtime `session_security_guardrails` a HTTP `newsletter_compose_validation_http`. JS regrese prokazatelně selhala před opravou. Globální stavy zůstávají beze změny, zejména `3.3.4` nadále `Partially Supports`. Test s modelovaným DOM nenahrazuje skutečný NVDA/keyboard-only průchod z ručního protokolu. Pravidlo pro vlastní modulové obnovy je nově výslovné v `AGENTS.md` a vývojářském checklistu.
+
 ## Current Summary
 
 - Supports: 31 criteria; strong structural support for landmarks, forms, status messages, navigation, page titles and semantic UI.

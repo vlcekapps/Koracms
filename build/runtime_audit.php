@@ -10479,6 +10479,14 @@ foreach ([
         'Nalezen záložní koncept z posledního odeslání',
         'saveDraft(recoveryKey);',
         'localStorage.removeItem(recoveryKey)',
+        'function isConfirmationField(el)',
+        '(el.name||"").indexOf("confirm_")===0||el.hasAttribute("data-autosave-confirmation")',
+        'isConfirmationField(el))return;',
+        'Array.from(form.elements).forEach(function(el)',
+        'if(isConfirmationField(el)){el.checked=false;needsConfirmation=true;}',
+        'if(el&&!isConfirmationField(el))el.checked=',
+        'if(el&&isConfirmationField(el))return;',
+        'Koncept byl obnoven. Před odesláním znovu potvrďte kontrolu akce.',
     ],
     'admin/blog_form.php' => [$blogFormSource, "adminRenderContentLockRefreshScript('article', \$id)"],
     'admin/page_form.php' => [$pageFormSource, "adminRenderContentLockRefreshScript('page', \$id)"],
@@ -10500,6 +10508,10 @@ if (!str_contains($httpIntegrationBuildSource, 'contentLockHeartbeatAttempt <= 3
 if (!str_contains($httpIntegrationBuildSource, 'contentLockExpiredResponse')
     || !str_contains($httpIntegrationBuildSource, 'content lock heartbeat po vypršení session nevrátil JSON 401 bez ztráty lokálního konceptu')) {
     $sessionSecurityIssues[] = 'build/http_integration.php is missing expired-session content-lock heartbeat coverage';
+}
+if (!str_contains($developerModulesDocSource, 'data-autosave-confirmation')
+    || !str_contains($developerModulesDocSource, 'confirm_*')) {
+    $sessionSecurityIssues[] = 'module documentation must distinguish action confirmation from recoverable draft data';
 }
 if ($sessionSecurityIssues === []) {
     echo "OK\n";

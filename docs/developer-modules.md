@@ -40,6 +40,7 @@ Tento dokument je praktický checklist pro návrh a implementaci nového modulu.
 
 ## WCAG 2.2 checklist
 
+- Potvrzovací checkboxy a radio volby kritických akcí nejsou obnovitelná data. Používejte jméno `confirm_*`, nebo při nutném odlišném názvu atribut `data-autosave-confirmation`. Sdílený autosave tato pole neukládá a při obnově zruší jejich zaškrtnutí pouze v obnovovaném formuláři, včetně ovládacích prvků připojených atributem `form`. Stejnou zásadu musí dodržet vlastní obnova modulu i pro starší koncepty: žádné automatické převzetí souhlasu, běžné datové checkboxy zachovat a potvrzení dál vyžadovat na serveru. Regresi skutečně generovaného JavaScriptu hlídá `build/rc_editor_autosave_selftest.js` přes `composer test:rc-core` a `composer ci:module-ready`; při novém vzoru rozšiřte tento důkaz.
 - Formuláře mají skutečné `label`, skupiny polí přes `fieldset` a `legend`, chybové hlášky přes `role="alert"` nebo `role="status"` a `aria-describedby` pouze na existující prvky.
 - Pokud veřejný nebo administrační formulář znovu sbírá kontaktní údaje přihlášeného uživatele, použijte bezpečné předvyplnění přes `currentUserContactDefaults()` nebo zdokumentujte výjimku. Při validační chybě musí mít přednost odeslaná hodnota, aby CMS nepřepsal ručně upravený údaj zpět profilem.
 - Navigace, vyhledávání, aside a významné sekce se pojmenovávají přes skutečný nadpis a `aria-labelledby`, ne samotným `aria-label`.

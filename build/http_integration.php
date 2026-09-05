@@ -7151,6 +7151,12 @@ try {
             'aria-invalid="true" aria-describedby="newsletter-review-help confirm-newsletter-send-error"',
             'id="confirm-newsletter-send-error"',
             'Před odesláním potvrďte, že jste zkontrolovali obsah a počet příjemců rozesílky.',
+            'id="a11y-live" role="status" aria-live="polite" aria-atomic="true"',
+            'function isConfirmationField(el)',
+            'if(isConfirmationField(el)){el.checked=false;needsConfirmation=true;}',
+            'if(el&&!isConfirmationField(el))el.checked=',
+            'if(el&&isConfirmationField(el))return;',
+            'Koncept byl obnoven. Před odesláním znovu potvrďte kontrolu akce.',
         ] as $newsletterComposeExpectedFragment) {
             if (!str_contains($newsletterInvalidRender['body'], $newsletterComposeExpectedFragment)) {
                 $newsletterComposeIssues[] = 'newsletter compose po validační chybě neobsahuje: ' . $newsletterComposeExpectedFragment;
