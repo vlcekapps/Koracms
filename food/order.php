@@ -135,28 +135,15 @@ if ($isPostRequest) {
             $fieldErrors['captcha'] = $captchaError;
         }
 
-        $rawQuantities = is_array($_POST['qty'] ?? null) ? (array)$_POST['qty'] : [];
-        $quantities = [];
-        foreach ($rawQuantities as $rawChoiceKey => $rawQuantity) {
-            $choiceKey = trim((string)$rawChoiceKey);
-            if (!isset($choicesByKey[$choiceKey]) && ctype_digit($choiceKey)) {
-                $legacyChoiceKey = foodOrderChoiceKey((int)$choiceKey);
-                if (isset($choicesByKey[$legacyChoiceKey])) {
-                    $choiceKey = $legacyChoiceKey;
-                }
-            }
-            $quantity = (int)$rawQuantity;
-            if ($choiceKey === '' || !isset($choicesByKey[$choiceKey])) {
-                continue;
-            }
-            $quantity = max(0, min(99, $quantity));
-            $formData['quantities'][$choiceKey] = (string)$quantity;
-            if ($quantity > 0) {
-                $quantities[$choiceKey] = $quantity;
-            }
+        $quantityValidation = foodValidateOrderQuantities($choicesByKey, $_POST['qty'] ?? []);
+        $quantities = $quantityValidation['quantities'];
+        $formData['quantities'] = $quantityValidation['values'];
+        foreach ($quantityValidation['errors'] as $quantityField => $quantityError) {
+            $fieldErrors[$quantityField] = $quantityError;
+            $errors[] = $quantityError;
         }
 
-        if ($quantities === []) {
+        if ($quantities === [] && $quantityValidation['errors'] === []) {
             $errors[] = 'Vyberte alespoň jednu dostupnou položku a zadejte množství.';
             $fieldErrors['items'] = 'Vyberte alespoň jednu dostupnou položku a zadejte množství.';
         }

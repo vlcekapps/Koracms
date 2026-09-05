@@ -14,6 +14,7 @@ foreach ([
     'rc_module_state_selftest.php',
     'rc_editor_publication_selftest.php',
     'rc_media_security_selftest.php',
+    'rc2_modules_selftest.php',
 ] as $filename) {
     echo 'RC PDO numeric-string mode: ' . $filename . PHP_EOL;
     $process = proc_open(

@@ -39,6 +39,9 @@ $fieldAttributes = static function (string $key, array $extraDescriptions = []) 
         <?php if ($referenceCode !== ''): ?>
           <p>Referenční kód zprávy: <strong><?= h($referenceCode) ?></strong></p>
         <?php endif; ?>
+        <?php foreach ($errors as $error): ?>
+          <p><?= h((string)$error) ?> Zprávu znovu neodesílejte; správce ji má uloženou v administraci.</p>
+        <?php endforeach; ?>
       </div>
     <?php else: ?>
       <?php if (!empty($errors)): ?>

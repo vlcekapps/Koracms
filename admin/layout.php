@@ -9,6 +9,8 @@ function adminEditorFormFields(): array
         'news' => ['title', 'slug', 'content', 'publish_at', 'unpublish_at', 'admin_note', 'meta_title', 'meta_description', 'article_status'],
         'event' => ['title', 'slug', 'event_kind', 'event_type_id', 'place_id', 'excerpt', 'description', 'program_note', 'location', 'organizer_name', 'organizer_email', 'registration_url', 'price_note', 'accessibility_note', 'event_date', 'event_time', 'event_end_date', 'event_end_time', 'recurrence_frequency', 'recurrence_interval', 'recurrence_count', 'publish_at', 'unpublish_at', 'admin_note', 'article_status'],
         'faq' => ['question', 'slug', 'excerpt', 'answer', 'category_id', 'meta_title', 'meta_description', 'article_status'],
+        'gallery_photo' => ['title', 'slug', 'alt_text', 'caption', 'description', 'credit', 'license_label', 'license_url', 'taken_at', 'location_label', 'sort_order'],
+        'poll' => ['question', 'slug', 'description', 'status', 'vote_mode', 'max_choices', 'results_visibility', 'start_date', 'start_time', 'end_date', 'end_time', 'meta_title', 'meta_description'],
         'podcast' => ['title', 'slug', 'description', 'transcript', 'audio_url', 'audio_mime_type', 'audio_file_size', 'subtitle', 'duration', 'episode_num', 'season_num', 'episode_type', 'explicit_mode', 'publish_at', 'article_status'],
         'podcast_show' => ['title', 'slug', 'author', 'subtitle', 'language', 'category', 'owner_name', 'owner_email', 'explicit_mode', 'show_type', 'feed_episode_limit', 'website_url', 'description', 'article_status'],
     ];
@@ -26,6 +28,7 @@ function adminEditorFormFlashStore(string $editor, ?int $id, array $input, ?int 
     $checkboxes = match ($editor) {
         'event' => ['is_published', 'event_image_delete'],
         'faq' => ['is_published'],
+        'gallery_photo' => ['is_published'],
         'podcast' => ['block_from_feed', 'audio_file_delete', 'image_file_delete'],
         'podcast_show' => ['feed_complete', 'is_published', 'cover_image_delete'],
         default => [],

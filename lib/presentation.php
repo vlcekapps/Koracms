@@ -4872,6 +4872,47 @@ function foodCardCanAcceptOrders(array $card): bool
         && foodOrderSelectableChoices(is_array($card['sections'] ?? null) ? $card['sections'] : []) !== [];
 }
 
+/**
+ * @param array<string,array<string,mixed>> $choicesByKey
+ * @return array{quantities:array<string,int>,values:array<string,string>,errors:array<string,string>}
+ */
+function foodValidateOrderQuantities(array $choicesByKey, mixed $input): array
+{
+    $quantities = [];
+    $values = [];
+    $errors = [];
+    if (!is_array($input)) {
+        return ['quantities' => [], 'values' => [], 'errors' => ['items' => 'Zadejte množství u vybraných položek.']];
+    }
+    foreach ($input as $rawKey => $rawQuantity) {
+        $key = (string)$rawKey;
+        if (ctype_digit($key)) {
+            $key = foodOrderChoiceKey((int)$key);
+        }
+        $value = is_string($rawQuantity) || is_int($rawQuantity) ? trim((string)$rawQuantity) : '';
+        $valid = (is_string($rawQuantity) || is_int($rawQuantity))
+            && ($value === '' || preg_match('/^[0-9]{1,2}$/D', $value) === 1);
+        $quantity = $valid && $value !== '' ? (int)$value : 0;
+        if (!isset($choicesByKey[$key])) {
+            if (!$valid || $quantity > 0) {
+                $errors['items'] = 'Některá vybraná položka už není dostupná. Zkontrolujte výběr a odešlete poptávku znovu.';
+            }
+            continue;
+        }
+        if (array_key_exists($key, $values)) {
+            $errors['items'] = 'Stejná položka byla odeslána vícekrát. Zkontrolujte výběr a odešlete poptávku znovu.';
+            continue;
+        }
+        $values[$key] = $value;
+        if (!$valid) {
+            $errors['qty-' . $key] = 'Zadejte celé množství od 0 do 99. Nula znamená položku neobjednat.';
+        } elseif ($quantity > 0) {
+            $quantities[$key] = $quantity;
+        }
+    }
+    return ['quantities' => $quantities, 'values' => $values, 'errors' => $errors];
+}
+
 function uniqueFoodOrderReferenceCode(PDO $pdo): string
 {
     $date = date('Ymd');
@@ -4899,6 +4940,7 @@ function foodBuildOrderSnapshot(array $choicesByKey, array $quantities): array
     $hasPricedItem = false;
     $currency = 'CZK';
     $hasMixedCurrencies = false;
+    $hasUnpricedItem = false;
     $sortOrder = 10;
     foreach ($quantities as $choiceKey => $quantity) {
         $choiceKey = (string)$choiceKey;
@@ -4917,6 +4959,8 @@ function foodBuildOrderSnapshot(array $choicesByKey, array $quantities): array
             $hasPricedItem = true;
             $total += ((float)$unitPrice) * $quantity;
             $currency = $itemCurrency;
+        } else {
+            $hasUnpricedItem = true;
         }
         $items[] = [
             'item_id' => (int)($choice['item_id'] ?? 0),
@@ -4937,7 +4981,7 @@ function foodBuildOrderSnapshot(array $choicesByKey, array $quantities): array
 
     return [
         'items' => $items,
-        'total' => $hasPricedItem && !$hasMixedCurrencies ? number_format($total, 2, '.', '') : null,
+        'total' => $hasPricedItem && !$hasMixedCurrencies && !$hasUnpricedItem ? number_format($total, 2, '.', '') : null,
         'currency' => $currency,
     ];
 }

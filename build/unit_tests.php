@@ -2462,7 +2462,8 @@ $foodOrderSnapshot = foodBuildOrderSnapshot($foodChoicesByKey, [
     'item-11' => 1,
 ]);
 assert_equals(2, count($foodOrderSnapshot['items']), 'food order snapshot keeps selected choices');
-assert_equals('319.80', $foodOrderSnapshot['total'], 'food order snapshot totals selected variant prices');
+assert_equals(null, $foodOrderSnapshot['total'], 'food order snapshot does not present a partial price as the total');
+assert_equals('319.80', foodBuildOrderSnapshot($foodChoicesByKey, ['variant-101' => 2])['total'], 'food order totals a fully priced selection');
 assert_equals('Smažený sýr', $foodOrderSnapshot['items'][0]['item_title'], 'food order snapshot stores item title');
 assert_equals(101, $foodOrderSnapshot['items'][0]['variant_id'], 'food order snapshot stores variant id');
 assert_equals('Velká', $foodOrderSnapshot['items'][0]['variant_label'], 'food order snapshot stores variant label');

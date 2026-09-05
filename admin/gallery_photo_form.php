@@ -54,6 +54,10 @@ if (!$album) {
 }
 $album = hydrateGalleryAlbumPresentation($album);
 
+if ($photo) {
+    $photo = array_replace($photo, adminEditorFormFlashTake('gallery_photo', $id, $albumId));
+}
+
 $pageTitle = $id ? 'Upravit fotografii' : 'Nahrát fotografie do alba';
 adminHeader($pageTitle);
 ?>

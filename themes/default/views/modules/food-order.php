@@ -52,6 +52,9 @@ if (isset($fieldErrors['items'])) {
         <?php if ($referenceCode !== ''): ?>
           <p>Referenční kód poptávky: <strong><?= h($referenceCode) ?></strong></p>
         <?php endif; ?>
+        <?php foreach ($errors as $error): ?>
+          <p><?= h((string)$error) ?> Poptávku znovu neodesílejte; provozovatel ji má uloženou v administraci.</p>
+        <?php endforeach; ?>
       </div>
     <?php elseif (!foodCardCanAcceptOrders($card)): ?>
       <p class="empty-state">Tento lístek teď nepřijímá objednávkové poptávky.</p>
@@ -79,7 +82,7 @@ if (isset($fieldErrors['items'])) {
 
         <fieldset class="form-fieldset">
           <legend>Vybrané položky</legend>
-          <p id="food-order-items-help" class="field-help field-help--flush">U položek, které chcete poptat, zadejte množství. Položky s nulou se neodešlou.</p>
+          <p id="food-order-items-help" class="field-help field-help--flush">U položek, které chcete poptat, zadejte celé množství od 0 do 99. Položky s nulou se neodešlou.</p>
           <?php if (isset($fieldErrors['items'])): ?><small id="<?= h($fieldErrorId('items')) ?>" class="field-help field-error"><?= h((string)$fieldErrors['items']) ?></small><?php endif; ?>
           <div class="food-order-items" aria-describedby="<?= h(implode(' ', $itemsDescriptionIds)) ?>">
             <?php foreach ($selectableItems as $item): ?>
@@ -104,7 +107,8 @@ if (isset($fieldErrors['items'])) {
                         <?php if ((string)$variant['price_label'] !== ''): ?><p class="meta-row meta-row--tight"><?= h((string)$variant['price_label']) ?></p><?php endif; ?>
                       </div>
                       <input id="<?= h($quantityId) ?>" class="form-control form-control--compact" type="number" min="0" max="99" step="1"
-                             name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric">
+                             name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric"<?= $fieldAttributes('qty-' . $choiceKey, $itemsDescriptionIds) ?>>
+                      <?php if (isset($fieldErrors['qty-' . $choiceKey])): ?><small id="<?= h($fieldErrorId('qty-' . $choiceKey)) ?>" class="field-help field-error"><?= h($fieldErrors['qty-' . $choiceKey]) ?></small><?php endif; ?>
                     </div>
                   <?php endforeach; ?>
                 </fieldset>
@@ -124,7 +128,8 @@ if (isset($fieldErrors['items'])) {
                     <?php if ($itemPrice !== ''): ?><p class="meta-row meta-row--tight"><?= h($itemPrice) ?></p><?php endif; ?>
                   </div>
                   <input id="<?= h($quantityId) ?>" class="form-control form-control--compact" type="number" min="0" max="99" step="1"
-                         name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric">
+                         name="qty[<?= h($choiceKey) ?>]" value="<?= h((string)($quantities[$choiceKey] ?? '0')) ?>" inputmode="numeric"<?= $fieldAttributes('qty-' . $choiceKey, $itemsDescriptionIds) ?>>
+                  <?php if (isset($fieldErrors['qty-' . $choiceKey])): ?><small id="<?= h($fieldErrorId('qty-' . $choiceKey)) ?>" class="field-help field-error"><?= h($fieldErrors['qty-' . $choiceKey]) ?></small><?php endif; ?>
                 </div>
               <?php endif; ?>
             <?php endforeach; ?>

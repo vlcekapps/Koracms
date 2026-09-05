@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu anket nemáte potřebné oprávnění.');
 requireModuleEnabled('polls');
 verifyCsrf();
@@ -11,6 +11,17 @@ $defaultRedirect = BASE_URL . '/admin/polls.php';
 $redirectTarget = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), $defaultRedirect);
 
 $redirectToForm = static function (?int $pollId, string $errorCode, string $backUrl) use ($defaultRedirect) {
+    adminEditorFormFlashStore('poll', $pollId, $_POST);
+    $submittedOptions = [];
+    $texts = is_array($_POST['options'] ?? null) ? $_POST['options'] : [];
+    $ids = is_array($_POST['option_ids'] ?? null) ? $_POST['option_ids'] : [];
+    foreach ($texts as $index => $text) {
+        if (is_scalar($text)) {
+            $submittedOptions[] = ['id' => is_scalar($ids[$index] ?? null) ? (int)$ids[$index] : 0,
+                'option_text' => (string)$text];
+        }
+    }
+    $_SESSION['cms_poll_options_flash'][$pollId ?? 'new'] = $submittedOptions;
     $params = ['err' => $errorCode];
     if ($pollId !== null) {
         $params['id'] = (string)$pollId;
@@ -91,17 +102,28 @@ if ($startDate !== null && $endDate !== null && $endDate <= $startDate) {
     $redirectToForm($id, 'range', $redirectTarget);
 }
 
-$optionTexts = $_POST['options'] ?? [];
-$optionIds = $_POST['option_ids'] ?? [];
+$optionTexts = is_array($_POST['options'] ?? null) ? $_POST['options'] : [];
+$optionIds = is_array($_POST['option_ids'] ?? null) ? $_POST['option_ids'] : [];
 $validOptions = [];
+$seenOptionIds = [];
 foreach ($optionTexts as $index => $text) {
+    if (!is_scalar($text)) {
+        $redirectToForm($id, 'invalid_options', $redirectTarget);
+    }
     $normalizedText = trim((string)$text);
     if ($normalizedText === '') {
         continue;
     }
 
+    $optionId = filter_var($optionIds[$index] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+    if ($optionId === false || ($optionId > 0 && isset($seenOptionIds[$optionId]))) {
+        $redirectToForm($id, 'invalid_options', $redirectTarget);
+    }
+    if ($optionId > 0) {
+        $seenOptionIds[$optionId] = true;
+    }
     $validOptions[] = [
-        'id' => (int)($optionIds[$index] ?? 0),
+        'id' => $optionId,
         'text' => $normalizedText,
         'sort' => count($validOptions),
     ];
@@ -161,6 +183,13 @@ if ($id !== null) {
         if (!in_array($existingOptionId, $submittedExistingIds, true) && $voteCount > 0) {
             $redirectToForm($id, 'has_votes', $redirectTarget);
         }
+    }
+}
+
+$allowedOptionIds = array_map(static fn (array $option): int => (int)$option['id'], $existingOptions);
+foreach ($validOptions as $option) {
+    if ($option['id'] > 0 && !in_array($option['id'], $allowedOptionIds, true)) {
+        $redirectToForm($id, 'invalid_options', $redirectTarget);
     }
 }
 

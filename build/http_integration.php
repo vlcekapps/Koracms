@@ -16,6 +16,7 @@ require_once __DIR__ . '/../cron.php';
 require_once __DIR__ . '/http_test_helpers.php';
 require_once __DIR__ . '/rc_publication_http.php';
 require_once __DIR__ . '/rc_session_security_http.php';
+require_once __DIR__ . '/rc2_modules_http.php';
 
 $baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
 if (!is_string($baseUrlInput) || $baseUrlInput === '') {
@@ -709,6 +710,7 @@ try {
     httpIntegrationPrintResult('rc_publication_window_http', rcPublicationHttpChecks($pdo, $baseUrl), $failures);
     httpIntegrationClearLocalRateLimits($pdo, ['login_2fa']);
     httpIntegrationPrintResult('rc_session_security_http', rcSessionSecurityHttpChecks($pdo, $baseUrl), $failures);
+    httpIntegrationPrintResult('rc2_module_revisions_http', rc2ModuleRevisionHttpChecks($pdo, $baseUrl), $failures);
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS cms_admin_shortcuts (
             id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -16167,6 +16169,46 @@ try {
             $foodStructuredIssues[] = 'objednávkový formulář uložil poptávku bez povinné adresy nebo termínu';
         }
 
+        foreach (['120', '1.5', 'stale'] as $invalidQuantity) {
+            httpIntegrationClearLocalRateLimits($pdo, ['food_order']);
+            $quantitySession = koraPrimeTestSession([], 'kora-http-food-quantity-' . bin2hex(random_bytes(5)));
+            $quantityPage = fetchUrl($foodOrderUrl, $quantitySession['cookie'], 0);
+            $quantityEmail = 'http-food-quantity-' . bin2hex(random_bytes(5)) . '@example.test';
+            $quantityFields = [
+                'csrf_token' => extractHiddenInputValue($quantityPage['body'], 'csrf_token'),
+                'slug' => $foodSlug,
+                'qty[' . $foodOrderChoiceKey . ']' => $invalidQuantity === 'stale' ? '1' : $invalidQuantity,
+                'customer_name' => 'HTTP Zákazník', 'customer_email' => $quantityEmail,
+                'customer_phone' => '+420123456789', 'fulfillment_type' => 'delivery',
+                'requested_at' => $foodRequestedAtInput, 'customer_address' => 'HTTP ulice 1',
+                'captcha' => httpIntegrationExtractCaptchaAnswer($quantityPage['body']),
+            ];
+            if ($invalidQuantity === 'stale') {
+                $quantityFields['qty[variant-2147483647]'] = '1';
+            }
+            $quantityResponse = postUrl($foodOrderUrl, $quantityFields, $quantitySession['cookie'], 0);
+            $quantityError = $invalidQuantity === 'stale'
+                ? 'Některá vybraná položka už není dostupná.' : 'Zadejte celé množství od 0 do 99.';
+            if (httpIntegrationStatusCode($quantityResponse) !== 200
+                || !str_contains($quantityResponse['body'], $quantityError)
+                || ($invalidQuantity !== 'stale' && !httpIntegrationFieldHasAriaInvalid(
+                    $quantityResponse['body'],
+                    'food-order-qty-' . str_replace('-', '_', $foodOrderChoiceKey)
+                ))) {
+                $foodStructuredIssues[] = 'Food quantity rejection missing: ' . $invalidQuantity;
+            }
+            $quantityStored = $pdo->prepare('SELECT id FROM cms_food_orders WHERE customer_email=?');
+            $quantityStored->execute([$quantityEmail]);
+            $quantityOrderIds = array_map('intval', $quantityStored->fetchAll(PDO::FETCH_COLUMN));
+            foreach ($quantityOrderIds as $quantityOrderId) {
+                $createdFoodOrderIds[] = $quantityOrderId;
+            }
+            if ($quantityOrderIds !== []) {
+                $foodStructuredIssues[] = 'Invalid quantity or stale basket was stored: ' . $invalidQuantity;
+            }
+        }
+
+        httpIntegrationClearLocalRateLimits($pdo, ['food_order']);
         $validFoodOrderEmail = 'http-food-order-valid-' . bin2hex(random_bytes(4)) . '@example.test';
         $validFoodOrderSession = koraPrimeTestSession([], 'kora-http-food-order-valid');
         $validFoodOrderPage = fetchUrl($foodOrderUrl, $validFoodOrderSession['cookie'], 0);

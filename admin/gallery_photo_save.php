@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu galerie nemáte potřebné oprávnění.');
 requireModuleEnabled('gallery');
 verifyCsrf();
@@ -30,6 +30,7 @@ if ($album === null) {
 }
 
 $redirectToPhotoForm = static function (int $photoId, int $targetAlbumId, string $error): void {
+    adminEditorFormFlashStore('gallery_photo', $photoId, $_POST, $targetAlbumId);
     header('Location: ' . BASE_URL . appendUrlQuery('/admin/gallery_photo_form.php', [
         'id' => (string)$photoId,
         'album_id' => (string)$targetAlbumId,

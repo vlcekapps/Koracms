@@ -361,6 +361,16 @@ Po nasazení projděte neúspěšné i úspěšné uložení dlouhého formulá�
 
 Před aktualizací uložte rozepsané změny. Staré přihlášené relace budou vyžadovat nový login. Každý další požadavek kontroluje existenci a potvrzení účtu, heslo, roli a nastavení 2FA; změna těchto údajů zneplatní dosavadní přihlášení. Rozpracovaný druhý faktor platí deset minut a po vypršení nabídne srozumitelný návrat k přihlášení. Nejde o desetiminutový limit editace obsahu. Administrátor starší instalace bez pole potvrzení účtu se může přihlásit k migraci; výjimka neplatí pro veřejné účty ani pro účet s výslovně vypnutým potvrzením.
 
+#### Navazující modulový audit pro RC.2
+
+Historie revizí je dostupná jen tomu, kdo může upravovat daný obsah. Autor vidí vlastní články v dostupném blogu a vlastní novinky; samotné přihlášení nestačí pro cizí ani sdílený obsah. Vypnutí modulu blokuje také jeho revize. Historie je funkční i u Anket a Míst.
+
+Při chybě licence, data nebo slugu fotografie zůstanou vyplněná metadata ve formuláři. Stejně se zachová odmítnutá anketa včetně odpovědí a časů, i bez JavaScriptu. Návratové hodnoty patří konkrétnímu editoru a záznamu a načtou se jednou; nejsou dlouhodobou zálohou ani historií.
+
+Food přijímá pouze celé množství 0–99. Pokud vybraná položka mezitím přestane být dostupná, nic z poptávky se neuloží a návštěvník musí výběr zkontrolovat. U neoceněné položky se nevytváří zdánlivě úplný součet; položkové ceny zůstávají ve snapshotu. Selže-li po uložení poptávky či kontaktní zprávy e-mailové oznámení, návštěvník uvidí upozornění i referenční kód a nemá formulář posílat znovu. Správce najde původní podání v administraci.
+
+Tento blok nemění databázi. Audit a ruční scénáře jsou v `docs/rc2-module-audit-2026-09.md`; před dalším vydáním zbývá vyhodnotit skutečný cron a logy na hostingu.
+
 ### Správa blogu
 
 U každého blogu lze nastavit:

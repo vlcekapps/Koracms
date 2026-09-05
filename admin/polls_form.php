@@ -41,6 +41,26 @@ $poll = $poll ?: [
     'meta_description' => '',
 ];
 $poll = hydratePollPresentation($poll);
+$flashValues = adminEditorFormFlashTake('poll', $id);
+$flashOptions = $_SESSION['cms_poll_options_flash'][$id ?? 'new'] ?? null;
+unset($_SESSION['cms_poll_options_flash'][$id ?? 'new']);
+$dateFields = [];
+foreach (['start', 'end'] as $datePrefix) {
+    $savedTimestamp = !empty($poll[$datePrefix . '_date']) ? strtotime((string)$poll[$datePrefix . '_date']) : false;
+    $dateFields[$datePrefix . '_date'] = $savedTimestamp !== false ? date('Y-m-d', $savedTimestamp) : '';
+    $dateFields[$datePrefix . '_time'] = $savedTimestamp !== false ? date('H:i', $savedTimestamp) : '';
+}
+if ($flashValues !== []) {
+    $poll = array_replace($poll, $flashValues);
+    $dateFields = array_replace($dateFields, array_intersect_key($flashValues, $dateFields));
+}
+if (is_array($flashOptions)) {
+    $savedVotes = array_column($options, 'vote_count', 'id');
+    $options = array_map(static function (array $option) use ($savedVotes): array {
+        $option['vote_count'] = (int)($savedVotes[(int)$option['id']] ?? 0);
+        return $option;
+    }, $flashOptions);
+}
 
 $selectionCount = 0;
 $voterCount = 0;
@@ -65,6 +85,7 @@ $pollRangeErrorMessage = 'Konec ankety musí být později než začátek. Uprav
 $formError = match ($err) {
     'required' => 'Anketu nejde uložit bez otázky a alespoň dvou možností odpovědi. U zvýrazněných polí je konkrétní nápověda.',
     'max_options' => 'Anketa má příliš mnoho možností odpovědi. U sekce Možnosti odpovědi je konkrétní nápověda.',
+    'invalid_options' => 'Možnosti odpovědi obsahují neplatné nebo opakované identifikátory. Anketa nebyla změněna.',
     'max_choices' => 'Limit vícevýběrové ankety není použitelný. U pole Maximální počet vybraných možností je konkrétní nápověda.',
     'has_votes' => 'Možnosti s uloženými hlasy nejde odebrat. U sekce Možnosti odpovědi je konkrétní nápověda.',
     'slug' => 'Slug ankety není použitelný nebo už existuje. U pole Slug veřejné stránky je konkrétní nápověda.',
@@ -76,6 +97,7 @@ $formError = match ($err) {
 $fieldErrorMap = [
     'required' => ['question', 'options'],
     'max_options' => ['options'],
+    'invalid_options' => ['options'],
     'max_choices' => ['max_choices'],
     'has_votes' => ['options'],
     'slug' => ['slug'],
@@ -92,6 +114,7 @@ $fieldErrorMessages = [
 $optionsErrorMessage = match ($err) {
     'required' => 'Doplňte alespoň dvě neprázdné možnosti odpovědi.',
     'max_options' => 'Nechte nejvýše deset možností odpovědi a přebytečné řádky odeberte.',
+    'invalid_options' => 'Každá existující možnost musí patřit k této anketě a být uvedena jen jednou. Uchovejte rozepsané texty a znovu otevřete editor.',
     'has_votes' => 'Možnosti, které už mají hlasy, ponechte v anketě nebo anketu uzavřete a vytvořte novou.',
     default => '',
 };
@@ -208,7 +231,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           name="start_date"
           class="admin-input-auto"
           <?= adminFieldAttributes('start_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
-          value="<?= !empty($poll['start_date']) ? h(date('Y-m-d', strtotime((string)$poll['start_date']))) : '' ?>"
+          value="<?= h($dateFields['start_date']) ?>"
         >
       </div>
       <div>
@@ -219,7 +242,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           name="start_time"
           class="admin-input-auto"
           <?= adminFieldAttributes('start_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
-          value="<?= !empty($poll['start_date']) ? h(date('H:i', strtotime((string)$poll['start_date']))) : '' ?>"
+          value="<?= h($dateFields['start_time']) ?>"
         >
       </div>
       <div>
@@ -230,7 +253,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           name="end_date"
           class="admin-input-auto"
           <?= adminFieldAttributes('end_date', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
-          value="<?= !empty($poll['end_date']) ? h(date('Y-m-d', strtotime((string)$poll['end_date']))) : '' ?>"
+          value="<?= h($dateFields['end_date']) ?>"
         >
       </div>
       <div>
@@ -241,7 +264,7 @@ adminHeader($id ? 'Upravit anketu' : 'Nová anketa');
           name="end_time"
           class="admin-input-auto"
           <?= adminFieldAttributes('end_time', $err, $fieldErrorMap, ['poll-timing-help'], 'poll-timing-error') ?>
-          value="<?= !empty($poll['end_date']) ? h(date('H:i', strtotime((string)$poll['end_date']))) : '' ?>"
+          value="<?= h($dateFields['end_time']) ?>"
         >
       </div>
     </div>

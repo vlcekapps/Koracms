@@ -14964,6 +14964,7 @@ foreach ([
     'normalizeFoodOrderRequestedAt',
     'foodOrderChoiceKey',
     'foodOrderSelectableChoices',
+    'foodValidateOrderQuantities',
     'foodCardCanAcceptOrders',
     'foodBuildOrderSnapshot',
     'uniqueFoodOrderReferenceCode',
@@ -15010,7 +15011,7 @@ foreach ([
     'honeypotTriggered()',
     "rateLimit('food_order'",
     'foodOrderSelectableChoices',
-    'foodOrderChoiceKey',
+    'foodValidateOrderQuantities',
     'normalizeFoodOrderRequestedAt',
     'foodOrderRequestedAtIsFuture',
     'foodBuildOrderSnapshot',
@@ -23901,6 +23902,36 @@ if (!preg_match('/\s30[12378]\s/', $pagePositionsRedirectProbe['status'])) {
     $failures++;
 } else {
     echo "OK\n";
+}
+
+echo "=== rc2_module_regression_contract ===\n";
+$rc2ModuleIssues = [];
+$rc2RevisionEndpoint = (string)file_get_contents(__DIR__ . '/../admin/revisions.php');
+$rc2AccessPosition = strpos($rc2RevisionEndpoint, 'canReadEntityRevisions(');
+$rc2ReadPosition = strpos($rc2RevisionEndpoint, 'loadRevisions(');
+if ($rc2AccessPosition === false || $rc2ReadPosition === false || $rc2AccessPosition >= $rc2ReadPosition) {
+    $rc2ModuleIssues[] = 'Revision authorization must precede history loading.';
+}
+foreach ([
+    'food/order.php' => 'foodValidateOrderQuantities(',
+    'admin/gallery_photo_save.php' => "adminEditorFormFlashStore('gallery_photo'",
+    'admin/gallery_photo_form.php' => "adminEditorFormFlashTake('gallery_photo'",
+    'admin/polls_save.php' => "adminEditorFormFlashStore('poll'",
+    'admin/polls_form.php' => "adminEditorFormFlashTake('poll'",
+    'composer.json' => 'php build/rc2_modules_selftest.php',
+    'build/http_integration.php' => 'rc2ModuleRevisionHttpChecks(',
+] as $rc2File => $rc2Fragment) {
+    if (!str_contains((string)file_get_contents(__DIR__ . '/../' . $rc2File), $rc2Fragment)) {
+        $rc2ModuleIssues[] = $rc2File . ' is missing its RC2 regression integration.';
+    }
+}
+if ($rc2ModuleIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($rc2ModuleIssues as $rc2Issue) {
+        echo '- ' . $rc2Issue . "\n";
+    }
 }
 
 exit($failures > 0 ? 1 : 0);

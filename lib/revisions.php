@@ -2,6 +2,57 @@
 
 // Revize obsahu – ukládá snapshoty textových polí před každou úpravou
 
+/** @return array<string,array{table:string,label:string,title_col:string,back:string,module:string,capability:string}> */
+function revisionEntityDefinitions(): array
+{
+    $shared = 'content_manage_shared';
+    $definitions = [
+        'article' => ['cms_articles', 'Článek', 'title', 'blog_form.php', 'blog', 'blog_manage_own'],
+        'news' => ['cms_news', 'Novinka', 'title', 'news_form.php', 'news', 'news_manage_own'],
+        'page' => ['cms_pages', 'Stránka', 'title', 'page_form.php', '', $shared],
+        'event' => ['cms_events', 'Událost', 'title', 'event_form.php', 'events', $shared],
+        'faq' => ['cms_faqs', 'FAQ', 'question', 'faq_form.php', 'faq', $shared],
+        'board' => ['cms_board', 'Položka vývěsky', 'title', 'board_form.php', 'board', $shared],
+        'download' => ['cms_downloads', 'Položka ke stažení', 'title', 'download_form.php', 'downloads', $shared],
+        'food' => ['cms_food_cards', 'Jídelní nebo nápojový lístek', 'title', 'food_form.php', 'food', $shared],
+        'recipe' => ['cms_recipes', 'Recept', 'title', 'recipe_form.php', 'recipes', $shared],
+        'place' => ['cms_places', 'Místo', 'name', 'place_form.php', 'places', $shared],
+        'poll' => ['cms_polls', 'Anketa', 'question', 'polls_form.php', 'polls', $shared],
+        'podcast_show' => ['cms_podcast_shows', 'Podcastový pořad', 'title', 'podcast_show_form.php', 'podcast', $shared],
+        'podcast_episode' => ['cms_podcasts', 'Podcastová epizoda', 'title', 'podcast_form.php', 'podcast', $shared],
+        'gallery_album' => ['cms_gallery_albums', 'Album galerie', 'name', 'gallery_album_form.php', 'gallery', $shared],
+        'gallery_photo' => ['cms_gallery_photos', 'Fotografie', 'title', 'gallery_photo_form.php', 'gallery', $shared],
+    ];
+    $result = [];
+    foreach ($definitions as $type => [$table, $label, $title, $back, $module, $capability]) {
+        $result[$type] = ['table' => $table, 'label' => $label, 'title_col' => $title,
+            'back' => $back, 'module' => $module, 'capability' => $capability];
+    }
+    return $result;
+}
+
+/** @param array<string,mixed> $entity */
+function canReadEntityRevisions(string $entityType, array $entity): bool
+{
+    $definition = revisionEntityDefinitions()[$entityType] ?? null;
+    if ($definition === null || !currentUserHasCapability($definition['capability'])) {
+        return false;
+    }
+    $module = $entityType === 'page' && !empty($entity['blog_id']) ? 'blog' : $definition['module'];
+    if ($module !== '' && !isModuleEnabled($module)) {
+        return false;
+    }
+    if ($entityType === 'article' && canManageOwnBlogOnly()) {
+        return currentUserId() !== null
+            && (int)($entity['author_id'] ?? 0) === currentUserId()
+            && canCurrentUserWriteToBlog((int)($entity['blog_id'] ?? 0));
+    }
+    if ($entityType === 'news' && canManageOwnNewsOnly()) {
+        return currentUserId() !== null && (int)($entity['author_id'] ?? 0) === currentUserId();
+    }
+    return true;
+}
+
 /**
  * Zapíše technickou chybu revizí bez ukládání samotného obsahu polí.
  */

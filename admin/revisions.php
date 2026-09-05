@@ -5,21 +5,7 @@ requireLogin(BASE_URL . '/admin/login.php');
 $entityType = trim($_GET['type'] ?? '');
 $entityId   = inputInt('get', 'id');
 
-$allowedTypes = [
-    'article' => ['table' => 'cms_articles', 'label' => 'Článek', 'title_col' => 'title', 'back' => 'blog_form.php'],
-    'news'    => ['table' => 'cms_news',     'label' => 'Novinka', 'title_col' => 'title', 'back' => 'news_form.php'],
-    'page'    => ['table' => 'cms_pages',    'label' => 'Stránka', 'title_col' => 'title', 'back' => 'page_form.php'],
-    'event'   => ['table' => 'cms_events',   'label' => 'Událost', 'title_col' => 'title', 'back' => 'event_form.php'],
-    'faq'     => ['table' => 'cms_faqs',     'label' => 'FAQ', 'title_col' => 'question', 'back' => 'faq_form.php'],
-    'board'   => ['table' => 'cms_board',    'label' => 'Položka vývěsky', 'title_col' => 'title', 'back' => 'board_form.php'],
-    'download' => ['table' => 'cms_downloads','label' => 'Položka ke stažení', 'title_col' => 'title', 'back' => 'download_form.php'],
-    'food'    => ['table' => 'cms_food_cards','label' => 'Jídelní nebo nápojový lístek', 'title_col' => 'title', 'back' => 'food_form.php'],
-    'recipe'  => ['table' => 'cms_recipes', 'label' => 'Recept', 'title_col' => 'title', 'back' => 'recipe_form.php'],
-    'podcast_show' => ['table' => 'cms_podcast_shows', 'label' => 'Podcastový pořad', 'title_col' => 'title', 'back' => 'podcast_show_form.php'],
-    'podcast_episode' => ['table' => 'cms_podcasts', 'label' => 'Podcastová epizoda', 'title_col' => 'title', 'back' => 'podcast_form.php'],
-    'gallery_album' => ['table' => 'cms_gallery_albums', 'label' => 'Album galerie', 'title_col' => 'name', 'back' => 'gallery_album_form.php'],
-    'gallery_photo' => ['table' => 'cms_gallery_photos', 'label' => 'Fotografie', 'title_col' => 'title', 'back' => 'gallery_photo_form.php'],
-];
+$allowedTypes = revisionEntityDefinitions();
 
 if ($entityType === '' || $entityId === null || !isset($allowedTypes[$entityType])) {
     header('Location: ' . BASE_URL . '/admin/index.php');
@@ -27,15 +13,23 @@ if ($entityType === '' || $entityId === null || !isset($allowedTypes[$entityType
 }
 
 $config = $allowedTypes[$entityType];
+requireCapability($config['capability']);
+if ($config['module'] !== '') {
+    requireModuleEnabled($config['module']);
+}
 $pdo = db_connect();
 
-$entityStmt = $pdo->prepare("SELECT {$config['title_col']} AS entity_title FROM {$config['table']} WHERE id = ?");
+$entityStmt = $pdo->prepare("SELECT *, {$config['title_col']} AS entity_title FROM {$config['table']} WHERE id = ?");
 $entityStmt->execute([$entityId]);
 $entity = $entityStmt->fetch();
 
 if (!$entity) {
     header('Location: ' . BASE_URL . '/admin/index.php');
     exit;
+}
+
+if (!canReadEntityRevisions($entityType, $entity)) {
+    adminForbidden('Přístup odepřen. Pro historii tohoto obsahu nemáte potřebné oprávnění.');
 }
 
 $revisions = loadRevisions($pdo, $entityType, $entityId);

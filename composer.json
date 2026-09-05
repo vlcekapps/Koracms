@@ -88,6 +88,7 @@
       "php build/rc_module_state_selftest.php",
       "php build/rc_editor_publication_selftest.php",
       "php build/rc_media_security_selftest.php",
+      "php build/rc2_modules_selftest.php",
       "node build/rc_clipboard_selftest.js",
       "php build/rc_pdo_fetch_selftest.php"
     ],

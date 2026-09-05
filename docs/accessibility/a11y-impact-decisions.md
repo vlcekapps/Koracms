@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-09-05: modulový audit pro RC.2
+
+- Datum a rozsah: historie revizí napříč moduly, Galerie, Ankety, poptávky Food a potvrzení kontaktního formuláře. Registr nálezů: `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.3.1`, `2.1.1`, `3.3.1`, `3.3.2`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: odmítnuté zadání se zachovává, množství se nemění bez vědomí návštěvníka, chyby jsou přiřazené konkrétním vstupům a oznámení rozlišuje uložení od doručení e-mailu. Registr revizí vyhodnocuje skutečná oprávnění před načtením historie. Bez nového ovládacího modelu, JS závislosti nebo databázové změny; hlavní ACR se nepovyšuje na Supports.
+- Automatizovaný důkaz: `build/rc2_modules_selftest.php` vykonává skutečné helpery, save handlery a šablony, kontroluje existující ARIA cíle a jednorázovou obnovu polí; běží i s PDO číselnými řetězci. `build/rc2_modules_http.php` a `build/http_integration.php` ověřují oprávnění a neplatné množství přes HTTP. `build/runtime_audit.php` hlídá jejich integraci.
+- Ruční ověření nebo zbývající riziko: s NVDA/Firefox ověřit oznámení chyby množství a selhání notifikace; bez JS projít chybu licence fotografie a času ankety včetně zachování zadání. Mobilní reflow, zoom a vlastní šablony zůstávají ručním ověřením; tyto testy nejsou tímto záznamem prohlášeny za provedené.
+
 ### 2026-09-05: vydání 5.0.0-rc.1 a čistota balíčku
 
 - Datum a rozsah: dokumentace nasazení RC, vynechání lokálních agentních metadat, cache a integrity snapshotu z distribuce a bezpečný úklid dočasného balicího adresáře.
