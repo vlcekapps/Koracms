@@ -475,7 +475,10 @@ final class SaveDb
 
 function memoryDb(): PDO
 {
-    $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo = new PDO('sqlite::memory:', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_STRINGIFY_FETCHES => getenv('KORA_RC_STRINGIFY_FETCHES') === '1',
+    ]);
     $pdo->sqliteCreateFunction('NOW', static fn (): string => '2026-09-05 12:00:00', 0);
     $pdo->sqliteCreateFunction('CONCAT', static fn (...$parts): string => implode('', $parts));
     $pdo->exec("CREATE TABLE cms_blogs (id INTEGER PRIMARY KEY, slug TEXT, name TEXT, description TEXT);

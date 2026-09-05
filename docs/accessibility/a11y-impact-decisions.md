@@ -16,11 +16,12 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ### 2026-09-05: RC audit editorů, médií a provozních akcí
 
-- Datum a rozsah: autosave a obnova editorů, validační návraty, publikace a náhledy, náhrady médií, rezervace, ankety, newsletter, schránka a přihlášení včetně starší instalace před migrací; podrobný registr RC-01 až RC-44 je v `docs/rc-audit-2026-09.md`.
+- Datum a rozsah: autosave a obnova editorů, validační návraty, publikace a náhledy, náhrady médií, rezervace, ankety, newsletter, schránka a přihlášení včetně starší instalace před migrací; podrobný registr RC-01 až RC-45 je v `docs/rc-audit-2026-09.md`.
 - Dotčená kritéria: `2.1.1`, `2.2.1`, `2.4.3`, `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
 - Rozhodnutí: jednoznačné runtime chyby se opravují bez zjednodušování autorizace a bez odstraňování chybových stavů. U odmítnuté akce zůstává původní obsah a soubor zachovaný, hláška odpovídá skutečnému výsledku a návrat obsahuje vyplněné hodnoty. Potvrzené nálezy jsou zároveň v hlavním backlogu; globální stavy shody se automaticky nezvyšují.
 - Automatizovaný důkaz: `composer test:rc-core`, `composer test:rc-runtime`, `rc_publication_window_http` a stávající runtime/HTTP sada. Skutečný JavaScript schránky je testovaný při zamítnutí oprávnění, selhání fallbacku i úspěchu a při navrácení fokusu; databázové testy používají izolované tabulky či vlastní uklizené fixtures.
 - Následné RC-44 mění pouze vývojové audity a DB test, nikoli produkční formuláře, oprávnění ani schéma. `repository_guardrails_audit_selftest.php` prokazuje pokrytí nových souborů v pěti auditech i vynechání ignorované konfigurace; 26 MySQL kontrol rezervací zůstává zelených. Stav WCAG/ACR se tím nemění.
+- Následné RC-45 řeší pouze přenositelnost testů mezi PDO ovladači, bez změny produkčního rozhraní a stavů WCAG/ACR. Automatizovaný důkaz doplňuje `rc_pdo_fetch_selftest.php`: opakuje šest sad s číselnými řetězci, včetně ochrany rozepsaných hodnot, souborů a chybových návratů.
 - Ruční ověření nebo zbývající riziko: s NVDA/Firefox zopakovat obnovu dlouhého editoru, chyby polí a odmítnutí datových akcí; provést 400% reflow a kontrast aktivní šablony. Změna relací/2FA RC-02/03 byla výslovně schválena. HTTP `rc_session_security_http` ověřuje zneplatnění při změně účtu a desetiminutovou platnost druhého faktoru; nejde o časový limit editoru. Existující relace se po aktualizaci znovu přihlásí, proto před nasazením uložit rozpracovaný obsah. Ruční ověření přístupného opakovaného přihlášení zůstává podmínkou RC.
 
 ### 2026-07-24: platformně nezávislá validace serverových URL

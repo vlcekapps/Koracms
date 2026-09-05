@@ -18,6 +18,7 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ### Opraveno
 
+- **Přenositelnost RC regresí mezi verzemi PHP**: databázové testy rozlišují hodnotu identifikátoru od PDO reprezentace čísla jako řetězce. Izolovaná sada se nově opakuje i s vynucenými číselnými řetězci, bez oslabení kontrol stavů, časů, oprávnění nebo obsahu.
 - **Shoda lokálních kontrol s CI**: zdrojové audity kontrolují i nové neignorované soubory před `git add`. Opravený databázový test rezervací nepoužívá vyhrazené názvy konfiguračních proměnných; izolované testy hlídají nové soubory i zachování ochrany lokálních tajných konfigurací.
 - **Platnost přihlášení a 2FA**: změna hesla, role či zabezpečení účtu a smazání nebo zneplatnění účtu ukončí starou relaci; rozpracované 2FA platí deset minut. Po aktualizaci je potřeba nové přihlášení, proto před nasazením uložit rozepsané úpravy. Starší administrátorské účty bez sloupce potvrzení zůstávají použitelné pro migraci, explicitně nepotvrzené účty se dál odmítají. Apache už nepřepisuje soukromou cache náhledů podle identifikace sociálního crawleru.
 - **RC audit: ochrana dat a veřejnosti obsahu**: opravy rate-limitů, ověření termínů a kapacity rezervací, souběžných změn stavů, publikačních oken a náhledů, koše médií, bezpečné náhrady originálů a webhooků. Podrobný registr a stav ověření jednotlivých nálezů je v `docs/rc-audit-2026-09.md`; tento blok nevydává novou RC verzi.

@@ -88,7 +88,8 @@
       "php build/rc_module_state_selftest.php",
       "php build/rc_editor_publication_selftest.php",
       "php build/rc_media_security_selftest.php",
-      "node build/rc_clipboard_selftest.js"
+      "node build/rc_clipboard_selftest.js",
+      "php build/rc_pdo_fetch_selftest.php"
     ],
     "test:rc-runtime": [
       "php build/rc_rate_limit_db_selftest.php",

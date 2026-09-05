@@ -58,7 +58,10 @@ try {
         $addIndexSql
     ) ?? '';
 
-    $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo = new PDO('sqlite::memory:', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_STRINGIFY_FETCHES => getenv('KORA_RC_STRINGIFY_FETCHES') === '1',
+    ]);
     $now = '2026-09-05 12:00:00';
     $pdo->sqliteCreateFunction('NOW', static function () use (&$now): string {
         return $now;
@@ -75,9 +78,13 @@ try {
     $pdo->exec($addIndexSql);
     $expiryColumn = $pdo->query("SELECT type, [notnull], dflt_value FROM pragma_table_info('cms_rate_limit')
         WHERE name = 'expires_at'")->fetch(PDO::FETCH_ASSOC);
+    if (is_array($expiryColumn) && array_key_exists('notnull', $expiryColumn)) {
+        // SQLite/PDO may return this integer as a numeric string on older PHP.
+        $expiryColumn['notnull'] = (string)$expiryColumn['notnull'];
+    }
     rateLimitExpirySelfTestSame(
         $expiryColumn,
-        ['type' => 'DATETIME', 'notnull' => 0, 'dflt_value' => 'NULL'],
+        ['type' => 'DATETIME', 'notnull' => '0', 'dflt_value' => 'NULL'],
         'Upgrade adds a nullable DATETIME column without expiring old rows'
     );
     rateLimitExpirySelfTestSame(

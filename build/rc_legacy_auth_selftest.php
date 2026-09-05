@@ -150,7 +150,11 @@ function renderPublicPage(array $args): void
 /** @param array<string,mixed> $row */
 function fixture(array $row): PDO
 {
-    $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $pdo = new PDO('sqlite::memory:', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_STRINGIFY_FETCHES => getenv('KORA_RC_STRINGIFY_FETCHES') === '1',
+    ]);
     $columns = ['id INTEGER PRIMARY KEY', 'email TEXT', 'password TEXT', 'first_name TEXT',
         'last_name TEXT', 'nickname TEXT', 'is_superadmin INTEGER', 'totp_secret TEXT'];
     if (array_key_exists('role', $row)) {

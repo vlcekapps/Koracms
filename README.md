@@ -10,6 +10,8 @@ Přípravu dalšího vydání sleduje [RC audit ze září 2026](docs/rc-audit-2
 
 Zdrojové repository, redirect, encoding, mojibake a whitespace audity zahrnují také nové neignorované soubory před `git add`, aby lokální kontrola nepřehlédla kód, který až po commitu uvidí CI. Ignorované lokální konfigurace a nástrojové cache se nenačítají; vynucené verzování tajné konfigurace repository audit dál odmítne.
 
+`composer test:rc-core` opakuje šest izolovaných SQLite sad také v režimu PDO s číselnými řetězci (`build/rc_pdo_fetch_selftest.php`). Tím kontroluje reprezentaci databázových hodnot používanou staršími PHP ovladači i na novějším místním PHP; nejde o náhradu CI na nejnižší podporované verzi PHP.
+
 - [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)

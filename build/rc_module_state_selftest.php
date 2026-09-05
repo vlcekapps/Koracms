@@ -75,6 +75,7 @@ class RcModuleStatePdo extends PDO
         parent::__construct('sqlite::memory:', null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_STRINGIFY_FETCHES => getenv('KORA_RC_STRINGIFY_FETCHES') === '1',
         ]);
         $this->sqliteCreateFunction('NOW', static fn (): string => $GLOBALS['rcClock'], 0);
         $this->sqliteCreateFunction('CURDATE', static fn (): string => substr($GLOBALS['rcClock'], 0, 10), 0);
@@ -450,7 +451,7 @@ try {
     $pdo->exec('UPDATE cms_board SET publish_at = NULL WHERE id = 8');
     $pdo->exec("UPDATE cms_board SET slug = '' WHERE id = 9");
     rcModuleSame(cronProcessScheduledBoardPublications($pdo), 2, 'Scheduled board publishes both checkbox states, excluding ineligible rows');
-    rcModuleSame($pdo->query('SELECT board_id FROM cms_board_publication_events ORDER BY id')->fetchAll(PDO::FETCH_COLUMN), [1,2], 'Scheduled publications record their audit events');
+    rcModuleSame(array_map('intval', $pdo->query('SELECT board_id FROM cms_board_publication_events ORDER BY id')->fetchAll(PDO::FETCH_COLUMN)), [1,2], 'Scheduled publications record their audit events');
     rcModuleSame(count($rcBoardMail), 4, 'Scheduled publications notify only confirmed matching subscribers');
     rcModuleSame($rcBoardMail, [
         ['all@example.test', 1], ['category@example.test', 1],
@@ -460,7 +461,7 @@ try {
         ['event_type' => 'published', 'actor_user_id' => null, 'public_path' => '/board/item-1'],
         ['event_type' => 'published', 'actor_user_id' => null, 'public_path' => '/board/item-2'],
     ], 'Scheduled event metadata identifies automated publication and public path');
-    rcModuleSame($pdo->query('SELECT id FROM cms_board WHERE is_published = 1 AND publish_at IS NULL ORDER BY id')->fetchAll(PDO::FETCH_COLUMN), [1,2], 'Only claimed schedule transitions change state');
+    rcModuleSame(array_map('intval', $pdo->query('SELECT id FROM cms_board WHERE is_published = 1 AND publish_at IS NULL ORDER BY id')->fetchAll(PDO::FETCH_COLUMN)), [1,2], 'Only claimed schedule transitions change state');
     rcModuleSame(cronProcessScheduledBoardPublications($pdo), 0, 'Completed board schedules are not republished');
     rcModuleSame(count($rcBoardMail), 4, 'Repeated cron sends no duplicate board notices');
 
@@ -492,7 +493,12 @@ try {
         count($newPublicationIds),
         'Only new publication transitions count, not already announced public saves'
     );
-    rcModuleSame($pdo->query('SELECT id, publish_at, created_at FROM cms_board WHERE id IN (10,11) ORDER BY id')->fetchAll(), [
+    $announcedRows = $pdo->query('SELECT id, publish_at, created_at FROM cms_board WHERE id IN (10,11) ORDER BY id')->fetchAll();
+    foreach ($announcedRows as &$announcedRow) {
+        $announcedRow['id'] = (int)$announcedRow['id'];
+    }
+    unset($announcedRow);
+    rcModuleSame($announcedRows, [
         ['id' => 10, 'publish_at' => null, 'created_at' => $rcClock],
         ['id' => 11, 'publish_at' => null, 'created_at' => $rcClock],
     ], 'Already announced schedules are cleared without rewriting the actual publication date');

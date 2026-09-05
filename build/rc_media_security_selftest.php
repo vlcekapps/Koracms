@@ -314,7 +314,11 @@ try {
     }
     eval($prefix . productionFunction($projectRoot . '/build/http_server_router.php', 'isProtectedRequest'));
 
-    $pdo = new FixtureDatabase('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+    $pdo = new FixtureDatabase('sqlite::memory:', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_STRINGIFY_FETCHES => getenv('KORA_RC_STRINGIFY_FETCHES') === '1',
+    ]);
     $GLOBALS['rcDb'] = $pdo;
     $pdo->sqliteCreateFunction('CONCAT', static fn (mixed ...$values): string => implode('', $values));
     $pdo->sqliteCreateFunction('NOW', static fn (): string => '2026-09-05 12:00:00');
