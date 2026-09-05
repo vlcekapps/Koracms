@@ -6,6 +6,8 @@ a projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
 ## [Unreleased]
 
+## [5.0.0-rc.1] – 2026-09-05
+
 ### Vydání
 - **5.0.0-rc.1**: první release candidate řady 5.0 zahrnuje obecný Appmarket, modulová rozšíření a opravy předrelease auditu. Distribuce je označená jako prerelease, nikoli stabilní vydání. Aktualizace vyžaduje zálohu souborů i databáze, migraci a nové přihlášení; provoz hostingu, doručování e-mailů a ruční přístupnost se ověřují po nasazení podle administrátorské příručky.
 
