@@ -43,8 +43,12 @@ if ($id !== null) {
     $contentLockWarning = acquireContentLock('recipe', $id);
 }
 
-$flash = is_array($_SESSION['recipe_form_flash'] ?? null) ? $_SESSION['recipe_form_flash'] : [];
-unset($_SESSION['recipe_form_flash']);
+$pendingFlash = $_SESSION['recipe_form_flash'] ?? null;
+$flash = is_array($pendingFlash) && array_key_exists('recipe_id', $pendingFlash)
+    && $pendingFlash['recipe_id'] === $id ? $pendingFlash : [];
+if ($flash !== [] || (is_array($pendingFlash) && !array_key_exists('recipe_id', $pendingFlash))) {
+    unset($_SESSION['recipe_form_flash']);
+}
 if (isset($flash['form']) && is_array($flash['form'])) {
     $recipe = array_merge($recipe, $flash['form']);
 }

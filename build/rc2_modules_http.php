@@ -2,6 +2,149 @@
 
 declare(strict_types=1);
 
+/**
+ * @param array{cookie:string,csrf:string} $adminSession
+ * @return list<string>
+ */
+function rc2RecipeIntegrityHttpChecks(PDO $pdo, string $baseUrl, array $adminSession): array
+{
+    $prefix = 'rc2-recipe-' . bin2hex(random_bytes(8));
+    $trigger = str_replace('-', '_', $prefix);
+    $triggerCreated = false;
+    $categoryId = $recipeId = $otherRecipeId = 0;
+    $oldModule = getSetting('module_recipes', '0');
+    $issues = [];
+    $post = static function (string $endpoint, array $fields) use ($baseUrl, $adminSession): array {
+        return postUrl($baseUrl . BASE_URL . '/admin/' . $endpoint, ['csrf_token' => $adminSession['csrf']] + $fields, $adminSession['cookie'], 0);
+    };
+    $snapshot = static function () use ($pdo, &$recipeId): array {
+        $result = [];
+        foreach (['cms_recipes' => 'id', 'cms_recipe_ingredient_groups' => 'recipe_id', 'cms_recipe_ingredients' => 'recipe_id',
+            'cms_recipe_steps' => 'recipe_id', 'cms_recipe_structure_snapshots' => 'recipe_id'] as $table => $column) {
+            $stmt = $pdo->prepare("SELECT * FROM {$table} WHERE {$column} = ? ORDER BY id");
+            $stmt->execute([$recipeId]);
+            $result[$table] = $stmt->fetchAll();
+        }
+        $stmt = $pdo->prepare("SELECT * FROM cms_revisions WHERE entity_type = 'recipe' AND entity_id = ? ORDER BY id");
+        $stmt->execute([$recipeId]);
+        $result['cms_revisions'] = $stmt->fetchAll();
+        return $result;
+    };
+    $checkAria = static function (string $html) use (&$issues): void {
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $doc->loadHTML('<?xml encoding="UTF-8">' . $html);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        $xpath = new DOMXPath($doc);
+        foreach ($xpath->query('//*[@aria-describedby or @aria-labelledby]') as $element) {
+            foreach (['aria-describedby', 'aria-labelledby'] as $attribute) {
+                foreach (preg_split('/\s+/', trim($element->getAttribute($attribute))) as $id) {
+                    if ($id !== '' && $xpath->query('//*[@id="' . $id . '"]')->length !== 1) {
+                        $issues[] = 'Recipe error form has a missing or duplicate ARIA target ' . $id;
+                    }
+                }
+            }
+        }
+    };
+    try {
+        saveSetting('module_recipes', '1');
+        $pdo->prepare('INSERT INTO cms_recipe_categories (name,slug) VALUES (?,?)')->execute([$prefix, $prefix]);
+        $categoryId = (int)$pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO cms_recipes (category_id,title,slug,summary,status) VALUES (?,?,?,?,'draft')")
+            ->execute([$categoryId, $prefix, $prefix, 'Fixture summary']);
+        $recipeId = (int)$pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO cms_recipes (category_id,title,slug,summary,status) VALUES (?,?,?,?,'draft')")
+            ->execute([$categoryId, $prefix . ' other', $prefix . '-other', 'Other recipe summary']);
+        $otherRecipeId = (int)$pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO cms_recipe_ingredient_groups (recipe_id,title) VALUES (?,?)')->execute([$recipeId, 'Fixture group']);
+        $groupId = (int)$pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO cms_recipe_ingredients (recipe_id,group_id,name) VALUES (?,?,?)')->execute([$recipeId, $groupId, 'Fixture ingredient']);
+        $pdo->prepare('INSERT INTO cms_recipe_steps (recipe_id,instruction) VALUES (?,?)')->execute([$recipeId, 'Fixture instruction']);
+        $before = $snapshot();
+        foreach ([['action' => 'purge', 'confirm_action' => '1'], ['action' => 'delete']] as $action) {
+            $response = $post('recipe_action.php', ['id' => $recipeId] + $action);
+            if (httpIntegrationStatusCode($response) !== 302 || $snapshot() !== $before) {
+                $issues[] = 'Active purge or unconfirmed deletion changed recipe data';
+            }
+        }
+        // Fail the actual update after the structural snapshot has been inserted.
+        $pdo->exec("CREATE TRIGGER {$trigger} BEFORE UPDATE ON cms_recipe_ingredient_groups FOR EACH ROW
+            BEGIN IF OLD.recipe_id = {$recipeId} THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='RC2 recipe fixture rollback'; END IF; END");
+        $triggerCreated = true;
+        $response = $post('recipe_content.php?id=' . $recipeId, ['recipe_id' => $recipeId, 'action' => 'save_group', 'group_id' => $groupId, 'group_title' => $prefix . ' changed']);
+        if (httpIntegrationStatusCode($response) !== 200 || $snapshot() !== $before
+            || !str_contains($response['body'], 'Změnu obsahu se nepodařilo uložit.')
+            || !str_contains($response['body'], 'role="alert"')
+            || !str_contains($response['body'], $prefix . ' changed')) {
+            $issues[] = 'Structure failure did not roll back backup, explain error or retain group input';
+        }
+        $checkAria($response['body']);
+        $pdo->exec("DROP TRIGGER {$trigger}");
+        $triggerCreated = false;
+        $pdo->exec("CREATE TRIGGER {$trigger} BEFORE INSERT ON cms_revisions FOR EACH ROW
+            BEGIN IF NEW.entity_type = 'recipe' AND NEW.entity_id = {$recipeId} AND NEW.field_name = 'summary' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='RC2 recipe revision rollback'; END IF; END");
+        $triggerCreated = true;
+        $fields = ['id' => $recipeId, 'category_id' => $categoryId, 'title' => $prefix . ' edited', 'slug' => $prefix,
+            'summary' => $prefix . ' retained summary', 'notes' => $prefix . ' retained notes', 'status' => 'published'];
+        $response = $post('recipe_save.php', $fields);
+        $otherForm = fetchUrl($baseUrl . BASE_URL . '/admin/recipe_form.php?id=' . $otherRecipeId, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($otherForm) !== 200 || str_contains($otherForm['body'], $fields['summary'])
+            || !str_contains($otherForm['body'], 'Other recipe summary')) {
+            $issues[] = 'Failed save flash overwrote another recipe editor';
+        }
+        $form = fetchUrl($baseUrl . BASE_URL . '/admin/recipe_form.php?id=' . $recipeId, $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($response) !== 302 || $snapshot() !== $before || httpIntegrationStatusCode($form) !== 200
+            || !str_contains($form['body'], 'Zadané údaje zůstaly zachované')
+            || !str_contains($form['body'], $fields['summary']) || !str_contains($form['body'], $fields['notes'])
+            || !httpIntegrationFieldHasAriaInvalid($form['body'], 'status')) {
+            $issues[] = 'Save failure did not roll back recipe, retain input or mark accessible error';
+        }
+        $checkAria($form['body']);
+        $pdo->exec("DROP TRIGGER {$trigger}");
+        $triggerCreated = false;
+        $response = $post('recipe_save.php', $fields);
+        if (httpIntegrationStatusCode($response) !== 302 || !recipeHasPublishableStructure($pdo, $recipeId)) {
+            $issues[] = 'Regular complete recipe save failed';
+        }
+        $response = $post('recipe_action.php', ['id' => $recipeId, 'action' => 'delete', 'confirm_action' => '1']);
+        $response = $post('recipe_action.php', ['id' => $recipeId, 'action' => 'restore']);
+        $restored = $snapshot();
+        $response = $post('recipe_action.php', ['id' => $recipeId, 'action' => 'purge', 'confirm_action' => '1']);
+        if (httpIntegrationStatusCode($response) !== 302 || $snapshot() !== $restored
+            || $restored['cms_recipes'][0]['deleted_at'] !== null || $restored['cms_recipes'][0]['status'] !== 'draft') {
+            $issues[] = 'Restored recipe was purged or did not remain draft';
+        }
+    } finally {
+        if ($triggerCreated) {
+            $pdo->exec("DROP TRIGGER {$trigger}");
+        }
+        if ($recipeId > 0) {
+            $owner = $pdo->prepare('SELECT slug FROM cms_recipes WHERE id = ?');
+            $owner->execute([$recipeId]);
+            if ($owner->fetchColumn() !== $prefix) {
+                throw new RuntimeException('Recipe HTTP cleanup refused a foreign fixture');
+            }
+            foreach (['cms_recipe_structure_snapshots', 'cms_recipe_steps', 'cms_recipe_ingredients', 'cms_recipe_ingredient_groups'] as $table) {
+                $pdo->prepare('DELETE FROM ' . $table . ' WHERE recipe_id = ?')->execute([$recipeId]);
+            }
+            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$recipeId]);
+            $pdo->prepare("DELETE FROM cms_content_locks WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$recipeId]);
+            deleteRedirectsTargetingPath($pdo, recipePublicPath($prefix));
+            $pdo->prepare('DELETE FROM cms_recipes WHERE id = ? AND slug = ?')->execute([$recipeId, $prefix]);
+        }
+        if ($categoryId > 0) {
+            if ($otherRecipeId > 0) {
+                $pdo->prepare("DELETE FROM cms_content_locks WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$otherRecipeId]);
+                $pdo->prepare('DELETE FROM cms_recipes WHERE id = ? AND slug = ?')->execute([$otherRecipeId, $prefix . '-other']);
+            }
+            $pdo->prepare('DELETE FROM cms_recipe_categories WHERE id = ? AND slug = ?')->execute([$categoryId, $prefix]);
+        }
+        saveSetting('module_recipes', $oldModule);
+    }
+    return $issues;
+}
+
 /** @return array<string,string> */
 function rc2GalleryZipContents(string $bytes): array
 {

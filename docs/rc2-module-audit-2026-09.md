@@ -1,5 +1,26 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Transakční hranice Receptů, 2026-10-03
+
+Výchozí revize `686574e7`, čistá a synchronizovaná větev `main`. Hloubkové čtení tohoto bloku se týká ukládání, publikace, strukturálního editoru, obnovy a vlastního koše Receptů. Není to nové řádkové review celého CMS. Schéma, `install.php`, `migrate.php` ani `VERSION` se nemění: nové sloupce nebo tabulky pro transakční ochranu nejsou potřeba. RC.2 se nevydává.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-16 | P1 | Vlastní koš Receptů načetl smazaný stav před transakcí; mezitím obnovený recept šlo trvale odstranit včetně vazeb. | Locking read aktuálního rodiče před cleanupem, podmíněný DELETE a atomický rollback. Před opravou skutečný handler nad izolovanou DB odstranil mezitím obnovený recept. Po opravě zachová rodiče i vazby; skutečný MySQL souběh se starým snapshotem potvrzuje odmítnutí. |
+| RC2-17 | P2 | Kontrola úplnosti publikace předcházela zápisu bez zámku; souběžné odstranění poslední ingredience mohlo zveřejnit neúplný recept. Selhání revize či výchozí skupiny nechávalo částečný zápis. | Rodičovský zámek a aktuální locking reads struktury; kontrola a uložení v jedné transakci, včetně revize či založení skupiny. Izolovaná reprodukce skutečného handleru, dva MySQL souběhy (odmítnutí neúplného a úspěšná publikace), rollback při vyvolané chybě. |
+| RC2-18 | P2 | Strukturální záloha a zápis nebyly atomické; selhání druhého přesunu zanechalo částečně změněné pořadí a nepravdivou historii. | Všechny POST změny editoru serializované přes rodiče; záloha a zápisy jsou jedna transakce. Selhání skupiny nebo druhého UPDATE vrátí původní data i historii a zachová vstup s alertem; deletion helper podporuje transakci volajícího. |
+| RC2-19 | P2 | Jednorázové návratové hodnoty neměly vazbu na ID receptu; otevření jiného editoru v téže relaci je mohlo spotřebovat a promítnout do cizího formuláře. | Flash obsahuje přesné ID (včetně nového formuláře), jiný editor jej nepoužije ani nespotřebuje. Skutečné HTTP otevře jiný recept mezi chybou a návratem do původního editoru a ověří oba obsahy. |
+
+### Důkazy a omezení tohoto bloku
+
+`build/rc_recipe_integrity_selftest.php` vykonává produkční handlery nad izolovanou SQLite, bez app bootstrapu nebo e-mailů. `build/rc_recipe_mysql_selftest.php` má tři samostatné procesové souběhy, pozorovaný skutečný čekající `FOR UPDATE`, starý REPEATABLE READ snapshot a vlastní uklizená data. `rc2_recipe_integrity_http` používá skutečné endpointy, MySQL triggery omezené testovacím ID a kontroluje rollback, zachování hodnot i existující ARIA reference. Nové testy jsou součástí `composer ci:module-ready` a izolovaná sada se opakuje s PDO číselnými řetězci.
+
+Lokální lint a celý `composer ci:module-ready` prošly na PHP 8.4.12: 1 577 unit testů, statická analýza, schéma, ACR, release balíček, runtime audit a kompletní HTTP integrace. Nová izolovaná sada prošla 59 kontrolami a znovu 59 kontrolami s PDO číselnými řetězci; skutečný MySQL test ověřil tři souběhy a HTTP scénář `rc2_recipe_integrity_http` prošel. `git diff --check` je čistý. Jediná očekávaná výjimka runtime auditu je `smtp_connectivity = SKIP`, nikoli potvrzení doručitelnosti e-mailů na hostingu.
+
+Transakční ochrana neznamená obecné slučování textových změn dvou správců; content lock a domluva editorů zůstávají důležité. Ruční NVDA, zoom/reflow a hostingový cron/log smoke zůstávají otevřené. GitHub CI se ověřuje zvlášť na konkrétní pushnuté revizi; lokální výsledky samy nepotvrzují Linux/PHP 8.0 ani úplnou WCAG shodu.
+
+Revize a cleanup redirectů původně zpracovávaly PDO chybu jako best-effort. Recepty proto explicitně požadují nový volitelný striktní režim těchto sdílených helperů, aby jejich selhání skutečně vrátilo transakci. Výchozí chování ostatních volání zůstává kompatibilní; izolovaná sada vykonává produkční helpery a kontroluje i tuto výjimku, nikoli jen mock revize.
+
 ## Rozsah a metoda
 
 Výchozí revize `2cc9dd02595bcd31a48052a540ba4b34176a2201`, čistá větev `main`, vydání `5.0.0-rc.1`. Správce oznámil, že RC.1 na hostingu běží; vyhodnocení následného cronu a logů zatím čeká. Tento audit nevydává RC.2 a nemění `VERSION`.

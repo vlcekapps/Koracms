@@ -73,8 +73,9 @@ function revisionLogError(string $operation, string $entityType, int $entityId, 
  * @param int $entityId ID entity
  * @param array<string,mixed> $oldValues Asociativní pole [field => old_value] – ukládají se jen změněná pole
  * @param array<string,mixed> $newValues Asociativní pole [field => new_value]
+ * @param bool $requireSuccess Propagate storage failure for callers requiring atomic revisions.
  */
-function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldValues, array $newValues): void
+function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldValues, array $newValues, bool $requireSuccess = false): void
 {
     $userId = (int)(currentUserId() ?? 0);
 
@@ -94,6 +95,9 @@ function saveRevision(PDO $pdo, string $entityType, int $entityId, array $oldVal
             )->execute([$entityType, $entityId, $field, $oldStr, $newStr, $userId ?: null]);
         } catch (\PDOException $e) {
             revisionLogError('save', $entityType, $entityId, $e);
+            if ($requireSuccess) {
+                throw $e;
+            }
         }
     }
 }

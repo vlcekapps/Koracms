@@ -748,6 +748,8 @@ Každý krok má volitelný krátký nadpis, povinnou instrukci a volitelný ve�
 
 Před přidáním, úpravou, odstraněním nebo přesunem skupiny, ingredience či kroku CMS automaticky uloží snapshot celé struktury. Odkaz `Historie struktury` umožní vybranou verzi obnovit; před obnovou se znovu uloží současný stav, akce vyžaduje samostatné potvrzení a obrazovka upozorní na případnou souběžnou editaci. Historie je provozní ochrana konkrétní instalace a není součástí JSON exportu.
 
+Záloha a vlastní strukturální změna jsou jedna transakce, včetně obou kroků přesunu pořadí. Pokud zápis selže, CMS vrátí předchozí data a zobrazí chybu se zachovanými hodnotami; stejně chrání založení receptu s výchozí skupinou a uložení základních údajů s revizí. Návratové hodnoty se nepromítnou do editoru jiného receptu otevřeného ve stejné relaci. Publikace kontroluje aktuální ingredience a postup pod zámkem a koš znovu ověřuje stav před odstraněním vazeb, takže mezitím obnovený recept nejde trvale smazat starým požadavkem. Upozornění na souběžnou editaci zůstává důležité: transakce není obecné slučování textových změn dvou správců.
+
 V přehledu receptů lze recept po výslovném potvrzení duplikovat. Kopie dostane unikátní slug, stav konceptu a vlastní kopii skupin, ingrediencí i kroků, takže další úpravy originál neovlivní.
 
 ### Veřejný katalog a vložení do obsahu

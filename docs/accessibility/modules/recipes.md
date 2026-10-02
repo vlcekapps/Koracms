@@ -72,7 +72,7 @@
 | 3.3.1 Identifikace chyb | Supports | Validační chyby používají souhrn s `role="alert"` a field-level vazby přes existující `aria-describedby`; zadané hodnoty se při chybě zachovají. |
 | 3.3.2 Popisky nebo instrukce | Supports | Povinné údaje, číselné množství nebo rozsah, oddělené slovní množství, přesné jednotky, volitelné časy, alt text, počet porcí a podmínky publikace mají viditelné popisky a konkrétní nápovědu. |
 | 3.3.3 Návrh při chybě | Supports | Chyby vysvětlují bezpečný další krok, například volbu aktivní kategorie, doplnění ingredience nebo pracovního kroku. |
-| 3.3.4 Prevence chyb | Supports | Nový i duplikovaný recept vzniká jako koncept. Publikace je samostatná potvrzená akce a proběhne jen s úplnou strukturou. Před každou strukturální změnou vzniká snapshot; obnova nejdřív uloží současný stav, vyžaduje výslovné potvrzení a upozorňuje na souběžnou editaci. Trvalé smazání a další datově dopadající akce vyžadují CSRF a potvrzení. |
+| 3.3.4 Prevence chyb | Supports | Nový i duplikovaný recept vzniká jako koncept. Publikace je výslovná volba stavu ve formuláři a proběhne jen s aktuálně úplnou strukturou; není samostatným potvrzovacím checkboxem. Strukturální změna a její snapshot jsou atomické; obnova nejdřív uloží současný stav, vyžaduje výslovné potvrzení a upozorňuje na souběžnou editaci. Trvalé smazání vyžaduje CSRF a čerstvé potvrzení a ověřuje aktuální stav koše. |
 | 3.3.7 Redundantní zadávání | Supports | Výchozí hodnoty se zachovávají a media picker přebírá existující metadata; CMS nevyžaduje opakované zadávání stejných ingrediencí nebo kroků. |
 | 3.3.8 Přístupné ověřování | Supports | Modul nepoužívá captchu ani kognitivní test. Administrace využívá běžné přihlášení Kora CMS. |
 | 4.1.2 Název, funkce, hodnota | Supports | Nativní prvky mají popisky; regiony a formuláře odkazují jen na existující nadpisy, legendy a nápovědy. |
@@ -98,6 +98,8 @@ Kora CMS odpovídá za sémantickou strukturu katalogu, detailu, nákupního sez
 Správce odpovídá za pravdivý a srozumitelný název, popis, ingredience, množství, postup, alergeny, dietní štítky a případné časové nebo nutriční údaje. Musí zkontrolovat významovou kvalitu alternativních textů, popsat neobvyklé techniky bez závislosti na obrázku a zadat jen hodnoty, které skutečně zná. Přesně škálovatelné množství má zadat do číselného pole a údaj typu `podle chuti` do slovního pole. Kora CMS časy, porce, kalorie ani množství automaticky neodhaduje.
 
 ## Automatizovaný důkaz
+
+- RC.2 průchod 2026-10-03: datově dopadající operace mají transakční rodičovský zámek a rollback. Chyba základního či strukturálního zápisu má pravdivé textové vysvětlení a zachované hodnoty; flash nepřepíše jiný recept. Důkazy pro `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7` a `4.1.3`: `build/rc_recipe_integrity_selftest.php` vykonává produkční handlery také s PDO číselnými řetězci; `build/rc_recipe_mysql_selftest.php` ověřuje tři dvouprocesové souběhy se starým snapshotem; HTTP `rc2_recipe_integrity_http` ověřuje skutečné chyby po strukturální záloze/revizi, zachování hodnot, alert a existující ARIA cíle. Ruční scénáře zůstávají otevřené, globální stav shody se nezvyšuje.
 
 - `build/unit_tests.php`: normalizace výběrů, slugů, přesných časů a množství, škálování porcí, nákupního výběru, veřejné viditelnosti, alt fallbacků, strukturovaných dat a EPUB balíčku.
 - `build/schema_parity_audit.php`: šest tabulek Receptů včetně strukturálních snapshotů, jejich sloupce a důležité indexy v `install.php` i `migrate.php`.

@@ -15,7 +15,10 @@ function recipeContentDeletePart(PDO $pdo, int $recipeId, string $part, int $par
         return false;
     }
     [$table, $label] = $definitions[$part];
-    $pdo->beginTransaction();
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) {
+        $pdo->beginTransaction();
+    }
     try {
         // Serialize destructive structure edits before checking publication.
         $recipeStatement = $pdo->prepare('SELECT status FROM cms_recipes WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
@@ -24,7 +27,9 @@ function recipeContentDeletePart(PDO $pdo, int $recipeId, string $part, int $par
         $partStatement = $pdo->prepare("SELECT id FROM {$table} WHERE id = ? AND recipe_id = ?");
         $partStatement->execute([$partId, $recipeId]);
         if ($status === false || !$partStatement->fetchColumn()) {
-            $pdo->rollBack();
+            if ($ownsTransaction) {
+                $pdo->rollBack();
+            }
             return false;
         }
         recipeSaveStructureSnapshot($pdo, $recipeId, $label, $actorId);
@@ -33,13 +38,15 @@ function recipeContentDeletePart(PDO $pdo, int $recipeId, string $part, int $par
                 ->execute([$recipeId, $partId]);
         }
         $pdo->prepare("DELETE FROM {$table} WHERE id = ? AND recipe_id = ?")->execute([$partId, $recipeId]);
-        if ($status === 'published' && !recipeHasPublishableStructure($pdo, $recipeId)) {
+        if ($status === 'published' && !recipeHasPublishableStructure($pdo, $recipeId, true)) {
             throw new DomainException('Zveřejněný recept musí mít alespoň jednu ingredienci a jeden krok postupu. Před jejich smazáním přepněte recept na koncept.');
         }
-        $pdo->commit();
+        if ($ownsTransaction) {
+            $pdo->commit();
+        }
         return true;
     } catch (Throwable $exception) {
-        if ($pdo->inTransaction()) {
+        if ($ownsTransaction && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         throw $exception;
@@ -84,7 +91,10 @@ $stepState = [
     'image_alt_text' => '',
 ];
 
-$redirectToContent = static function (string $message = '') use ($recipeId): void {
+$redirectToContent = static function (string $message = '') use ($pdo, $recipeId): void {
+    if ($pdo->inTransaction()) {
+        $pdo->commit();
+    }
     $params = ['id' => $recipeId];
     if ($message !== '') {
         $params['msg'] = $message;
@@ -174,253 +184,269 @@ $moveRow = static function (
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
-    $action = trim((string)($_POST['action'] ?? ''));
-
-    if ($action === 'save_group') {
-        $groupId = inputInt('post', 'group_id');
-        $groupState = [
-            'id' => $groupId ?? 0,
-            'title' => mb_substr(trim((string)($_POST['group_title'] ?? '')), 0, 255),
-        ];
-        if ($groupId !== null && !$groupBelongs($groupId)) {
-            $error = 'Upravovanou skupinu se v tomto receptu nepodařilo najít.';
-        } elseif ($groupId !== null) {
-            $snapshotBeforeChange('Před úpravou skupiny ingrediencí');
-            $pdo->prepare(
-                'UPDATE cms_recipe_ingredient_groups SET title = ?, updated_at = NOW()
-                 WHERE id = ? AND recipe_id = ?'
-            )->execute([$groupState['title'], $groupId, $recipeId]);
-            logAction('recipe_group_edit', "recipe={$recipeId} group={$groupId}");
-            $redirectToContent('saved');
-        } else {
-            $order = $nextOrder('cms_recipe_ingredient_groups', 'recipe_id = ?', [$recipeId]);
-            $snapshotBeforeChange('Před přidáním skupiny ingrediencí');
-            $pdo->prepare(
-                'INSERT INTO cms_recipe_ingredient_groups (recipe_id, title, sort_order) VALUES (?, ?, ?)'
-            )->execute([$recipeId, $groupState['title'], $order]);
-            logAction('recipe_group_add', "recipe={$recipeId}");
-            $redirectToContent('saved');
+    $pdo->beginTransaction();
+    try {
+        $recipe = recipeLockForWrite($pdo, $recipeId);
+        if ($recipe === null) {
+            $pdo->rollBack();
+            header('Location: ' . BASE_URL . '/admin/recipes.php');
+            exit;
         }
-    }
+        $action = trim((string)($_POST['action'] ?? ''));
 
-    if ($action === 'save_ingredient') {
-        $ingredientId = inputInt('post', 'ingredient_id');
-        $groupId = inputInt('post', 'group_id');
-        $ingredientState = [
-            'id' => $ingredientId ?? 0,
-            'group_id' => $groupId ?? '',
-            'amount' => mb_substr(trim((string)($_POST['amount'] ?? '')), 0, 40),
-            'quantity_min' => trim((string)($_POST['quantity_min'] ?? '')),
-            'quantity_max' => trim((string)($_POST['quantity_max'] ?? '')),
-            'unit' => mb_substr(trim((string)($_POST['unit'] ?? '')), 0, 40),
-            'name' => mb_substr(trim((string)($_POST['ingredient_name'] ?? '')), 0, 255),
-            'note' => mb_substr(trim((string)($_POST['ingredient_note'] ?? '')), 0, 255),
-            'is_optional' => isset($_POST['is_optional']) ? 1 : 0,
-        ];
-        $quantityMin = recipeNullableQuantity($ingredientState['quantity_min']);
-        $quantityMax = recipeNullableQuantity($ingredientState['quantity_max']);
-        $existingIngredient = $ingredientForRecipe($ingredientId);
-        if ($ingredientState['name'] === '') {
-            $error = 'Ingredienci nejde uložit bez názvu.';
-            $fieldErrors[] = 'ingredient_name';
-            $fieldErrorMessages['ingredient_name'] = 'Doplňte název suroviny, například hladká mouka.';
-        } elseif (!$groupBelongs($groupId)) {
-            $error = 'Vyberte skupinu ingrediencí, která patří k tomuto receptu.';
-            $fieldErrors[] = 'ingredient_group';
-            $fieldErrorMessages['ingredient_group'] = 'Vyberte existující skupinu tohoto receptu.';
-        } elseif ($ingredientState['quantity_min'] !== '' && $quantityMin === null) {
-            $error = 'Přesné množství musí být kladné číslo s nejvýše čtyřmi desetinnými místy.';
-            $fieldErrors[] = 'quantity_min';
-            $fieldErrorMessages['quantity_min'] = 'Zadejte kladné číslo, například 250 nebo 1,5.';
-        } elseif ($ingredientState['quantity_max'] !== '' && $quantityMax === null) {
-            $error = 'Horní hranice množství musí být kladné číslo s nejvýše čtyřmi desetinnými místy.';
-            $fieldErrors[] = 'quantity_max';
-            $fieldErrorMessages['quantity_max'] = 'Zadejte kladné číslo, nebo horní hranici nechte prázdnou.';
-        } elseif ($quantityMax !== null && $quantityMin === null) {
-            $error = 'Rozsah množství potřebuje také dolní hranici.';
-            $fieldErrors[] = 'quantity_min';
-            $fieldErrorMessages['quantity_min'] = 'Doplňte dolní hranici rozsahu.';
-        } elseif ($quantityMin !== null && $quantityMax !== null && (float)$quantityMax < (float)$quantityMin) {
-            $error = 'Horní hranice množství nesmí být menší než dolní hranice.';
-            $fieldErrors[] = 'quantity_max';
-            $fieldErrorMessages['quantity_max'] = 'Zadejte hodnotu stejnou nebo vyšší než dolní hranice.';
-        } elseif ($quantityMin !== null && $ingredientState['amount'] !== '') {
-            $error = 'Použijte buď přesné číselné množství, nebo textové množství, ne obojí současně.';
-            $fieldErrors[] = 'amount';
-            $fieldErrorMessages['amount'] = 'Textové množství vymažte, nebo nechte přesná číselná pole prázdná.';
-        } elseif ($ingredientId !== null && $existingIngredient === null) {
-            $error = 'Upravovanou ingredienci se v tomto receptu nepodařilo najít.';
-        } elseif ($existingIngredient !== null) {
-            $snapshotBeforeChange('Před úpravou ingredience');
-            $pdo->prepare(
-                'UPDATE cms_recipe_ingredients
+        if ($action === 'save_group') {
+            $groupId = inputInt('post', 'group_id');
+            $groupState = [
+                'id' => $groupId ?? 0,
+                'title' => mb_substr(trim((string)($_POST['group_title'] ?? '')), 0, 255),
+            ];
+            if ($groupId !== null && !$groupBelongs($groupId)) {
+                $error = 'Upravovanou skupinu se v tomto receptu nepodařilo najít.';
+            } elseif ($groupId !== null) {
+                $snapshotBeforeChange('Před úpravou skupiny ingrediencí');
+                $pdo->prepare(
+                    'UPDATE cms_recipe_ingredient_groups SET title = ?, updated_at = NOW()
+                 WHERE id = ? AND recipe_id = ?'
+                )->execute([$groupState['title'], $groupId, $recipeId]);
+                logAction('recipe_group_edit', "recipe={$recipeId} group={$groupId}");
+                $redirectToContent('saved');
+            } else {
+                $order = $nextOrder('cms_recipe_ingredient_groups', 'recipe_id = ?', [$recipeId]);
+                $snapshotBeforeChange('Před přidáním skupiny ingrediencí');
+                $pdo->prepare(
+                    'INSERT INTO cms_recipe_ingredient_groups (recipe_id, title, sort_order) VALUES (?, ?, ?)'
+                )->execute([$recipeId, $groupState['title'], $order]);
+                logAction('recipe_group_add', "recipe={$recipeId}");
+                $redirectToContent('saved');
+            }
+        }
+
+        if ($action === 'save_ingredient') {
+            $ingredientId = inputInt('post', 'ingredient_id');
+            $groupId = inputInt('post', 'group_id');
+            $ingredientState = [
+                'id' => $ingredientId ?? 0,
+                'group_id' => $groupId ?? '',
+                'amount' => mb_substr(trim((string)($_POST['amount'] ?? '')), 0, 40),
+                'quantity_min' => trim((string)($_POST['quantity_min'] ?? '')),
+                'quantity_max' => trim((string)($_POST['quantity_max'] ?? '')),
+                'unit' => mb_substr(trim((string)($_POST['unit'] ?? '')), 0, 40),
+                'name' => mb_substr(trim((string)($_POST['ingredient_name'] ?? '')), 0, 255),
+                'note' => mb_substr(trim((string)($_POST['ingredient_note'] ?? '')), 0, 255),
+                'is_optional' => isset($_POST['is_optional']) ? 1 : 0,
+            ];
+            $quantityMin = recipeNullableQuantity($ingredientState['quantity_min']);
+            $quantityMax = recipeNullableQuantity($ingredientState['quantity_max']);
+            $existingIngredient = $ingredientForRecipe($ingredientId);
+            if ($ingredientState['name'] === '') {
+                $error = 'Ingredienci nejde uložit bez názvu.';
+                $fieldErrors[] = 'ingredient_name';
+                $fieldErrorMessages['ingredient_name'] = 'Doplňte název suroviny, například hladká mouka.';
+            } elseif (!$groupBelongs($groupId)) {
+                $error = 'Vyberte skupinu ingrediencí, která patří k tomuto receptu.';
+                $fieldErrors[] = 'ingredient_group';
+                $fieldErrorMessages['ingredient_group'] = 'Vyberte existující skupinu tohoto receptu.';
+            } elseif ($ingredientState['quantity_min'] !== '' && $quantityMin === null) {
+                $error = 'Přesné množství musí být kladné číslo s nejvýše čtyřmi desetinnými místy.';
+                $fieldErrors[] = 'quantity_min';
+                $fieldErrorMessages['quantity_min'] = 'Zadejte kladné číslo, například 250 nebo 1,5.';
+            } elseif ($ingredientState['quantity_max'] !== '' && $quantityMax === null) {
+                $error = 'Horní hranice množství musí být kladné číslo s nejvýše čtyřmi desetinnými místy.';
+                $fieldErrors[] = 'quantity_max';
+                $fieldErrorMessages['quantity_max'] = 'Zadejte kladné číslo, nebo horní hranici nechte prázdnou.';
+            } elseif ($quantityMax !== null && $quantityMin === null) {
+                $error = 'Rozsah množství potřebuje také dolní hranici.';
+                $fieldErrors[] = 'quantity_min';
+                $fieldErrorMessages['quantity_min'] = 'Doplňte dolní hranici rozsahu.';
+            } elseif ($quantityMin !== null && $quantityMax !== null && (float)$quantityMax < (float)$quantityMin) {
+                $error = 'Horní hranice množství nesmí být menší než dolní hranice.';
+                $fieldErrors[] = 'quantity_max';
+                $fieldErrorMessages['quantity_max'] = 'Zadejte hodnotu stejnou nebo vyšší než dolní hranice.';
+            } elseif ($quantityMin !== null && $ingredientState['amount'] !== '') {
+                $error = 'Použijte buď přesné číselné množství, nebo textové množství, ne obojí současně.';
+                $fieldErrors[] = 'amount';
+                $fieldErrorMessages['amount'] = 'Textové množství vymažte, nebo nechte přesná číselná pole prázdná.';
+            } elseif ($ingredientId !== null && $existingIngredient === null) {
+                $error = 'Upravovanou ingredienci se v tomto receptu nepodařilo najít.';
+            } elseif ($existingIngredient !== null) {
+                $snapshotBeforeChange('Před úpravou ingredience');
+                $pdo->prepare(
+                    'UPDATE cms_recipe_ingredients
                  SET group_id = ?, amount = ?, quantity_min = ?, quantity_max = ?,
                      unit = ?, name = ?, note = ?, is_optional = ?, updated_at = NOW()
                  WHERE id = ? AND recipe_id = ?'
-            )->execute([
-                $groupId,
-                $ingredientState['amount'],
-                $quantityMin,
-                $quantityMax,
-                $ingredientState['unit'],
-                $ingredientState['name'],
-                $ingredientState['note'],
-                $ingredientState['is_optional'],
-                $ingredientId,
-                $recipeId,
-            ]);
-            logAction('recipe_ingredient_edit', "recipe={$recipeId} ingredient={$ingredientId}");
-            $redirectToContent('saved');
-        } else {
-            $order = $nextOrder(
-                'cms_recipe_ingredients',
-                'recipe_id = ? AND group_id = ?',
-                [$recipeId, $groupId]
-            );
-            $snapshotBeforeChange('Před přidáním ingredience');
-            $pdo->prepare(
-                'INSERT INTO cms_recipe_ingredients
+                )->execute([
+                    $groupId,
+                    $ingredientState['amount'],
+                    $quantityMin,
+                    $quantityMax,
+                    $ingredientState['unit'],
+                    $ingredientState['name'],
+                    $ingredientState['note'],
+                    $ingredientState['is_optional'],
+                    $ingredientId,
+                    $recipeId,
+                ]);
+                logAction('recipe_ingredient_edit', "recipe={$recipeId} ingredient={$ingredientId}");
+                $redirectToContent('saved');
+            } else {
+                $order = $nextOrder(
+                    'cms_recipe_ingredients',
+                    'recipe_id = ? AND group_id = ?',
+                    [$recipeId, $groupId]
+                );
+                $snapshotBeforeChange('Před přidáním ingredience');
+                $pdo->prepare(
+                    'INSERT INTO cms_recipe_ingredients
                  (recipe_id, group_id, amount, quantity_min, quantity_max, unit, name, note, is_optional, sort_order)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            )->execute([
-                $recipeId,
-                $groupId,
-                $ingredientState['amount'],
-                $quantityMin,
-                $quantityMax,
-                $ingredientState['unit'],
-                $ingredientState['name'],
-                $ingredientState['note'],
-                $ingredientState['is_optional'],
-                $order,
-            ]);
-            logAction('recipe_ingredient_add', "recipe={$recipeId}");
-            $redirectToContent('saved');
-        }
-    }
-
-    if ($action === 'save_step') {
-        $stepId = inputInt('post', 'step_id');
-        $mediaId = inputInt('post', 'media_id');
-        $stepState = [
-            'id' => $stepId ?? 0,
-            'title' => mb_substr(trim((string)($_POST['step_title'] ?? '')), 0, 255),
-            'instruction' => trim((string)($_POST['instruction'] ?? '')),
-            'media_id' => $mediaId ?? '',
-            'image_alt_text' => mb_substr(trim((string)($_POST['image_alt_text'] ?? '')), 0, 255),
-        ];
-        $existingStep = $stepForRecipe($stepId);
-        if ($stepState['instruction'] === '') {
-            $error = 'Krok postupu nejde uložit bez instrukce.';
-            $fieldErrors[] = 'instruction';
-            $fieldErrorMessages['instruction'] = 'Popište jeden konkrétní krok postupu.';
-        }
-        if ($mediaId !== null) {
-            $media = mediaGetById($mediaId);
-            if (!is_array($media) || !mediaIsPublic($media) || !mediaCanPreviewImage($media)) {
-                $error = 'Vybraný obrázek kroku není veřejný rastrový obrázek.';
-                $fieldErrors[] = 'step_media_id';
-                $fieldErrorMessages['step_media_id'] = 'Vyberte veřejný rastrový obrázek z knihovny médií, nebo obrázek odeberte.';
+                )->execute([
+                    $recipeId,
+                    $groupId,
+                    $ingredientState['amount'],
+                    $quantityMin,
+                    $quantityMax,
+                    $ingredientState['unit'],
+                    $ingredientState['name'],
+                    $ingredientState['note'],
+                    $ingredientState['is_optional'],
+                    $order,
+                ]);
+                logAction('recipe_ingredient_add', "recipe={$recipeId}");
+                $redirectToContent('saved');
             }
         }
-        if ($stepId !== null && $existingStep === null) {
-            $error = 'Upravovaný krok se v tomto receptu nepodařilo najít.';
-        }
-        if ($error === '' && $existingStep !== null) {
-            $snapshotBeforeChange('Před úpravou kroku postupu');
-            $pdo->prepare(
-                'UPDATE cms_recipe_steps
+
+        if ($action === 'save_step') {
+            $stepId = inputInt('post', 'step_id');
+            $mediaId = inputInt('post', 'media_id');
+            $stepState = [
+                'id' => $stepId ?? 0,
+                'title' => mb_substr(trim((string)($_POST['step_title'] ?? '')), 0, 255),
+                'instruction' => trim((string)($_POST['instruction'] ?? '')),
+                'media_id' => $mediaId ?? '',
+                'image_alt_text' => mb_substr(trim((string)($_POST['image_alt_text'] ?? '')), 0, 255),
+            ];
+            $existingStep = $stepForRecipe($stepId);
+            if ($stepState['instruction'] === '') {
+                $error = 'Krok postupu nejde uložit bez instrukce.';
+                $fieldErrors[] = 'instruction';
+                $fieldErrorMessages['instruction'] = 'Popište jeden konkrétní krok postupu.';
+            }
+            if ($mediaId !== null) {
+                $media = mediaGetById($mediaId);
+                if (!is_array($media) || !mediaIsPublic($media) || !mediaCanPreviewImage($media)) {
+                    $error = 'Vybraný obrázek kroku není veřejný rastrový obrázek.';
+                    $fieldErrors[] = 'step_media_id';
+                    $fieldErrorMessages['step_media_id'] = 'Vyberte veřejný rastrový obrázek z knihovny médií, nebo obrázek odeberte.';
+                }
+            }
+            if ($stepId !== null && $existingStep === null) {
+                $error = 'Upravovaný krok se v tomto receptu nepodařilo najít.';
+            }
+            if ($error === '' && $existingStep !== null) {
+                $snapshotBeforeChange('Před úpravou kroku postupu');
+                $pdo->prepare(
+                    'UPDATE cms_recipe_steps
                  SET title = ?, instruction = ?, media_id = ?, image_alt_text = ?, updated_at = NOW()
                  WHERE id = ? AND recipe_id = ?'
-            )->execute([
-                $stepState['title'],
-                $stepState['instruction'],
-                $mediaId,
-                $stepState['image_alt_text'],
-                $stepId,
-                $recipeId,
-            ]);
-            logAction('recipe_step_edit', "recipe={$recipeId} step={$stepId}");
-            $redirectToContent('saved');
-        } elseif ($error === '') {
-            $order = $nextOrder('cms_recipe_steps', 'recipe_id = ?', [$recipeId]);
-            $snapshotBeforeChange('Před přidáním kroku postupu');
-            $pdo->prepare(
-                'INSERT INTO cms_recipe_steps
+                )->execute([
+                    $stepState['title'],
+                    $stepState['instruction'],
+                    $mediaId,
+                    $stepState['image_alt_text'],
+                    $stepId,
+                    $recipeId,
+                ]);
+                logAction('recipe_step_edit', "recipe={$recipeId} step={$stepId}");
+                $redirectToContent('saved');
+            } elseif ($error === '') {
+                $order = $nextOrder('cms_recipe_steps', 'recipe_id = ?', [$recipeId]);
+                $snapshotBeforeChange('Před přidáním kroku postupu');
+                $pdo->prepare(
+                    'INSERT INTO cms_recipe_steps
                  (recipe_id, title, instruction, media_id, image_alt_text, sort_order)
                  VALUES (?, ?, ?, ?, ?, ?)'
-            )->execute([
-                $recipeId,
-                $stepState['title'],
-                $stepState['instruction'],
-                $mediaId,
-                $stepState['image_alt_text'],
-                $order,
-            ]);
-            logAction('recipe_step_add', "recipe={$recipeId}");
-            $redirectToContent('saved');
+                )->execute([
+                    $recipeId,
+                    $stepState['title'],
+                    $stepState['instruction'],
+                    $mediaId,
+                    $stepState['image_alt_text'],
+                    $order,
+                ]);
+                logAction('recipe_step_add', "recipe={$recipeId}");
+                $redirectToContent('saved');
+            }
         }
-    }
 
-    if (in_array($action, ['delete_group', 'delete_ingredient', 'delete_step'], true)) {
-        $confirmed = (string)($_POST['confirm_action'] ?? '') === '1';
-        if (!$confirmed) {
-            $error = 'Smazání vyžaduje potvrzení kontroly dopadu.';
-        } else {
-            $part = substr($action, strlen('delete_'));
-            $partId = inputInt('post', $part . '_id') ?? 0;
-            try {
-                if (recipeContentDeletePart($pdo, $recipeId, $part, $partId, currentUserId())) {
-                    logAction('recipe_' . $part . '_delete', "recipe={$recipeId} {$part}={$partId}");
+        if (in_array($action, ['delete_group', 'delete_ingredient', 'delete_step'], true)) {
+            $confirmed = (string)($_POST['confirm_action'] ?? '') === '1';
+            if (!$confirmed) {
+                $error = 'Smazání vyžaduje potvrzení kontroly dopadu.';
+            } else {
+                $part = substr($action, strlen('delete_'));
+                $partId = inputInt('post', $part . '_id') ?? 0;
+                try {
+                    if (recipeContentDeletePart($pdo, $recipeId, $part, $partId, currentUserId())) {
+                        logAction('recipe_' . $part . '_delete', "recipe={$recipeId} {$part}={$partId}");
+                    }
+                    $redirectToContent('deleted');
+                } catch (DomainException $exception) {
+                    $error = $exception->getMessage();
                 }
-                $redirectToContent('deleted');
-            } catch (DomainException $exception) {
-                $error = $exception->getMessage();
             }
         }
-    }
 
-    if (in_array($action, ['move_group', 'move_ingredient', 'move_step'], true)) {
-        $direction = trim((string)($_POST['direction'] ?? ''));
-        if ($action === 'move_group') {
-            $groupId = inputInt('post', 'group_id');
-            if ($groupBelongs($groupId)) {
-                $snapshotBeforeChange('Před změnou pořadí skupin');
-                $moveRow(
-                    'cms_recipe_ingredient_groups',
-                    (int)$groupId,
-                    'recipe_id = ?',
-                    [$recipeId],
-                    $direction
-                );
+        if (in_array($action, ['move_group', 'move_ingredient', 'move_step'], true)) {
+            $direction = trim((string)($_POST['direction'] ?? ''));
+            if ($action === 'move_group') {
+                $groupId = inputInt('post', 'group_id');
+                if ($groupBelongs($groupId)) {
+                    $snapshotBeforeChange('Před změnou pořadí skupin');
+                    $moveRow(
+                        'cms_recipe_ingredient_groups',
+                        (int)$groupId,
+                        'recipe_id = ?',
+                        [$recipeId],
+                        $direction
+                    );
+                }
+            } elseif ($action === 'move_ingredient') {
+                $ingredientId = inputInt('post', 'ingredient_id');
+                $ingredient = $ingredientForRecipe($ingredientId);
+                if ($ingredient !== null) {
+                    $snapshotBeforeChange('Před změnou pořadí ingrediencí');
+                    $moveRow(
+                        'cms_recipe_ingredients',
+                        (int)$ingredient['id'],
+                        'recipe_id = ? AND group_id = ?',
+                        [$recipeId, (int)$ingredient['group_id']],
+                        $direction
+                    );
+                }
+            } else {
+                $stepId = inputInt('post', 'step_id');
+                if ($stepForRecipe($stepId) !== null) {
+                    $snapshotBeforeChange('Před změnou pořadí kroků');
+                    $moveRow(
+                        'cms_recipe_steps',
+                        (int)$stepId,
+                        'recipe_id = ?',
+                        [$recipeId],
+                        $direction
+                    );
+                }
             }
-        } elseif ($action === 'move_ingredient') {
-            $ingredientId = inputInt('post', 'ingredient_id');
-            $ingredient = $ingredientForRecipe($ingredientId);
-            if ($ingredient !== null) {
-                $snapshotBeforeChange('Před změnou pořadí ingrediencí');
-                $moveRow(
-                    'cms_recipe_ingredients',
-                    (int)$ingredient['id'],
-                    'recipe_id = ? AND group_id = ?',
-                    [$recipeId, (int)$ingredient['group_id']],
-                    $direction
-                );
-            }
-        } else {
-            $stepId = inputInt('post', 'step_id');
-            if ($stepForRecipe($stepId) !== null) {
-                $snapshotBeforeChange('Před změnou pořadí kroků');
-                $moveRow(
-                    'cms_recipe_steps',
-                    (int)$stepId,
-                    'recipe_id = ?',
-                    [$recipeId],
-                    $direction
-                );
-            }
+            $redirectToContent('moved');
         }
-        $redirectToContent('moved');
+        $pdo->rollBack();
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        koraLog('error', 'recipe_structure_save_failed', ['recipe_id' => $recipeId, 'code' => (string)$exception->getCode()]);
+        $error = 'Změnu obsahu se nepodařilo uložit. Zadané údaje zůstaly zachované; zkuste uložení znovu.';
     }
 }
 

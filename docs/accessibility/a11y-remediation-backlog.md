@@ -17,6 +17,8 @@ Tuto úplnost a shodu s aktuální WCAG maticí hlídá `build/accessibility_con
 
 ## Vysoká priorita
 
+Poznámka 2026-10-03: RC2-16 až RC2-19 Receptů jsou opravené v kódu: souběh koše/publikace, částečné zápisy struktury a návratové hodnoty v nesprávném editoru mají izolované, MySQL a HTTP regrese. Otevřenou podmínkou zůstává ruční NVDA/Firefox průchod chybou publikace a ukládání, čerstvým potvrzením mazání a bezpečným opakováním. Transakce nezajišťuje slučování textových změn dvou editorů; hlavní stav `3.3.4` se tím nezvyšuje.
+
 Audit 2026-09-05 opravil potvrzené P1 problémy: autosave mohl zaměnit perex a tělo, odmítnuté změny médií/podcastů mohly smazat originály nebo předčasně změnit jejich veřejnost. Opravená je také ztráta hodnot po odmítnutí editorů a chybné hlášení schránky. Stav každého nálezu a automatizované důkazy jsou v [RC registru](../rc-audit-2026-09.md), zejména RC-10/11/18/19/20/25/26/27/30/40. Změna platnosti přihlášení a 2FA (RC-02/03, WCAG 2.2.1) byla výslovně schválena; před aktualizací je nutné uložit rozepsaný obsah, protože staré relace vyžadují nové přihlášení. Otevřenou podmínkou RC zůstává ruční průchod obnovy editorů, chybových stavů a opakovaného přihlášení s NVDA/Firefox a klávesnicí. Zelené automatické testy samy o sobě neuzavírají globální WCAG/ACR kritéria.
 
 ## GitHub bridge: návazný blok 2026-09-05

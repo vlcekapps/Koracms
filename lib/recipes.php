@@ -486,11 +486,78 @@ function recipeLoadStructure(PDO $pdo, int $recipeId): array
     ];
 }
 
-function recipeHasPublishableStructure(PDO $pdo, int $recipeId): bool
+/** @return array<string,mixed>|null */
+function recipeLockForWrite(PDO $pdo, int $recipeId, bool $includeDeleted = false): ?array
 {
-    $ingredientStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_recipe_ingredients WHERE recipe_id = ?');
+    if (!$pdo->inTransaction()) {
+        throw new LogicException('Recipe writes require a transaction.');
+    }
+    $stmt = $pdo->prepare('SELECT * FROM cms_recipes WHERE id = ?'
+        . ($includeDeleted ? '' : ' AND deleted_at IS NULL') . ' FOR UPDATE');
+    $stmt->execute([$recipeId]);
+    $recipe = $stmt->fetch();
+    return is_array($recipe) ? $recipe : null;
+}
+
+function recipeApplyLifecycleAction(PDO $pdo, int $recipeId, string $action): bool
+{
+    if ($recipeId <= 0 || !in_array($action, ['delete', 'restore', 'purge'], true)) {
+        return false;
+    }
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) {
+        $pdo->beginTransaction();
+    }
+    try {
+        $recipe = recipeLockForWrite($pdo, $recipeId, true);
+        $isDeleted = $recipe !== null && $recipe['deleted_at'] !== null;
+        if ($recipe === null || ($action === 'delete' ? $isDeleted : !$isDeleted)) {
+            if ($ownsTransaction) {
+                $pdo->rollBack();
+            }
+            return false;
+        }
+        if ($action === 'purge') {
+            foreach (['cms_recipe_steps', 'cms_recipe_ingredients', 'cms_recipe_ingredient_groups', 'cms_recipe_structure_snapshots'] as $table) {
+                $pdo->prepare('DELETE FROM ' . $table . ' WHERE recipe_id = ?')->execute([$recipeId]);
+            }
+            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$recipeId]);
+            $pdo->prepare("DELETE FROM cms_content_locks WHERE entity_type = 'recipe' AND entity_id = ?")->execute([$recipeId]);
+            deleteRedirectsTargetingPath($pdo, recipePublicPath($recipe), true);
+            $statement = $pdo->prepare('DELETE FROM cms_recipes WHERE id = ? AND deleted_at IS NOT NULL');
+        } elseif ($action === 'delete') {
+            deleteRedirectsTargetingPath($pdo, recipePublicPath($recipe), true);
+            $statement = $pdo->prepare("UPDATE cms_recipes SET deleted_at = NOW(), status = 'draft' WHERE id = ? AND deleted_at IS NULL");
+        } else {
+            $statement = $pdo->prepare("UPDATE cms_recipes SET deleted_at = NULL, status = 'draft' WHERE id = ? AND deleted_at IS NOT NULL");
+        }
+        $statement->execute([$recipeId]);
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException('Recipe lifecycle state changed before write.');
+        }
+        if ($ownsTransaction) {
+            $pdo->commit();
+        }
+        return true;
+    } catch (Throwable $exception) {
+        if ($ownsTransaction && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $exception;
+    }
+}
+
+function recipeHasPublishableStructure(PDO $pdo, int $recipeId, bool $forWrite = false): bool
+{
+    if ($forWrite && !$pdo->inTransaction()) {
+        throw new LogicException('Recipe publication validation requires a transaction.');
+    }
+    // Locking reads bypass an older REPEATABLE READ snapshot during publication.
+    $selection = $forWrite ? 'id' : 'COUNT(*)';
+    $suffix = $forWrite ? ' LIMIT 1 FOR UPDATE' : '';
+    $ingredientStmt = $pdo->prepare('SELECT ' . $selection . ' FROM cms_recipe_ingredients WHERE recipe_id = ?' . $suffix);
     $ingredientStmt->execute([$recipeId]);
-    $stepStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_recipe_steps WHERE recipe_id = ?');
+    $stepStmt = $pdo->prepare('SELECT ' . $selection . ' FROM cms_recipe_steps WHERE recipe_id = ?' . $suffix);
     $stepStmt->execute([$recipeId]);
 
     return (int)$ingredientStmt->fetchColumn() > 0 && (int)$stepStmt->fetchColumn() > 0;

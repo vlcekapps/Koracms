@@ -24044,4 +24044,34 @@ if ($rc2GalleryIssues === []) {
     }
 }
 
+echo "=== rc2_recipe_write_integrity_contract ===\n";
+$rc2RecipeIssues = [];
+foreach ([
+    'lib/recipes.php' => ['function recipeLockForWrite(', 'function recipeApplyLifecycleAction(', 'FOR UPDATE', 'AND deleted_at IS NOT NULL', '$ownsTransaction'],
+    'lib/revisions.php' => ['bool $requireSuccess = false', 'if ($requireSuccess)'],
+    'admin/recipe_action.php' => ['verifyCsrf()', 'confirm_action', 'recipeApplyLifecycleAction('],
+    'admin/recipe_save.php' => ['beginTransaction()', 'recipeLockForWrite(', 'recipeHasPublishableStructure($pdo, $id, true)', 'recipeRevisionSnapshot($newRecipe), true)', 'rollBack()', 'recipe_save_failed', "'recipe_id' => \$id"],
+    'admin/recipe_content.php' => ['recipeLockForWrite(', 'beginTransaction()', 'rollBack()', '$ownsTransaction', 'recipe_structure_save_failed'],
+    'admin/recipe_form.php' => ["\$pendingFlash['recipe_id'] === \$id"],
+    'build/rc_recipe_integrity_selftest.php' => ['fixture second move failure', 'fixture purge failure', 'beforeUnprotectedUpdate'],
+    'build/rc_recipe_mysql_selftest.php' => ['REPEATABLE READ', 'PROCESSLIST', 'incomplete', 'restore'],
+    'build/http_integration.php' => ['rc2RecipeIntegrityHttpChecks('],
+    'composer.json' => ['build/rc_recipe_integrity_selftest.php', 'build/rc_recipe_mysql_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $rc2RecipeIssues[] = $file . ': missing recipe write integrity proof: ' . $fragment;
+        }
+    }
+}
+if ($rc2RecipeIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($rc2RecipeIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

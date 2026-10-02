@@ -7155,7 +7155,7 @@ function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $sta
     }
 }
 
-function deleteRedirectsTargetingPath(PDO $pdo, string $targetPath): void
+function deleteRedirectsTargetingPath(PDO $pdo, string $targetPath, bool $requireSuccess = false): void
 {
     $targetPath = storedRedirectTarget($targetPath, '');
     if ($targetPath === '') {
@@ -7169,6 +7169,9 @@ function deleteRedirectsTargetingPath(PDO $pdo, string $targetPath): void
             'target_path_hash' => hash('sha256', $targetPath),
             'exception' => $e,
         ]);
+        if ($requireSuccess) {
+            throw $e;
+        }
     }
 }
 
