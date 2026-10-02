@@ -45,6 +45,8 @@ final class Response extends RuntimeException
 function runFile(string $path, array $variables = []): string
 {
     $code = preg_replace('/^require_once [^\r\n]+;\R/m', '', source($path));
+    // Real header/exit redirects cannot be caught by the handler's Throwable branch.
+    $code = str_replace('} catch (\\Throwable $e) {', '} catch (\\Throwable $e) { if ($e instanceof \\KoraRc2ModulesTest\\Response) { throw $e; }', $code);
     ob_start();
     try {
         evaluate('?>' . $code, $variables);
@@ -241,6 +243,12 @@ try {
         'adminFieldHasError', 'adminFieldErrorId', 'adminFieldAttributes', 'adminRenderFieldError'] as $function) {
         loadFunction('admin/layout.php', $function);
     }
+    foreach (['pollWriteLockSql', 'pollLockForWrite', 'pollLockedOptions', 'pollOptionHasVotes', 'pollStoreVote', 'pollDeletePermanently'] as $function) {
+        loadFunction('lib/poll_voting.php', $function);
+    }
+    foreach (['pollSelectedOptionIds', 'pollAllowsMultipleChoices', 'pollConfiguredMaxChoices', 'pollPublicVisibilitySql'] as $function) {
+        loadFunction('lib/presentation.php', $function);
+    }
 
     $entity = ['author_id' => '7', 'blog_id' => '5'];
     foreach (revisionEntityDefinitions() as $type => $definition) {
@@ -314,8 +322,12 @@ try {
     $testDb->exec("INSERT INTO cms_polls VALUES (1,'Original','original','','single',NULL,'after_vote','active',NULL,NULL,'','')");
     $testDb->exec('CREATE TABLE cms_poll_options (id INTEGER PRIMARY KEY, poll_id INTEGER, option_text TEXT, sort_order INTEGER)');
     $testDb->exec("INSERT INTO cms_poll_options VALUES (10,1,'One',0),(11,1,'Two',1),(20,2,'Foreign',0)");
-    $testDb->exec('CREATE TABLE cms_poll_votes (poll_id INTEGER, option_id INTEGER, ip_hash TEXT)');
-    $testDb->exec('CREATE TABLE cms_poll_vote_sessions (poll_id INTEGER)');
+    $testDb->exec('ALTER TABLE cms_polls ADD deleted_at TEXT');
+    $testDb->sqliteCreateFunction('NOW', static fn (): string => date('Y-m-d H:i:s'));
+    $testDb->exec('CREATE TABLE cms_poll_votes (poll_id INTEGER, option_id INTEGER, ip_hash TEXT, vote_session_id INTEGER,
+        UNIQUE(poll_id, option_id, ip_hash))');
+    $testDb->exec('CREATE TABLE cms_poll_vote_sessions (id INTEGER PRIMARY KEY, poll_id INTEGER, voter_hash TEXT,
+        UNIQUE(poll_id, voter_hash))');
     $capabilities = ['content_manage_shared'];
     $post = ['csrf_token' => 'test-csrf', 'id' => '1', 'question' => 'Rozepsaná otázka', 'slug' => 'updated',
         'description' => 'Rozepsaný popis', 'options' => ['První', 'Druhá'], 'option_ids' => ['10', '11'],
@@ -347,6 +359,108 @@ try {
     $_POST = $post;
     same(runFile('admin/polls_save.php'), '/admin/polls.php', 'Valid poll edit succeeds');
     same($testDb->query('SELECT option_text FROM cms_poll_options WHERE id=10')->fetchColumn(), 'První', 'Valid option updated');
+
+    $testDb->exec('UPDATE cms_polls SET start_date=NULL, vote_mode="multiple", max_choices=2 WHERE id=1');
+    $cast = static function (mixed $single, mixed $multiple, string $hash = 'visitor'): array {
+        $pdo = db_connect();
+        $pdo->beginTransaction();
+        try {
+            $result = pollStoreVote($pdo, 1, $single, $multiple, $hash);
+            if ($result['error'] === '') {
+                $pdo->commit();
+            } else {
+                $pdo->rollBack();
+            }
+            return $result;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    };
+    try {
+        pollStoreVote($testDb, 1, null, [10], 'visitor');
+        same(true, false, 'Vote without transaction must fail');
+    } catch (\LogicException) {
+        same($testDb->inTransaction(), false, 'Parent lock requires a transaction');
+    }
+    same($cast(null, [])['error'], 'no_option', 'Empty vote rejected');
+    same($cast(null, [10, 20])['error'], 'invalid_option', 'Foreign option rejected');
+    same((int)$testDb->query('SELECT COUNT(*) FROM cms_poll_vote_sessions')->fetchColumn(), 0, 'Rejection creates no session');
+    $testDb->exec('UPDATE cms_polls SET status="closed" WHERE id=1');
+    same($cast(null, [10])['error'], 'closed', 'Closed poll cannot accept votes');
+    $testDb->exec('UPDATE cms_polls SET status="active", deleted_at="2026-01-01" WHERE id=1');
+    same($cast(null, [10])['error'], 'closed', 'Deleted poll cannot accept votes');
+    $testDb->exec('UPDATE cms_polls SET deleted_at=NULL, start_date="2999-01-01" WHERE id=1');
+    same($cast(null, [10])['error'], 'closed', 'Scheduled poll cannot accept votes');
+    $testDb->exec('UPDATE cms_polls SET start_date=NULL, end_date="2000-01-01" WHERE id=1');
+    same($cast(null, [10])['error'], 'closed', 'Expired poll cannot accept votes');
+    $testDb->exec('UPDATE cms_polls SET end_date=NULL, max_choices=1 WHERE id=1');
+    same($cast(null, [10, 11])['error'], 'too_many_options', 'Current limit enforced');
+    $testDb->exec('UPDATE cms_polls SET max_choices=2 WHERE id=1');
+    $testDb->exec("CREATE TRIGGER fail_second_vote BEFORE INSERT ON cms_poll_votes WHEN NEW.option_id=11
+        BEGIN SELECT RAISE(ABORT, 'simulated storage failure'); END");
+    try {
+        $cast(null, [10, 11]);
+        same(true, false, 'Simulated DB failure must propagate');
+    } catch (\PDOException) {
+        same((int)$testDb->query('SELECT COUNT(*) FROM cms_poll_vote_sessions')->fetchColumn(), 0, 'DB failure rolls back session');
+        same((int)$testDb->query('SELECT COUNT(*) FROM cms_poll_votes')->fetchColumn(), 0, 'DB failure rolls back first selected vote');
+    }
+    $testDb->exec('DROP TRIGGER fail_second_vote');
+    same($cast(null, ['10', '11', '10'])['error'], '', 'Valid deduplicated multiple vote succeeds');
+    same((int)$testDb->query('SELECT COUNT(*) FROM cms_poll_votes')->fetchColumn(), 2, 'Two selections are atomic');
+    same($cast(null, [10])['error'], 'already_voted', 'Repeat vote detected under lock');
+    $testDb->exec("INSERT INTO cms_poll_votes (poll_id, option_id, ip_hash) VALUES (1,10,'legacy')");
+    same($cast(null, [11], 'legacy')['error'], 'already_voted', 'Legacy vote without session also deduplicates');
+    $_POST = array_replace($post, ['options' => ['Druhá', 'Nová'], 'option_ids' => ['11', '0']]);
+    same(str_contains(runFile('admin/polls_save.php'), 'err=has_votes'), true, 'Cannot remove voted option');
+    same($testDb->inTransaction(), false, 'Rejected editor releases transaction');
+    same((int)$testDb->query('SELECT COUNT(*) FROM cms_poll_options WHERE id=10')->fetchColumn(), 1, 'Voted option remains');
+    $pollOptions = $testDb->query('SELECT * FROM cms_poll_options WHERE poll_id=1')->fetchAll();
+    $html = runFile('themes/default/views/modules/polls-index.php', [
+        'poll' => ['id' => 1, 'question' => 'Question', 'slug' => 'original', 'vote_mode' => 'multiple', 'max_choices' => 2],
+        'options' => $pollOptions, 'showForm' => true, 'voted' => false, 'isActive' => true, 'hasVoted' => false,
+        'resultsVisible' => false, 'voteErrorMessage' => 'Hlas se nepodařilo uložit. Zkuste to prosím znovu.',
+        'selectedOptionIds' => [10, 11],
+    ]);
+    $xpath = assertAriaReferences($html);
+    same($xpath->query('//input[@type="checkbox" and @checked]')->length, 2, 'Rejected vote keeps selections');
+    same($xpath->query('//fieldset[@aria-describedby="poll-vote-error-message-1"]')->length, 1, 'Group references existing error');
+    same($xpath->query('//*[@role="alert"]')->length, 1, 'Vote failure announced once');
+    $testDb->exec('CREATE TABLE cms_revisions (entity_type TEXT, entity_id INTEGER)');
+    $testDb->exec('CREATE TABLE cms_redirects (new_path TEXT)');
+    $testDb->exec("INSERT INTO cms_revisions VALUES ('poll',1),('poll',2)");
+    $testDb->prepare('INSERT INTO cms_redirects VALUES (?)')->execute([pollPublicPath(['id' => 1, 'slug' => 'updated'])]);
+    $testDb->exec("INSERT INTO cms_redirects VALUES ('/unrelated')");
+    $pollSnapshot = static fn (): array => array_map(
+        static fn (string $table): array => db_connect()->query('SELECT * FROM ' . $table)->fetchAll(),
+        ['cms_polls', 'cms_poll_options', 'cms_poll_votes', 'cms_poll_vote_sessions', 'cms_revisions', 'cms_redirects']
+    );
+    $before = $pollSnapshot();
+    same(pollDeletePermanently($testDb, 1), false, 'Trash purge rejects active poll');
+    same($pollSnapshot(), $before, 'Rejected purge preserves all children and votes');
+    same(pollDeletePermanently($testDb, 999), false, 'Missing poll purge rejected');
+    $testDb->exec('UPDATE cms_polls SET deleted_at="2026-10-02" WHERE id=1');
+    $before = $pollSnapshot();
+    $testDb->exec("CREATE TRIGGER fail_poll_cleanup BEFORE DELETE ON cms_poll_options
+        BEGIN SELECT RAISE(ABORT, 'simulated cleanup failure'); END");
+    try {
+        pollDeletePermanently($testDb, 1);
+        same(true, false, 'Cleanup failure must propagate');
+    } catch (\PDOException) {
+        same($pollSnapshot(), $before, 'Failed cleanup rolls back votes, sessions and options');
+        same($testDb->inTransaction(), false, 'Failed cleanup releases lock');
+    }
+    $testDb->exec('DROP TRIGGER fail_poll_cleanup');
+    same(pollDeletePermanently($testDb, 1), true, 'Deleted poll can be purged');
+    foreach (['cms_polls', 'cms_poll_options', 'cms_poll_votes', 'cms_poll_vote_sessions'] as $table) {
+        $key = $table === 'cms_polls' ? 'id' : 'poll_id';
+        same((int)$testDb->query('SELECT COUNT(*) FROM ' . $table . ' WHERE ' . $key . '=1')->fetchColumn(), 0, $table . ' cleaned atomically');
+    }
+    same((int)$testDb->query('SELECT COUNT(*) FROM cms_revisions WHERE entity_id=2')->fetchColumn(), 1, 'Unrelated history preserved');
+    same((int)$testDb->query("SELECT COUNT(*) FROM cms_redirects WHERE new_path='/unrelated'")->fetchColumn(), 1, 'Unrelated redirect preserved');
+    $testDb->exec("INSERT INTO cms_polls (id,question,slug,status) VALUES (2,'Bulk','bulk','active')");
+    same(pollDeletePermanently($testDb, 2, false), true, 'Explicit bulk purge accepts active poll');
 
     $testDb->exec('CREATE TABLE cms_gallery_albums (id INTEGER PRIMARY KEY, name TEXT)');
     $testDb->exec("INSERT INTO cms_gallery_albums VALUES (1,'Album'),(2,'Other')");

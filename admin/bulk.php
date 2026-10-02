@@ -134,17 +134,8 @@ $moduleConfig = match ($module) {
         'log_prefix' => 'poll',
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
             foreach ($deleteIds as $deleteId) {
-                $pollStmt = $pdo->prepare("SELECT id, slug FROM cms_polls WHERE id = ?");
-                $pollStmt->execute([$deleteId]);
-                $poll = $pollStmt->fetch() ?: null;
-                if ($poll) {
-                    $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([pollPublicPath($poll)]);
-                }
-                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$deleteId]);
+                pollDeletePermanently($pdo, (int)$deleteId, false);
             }
-            $ph = implode(',', array_fill(0, count($deleteIds), '?'));
-            $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id IN ({$ph})")->execute($deleteIds);
-            $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id IN ({$ph})")->execute($deleteIds);
         },
     ],
     'food' => [
@@ -321,7 +312,9 @@ if ($action === 'delete') {
 
         // Smazání záznamů
         $ph = implode(',', array_fill(0, count($deleteIds), '?'));
-        $pdo->prepare("DELETE FROM {$table} WHERE id IN ({$ph})")->execute($deleteIds);
+        if ($module !== 'polls') {
+            $pdo->prepare("DELETE FROM {$table} WHERE id IN ({$ph})")->execute($deleteIds);
+        }
 
         logAction($moduleConfig['log_prefix'] . '_bulk_delete', 'ids=' . implode(',', $deleteIds));
     }

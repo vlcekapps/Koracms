@@ -85,7 +85,7 @@ if ($faqCatId > 0) {
     $faqBreadcrumbs = array_reverse($faqBreadcrumbs);
 }
 
-if ($slug === '' && !empty($faq['slug'])) {
+if ($slug === '' && !empty($faq['slug']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ' . faqPublicPath($faq, $listingQuery));
     exit;
 }

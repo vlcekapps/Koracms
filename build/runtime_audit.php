@@ -13763,7 +13763,7 @@ if (!str_contains($pollIndexControllerSource, 'pollPublicVisibilitySql(')) {
 foreach ([
     'pollSelectedOptionIds(',
     'cms_poll_vote_sessions',
-    'vote_session_id',
+    'pollStoreVote(',
     'pollResultsAreVisible(',
 ] as $pollVotingControllerFragment) {
     if (!str_contains($pollIndexControllerSource, $pollVotingControllerFragment)) {
@@ -21908,7 +21908,7 @@ foreach ([
     '$pdo->commit()',
     'deleteArticleImageFile($articleImageFile)',
     "koraLog('warning', 'article trash purge failed'",
-    "!in_array(\$module, ['places', 'articles'], true)",
+    "!in_array(\$module, ['places', 'articles', 'polls'], true)",
 ] as $articleDeleteTrashFragment) {
     if (!str_contains($articleDeleteTrashSource, $articleDeleteTrashFragment)) {
         $articleDeleteGuardrailIssues[] = 'article Trash purge is missing deferred permanent cleanup: ' . $articleDeleteTrashFragment;
@@ -23969,6 +23969,38 @@ foreach ([
 ] as $rc2File => $rc2Fragment) {
     if (!str_contains((string)file_get_contents(__DIR__ . '/../' . $rc2File), $rc2Fragment)) {
         $rc2ModuleIssues[] = $rc2File . ' is missing its RC2 regression integration.';
+    }
+}
+$rc2PollHelper = (string)file_get_contents(__DIR__ . '/../lib/poll_voting.php');
+$rc2TrashSource = (string)file_get_contents(__DIR__ . '/../admin/trash.php');
+$rc2TrashLock = strpos($rc2TrashSource, 'SELECT id FROM {$cfg[\'table\']} WHERE id = ? AND deleted_at IS NOT NULL FOR UPDATE');
+$rc2TrashCleanup = strpos($rc2TrashSource, 'DELETE FROM cms_food_order_items');
+if ($rc2TrashLock === false || $rc2TrashCleanup === false || $rc2TrashLock >= $rc2TrashCleanup
+    || !str_contains($rc2TrashSource, '$purgeDeleteStmt->rowCount() !== 1')
+    || !str_contains($rc2TrashSource, '$pdo->rollBack()')
+    || !str_contains($rc2TrashSource, '$pdo->commit()')
+    || !str_contains((string)file_get_contents(__DIR__ . '/http_integration.php'), 'rc2TrashHttpChecks(')
+    || !str_contains((string)file_get_contents(__DIR__ . '/rc2_modules_http.php'), 'RC2 fixture rollback')) {
+    $rc2ModuleIssues[] = 'Generic trash purge must lock a deleted parent before cleanup and prove transactional rollback over HTTP.';
+}
+foreach (['inTransaction()', 'FOR UPDATE', 'pollLockForWrite(', 'pollLockedOptions(', 'pollPublicVisibilitySql(',
+    'pollConfiguredMaxChoices(', 'pollOptionHasVotes(', 'cms_poll_vote_sessions', 'vote_session_id', 'cms_poll_votes',
+    'pollDeletePermanently(', '$onlyDeleted', "empty(\$poll['deleted_at'])"] as $fragment) {
+    if (!str_contains($rc2PollHelper, $fragment)) {
+        $rc2ModuleIssues[] = 'Poll helper is missing transactional protection: ' . $fragment;
+    }
+}
+foreach ([
+    'admin/polls_save.php' => 'pollLockForWrite(',
+    'admin/bulk.php' => 'pollDeletePermanently(',
+    'admin/trash.php' => 'pollDeletePermanently(',
+    'composer.json' => 'php build/rc_poll_mysql_selftest.php',
+    'polls/index.php' => "'save' => 'Hlas se nepodařilo uložit.",
+    'themes/default/views/modules/polls-index.php' => '$selectedOptionIds',
+    'faq/item.php' => "\$_SERVER['REQUEST_METHOD'] !== 'POST'",
+] as $rc2File => $rc2Fragment) {
+    if (!str_contains((string)file_get_contents(__DIR__ . '/../' . $rc2File), $rc2Fragment)) {
+        $rc2ModuleIssues[] = $rc2File . ' is missing the follow-up RC2 protection.';
     }
 }
 if ($rc2ModuleIssues === []) {

@@ -14,6 +14,15 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-02: souběh Anket, ochrana koše a zpracování starého FAQ formuláře
+
+- Datum a rozsah: veřejné hlasování, editor a trvalé mazání Anket, koš napříč moduly, zpětná vazba FAQ přes legacy URL; nálezy RC2-09 až RC2-13 v `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: databázová chyba má pravdivou hlášku, odmítnuté hlasování zachová existující volby a fieldset odkazuje na skutečné vysvětlení v atomickém alertu. Souběh nesmí změnit uložený výběr ani odstranit odhlasovanou možnost; koš musí ověřit stav před datovým dopadem. FAQ nezahodí POST při navigačním přesměrování a chybný formulář ponechá poznámku. Nevzniká nový ovládací model, časový limit ani databázové schéma; globální ACR se nezvyšuje na Supports.
+- Automatizovaný důkaz: `build/rc2_modules_selftest.php` vykonává produkční helpery a šablonu, kontroluje ARIA cíle, zachování checkboxů, odmítnutí aktivní ankety v koši a rollback více zápisů i mazání; opakuje se s PDO číselnými řetězci. `build/rc_poll_mysql_selftest.php` ověřuje sedm skutečných dvouprocesových souběhů se starým REPEATABLE READ snapshotem. HTTP kontroluje zachování voleb, FAQ legacy GET/POST, CSRF, validační poznámku a deduplikaci. Runtime audit hlídá napojení helperů a testů.
+- Ruční ověření nebo zbývající riziko: s NVDA/Firefox ověřit přečtení chyby u skupiny voleb, zachovaný výběr a opravené odeslání; klávesnicí projít FAQ s neplatnou odpovědí. Ruční test čtečkou ani vizuální reflow nebyl tímto záznamem proveden. Dávkové mazání je atomické pro jednotlivou anketu, ne pro celý výběr více anket.
+- Doplněný důkaz koše: `build/rc2_modules_http.php` odesílá potvrzené POSTy s aktivními fixtures všech 14 typů koše a porovnává rodiče, revize i související data. U Food ověřuje chybějící potvrzení a pomocí skutečného MySQL triggeru selhání až po úklidu vazeb, následný úplný rollback a úspěšné smazání. Existující review text, potvrzovací checkbox a návrat na textovou chybu se nemění; automatizace nenahrazuje ruční kontrolu smazávané položky.
+
 ### 2026-09-05: modulový audit pro RC.2
 
 - Datum a rozsah: historie revizí napříč moduly, Galerie, Ankety, poptávky Food a potvrzení kontaktního formuláře. Registr nálezů: `docs/rc2-module-audit-2026-09.md`.

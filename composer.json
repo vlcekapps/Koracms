@@ -95,6 +95,7 @@
     "test:rc-runtime": [
       "php build/rc_rate_limit_db_selftest.php",
       "php build/rc_reservation_mysql_selftest.php",
+      "php build/rc_poll_mysql_selftest.php",
       "php build/rc_upload_http_selftest.php"
     ],
     "test:runtime": "php build/runtime_audit.php",

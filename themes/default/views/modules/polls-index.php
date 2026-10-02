@@ -1,6 +1,7 @@
 <?php
 $isEmbedded = !empty($isEmbedded);
 $q = trim((string)($q ?? ''));
+$selectedOptionIds = $selectedOptionIds ?? [];
 ?>
 <div class="<?= $isEmbedded ? 'listing-shell listing-shell--embed' : 'listing-shell' ?>">
   <?php if ($poll !== null): ?>
@@ -9,7 +10,7 @@ $q = trim((string)($q ?? ''));
       $maxChoices = pollConfiguredMaxChoices($poll, count($options));
       $resultDenominator = $multipleMode ? (int)($voterCount ?? 0) : (int)($totalVotes ?? 0);
       $resultsVisible = !empty($resultsVisible);
-    ?>
+      ?>
     <section class="surface<?= $isEmbedded ? ' surface--embed' : '' ?>" aria-labelledby="poll-title">
       <div class="section-heading">
         <div>
@@ -40,7 +41,7 @@ $q = trim((string)($q ?? ''));
           <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
           <?= honeypotField() ?>
 
-          <fieldset class="form-fieldset">
+          <fieldset class="form-fieldset"<?= $voteErrorMessage !== '' ? ' aria-describedby="poll-vote-error-message-' . $pollFeedbackIdSuffix . '"' : '' ?>>
             <legend><?= $multipleMode ? 'Vyberte jednu nebo více možností' : 'Vyberte jednu možnost' ?></legend>
             <?php if ($multipleMode): ?>
               <p id="poll-choice-limit" class="field-help">Můžete vybrat nejvýše <?= (int)$maxChoices ?> možností.</p>
@@ -54,6 +55,7 @@ $q = trim((string)($q ?? ''));
                     id="poll-option-<?= (int)$option['id'] ?>"
                     name="<?= $multipleMode ? 'option_ids[]' : 'option_id' ?>"
                     value="<?= (int)$option['id'] ?>"
+                    <?= in_array((int)$option['id'], $selectedOptionIds, true) ? ' checked' : '' ?>
                     <?= !$multipleMode && $index === 0 ? ' aria-required="true"' : '' ?>
                     <?= $multipleMode ? ' aria-describedby="poll-choice-limit"' : ' required' ?>
                   >
@@ -76,10 +78,10 @@ $q = trim((string)($q ?? ''));
           <div class="poll-results" role="list" aria-labelledby="poll-results-title">
             <?php foreach ($options as $option): ?>
               <?php
-              $percentage = pollResultPercentage((int)$option['vote_count'], $resultDenominator);
-              $optionLabelId = 'poll-result-option-' . (int)$option['id'];
-              $optionValueId = 'poll-result-value-' . (int)$option['id'];
-              ?>
+                $percentage = pollResultPercentage((int)$option['vote_count'], $resultDenominator);
+                $optionLabelId = 'poll-result-option-' . (int)$option['id'];
+                $optionValueId = 'poll-result-value-' . (int)$option['id'];
+                ?>
               <div class="poll-result" role="listitem">
                 <div class="poll-result__header">
                   <span id="<?= h($optionLabelId) ?>"><?= h((string)$option['option_text']) ?></span>
@@ -144,7 +146,7 @@ $q = trim((string)($q ?? ''));
       if ($pagerParams !== []) {
           $pagerBaseUrl .= http_build_query($pagerParams) . '&';
       }
-    ?>
+      ?>
     <section class="surface" aria-labelledby="polls-title">
       <div class="section-heading">
         <div>

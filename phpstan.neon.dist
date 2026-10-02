@@ -21,6 +21,7 @@ parameters:
         - lib/messages.php
         - lib/recipes.php
         - lib/presentation.php
+        - lib/poll_voting.php
         - lib/revisions.php
         - lib/stats.php
         - lib/theme.php
@@ -78,6 +79,7 @@ parameters:
         - lib/messages.php
         - lib/recipes.php
         - lib/pagination.php
+        - lib/poll_voting.php
         - lib/presentation.php
         - lib/revisions.php
         - lib/stats.php

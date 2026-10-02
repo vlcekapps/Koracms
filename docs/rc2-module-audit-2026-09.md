@@ -39,3 +39,25 @@ Plná sada zahrnuje manifest, oprávnění a vypnuté moduly, schéma install/mi
 5. Dokončit hostingový cron/log smoke, mobilní reflow, zoom 200–400 % a vlastní šablony před rozhodnutím o vydání. Automatické DOM testy nejsou náhradou NVDA ani vizuální kontroly.
 
 Přístupnostní dopad a automatizované důkazy jsou zaznamenané v [ACR deníku](accessibility/a11y-impact-decisions.md). Nalezené a opravené problémy nezvyšují automaticky globální stav Supports.
+
+## Navazující průchod, 2026-10-02
+
+Výchozí revize `d63e299f`, čistá větev `main`. Tento blok prochází transakční hranice Anket, trvalé mazání napříč moduly koše a zpracování veřejné zpětné vazby FAQ. Neprohlašuje nový úplný řádkový audit ostatních modulů. Schéma a `VERSION` zůstávají beze změny; vydání RC.2 není součástí tohoto kroku.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-09 | P2 | Hlasování i editor načítaly pravidla/možnosti a kontrolovaly hlasy před transakcí. Souběh mohl přijmout hlas do uzavřené ankety, podle starého limitu nebo na mezitím odstraněnou možnost; editor mohl smazat nově odhlasovanou možnost. | Společný parent row lock, aktuální locking reads pravidel, možností a hlasů, všechny zápisy v transakci. Sedm skutečných MySQL souběhů: uzavření, odstranění možnosti, nový limit, změna režimu, duplicitní hlas, ochrana odhlasované možnosti a úspěšný hlas. Worker má starší REPEATABLE READ snapshot. |
+| RC2-10 | P2 | Každá PDO chyba hlasování se vydávala za opakovaný hlas; formulář ztrácel výběr a skupina neodkazovala na chybu. | Oddělená pravdivá chyba ukládání, strukturovaný log bez nové analytiky, zachování existujících voleb a fieldset navázaný na alert. Simulovaný pád druhého INSERTu prokazuje rollback session i prvního hlasu; DOM a HTTP důkazy zachovaného výběru. |
+| RC2-11 | P2 | FAQ přesměrovalo legacy `?id=` i u POSTu ještě před ověřením a uložením zpětné vazby. | Canonical redirect jen mimo POST. Skutečné HTTP ověřuje GET redirect, chybný CSRF, zachování poznámky při validační chybě a aktualizaci jediného hlasu přes legacy endpoint. |
+| RC2-12 | P2 | Trvalé/hromadné mazání Anket neuklízelo hlasovací sessions. Koš mazal možnosti a hlasy před ověřením, zda je anketa skutečně smazaná; podvržené aktivní ID ztratilo vazby. | Sdílené atomické mazání s parent row lockem, kontrolou stavu koše před zápisem, cleanupem sessions i redirectů/revizí. Izolované snapshoty dokazují zachování aktivní ankety, úplný rollback selhání cleanupu a zachování cizích záznamů. Dávka je atomická po jednotlivých anketách. |
+| RC2-13 | P1 | Také obecná větev koše uklízela vazby před ověřením smazaného rodiče; potvrzený POST s ID aktivního lístku mohl odstranit jeho položky i poptávky, u podcastů kapitoly a další data. Selhání posledního DELETE nevracelo předchozí úklid. | Whitelist tabulek, transakce a locking read s `deleted_at IS NOT NULL` před jakýmkoli cleanupem; kontrola výsledku DELETE a rollback chyby. HTTP matice všech 14 typů koše dokazuje zachování aktivních rodičů a vazeb. Food navíc pokrývá chybějící potvrzení, skutečný MySQL trigger po úklidu, úplný rollback a následné úspěšné smazání. |
+
+### Ověření a přijetí průchodu
+
+Lokální `composer ci:module-ready` na PHP 8.4.12 prošel včetně lintů, statické analýzy, schématu, ACR, balíčku, runtime auditu a celé HTTP integrace. Unit sada: 1 552 testů, žádná chyba. Izolované RC.2 regrese: 302 kontrol a znovu 302 kontrol s PDO číselnými řetězci. Skutečný MySQL test: sedm dvouprocesových souběhů. HTTP `rc2_module_revisions_http`, `rc2_trash_integrity_http`, `rc2_poll_cleanup_http`, `poll_voting_modes_http` a `faq_categories_feedback_http` prošly; fixtures i testovací trigger jsou uklizené.
+
+Jedinou očekávanou výjimkou runtime auditu je `smtp_connectivity = SKIP`: lokální síť nedosáhla SMTP na portu 25. První plný běh zachytil zastaralou zdrojovou kontrolu seznamu větví koše po oddělení Anket; kontrola byla aktualizována, nikoli vypnuta. Po dokončení obecné ochrany koše se celý balík zopakoval bez přeskočení kontrol. `git diff --check` prošel. Výsledek GitHub CI se vztahuje až ke konkrétnímu pushnutému commitu; lokální výsledek sám neprokazuje Linux/PHP 8.0 ani hosting.
+
+Na lokálu byly při zahájení databázového testu zastavené MySQL i Apache. Spuštěny byly existující binárky Laragonu se současnou konfigurací a datovým adresářem, bez ruční změny konfigurace nebo přesunu databázových souborů. Testy pracují pouze s vlastními uklizenými fixtures; lokální problém se neobchází SKIPem.
+
+Ručně zůstává NVDA/Firefox, klávesnice, reflow a hostingový cron/log smoke. Při odmítnutém vícevýběru musí být původní platné checkboxy zaškrtnuté a skupina nabídnout vysvětlení chyby; po změně režimu hlasování se použije aktuální ovládací model. Tento průchod nevydává certifikaci ani stabilní verzi.

@@ -86,157 +86,186 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'purge_id' => $itemId,
                 ]);
             } else {
-                if ($module === 'places') {
-                    $placeImageFile = '';
-                    try {
+                $genericPurge = !in_array($module, ['places', 'articles', 'polls'], true);
+                try {
+                    if ($genericPurge) {
                         $pdo->beginTransaction();
-                        $placeStmt = $pdo->prepare(
-                            "SELECT id, slug, image_file
+                        $purgeItemStmt = $pdo->prepare("SELECT id FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL FOR UPDATE");
+                        $purgeItemStmt->execute([$itemId]);
+                        if ($purgeItemStmt->fetchColumn() === false) {
+                            $pdo->rollBack();
+                            header('Location: ' . BASE_URL . '/admin/trash.php?err=invalid_action');
+                            exit;
+                        }
+                    }
+                    if ($module === 'places') {
+                        $placeImageFile = '';
+                        try {
+                            $pdo->beginTransaction();
+                            $placeStmt = $pdo->prepare(
+                                "SELECT id, slug, image_file
                              FROM cms_places
                              WHERE id = ? AND deleted_at IS NOT NULL
                              FOR UPDATE"
-                        );
-                        $placeStmt->execute([$itemId]);
-                        $place = $placeStmt->fetch() ?: null;
-                        if (!$place) {
-                            $pdo->rollBack();
+                            );
+                            $placeStmt->execute([$itemId]);
+                            $place = $placeStmt->fetch() ?: null;
+                            if (!$place) {
+                                $pdo->rollBack();
+                                $redirectQuery = 'err=invalid_action';
+                            } else {
+                                $placeImageFile = trim((string)($place['image_file'] ?? ''));
+                                deleteRedirectsTargetingPath($pdo, placePublicPath($place));
+                                $pdo->prepare("UPDATE cms_events SET place_id = NULL WHERE place_id = ?")->execute([$itemId]);
+                                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?")->execute([$itemId]);
+                                $deletePlaceStmt = $pdo->prepare("DELETE FROM cms_places WHERE id = ? AND deleted_at IS NOT NULL");
+                                $deletePlaceStmt->execute([$itemId]);
+                                if ($deletePlaceStmt->rowCount() !== 1) {
+                                    throw new RuntimeException('Místo se nepodařilo trvale smazat.');
+                                }
+                                logAction('trash_purge', "module={$module} id={$itemId}");
+                                $pdo->commit();
+                                if ($placeImageFile !== '') {
+                                    deletePlaceImageFile($placeImageFile);
+                                }
+                                $redirectQuery = 'ok=purged';
+                            }
+                        } catch (Throwable $e) {
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+                            koraLog('warning', 'place trash purge failed', [
+                                'operation' => 'place_trash_purge',
+                                'place_id' => $itemId,
+                                'exception' => $e,
+                            ]);
                             $redirectQuery = 'err=invalid_action';
-                        } else {
-                            $placeImageFile = trim((string)($place['image_file'] ?? ''));
-                            deleteRedirectsTargetingPath($pdo, placePublicPath($place));
-                            $pdo->prepare("UPDATE cms_events SET place_id = NULL WHERE place_id = ?")->execute([$itemId]);
-                            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?")->execute([$itemId]);
-                            $deletePlaceStmt = $pdo->prepare("DELETE FROM cms_places WHERE id = ? AND deleted_at IS NOT NULL");
-                            $deletePlaceStmt->execute([$itemId]);
-                            if ($deletePlaceStmt->rowCount() !== 1) {
-                                throw new RuntimeException('Místo se nepodařilo trvale smazat.');
-                            }
-                            logAction('trash_purge', "module={$module} id={$itemId}");
-                            $pdo->commit();
-                            if ($placeImageFile !== '') {
-                                deletePlaceImageFile($placeImageFile);
-                            }
-                            $redirectQuery = 'ok=purged';
                         }
-                    } catch (Throwable $e) {
-                        if ($pdo->inTransaction()) {
-                            $pdo->rollBack();
-                        }
-                        koraLog('warning', 'place trash purge failed', [
-                            'operation' => 'place_trash_purge',
-                            'place_id' => $itemId,
-                            'exception' => $e,
-                        ]);
-                        $redirectQuery = 'err=invalid_action';
-                    }
-                } elseif ($module === 'articles') {
-                    $articleImageFile = '';
-                    try {
-                        $pdo->beginTransaction();
-                        $articleStmt = $pdo->prepare(
-                            "SELECT a.id, a.slug, a.blog_id, a.image_file, b.slug AS blog_slug
+                    } elseif ($module === 'articles') {
+                        $articleImageFile = '';
+                        try {
+                            $pdo->beginTransaction();
+                            $articleStmt = $pdo->prepare(
+                                "SELECT a.id, a.slug, a.blog_id, a.image_file, b.slug AS blog_slug
                              FROM cms_articles a
                              INNER JOIN cms_blogs b ON b.id = a.blog_id
                              WHERE a.id = ? AND a.deleted_at IS NOT NULL
                              FOR UPDATE"
-                        );
-                        $articleStmt->execute([$itemId]);
-                        $articleForPurge = $articleStmt->fetch() ?: null;
-                        if (!$articleForPurge) {
-                            $pdo->rollBack();
+                            );
+                            $articleStmt->execute([$itemId]);
+                            $articleForPurge = $articleStmt->fetch() ?: null;
+                            if (!$articleForPurge) {
+                                $pdo->rollBack();
+                                $redirectQuery = 'err=invalid_action';
+                            } else {
+                                $articleImageFile = trim((string)($articleForPurge['image_file'] ?? ''));
+                                deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForPurge));
+                                $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
+                                $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
+                                $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);
+                                $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
+                                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
+                                $deleteArticleStmt = $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND deleted_at IS NOT NULL");
+                                $deleteArticleStmt->execute([$itemId]);
+                                if ($deleteArticleStmt->rowCount() !== 1) {
+                                    throw new RuntimeException('Článek se nepodařilo trvale smazat.');
+                                }
+                                logAction('trash_purge', "module={$module} id={$itemId}");
+                                $pdo->commit();
+                                if ($articleImageFile !== '') {
+                                    deleteArticleImageFile($articleImageFile);
+                                }
+                                $redirectQuery = 'ok=purged';
+                            }
+                        } catch (Throwable $e) {
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+                            koraLog('warning', 'article trash purge failed', [
+                                'operation' => 'article_trash_purge',
+                                'article_id' => $itemId,
+                                'exception' => $e,
+                            ]);
                             $redirectQuery = 'err=invalid_action';
-                        } else {
-                            $articleImageFile = trim((string)($articleForPurge['image_file'] ?? ''));
-                            deleteRedirectsTargetingPath($pdo, articlePublicPath($articleForPurge));
-                            $pdo->prepare("DELETE FROM cms_article_tags WHERE article_id = ?")->execute([$itemId]);
-                            $pdo->prepare("DELETE FROM cms_article_related WHERE article_id = ? OR related_article_id = ?")->execute([$itemId, $itemId]);
-                            $pdo->prepare("DELETE FROM cms_blog_series_items WHERE article_id = ?")->execute([$itemId]);
-                            $pdo->prepare("DELETE FROM cms_comments WHERE article_id = ?")->execute([$itemId]);
-                            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'article' AND entity_id = ?")->execute([$itemId]);
-                            $deleteArticleStmt = $pdo->prepare("DELETE FROM cms_articles WHERE id = ? AND deleted_at IS NOT NULL");
-                            $deleteArticleStmt->execute([$itemId]);
-                            if ($deleteArticleStmt->rowCount() !== 1) {
-                                throw new RuntimeException('Článek se nepodařilo trvale smazat.');
+                        }
+                    } elseif ($module === 'polls') {
+                        try {
+                            if (pollDeletePermanently($pdo, $itemId)) {
+                                logAction('trash_purge', "module={$module} id={$itemId}");
+                                $redirectQuery = 'ok=purged';
                             }
-                            logAction('trash_purge', "module={$module} id={$itemId}");
-                            $pdo->commit();
-                            if ($articleImageFile !== '') {
-                                deleteArticleImageFile($articleImageFile);
+                        } catch (Throwable $e) {
+                            koraLog('warning', 'poll permanent deletion failed', ['poll_id' => $itemId, 'exception' => $e]);
+                        }
+                    } elseif ($module === 'downloads') {
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'food_cards') {
+                        $orderIds = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id = ?");
+                        $orderIds->execute([$itemId]);
+                        $foodOrderIds = array_map('intval', array_column($orderIds->fetchAll(), 'id'));
+                        if ($foodOrderIds !== []) {
+                            $foodOrderPlaceholders = implode(',', array_fill(0, count($foodOrderIds), '?'));
+                            $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$foodOrderPlaceholders})")->execute($foodOrderIds);
+                        }
+                        $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_food_item_variants WHERE card_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'podcasts') {
+                        $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_podcast_people WHERE episode_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'podcast_shows') {
+                        $episodeIdsStmt = $pdo->prepare("SELECT id FROM cms_podcasts WHERE show_id = ?");
+                        $episodeIdsStmt->execute([$itemId]);
+                        $podcastEpisodeIds = array_map('intval', array_column($episodeIdsStmt->fetchAll(), 'id'));
+                        if ($podcastEpisodeIds !== []) {
+                            $chapterPlaceholders = implode(',', array_fill(0, count($podcastEpisodeIds), '?'));
+                            $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id IN ({$chapterPlaceholders})")->execute($podcastEpisodeIds);
+                            foreach ($podcastEpisodeIds as $podcastEpisodeId) {
+                                $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeId]);
                             }
-                            $redirectQuery = 'ok=purged';
                         }
-                    } catch (Throwable $e) {
-                        if ($pdo->inTransaction()) {
-                            $pdo->rollBack();
-                        }
-                        koraLog('warning', 'article trash purge failed', [
-                            'operation' => 'article_trash_purge',
-                            'article_id' => $itemId,
-                            'exception' => $e,
-                        ]);
-                        $redirectQuery = 'err=invalid_action';
-                    }
-                } elseif ($module === 'polls') {
-                    $pdo->prepare("DELETE FROM cms_poll_votes WHERE poll_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_poll_options WHERE poll_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'poll' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'downloads') {
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'food_cards') {
-                    $orderIds = $pdo->prepare("SELECT id FROM cms_food_orders WHERE card_id = ?");
-                    $orderIds->execute([$itemId]);
-                    $foodOrderIds = array_map('intval', array_column($orderIds->fetchAll(), 'id'));
-                    if ($foodOrderIds !== []) {
-                        $foodOrderPlaceholders = implode(',', array_fill(0, count($foodOrderIds), '?'));
-                        $pdo->prepare("DELETE FROM cms_food_order_items WHERE order_id IN ({$foodOrderPlaceholders})")->execute($foodOrderIds);
-                    }
-                    $pdo->prepare("DELETE FROM cms_food_orders WHERE card_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_food_item_variants WHERE card_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_food_items WHERE card_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_food_sections WHERE card_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'food' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'podcasts') {
-                    $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_podcast_people WHERE episode_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'podcast_shows') {
-                    $episodeIdsStmt = $pdo->prepare("SELECT id FROM cms_podcasts WHERE show_id = ?");
-                    $episodeIdsStmt->execute([$itemId]);
-                    $podcastEpisodeIds = array_map('intval', array_column($episodeIdsStmt->fetchAll(), 'id'));
-                    if ($podcastEpisodeIds !== []) {
-                        $chapterPlaceholders = implode(',', array_fill(0, count($podcastEpisodeIds), '?'));
-                        $pdo->prepare("DELETE FROM cms_podcast_chapters WHERE episode_id IN ({$chapterPlaceholders})")->execute($podcastEpisodeIds);
-                        foreach ($podcastEpisodeIds as $podcastEpisodeId) {
-                            $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_episode' AND entity_id = ?")->execute([$podcastEpisodeId]);
-                        }
-                    }
-                    $pdo->prepare("DELETE FROM cms_podcast_people WHERE show_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_podcast_platform_links WHERE show_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'gallery_albums') {
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'gallery_photos') {
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
-                } elseif ($module === 'board') {
-                    $boardRedirectStmt = $pdo->prepare(
-                        "SELECT id, slug
+                        $pdo->prepare("DELETE FROM cms_podcast_people WHERE show_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_podcast_platform_links WHERE show_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_podcasts WHERE show_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'podcast_show' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'gallery_albums') {
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_album' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'gallery_photos') {
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
+                    } elseif ($module === 'board') {
+                        $boardRedirectStmt = $pdo->prepare(
+                            "SELECT id, slug
                          FROM cms_board
                          WHERE id = ?
                          LIMIT 1"
-                    );
-                    $boardRedirectStmt->execute([$itemId]);
-                    $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
-                    if ($boardForRedirectCleanup) {
-                        deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
+                        );
+                        $boardRedirectStmt->execute([$itemId]);
+                        $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
+                        if ($boardForRedirectCleanup) {
+                            deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
+                        }
+                        $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
                     }
-                    $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
-                    $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
-                }
-                if (!in_array($module, ['places', 'articles'], true)) {
-                    $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL")->execute([$itemId]);
-                    logAction('trash_purge', "module={$module} id={$itemId}");
-                    $redirectQuery = 'ok=purged';
+                    if (!in_array($module, ['places', 'articles', 'polls'], true)) {
+                        $purgeDeleteStmt = $pdo->prepare("DELETE FROM {$cfg['table']} WHERE id = ? AND deleted_at IS NOT NULL");
+                        $purgeDeleteStmt->execute([$itemId]);
+                        if ($purgeDeleteStmt->rowCount() !== 1) {
+                            throw new RuntimeException('Položku se nepodařilo trvale smazat.');
+                        }
+                        logAction('trash_purge', "module={$module} id={$itemId}");
+                        $pdo->commit();
+                        $redirectQuery = 'ok=purged';
+                    }
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    koraLog('warning', 'trash permanent deletion failed', ['module' => $module, 'item_id' => $itemId, 'exception' => $e]);
+                    $redirectQuery = 'err=invalid_action';
                 }
             }
         }

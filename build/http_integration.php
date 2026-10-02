@@ -736,6 +736,8 @@ try {
         'cms_user_role' => 'admin',
     ], 'kora-http-settings-admin');
 
+    httpIntegrationPrintResult('rc2_trash_integrity_http', rc2TrashHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+
     $baseSettingsState = settingsDefaultFormState();
     $settingsPostFields = httpIntegrationSettingsPostFields($baseSettingsState);
 
@@ -1187,6 +1189,15 @@ try {
         if (httpIntegrationStatusCode($tooManyResponse) !== 200 || !str_contains($tooManyResponse['body'], 'Vybrali jste více možností')) {
             $pollVotingModeIssues[] = 'překročení limitu vícevýběru nevrátilo přístupnou validační chybu';
         }
+        foreach ($pollMultipleOptions as $rejectedOption) {
+            if (!httpIntegrationCheckboxIsChecked($tooManyResponse['body'], 'poll-option-' . (int)$rejectedOption['id'])) {
+                $pollVotingModeIssues[] = 'odmítnutý vícevýběr nezachoval vybrané odpovědi';
+                break;
+            }
+        }
+        if (!str_contains($tooManyResponse['body'], 'aria-describedby="poll-vote-error-message-' . $pollMultipleId . '"')) {
+            $pollVotingModeIssues[] = 'skupina hlasovacích možností neodkazuje na vysvětlení chyby';
+        }
         $tooManyCountStmt = $pdo->prepare("SELECT COUNT(*) FROM cms_poll_votes WHERE poll_id = ?");
         $tooManyCountStmt->execute([$pollMultipleId]);
         if ((int)$tooManyCountStmt->fetchColumn() !== 0) {
@@ -1333,6 +1344,55 @@ try {
     }
 
     httpIntegrationPrintResult('poll_voting_modes_http', $pollVotingModeIssues, $failures);
+
+    $pollCleanupIssues = [];
+    if ($pollMultipleId > 0) {
+        $pollCounts = static function (int $id) use ($pdo): array {
+            $counts = [];
+            foreach (['cms_polls', 'cms_poll_options', 'cms_poll_votes', 'cms_poll_vote_sessions'] as $table) {
+                $key = $table === 'cms_polls' ? 'id' : 'poll_id';
+                $stmt = $pdo->prepare('SELECT COUNT(*) FROM ' . $table . ' WHERE ' . $key . ' = ?');
+                $stmt->execute([$id]);
+                $counts[$table] = (int)$stmt->fetchColumn();
+            }
+            return $counts;
+        };
+        $activeCountsBefore = $pollCounts($pollMultipleId);
+        $activePurgeResponse = postUrl($baseUrl . BASE_URL . '/admin/trash.php', [
+            'csrf_token' => $adminSession['csrf'], 'action' => 'purge', 'module' => 'polls',
+            'id' => (string)$pollMultipleId, 'confirm_permanent_delete' => '1',
+        ], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($activePurgeResponse) !== 302
+            || !responseHasLocationHeader($activePurgeResponse['headers'], BASE_URL . '/admin/trash.php?err=invalid_action', $baseUrl)
+            || $pollCounts($pollMultipleId) !== $activeCountsBefore) {
+            $pollCleanupIssues[] = 'podvržené aktivní ID v koši změnilo možnosti/hlasy nebo vrátilo úspěch';
+        }
+        httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $pollCleanupIssues, 'odmítnuté trvalé mazání ankety');
+        foreach (['trash', 'bulk'] as $purgeMode) {
+            $pdo->prepare('INSERT INTO cms_polls (question, slug, status, deleted_at) VALUES (?, ?, ?, ?)')->execute([
+                'HTTP Cleanup ' . $purgeMode, $pollMultipleSlug . '-cleanup-' . $purgeMode,
+                'active', $purgeMode === 'trash' ? date('Y-m-d H:i:s') : null,
+            ]);
+            $cleanupPollId = (int)$pdo->lastInsertId();
+            $createdPollIds[] = $cleanupPollId;
+            $pdo->prepare('INSERT INTO cms_poll_options (poll_id, option_text, sort_order) VALUES (?, ?, 0)')->execute([$cleanupPollId, 'Cleanup choice']);
+            $cleanupOptionId = (int)$pdo->lastInsertId();
+            $cleanupVoterHash = hash('sha256', 'http-cleanup-' . $cleanupPollId);
+            $pdo->prepare('INSERT INTO cms_poll_vote_sessions (poll_id, voter_hash) VALUES (?, ?)')->execute([$cleanupPollId, $cleanupVoterHash]);
+            $cleanupSessionId = (int)$pdo->lastInsertId();
+            $pdo->prepare('INSERT INTO cms_poll_votes (poll_id, option_id, vote_session_id, ip_hash) VALUES (?, ?, ?, ?)')->execute([$cleanupPollId, $cleanupOptionId, $cleanupSessionId, $cleanupVoterHash]);
+            $cleanupPost = $purgeMode === 'trash'
+                ? ['action' => 'purge', 'module' => 'polls', 'id' => (string)$cleanupPollId, 'confirm_permanent_delete' => '1']
+                : ['action' => 'delete', 'module' => 'polls', 'ids' => [(string)$cleanupPollId], 'confirm_bulk_delete' => '1', 'redirect' => BASE_URL . '/admin/polls.php'];
+            $cleanupResponse = postUrl($baseUrl . BASE_URL . '/admin/' . ($purgeMode === 'trash' ? 'trash.php' : 'bulk.php'),
+                ['csrf_token' => $adminSession['csrf']] + $cleanupPost, $adminSession['cookie'], 0);
+            if (httpIntegrationStatusCode($cleanupResponse) !== 302 || array_sum($pollCounts($cleanupPollId)) !== 0) {
+                $pollCleanupIssues[] = $purgeMode . ' mazání ankety neuklidilo všechny hlasy/sessions/možnosti';
+            }
+            httpIntegrationRefreshAdminSessionCsrf($baseUrl, $adminSession, $pollCleanupIssues, $purgeMode . ' mazání ankety');
+        }
+    }
+    httpIntegrationPrintResult('rc2_poll_cleanup_http', $pollCleanupIssues, $failures);
 
     $discoveryEndpointIssues = [];
     saveSetting('module_events', '1');
@@ -15167,6 +15227,36 @@ try {
         $faqFeedbackUpdated = $faqFeedbackCountStmt->fetch(PDO::FETCH_NUM) ?: [0, ''];
         if ((int)$faqFeedbackUpdated[0] !== 1 || (string)$faqFeedbackUpdated[1] !== 'helpful') {
             $faqIssues[] = 'opakovaný FAQ feedback nevytvořil aktualizaci jednoho hlasu';
+        }
+
+        $faqLegacyPath = BASE_URL . '/faq/item.php?id=' . $faqId;
+        $faqLegacyGet = fetchUrl($baseUrl . $faqLegacyPath, $faqFeedbackSession['cookie'], 0);
+        if (httpIntegrationStatusCode($faqLegacyGet) !== 302 || !responseHasLocationHeader($faqLegacyGet['headers'], $faqDetailPath, $baseUrl)) {
+            $faqIssues[] = 'čtení starého FAQ odkazu nepřesměruje na canonical detail';
+        }
+        $faqLegacyCsrfPage = fetchUrl($baseUrl . $faqDetailPath, $faqFeedbackSession['cookie'], 0);
+        $faqLegacyCsrf = extractHiddenInputValue($faqLegacyCsrfPage['body'], 'csrf_token');
+        $faqLegacyInvalid = postUrl($baseUrl . $faqLegacyPath, ['csrf_token' => $faqLegacyCsrf, 'vote' => 'invalid', 'note' => 'Rozepsaná poznámka.'], $faqFeedbackSession['cookie'], 0);
+        if (httpIntegrationStatusCode($faqLegacyInvalid) !== 200
+            || !str_contains($faqLegacyInvalid['body'], 'Vyberte prosím, zda vám odpověď pomohla.')
+            || !str_contains($faqLegacyInvalid['body'], 'Rozepsaná poznámka.')) {
+            $faqIssues[] = 'chyba feedbacku na staré FAQ adrese zahodila formulář nebo poznámku';
+        }
+        $faqLegacyCsrf = extractHiddenInputValue($faqLegacyInvalid['body'], 'csrf_token');
+        $faqLegacyBadCsrf = postRawUrl($baseUrl . $faqLegacyPath, http_build_query(['csrf_token' => 'invalid', 'vote' => 'not_helpful']), 'application/x-www-form-urlencoded', $faqFeedbackSession['cookie'], 0);
+        $faqFeedbackCountStmt->execute([$faqId]);
+        $faqAfterInvalidCsrf = $faqFeedbackCountStmt->fetch(PDO::FETCH_NUM);
+        if (httpIntegrationStatusCode($faqLegacyBadCsrf) !== 403 || (int)$faqAfterInvalidCsrf[0] !== 1 || $faqAfterInvalidCsrf[1] !== 'helpful') {
+            $faqIssues[] = 'starý FAQ endpoint neověřuje CSRF před změnou hlasu';
+        }
+        $faqLegacyPost = postUrl($baseUrl . $faqLegacyPath, ['csrf_token' => $faqLegacyCsrf, 'vote' => 'not_helpful', 'note' => 'Změna přes starý odkaz.'], $faqFeedbackSession['cookie'], 0);
+        $faqLegacyStoredStmt = $pdo->prepare('SELECT COUNT(*), MAX(vote), MAX(note) FROM cms_faq_feedback WHERE faq_id = ?');
+        $faqLegacyStoredStmt->execute([$faqId]);
+        $faqLegacyStored = $faqLegacyStoredStmt->fetch(PDO::FETCH_NUM);
+        if (httpIntegrationStatusCode($faqLegacyPost) !== 302
+            || !responseHasLocationHeader($faqLegacyPost['headers'], $faqDetailPath . '?feedback=thanks', $baseUrl)
+            || (int)$faqLegacyStored[0] !== 1 || $faqLegacyStored[1] !== 'not_helpful' || $faqLegacyStored[2] !== 'Změna přes starý odkaz.') {
+            $faqIssues[] = 'FAQ feedback na staré adrese se nezpracoval před canonical redirectem';
         }
 
         $genericBulkDeleteScenarioRan = true;

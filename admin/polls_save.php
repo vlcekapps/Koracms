@@ -10,7 +10,10 @@ $id = inputInt('post', 'id');
 $defaultRedirect = BASE_URL . '/admin/polls.php';
 $redirectTarget = internalRedirectTarget(trim((string)($_POST['redirect'] ?? '')), $defaultRedirect);
 
-$redirectToForm = static function (?int $pollId, string $errorCode, string $backUrl) use ($defaultRedirect) {
+$redirectToForm = static function (?int $pollId, string $errorCode, string $backUrl) use ($defaultRedirect, $pdo) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     adminEditorFormFlashStore('poll', $pollId, $_POST);
     $submittedOptions = [];
     $texts = is_array($_POST['options'] ?? null) ? $_POST['options'] : [];
@@ -149,50 +152,6 @@ if ($voteMode === 'multiple') {
     }
 }
 
-$existingPoll = null;
-$existingOptions = [];
-if ($id !== null) {
-    $existingStmt = $pdo->prepare("SELECT * FROM cms_polls WHERE id = ?");
-    $existingStmt->execute([$id]);
-    $existingPoll = $existingStmt->fetch() ?: null;
-    if (!$existingPoll) {
-        header('Location: ' . $defaultRedirect);
-        exit;
-    }
-
-    $existingOptionsStmt = $pdo->prepare(
-        "SELECT o.id, o.option_text, o.sort_order,
-                (SELECT COUNT(*) FROM cms_poll_votes WHERE option_id = o.id) AS vote_count
-         FROM cms_poll_options o
-         WHERE o.poll_id = ?
-         ORDER BY o.sort_order, o.id"
-    );
-    $existingOptionsStmt->execute([$id]);
-    $existingOptions = $existingOptionsStmt->fetchAll();
-
-    $submittedExistingIds = [];
-    foreach ($validOptions as $option) {
-        if ($option['id'] > 0) {
-            $submittedExistingIds[] = $option['id'];
-        }
-    }
-
-    foreach ($existingOptions as $existingOption) {
-        $existingOptionId = (int)$existingOption['id'];
-        $voteCount = (int)($existingOption['vote_count'] ?? 0);
-        if (!in_array($existingOptionId, $submittedExistingIds, true) && $voteCount > 0) {
-            $redirectToForm($id, 'has_votes', $redirectTarget);
-        }
-    }
-}
-
-$allowedOptionIds = array_map(static fn (array $option): int => (int)$option['id'], $existingOptions);
-foreach ($validOptions as $option) {
-    if ($option['id'] > 0 && !in_array($option['id'], $allowedOptionIds, true)) {
-        $redirectToForm($id, 'invalid_options', $redirectTarget);
-    }
-}
-
 $slug = pollSlug($submittedSlug !== '' ? $submittedSlug : $question);
 if ($slug === '') {
     $redirectToForm($id, 'slug', $redirectTarget);
@@ -206,6 +165,31 @@ $slug = $uniqueSlug;
 
 try {
     $pdo->beginTransaction();
+    $existingPoll = null;
+    $existingOptions = [];
+    if ($id !== null) {
+        $existingPoll = pollLockForWrite($pdo, $id);
+        if ($existingPoll === null) {
+            $pdo->rollBack();
+            header('Location: ' . $defaultRedirect);
+            exit;
+        }
+        $existingOptions = pollLockedOptions($pdo, $id);
+        $submittedExistingIds = array_column($validOptions, 'id');
+        foreach ($existingOptions as $existingOption) {
+            $existingOptionId = (int)$existingOption['id'];
+            if (!in_array($existingOptionId, $submittedExistingIds, true) && pollOptionHasVotes($pdo, $id, $existingOptionId)) {
+                $redirectToForm($id, 'has_votes', $redirectTarget);
+            }
+        }
+    }
+
+    $allowedOptionIds = array_map(static fn (array $option): int => (int)$option['id'], $existingOptions);
+    foreach ($validOptions as $option) {
+        if ($option['id'] > 0 && !in_array($option['id'], $allowedOptionIds, true)) {
+            $redirectToForm($id, 'invalid_options', $redirectTarget);
+        }
+    }
 
     if ($existingPoll !== null) {
         $pdo->prepare(

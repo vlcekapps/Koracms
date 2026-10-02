@@ -18,6 +18,10 @@ Zdrojové repository, redirect, encoding, mojibake a whitespace audity zahrnují
 
 Navazující [modulový audit pro RC.2](docs/rc2-module-audit-2026-09.md) chrání neveřejné revize, zachovává odmítnuté formuláře Galerie a Anket a zpřesňuje poptávky Food i stavová hlášení Kontaktu. Regrese běží ve stejném `composer ci:module-ready`; databázové schéma ani číslo vydání se tímto blokem nemění.
 
+Další průchod chrání souběh hlasování, editace a trvalého mazání Anket; `composer test:rc-runtime` ověřuje sedm skutečných InnoDB souběhů i se starým transakčním snapshotem. Odmítnutý hlas zachová výběr, databázová chyba má vlastní vysvětlení a starý FAQ endpoint nepřesměruje odeslané hodnocení před zpracováním. Bez změny schématu nebo vydání RC.2.
+
+Koš napříč moduly zamyká a ověřuje smazanou položku před úklidem souvisejících dat. HTTP matice všech typů koše prokazuje odmítnutí aktivních ID a zachování jejich vazeb; u Food také úplný rollback databázové chyby a úspěšné potvrzené smazání.
+
 - [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)

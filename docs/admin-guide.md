@@ -1311,6 +1311,7 @@ Veřejná znalostní báze nově podporuje:
 - související otázky na detailu
 - veřejné landing stránky kategorií `/faq/kategorie/{slug}` s popisem a SEO poli
 - přístupnou zpětnou vazbu `Pomohla vám tato odpověď?` na detailu otázky
+- zpětná vazba funguje i přes starý endpoint `faq/item.php?id=...`; odeslání se ověří a zpracuje před přesměrováním, chybný formulář zachová poznámku
 - `FAQPage` strukturovaná data pro vyhledávače
 
 Detail otázky umí použít vlastní `meta title` a `meta description`. Pokud nejsou vyplněné, použije se otázka a shrnutí FAQ.
@@ -1817,6 +1818,12 @@ Detail ankety respektuje zvolený režim hlasování:
 - výsledky se zobrazí jen podle nastavené viditelnosti
 - neexportují se jednotlivé hlasy
 - ochrana proti opakovanému hlasování používá anonymní hlasovací session nad stávajícím hash modelem
+
+Hlasování, editor i trvalé mazání používají společný transakční zámek ankety. Pokud správce mezitím anketu uzavře, změní režim/limit nebo odstraní dosud neodhlasovanou možnost, odeslaný hlas se znovu ověří podle aktuálních dat. Možnost s již uloženým hlasem nelze z editoru odstranit. Neplatný hlas nezapíše ani část vícevýběru ani prázdnou hlasovací session.
+
+Odmítnutý formulář ponechá vybrané existující odpovědi; vysvětlení je připojené ke skupině voleb. Skutečné selhání databáze má hlášku `Hlas se nepodařilo uložit. Zkuste to prosím znovu.`, ne tvrzení o předchozím hlasování. Trvalé smazání odstraní možnosti, hlasy, hlasovací sessions, revize a redirecty mířící na anketu v jedné transakci. Požadavek z koše nesmí odstranit vazby aktivní ankety; běžné hromadné mazání dál vyžaduje potvrzení.
+
+Stejná kontrola stavu koše před prvním mazáním platí napříč moduly. Aktivní nebo mezitím obnovené položky se odmítnou bez úklidu jejich dat, i když je odeslán potvrzený požadavek se správným ID. U běžné větve koše proběhne úklid vazeb i položky v jedné transakci; při databázové chybě zůstanou zachované například sekce, položky, varianty, poptávky a revize Food. Potvrzovací checkbox je nadále povinný. Automatizovaná matice zahrnuje všechny typy koše; nejde o náhradu ruční kontroly vybrané položky před smazáním.
 
 ### Export a import
 
