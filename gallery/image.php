@@ -46,13 +46,12 @@ if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
     sendFileDownloadNotFound();
 }
 
-$baseDir = dirname(__DIR__) . '/uploads/gallery/';
-$filePath = $baseDir . ($size === 'thumb' ? 'thumbs/' : '') . (string)$photo['filename'];
-if (!is_file($filePath) && $size === 'thumb') {
-    $filePath = $baseDir . (string)$photo['filename'];
+$filePath = galleryPhotoStoredPath((string)$photo['filename'], $size);
+if ($filePath === '' && $size === 'thumb') {
+    $filePath = galleryPhotoStoredPath((string)$photo['filename']);
 }
 
-if (!is_file($filePath)) {
+if ($filePath === '') {
     sendFileDownloadNotFound();
 }
 

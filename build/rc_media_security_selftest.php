@@ -90,6 +90,16 @@ function unlink(string $path): bool
     return \unlink($path);
 }
 
+function is_link(string $path): bool
+{
+    return isset($GLOBALS['rcSimulatedLinks'][str_replace('\\', '/', $path)]) || \is_link($path);
+}
+
+function realpath(string $path): string|false
+{
+    return $GLOBALS['rcSimulatedPaths'][str_replace('\\', '/', $path)] ?? \realpath($path);
+}
+
 /** @return list<array<string,string>>|false */
 function dns_get_record(string $host, int $type): array|false
 {
@@ -143,6 +153,12 @@ function sendStoredFileDownload(string $path, string $name): void
         throw new Response(404);
     }
     throw new Response(200, requireReadOnlyHttpMethod() ? '' : (string)file_get_contents($path));
+}
+
+function sendAdminAttachmentHeaders(string $contentType, string $downloadName, ?int $contentLength = null): void
+{
+    same($contentType, 'application/zip', 'Gallery ZIP fallback attachment MIME');
+    same($downloadName, 'fixture.zip', 'Gallery ZIP fallback attachment name');
 }
 
 function mediaAdminRedirectWithFlash(string $target): void
@@ -327,8 +343,8 @@ try {
     $pdo->exec('CREATE TABLE cms_pages (id INT, title TEXT, content TEXT)');
     $pdo->exec('CREATE TABLE cms_appmarket_apps (id INT, name TEXT, icon_media_id INT)');
     $pdo->exec('CREATE TABLE cms_appmarket_screenshots (id INT, app_id INT, media_id INT)');
-    $pdo->exec('CREATE TABLE cms_gallery_albums (id INT, status TEXT, is_published INT, deleted_at TEXT)');
-    $pdo->exec('CREATE TABLE cms_gallery_photos (id INT, album_id INT, filename TEXT, status TEXT, is_published INT, deleted_at TEXT)');
+    $pdo->exec("CREATE TABLE cms_gallery_albums (id INT, status TEXT, is_published INT, deleted_at TEXT, name TEXT DEFAULT '', parent_id INT)");
+    $pdo->exec('CREATE TABLE cms_gallery_photos (id INT, album_id INT, filename TEXT, status TEXT, is_published INT, deleted_at TEXT, sort_order INT DEFAULT 0)');
     $pdo->exec('CREATE TABLE cms_podcast_shows (id INT, status TEXT, is_published INT, deleted_at TEXT)');
     $pdo->exec('CREATE TABLE cms_downloads (id INT, title TEXT, filename TEXT, original_name TEXT, is_published INT, deleted_at TEXT, status TEXT, download_count INT)');
 
@@ -478,8 +494,8 @@ try {
     same(is_file($downloadRoot . 'images/cover.jpg'), false, 'Image deletion removes original');
     same(is_file($downloadRoot . 'images/cover.webp'), false, 'Image deletion removes WebP derivative');
 
-    $pdo->exec("INSERT INTO cms_gallery_albums VALUES (1,'published',1,NULL)");
-    $pdo->exec("INSERT INTO cms_gallery_photos VALUES (1,1,'fixture.png','published',1,NULL)");
+    $pdo->exec("INSERT INTO cms_gallery_albums (id,status,is_published) VALUES (1,'published',1)");
+    $pdo->exec("INSERT INTO cms_gallery_photos (id,album_id,filename,status,is_published) VALUES (1,1,'fixture.png','published',1)");
     writeFixture($GLOBALS['rcRoot'] . '/uploads/gallery/fixture.png', 'PHOTO');
     writeFixture($GLOBALS['rcRoot'] . '/uploads/gallery/thumbs/fixture.png', 'THUMB');
     foreach (['GET', 'HEAD'] as $method) {
@@ -501,6 +517,101 @@ try {
                 }
             }
         }
+    }
+    writeFixture($GLOBALS['rcRoot'] . '/outside.png', 'OUTSIDE-GALLERY-SENTINEL');
+    $pdo->exec('UPDATE cms_gallery_albums SET deleted_at=NULL');
+    foreach (['../../outside.png', '..\\..\\outside.png', $GLOBALS['rcRoot'] . '/outside.png', 'fixture.png:stream', 'payload.php'] as $unsafeFilename) {
+        $pdo->prepare('UPDATE cms_gallery_photos SET filename=?, deleted_at=NULL')->execute([$unsafeFilename]);
+        foreach (['GET', 'HEAD'] as $method) {
+            foreach (['full', 'thumb'] as $size) {
+                $_SERVER['REQUEST_METHOD'] = $method;
+                $_GET = ['id' => 1, 'size' => $size];
+                try {
+                    require $GLOBALS['rcRoot'] . '/gallery/image.php';
+                    throw new RuntimeException('Gallery endpoint did not terminate.');
+                } catch (Response $response) {
+                    same($response->status, 404, 'Gallery endpoint rejects an unsafe reference: ' . $method . '/' . $size);
+                }
+            }
+        }
+        deleteGalleryPhotoFile($unsafeFilename);
+        same(file_get_contents($GLOBALS['rcRoot'] . '/outside.png'), 'OUTSIDE-GALLERY-SENTINEL', 'Invalid deletion leaves outside bytes unchanged');
+        same(file_get_contents($GLOBALS['rcRoot'] . '/uploads/gallery/fixture.png'), 'PHOTO', 'Invalid deletion does not salvage the basename');
+    }
+    $pdo->prepare('UPDATE cms_gallery_photos SET filename=?')->execute(['fixture.png']);
+    $galleryRoot = $GLOBALS['rcRoot'] . '/uploads/gallery/';
+    same(file_get_contents(galleryPhotoStoredPath('fixture.png')), 'PHOTO', 'Gallery safe original path');
+    same(galleryPhotoStoredPath('missing.png'), '', 'Gallery missing reference has no path');
+    $GLOBALS['rcSimulatedLinks'][$galleryRoot . 'fixture.png'] = true;
+    same(galleryPhotoStoredPath('fixture.png'), '', 'Gallery rejects a symlink before realpath');
+    unset($GLOBALS['rcSimulatedLinks']);
+    $GLOBALS['rcSimulatedPaths'][$galleryRoot . 'thumbs'] = $GLOBALS['rcRoot'];
+    same(galleryPhotoStoredPath('fixture.png', 'thumb'), '', 'Gallery rejects an outside thumbnail directory');
+    unset($GLOBALS['rcSimulatedPaths']);
+    // Linux CI also exercises native symlinks; Windows may lack SeCreateSymbolicLinkPrivilege.
+    if (PHP_OS_FAMILY !== 'Windows') {
+        $link = $galleryRoot . 'outside-link.png';
+        same(\symlink($GLOBALS['rcRoot'] . '/outside.png', $link), true, 'Native outside symlink fixture');
+        same(galleryPhotoStoredPath('outside-link.png'), '', 'Native outside symlink is rejected');
+        deleteGalleryPhotoFile('outside-link.png');
+        same(file_get_contents($GLOBALS['rcRoot'] . '/outside.png'), 'OUTSIDE-GALLERY-SENTINEL', 'Native symlink target is not deleted');
+        \unlink($link);
+    }
+    $pdo->exec("UPDATE cms_gallery_albums SET name='..' WHERE id=1");
+    $pdo->exec("INSERT INTO cms_gallery_albums (id,status,is_published,name,parent_id) VALUES (2,'published',1,'C:\\child',1)");
+    $pdo->exec("INSERT INTO cms_gallery_photos (id,album_id,filename,status,is_published) VALUES (2,1,'../../outside.png','published',1)");
+    $entries = collectAlbumTree($pdo, 1, '..', $galleryRoot);
+    same($entries[0]['zip_path'], 'album/fixture.png', 'ZIP original entry uses safe album name');
+    same(file_get_contents($entries[0]['disk_path']), 'PHOTO', 'ZIP safe original remains readable');
+    same($entries[1]['disk_path'], '', 'ZIP outside reference is never readable');
+    same($entries[1]['zip_path'], 'album/fotografie-2', 'ZIP invalid filename cannot introduce a parent path');
+    same($entries[2]['zip_path'], 'album/C__child/', 'ZIP empty subalbum has safe path');
+    same(buildAlbumPath($pdo, 2), 'album/C__child', 'Album path builder uses the same ZIP segment rules');
+    $filesToZip = [$entries[0]];
+    $emptyDirs = [$entries[2]['zip_path']];
+    $zipFilename = 'fixture.zip';
+    $exportSource = (string)file_get_contents($projectRoot . '/admin/gallery_export_zip.php');
+    $fallbackMarker = strpos($exportSource, '// ── Fallback:');
+    $fallbackStart = strpos($exportSource, 'sendAdminAttachmentHeaders(', $fallbackMarker);
+    $fallbackEnd = strpos($exportSource, "logAction('gallery_export_zip'", $fallbackStart);
+    if ($fallbackStart === false || $fallbackEnd === false) {
+        throw new RuntimeException('Cannot locate the production Gallery ZIP fallback');
+    }
+    eval($prefix . productionFunction($projectRoot . '/build/rc2_modules_http.php', 'rc2GalleryZipContents'));
+    ob_start();
+    try {
+        eval($prefix . substr($exportSource, $fallbackStart, $fallbackEnd - $fallbackStart));
+        $fallbackBytes = (string)ob_get_contents();
+    } finally {
+        ob_end_clean();
+    }
+    $fallbackContents = rc2GalleryZipContents($fallbackBytes);
+    same($fallbackContents, ['album/C__child/' => '', 'album/fixture.png' => 'PHOTO'], 'Actual PHP ZIP fallback preserves safe archive paths and bytes');
+    same(str_contains($fallbackBytes, 'OUTSIDE-GALLERY-SENTINEL'), false, 'PHP ZIP fallback never includes outside bytes');
+    writeFixture($galleryRoot . 'cleanup.jpg', 'ORIGINAL');
+    writeFixture($galleryRoot . 'thumbs/cleanup.jpg', 'THUMB');
+    writeFixture($galleryRoot . 'unrelated.webp', 'UNRELATED');
+    deleteGalleryPhotoFile('cleanup.jpg');
+    foreach (['cleanup.jpg', 'thumbs/cleanup.jpg'] as $relative) {
+        same(is_file($galleryRoot . $relative), false, 'Gallery cleanup removes only safe original/thumbnail: ' . $relative);
+    }
+    same(file_get_contents($galleryRoot . 'unrelated.webp'), 'UNRELATED', 'Gallery cleanup retains an unrelated image');
+    writeFixture($galleryRoot . 'refused.png', 'REFUSED');
+    $refusedPath = galleryPhotoStoredPath('refused.png');
+    $GLOBALS['rcFailUnlink'][$refusedPath] = 1;
+    deleteGalleryPhotoFile('refused.png');
+    same(file_get_contents($refusedPath), 'REFUSED', 'Failed Gallery deletion leaves its original intact');
+    same(end($GLOBALS['rcLogs']), ['warning', 'presentation file delete failed', [
+        'scope' => 'gallery_photo', 'filename' => 'refused.png', 'path_hash' => hash('sha256', $refusedPath),
+    ]], 'Gallery deletion failure is logged without the raw filesystem path');
+    \unlink($refusedPath);
+    \unlink($galleryRoot . 'thumbs/fixture.png');
+    $_SERVER['REQUEST_METHOD'] = 'GET';
+    $_GET = ['id' => 1, 'size' => 'thumb'];
+    try {
+        require $GLOBALS['rcRoot'] . '/gallery/image.php';
+    } catch (Response $response) {
+        same($response->body, 'PHOTO', 'Missing thumbnail falls back to the safe original');
     }
     $pdo->exec("INSERT INTO cms_podcast_shows VALUES (1,'published',1,NULL)");
     $episode = ['show_id' => 1, 'status' => 'published', 'publish_at' => null, 'deleted_at' => null, 'show_status' => 'published', 'show_is_published' => 1];

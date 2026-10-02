@@ -1605,6 +1605,19 @@ $galleryPhotoWithAlt = [
     'license_url' => 'https://creativecommons.org/licenses/by/4.0/',
     'taken_at' => '2026-04-01',
 ];
+foreach (['foto.jpg', 'foto.JPEG', 'výlet 2026.png', 'foto.gif', 'foto.webp'] as $galleryFilename) {
+    assert_equals($galleryFilename, galleryStoredFilename($galleryFilename), 'gallery retains a simple raster filename');
+}
+foreach (['', '../foto.jpg', '..\\foto.jpg', '/foto.png', 'C:\\foto.png', 'C:foto.png',
+    'foto.png:stream', 'foto.php', '.htaccess', "foto\n.png", "foto\0.png", 'foto.png ', 'CON.png', 'aux.jpg'] as $galleryFilename) {
+    assert_equals('', galleryStoredFilename($galleryFilename), 'gallery rejects paths, aliases and non-image references');
+}
+assert_equals('album', galleryArchiveSegment('..'), 'gallery ZIP parent traversal becomes an ordinary segment');
+assert_equals('album', galleryArchiveSegment(' . '), 'gallery ZIP current-directory name becomes an ordinary segment');
+assert_equals('Výlet 2026', galleryArchiveSegment('Výlet 2026'), 'gallery ZIP retains Czech album names');
+assert_equals('C__fotky', galleryArchiveSegment('C:\\fotky'), 'gallery ZIP strips Windows drive/path punctuation');
+assert_equals('_CON', galleryArchiveSegment('CON'), 'gallery ZIP neutralizes reserved Windows names');
+assert_equals('a_b', galleryArchiveSegment("a\nb"), 'gallery ZIP strips control characters');
 $hydratedGalleryPhoto = hydrateGalleryPhotoPresentation($galleryPhotoWithAlt);
 assert_equals('Kukací hodiny zavěšené na stěně.', $hydratedGalleryPhoto['alt_text_resolved'], 'explicit gallery photo alt text wins');
 assert_equals('Hodiny po opravě', $hydratedGalleryPhoto['caption_text'], 'gallery photo caption prefers explicit caption');

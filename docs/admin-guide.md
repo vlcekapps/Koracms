@@ -822,6 +822,11 @@ Přehled fotografií obsahuje filtr `Chybí alt text`, který pomáhá dohledat 
 - Obrázky se nově zobrazují přes serverový endpoint `gallery/image.php`, takže veřejný HTML výstup už neodkazuje přímo do `/uploads/gallery/`.
 - Přímý přístup do `/uploads/gallery/` je zablokovaný na úrovni serveru.
 - Hromadné nahrávání fotografií používá sdílenou upload validaci pro stav uploadu, velikost, MIME typ a finální uložení souboru.
+- Reference souboru musí být jednoduchý název JPEG, PNG, GIF nebo WebP; veřejné čtení, ZIP export a hromadné mazání kontrolují i skutečné umístění souboru a odmítají symlinky. Chybějící miniatura může použít pouze bezpečný originál.
+
+Při JSON importu se fotografie s neplatným názvem souboru přeskočí a výsledek uvede jejich počet. Běžné názvy z dřívějšího exportu se nemění a import dál nepřenáší samotné obrazové soubory. Starší vadná reference již uložená v databázi nezpřístupní ani nesmaže soubor mimo galerii; metadata je potřeba opravit nebo fotografii znovu nahrát. ZIP export neplatné či chybějící zdroje vynechá a zapíše varování do logu.
+
+Názvy alb v ZIPu jsou bezpečné části relativní cesty: česká diakritika zůstává, lomítka, řídicí znaky a nebezpečné názvy jako `..` se normalizují. Tato úprava mění jen pojmenování uvnitř archivu, ne název alba v CMS ani veřejnou URL. Review výběru a nové potvrzení exportu/mazání zůstávají povinné.
 
 To znamená, že „skryté“ už neznamená jen „není v přehledu“, ale skutečně se neukazuje ani přes detail, vyhledávání a běžné veřejné odkazy.
 

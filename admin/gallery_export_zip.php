@@ -6,6 +6,7 @@
  */
 require_once __DIR__ . '/../db.php';
 requireCapability('content_manage_shared', 'Přístup odepřen.');
+requireModuleEnabled('gallery');
 verifyCsrf();
 
 set_time_limit(0);
@@ -59,7 +60,7 @@ foreach ($albumIds as $aid) {
         continue;
     }
 
-    $albumName = str_replace(['/', '\\', "\0"], '_', (string)$album['name']);
+    $albumName = galleryArchiveSegment((string)$album['name']);
     $albumNames[] = $albumName;
     $entries = array_merge($entries, collectAlbumTree($pdo, $aid, $albumName, $galleryDir));
 }

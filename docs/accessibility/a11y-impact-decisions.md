@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-02: bezpečné souborové reference a ZIP export Galerie
+
+- Datum a rozsah: veřejný obrázkový endpoint Galerie, JSON import fotografií, ZIP export alb a hromadné mazání alb/fotografií; nálezy RC2-14 a RC2-15 v `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.1.1`, `3.3.1`, `3.3.4`, `4.1.3`; nevzniká nový ovládací model ani změna alt textů.
+- Rozhodnutí: poškozená importovaná reference se nesmí změnit v čtení nebo odstranění jiného souboru. Import textově oznámí počet odmítnutých fotografií ve stávajícím výsledku; normální obrázek a bezpečný fallback miniatury zůstávají. ZIP používá přenositelné relativní názvy, nemění veřejný název alba a zachovává review/čerstvé potvrzení kritické akce. Hlavní ACR se tím nezvyšuje na Supports.
+- Automatizovaný důkaz: unit testy validátoru názvů, izolované vykonání endpointu a cleanup helperu nad sentinel souborem mimo galerii, kontrola skutečných cest a neplatných odkazů. Selhání mazání zachová soubor a zapíše strukturovaný log bez celé cesty. Linux CI navíc testuje nativní symlink; Windows používá simulaci odmítnutého odkazu a adresáře kvůli systémovému oprávnění. `rc2_gallery_file_boundaries_http` provádí GET/HEAD, bezpečný fallback, JSON import, rozbor skutečného ZIPu, vypnutý modul a oba potvrzené bulk cleanupy s nezměněným okolním souborem. Runtime guardrail hlídá napojení všech těchto operací.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox a klávesnicí ověřit stávající review exportu a textový výsledek importu; v archivu zkontrolovat české názvy běžných alb. Tyto ruční scénáře ani úplná WCAG shoda nejsou automatickým testem prohlášeny za hotové. Ochrana se týká cest a souborů Galerie, nikoli úplné transakční atomicity všech hromadných operací CMS.
+
 ### 2026-10-02: souběh Anket, ochrana koše a zpracování starého FAQ formuláře
 
 - Datum a rozsah: veřejné hlasování, editor a trvalé mazání Anket, koš napříč moduly, zpětná vazba FAQ přes legacy URL; nálezy RC2-09 až RC2-13 v `docs/rc2-module-audit-2026-09.md`.

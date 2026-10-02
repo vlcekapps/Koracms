@@ -737,6 +737,7 @@ try {
     ], 'kora-http-settings-admin');
 
     httpIntegrationPrintResult('rc2_trash_integrity_http', rc2TrashHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+    httpIntegrationPrintResult('rc2_gallery_file_boundaries_http', rc2GalleryFileHttpChecks($pdo, $baseUrl, $adminSession), $failures);
 
     $baseSettingsState = settingsDefaultFormState();
     $settingsPostFields = httpIntegrationSettingsPostFields($baseSettingsState);

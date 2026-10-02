@@ -147,6 +147,7 @@ if (!function_exists('koraEnsureDirectory')) {
 require_once dirname(__DIR__) . '/lib/definitions.php';
 require_once dirname(__DIR__) . '/lib/appmarket.php';
 require_once dirname(__DIR__) . '/lib/filedownloads.php';
+require_once dirname(__DIR__) . '/lib/gallery.php';
 require_once dirname(__DIR__) . '/lib/uploads.php';
 require_once dirname(__DIR__) . '/lib/media_library.php';
 require_once dirname(__DIR__) . '/lib/presentation.php';

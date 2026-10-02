@@ -2,6 +2,211 @@
 
 declare(strict_types=1);
 
+/** @return array<string,string> */
+function rc2GalleryZipContents(string $bytes): array
+{
+    $eocd = strrpos($bytes, "PK\x05\x06");
+    if ($eocd === false || strlen($bytes) < $eocd + 22) {
+        throw new RuntimeException('Gallery fixture response is not a complete ZIP');
+    }
+    $count = unpack('v', substr($bytes, $eocd + 10, 2))[1];
+    $offset = unpack('V', substr($bytes, $eocd + 16, 4))[1];
+    $contents = [];
+    for ($index = 0; $index < $count; $index++) {
+        if (substr($bytes, $offset, 4) !== "PK\x01\x02" || strlen($bytes) < $offset + 46) {
+            throw new RuntimeException('Gallery fixture ZIP central directory is invalid');
+        }
+        $method = unpack('v', substr($bytes, $offset + 10, 2))[1];
+        $compressedSize = unpack('V', substr($bytes, $offset + 20, 4))[1];
+        $lengths = unpack('vname/vextra/vcomment', substr($bytes, $offset + 28, 6));
+        $localOffset = unpack('V', substr($bytes, $offset + 42, 4))[1];
+        $name = substr($bytes, $offset + 46, $lengths['name']);
+        if (substr($bytes, $localOffset, 4) !== "PK\x03\x04") {
+            throw new RuntimeException('Gallery fixture ZIP local entry is invalid');
+        }
+        $localLengths = unpack('vname/vextra', substr($bytes, $localOffset + 26, 4));
+        $data = substr($bytes, $localOffset + 30 + $localLengths['name'] + $localLengths['extra'], $compressedSize);
+        if ($method === 8) {
+            $data = gzinflate($data);
+        } elseif ($method !== 0) {
+            throw new RuntimeException('Gallery fixture ZIP uses an unexpected compression method');
+        }
+        if (!is_string($data) || isset($contents[$name])) {
+            throw new RuntimeException('Gallery fixture ZIP has invalid or duplicate entries');
+        }
+        $contents[$name] = $data;
+        $offset += 46 + $lengths['name'] + $lengths['extra'] + $lengths['comment'];
+    }
+    return $contents;
+}
+
+/**
+ * @param array{cookie:string,csrf:string} $adminSession
+ * @return list<string>
+ */
+function rc2GalleryFileHttpChecks(PDO $pdo, string $baseUrl, array $adminSession): array
+{
+    $prefix = 'rc2-gallery-' . bin2hex(random_bytes(8));
+    $issues = [];
+    $albumId = 0;
+    $childId = 0;
+    $photos = [];
+    $temporaryFiles = [];
+    $oldModule = getSetting('module_gallery', '0');
+    $uploads = dirname(__DIR__) . '/uploads/';
+    $gallery = $uploads . 'gallery/';
+    $filename = $prefix . '.png';
+    $outsideName = $prefix . '-outside.png';
+    $sentinel = $prefix . '-OUTSIDE-GALLERY-SENTINEL';
+    $outsidePath = $uploads . $outsideName;
+    $imageBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', true);
+    $insertPhoto = static function (string $storedName, string $suffix) use ($pdo, $prefix, &$photos, &$albumId): int {
+        $slug = $prefix . '-' . $suffix;
+        $pdo->prepare("INSERT INTO cms_gallery_photos (album_id,filename,title,slug,status,is_published) VALUES (?,?,?,?,'published',1)")
+            ->execute([$albumId, $storedName, $prefix, $slug]);
+        $id = (int)$pdo->lastInsertId();
+        $photos[$slug] = $id;
+        return $id;
+    };
+    try {
+        saveSetting('module_gallery', '1');
+        clearSettingsCache();
+        if (!is_string($imageBytes) || !koraEnsureDirectory($gallery)
+            || file_exists($outsidePath) || file_exists($gallery . $filename)) {
+            throw new RuntimeException('Gallery fixture paths are not available');
+        }
+        if (file_put_contents($outsidePath, $sentinel) !== strlen($sentinel)
+            || file_put_contents($gallery . $filename, $imageBytes) !== strlen($imageBytes)) {
+            throw new RuntimeException('Cannot write Gallery fixture bytes');
+        }
+        $pdo->prepare("INSERT INTO cms_gallery_albums (name,slug,status,is_published) VALUES ('..',?,'published',1)")->execute([$prefix]);
+        $albumId = (int)$pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO cms_gallery_albums (name,slug,parent_id,status,is_published) VALUES ('C:\\\\child',?,?,'published',1)")
+            ->execute([$prefix . '-child', $albumId]);
+        $childId = (int)$pdo->lastInsertId();
+        $safeId = $insertPhoto($filename, 'safe');
+        $badId = $insertPhoto('../' . $outsideName, 'legacy-unsafe');
+        $badAlbumId = $insertPhoto('../' . $outsideName, 'legacy-unsafe-album');
+        foreach (['GET', 'HEAD'] as $method) {
+            foreach (['full', 'thumb'] as $size) {
+                $response = requestRawUrl($method, $baseUrl . BASE_URL . '/gallery/image.php?id=' . $badId . '&size=' . $size, '', 'text/plain', '', 0);
+                if (httpIntegrationStatusCode($response) !== 404 || str_contains($response['body'], $sentinel)
+                    || !httpIntegrationHeaderContains($response, 'Cache-Control', 'no-store')) {
+                    $issues[] = 'Gallery unsafe legacy file reference is readable: ' . $method . '/' . $size;
+                }
+            }
+        }
+        $safeResponse = fetchUrl($baseUrl . BASE_URL . '/gallery/image.php?id=' . $safeId, '', 0);
+        $thumbResponse = fetchUrl($baseUrl . BASE_URL . '/gallery/image.php?id=' . $safeId . '&size=thumb', '', 0);
+        if (httpIntegrationStatusCode($safeResponse) !== 200 || $safeResponse['body'] !== $imageBytes
+            || httpIntegrationStatusCode($thumbResponse) !== 200 || $thumbResponse['body'] !== $imageBytes) {
+            $issues[] = 'Gallery valid image or safe missing-thumbnail fallback is broken';
+        }
+        $importRows = [];
+        foreach (['valid' => $filename, 'invalid' => '../' . $outsideName, 'windows' => '..\\' . $outsideName] as $suffix => $storedName) {
+            $importRows[] = ['id' => 0, 'album_id' => $albumId, 'filename' => $storedName,
+                'title' => $prefix, 'slug' => $prefix . '-import-' . $suffix, 'sort_order' => 1];
+        }
+        $importPath = httpIntegrationCreateTempFile('rc2-gallery-', (string)json_encode(['site' => 'cms', 'gallery_photos' => $importRows], JSON_UNESCAPED_UNICODE), $temporaryFiles);
+        $response = postMultipartUrl($baseUrl . BASE_URL . '/admin/import.php', [
+            'csrf_token' => $adminSession['csrf'], 'confirm_json_import' => '1',
+        ], ['import_file' => ['path' => $importPath, 'filename' => 'cms-gallery.json', 'type' => 'application/json']], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($response) !== 200
+            || !str_contains($response['body'], 'Přeskočené fotografie s neplatným názvem souboru: 2.')) {
+            $issues[] = 'Gallery import does not report rejected filenames';
+        }
+        $stmt = $pdo->prepare('SELECT id,slug,filename FROM cms_gallery_photos WHERE album_id=? ORDER BY id');
+        $stmt->execute([$albumId]);
+        $imported = false;
+        foreach ($stmt->fetchAll() as $photo) {
+            $photos[(string)$photo['slug']] = (int)$photo['id'];
+            if ($photo['slug'] === $prefix . '-import-valid') {
+                $imported = $photo['filename'] === $filename;
+            } elseif (str_starts_with((string)$photo['slug'], $prefix . '-import-')) {
+                $issues[] = 'Gallery import stored a rejected path reference';
+            }
+        }
+        if (!$imported) {
+            $issues[] = 'Gallery import lost a valid legacy filename';
+        }
+        // Avoid duplicate archive members from two metadata records sharing one fixture image.
+        $importedId = $photos[$prefix . '-import-valid'] ?? 0;
+        if ($importedId > 0) {
+            $pdo->prepare('DELETE FROM cms_gallery_photos WHERE id=? AND slug=?')->execute([$importedId, $prefix . '-import-valid']);
+        }
+        $export = postUrl($baseUrl . BASE_URL . '/admin/gallery_export_zip.php', [
+            'csrf_token' => $adminSession['csrf'], 'ids' => [$albumId], 'confirm_gallery_albums_bulk_action' => '1',
+        ], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($export) !== 200
+            || !httpIntegrationHeaderContains($export, 'Content-Disposition', 'attachment')
+            || !httpIntegrationHeaderContains($export, 'Cache-Control', 'no-store')) {
+            $issues[] = 'Gallery safe ZIP export did not return an admin-only attachment';
+        } else {
+            $entries = rc2GalleryZipContents($export['body']);
+            if (($entries['album/' . $filename] ?? null) !== $imageBytes || !array_key_exists('album/C__child/', $entries)
+                || count($entries) !== 2) {
+                $issues[] = 'Gallery ZIP did not preserve safe image and empty subalbum';
+            }
+            foreach ($entries as $name => $bytes) {
+                if (str_starts_with($name, '/') || str_contains($name, '\\') || str_contains($name, ':')
+                    || preg_match('~(?:^|/)\.\.?(/|$)~', $name) === 1 || str_contains($bytes, $sentinel)) {
+                    $issues[] = 'Gallery ZIP has an unsafe member or outside bytes';
+                }
+            }
+        }
+        saveSetting('module_gallery', '0');
+        clearSettingsCache();
+        $disabled = postUrl($baseUrl . BASE_URL . '/admin/gallery_export_zip.php', [
+            'csrf_token' => $adminSession['csrf'], 'ids' => [$albumId], 'confirm_gallery_albums_bulk_action' => '1',
+        ], $adminSession['cookie'], 0);
+        if (httpIntegrationStatusCode($disabled) !== 403 || str_starts_with($disabled['body'], 'PK')) {
+            $issues[] = 'Disabled Gallery module allowed a ZIP export';
+        }
+        saveSetting('module_gallery', '1');
+        clearSettingsCache();
+        foreach ([['gallery_photos', $badId, 'confirm_bulk_delete'], ['gallery_albums', $albumId, 'confirm_gallery_albums_bulk_action']] as [$module, $id, $confirmation]) {
+            $response = postUrl($baseUrl . BASE_URL . '/admin/bulk.php', [
+                'csrf_token' => $adminSession['csrf'], 'module' => $module, 'action' => 'delete',
+                'ids' => [$id], $confirmation => '1', 'redirect' => BASE_URL . '/admin/gallery_albums.php',
+            ], $adminSession['cookie'], 0);
+            $table = $module === 'gallery_photos' ? 'cms_gallery_photos' : 'cms_gallery_albums';
+            $remaining = $pdo->prepare("SELECT COUNT(*) FROM {$table} WHERE id=?");
+            $remaining->execute([$id]);
+            if (httpIntegrationStatusCode($response) !== 302 || (int)$remaining->fetchColumn() !== 0
+                || file_get_contents($outsidePath) !== $sentinel) {
+                $issues[] = $module . ': bulk cleanup damaged an outside sentinel or did not finish';
+            }
+        }
+        if (file_exists($gallery . $filename)) {
+            $issues[] = 'Gallery bulk cleanup left its safe original behind';
+        }
+    } finally {
+        saveSetting('module_gallery', $oldModule);
+        clearSettingsCache();
+        foreach ($photos as $slug => $id) {
+            $pdo->prepare('DELETE FROM cms_gallery_photos WHERE id=? AND slug=?')->execute([$id, $slug]);
+        }
+        foreach ([$childId => $prefix . '-child', $albumId => $prefix] as $id => $slug) {
+            if ($id > 0) {
+                $pdo->prepare('DELETE FROM cms_gallery_albums WHERE id=? AND slug=?')->execute([$id, $slug]);
+            }
+        }
+        foreach ([$outsidePath, $gallery . $filename] as $path) {
+            if (is_file($path)) {
+                $expectedBytes = $path === $outsidePath ? $sentinel : $imageBytes;
+                if (file_get_contents($path) !== $expectedBytes) {
+                    throw new RuntimeException('Gallery fixture bytes changed; refusing filesystem cleanup');
+                }
+                unlink($path);
+            }
+        }
+        foreach ($temporaryFiles as $path) {
+            unlink($path);
+        }
+    }
+    return $issues;
+}
+
 /** @return list<string> */
 function rc2ModuleRevisionHttpChecks(PDO $pdo, string $baseUrl): array
 {

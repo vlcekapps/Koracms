@@ -61,3 +61,22 @@ Jedinou očekávanou výjimkou runtime auditu je `smtp_connectivity = SKIP`: lok
 Na lokálu byly při zahájení databázového testu zastavené MySQL i Apache. Spuštěny byly existující binárky Laragonu se současnou konfigurací a datovým adresářem, bez ruční změny konfigurace nebo přesunu databázových souborů. Testy pracují pouze s vlastními uklizenými fixtures; lokální problém se neobchází SKIPem.
 
 Ručně zůstává NVDA/Firefox, klávesnice, reflow a hostingový cron/log smoke. Při odmítnutém vícevýběru musí být původní platné checkboxy zaškrtnuté a skupina nabídnout vysvětlení chyby; po změně režimu hlasování se použije aktuální ovládací model. Tento průchod nevydává certifikaci ani stabilní verzi.
+
+## Souborové hranice Galerie, 2026-10-02
+
+Výchozí revize `0bc70652`, čistá větev `main`. Cílené čtení pokrylo doručování souborů Ke stažení, Vývěsky, Médií, Míst a Appmarketu, poté hlubší průchod souborových referencí Galerie v importu, veřejném čtení, ZIP exportu a bulk cleanupu. Potvrzené problémy tohoto bloku jsou v Galerii; nejde o úplný nový řádkový audit všech modulů. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění: oprava nemá nový perzistentní stav.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-14 | P1 | Import ukládal syrový `filename` fotografie; endpoint, ZIP collector i bulk cleanup jej spojovaly s adresářem bez ověření. Při existujících vadných/importovaných metadatech mohl návštěvník číst okolní soubor přes ID fotografie, export jej zabalit a potvrzené mazání jej odstranit. Nejde o přímo veřejný parametr filename: podmínkou jsou vadná metadata v DB. | Společná validace jednoduchého názvu rasteru a skutečné cesty uvnitř galerie/miniatur, odmítnutí symlinků a žádné zachraňování basename neplatné cesty. Import vadné řádky přeskočí s počtem. Před opravou izolovaná skutečná route vrátila 200 a sentinel mimo galerii místo 404; po opravě GET/HEAD full/thumb vrací 404. HTTP dokazuje bezpečný import, ZIP a oba bulk cleanupy s nezměněným okolním souborem. |
+| RC2-15 | P2 | Sanitizace názvů alb nahrazovala jen lomítka/NUL, ale ponechala `..`, tečky, řídicí znaky či Windows drive části v ZIP cestách; archiv mohl mít nebezpečné member názvy při rozbalení. | Sdílené bezpečné segmenty cest při sběru kořene, podalb i pomocném builderu. Diakritika zůstává, dot segmenty a rezervované názvy se normalizují. Unit/izolované testy a rozbor skutečného HTTP ZIPu ověřují relativní cesty, obsah běžné fotografie a prázdného podalba; žádné sentinel bytes ani dot segmenty. |
+
+### Ověření a omezení
+
+Regrese patří do existující `composer ci:module-ready`: unit validátory, `build/rc_media_security_selftest.php` (také s PDO číselnými řetězci), runtime contract a `rc2_gallery_file_boundaries_http`. ZIP HTTP test nepoužívá rozbalení do filesystemu a čte centrální adresář i obsah členů; funguje pro ZipArchive i PHP fallback. Testy vytvářejí pouze vlastní náhodně pojmenované soubory, alba a metadata a uklízejí je s kontrolou vlastnictví.
+
+Linux test zahrnuje nativní symlink. Na Windows jsou symlink a únik adresáře ověřené přes izolované filesystem hooky, bez potřeby měnit oprávnění operačního systému. Neprohlašujeme odolnost proti souběžným změnám filesystemu od uživatele se serverovým přístupem ani úplnou transakční atomicitu všech bulk operací. Ruční přístupnost a hostingový cron/log smoke zůstávají otevřené; RC.2 se tímto blokem nevydává.
+
+Lokální `composer ci:module-ready` na PHP 8.4.12 prošel včetně lintů, statické analýzy, schématu, ACR, balíčku, runtime auditu a úplné HTTP integrace. Unit sada má 1 577 úspěšných testů bez chyby; rozšířená izolovaná souborová sada má 214 kontrol a dalších 214 s PDO číselnými řetězci. Nový `rc2_gallery_file_boundaries_http` i runtime contract jsou zelené. Produkční PHP fallback ZIPu je vykonaný a ověřený i nezávisle na přítomnosti ZipArchive. Jedinou očekávanou výjimkou je `smtp_connectivity = SKIP` kvůli nedostupnému portu 25 z lokální sítě; `git diff --check` prošel.
+
+První plný běh zachytil zastaralou zdrojovou kontrolu původních logovacích volání v bulk větvích Galerie. Kontrola nyní vyžaduje společný cleanup v obou větvích a jeho strukturovaný log; není vypnutá. Nová vykonávaná regrese selhání `unlink` ověřuje zachování souboru a log s názvem a hashem, nikoli syrovou cestou. Po úpravě kontroly a doplnění této regrese se celý balík zopakoval bez přeskočení kontrol. GitHub výsledek musí být ověřený pro konkrétní pushnutý commit, nikoli odvozený z lokálního průchodu.

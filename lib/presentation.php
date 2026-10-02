@@ -6398,16 +6398,14 @@ function galleryPhotoThumbDirectory(): string
 
 function deleteGalleryPhotoFile(string $filename): void
 {
-    $filename = basename($filename);
+    $filename = galleryStoredFilename($filename);
     if ($filename === '') {
         return;
     }
 
-    foreach ([
-        galleryPhotoUploadDirectory() . $filename,
-        galleryPhotoThumbDirectory() . $filename,
-    ] as $path) {
-        if (is_file($path) && !unlink($path)) {
+    foreach (['full', 'thumb'] as $size) {
+        $path = galleryPhotoStoredPath($filename, $size);
+        if ($path !== '' && !unlink($path)) {
             presentationLogFileDeleteFailure('gallery_photo', $path);
         }
     }

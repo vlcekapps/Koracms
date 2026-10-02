@@ -9620,8 +9620,8 @@ $foundationChecks = [
         && str_contains($adminGalleryExportZipSource, "koraLog('warning', 'gallery export source file missing'")
         && str_contains($adminBulkSource, 'function adminBulkLogFileDeleteFailure')
         && str_contains($adminBulkSource, "koraLog('warning', 'admin bulk operation failed'")
-        && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_photos'")
-        && str_contains($adminBulkSource, "adminBulkLogFileDeleteFailure('gallery_albums'")
+        && substr_count($adminBulkSource, 'deleteGalleryPhotoFile((string)$photo[\'filename\']);') === 2
+        && str_contains($presentationSource, "presentationLogFileDeleteFailure('gallery_photo', \$path)")
         && str_contains($mediaLibrarySource, 'function mediaRunFilesystemOperation')
         && str_contains($mediaLibrarySource, 'path_hash')
         && str_contains($themeSource, 'path_hash')
@@ -24009,6 +24009,38 @@ if ($rc2ModuleIssues === []) {
     $failures++;
     foreach ($rc2ModuleIssues as $rc2Issue) {
         echo '- ' . $rc2Issue . "\n";
+    }
+}
+
+echo "=== rc2_gallery_file_boundaries_contract ===\n";
+$rc2GalleryIssues = [];
+$rc2GalleryLibrary = (string)file_get_contents(__DIR__ . '/../lib/gallery.php');
+foreach (['galleryStoredFilename(', 'galleryPhotoStoredPath(', 'galleryArchiveSegment(', 'realpath(',
+    'is_link($candidate)', 'str_starts_with(', '$safeBasePath'] as $fragment) {
+    if (!str_contains($rc2GalleryLibrary, $fragment)) {
+        $rc2GalleryIssues[] = 'Gallery storage/export helper is missing protection: ' . $fragment;
+    }
+}
+foreach ([
+    'gallery/image.php' => 'galleryPhotoStoredPath(',
+    'admin/import.php' => 'galleryStoredFilename(',
+    'admin/gallery_export_zip.php' => 'galleryArchiveSegment(',
+    'admin/bulk.php' => 'deleteGalleryPhotoFile(',
+    'lib/presentation.php' => 'galleryPhotoStoredPath(',
+    'build/http_integration.php' => 'rc2GalleryFileHttpChecks(',
+    'build/rc_media_security_selftest.php' => 'OUTSIDE-GALLERY-SENTINEL',
+    'build/rc2_modules_http.php' => 'rc2GalleryZipContents(',
+] as $file => $fragment) {
+    if (!str_contains((string)file_get_contents(__DIR__ . '/../' . $file), $fragment)) {
+        $rc2GalleryIssues[] = $file . ' is missing safe Gallery file integration or evidence.';
+    }
+}
+if ($rc2GalleryIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($rc2GalleryIssues as $issue) {
+        echo '- ' . $issue . "\n";
     }
 }
 

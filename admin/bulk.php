@@ -167,8 +167,6 @@ $moduleConfig = match ($module) {
         'own_check'  => null,
         'log_prefix' => 'gallery_photo',
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
-            $dir = dirname(__DIR__) . '/uploads/gallery/';
-            $thumbDir = $dir . 'thumbs/';
             foreach ($deleteIds as $id) {
                 $stmt = $pdo->prepare("SELECT id, filename, slug FROM cms_gallery_photos WHERE id = ?");
                 $stmt->execute([$id]);
@@ -176,17 +174,7 @@ $moduleConfig = match ($module) {
                 if ($photo === null) {
                     continue;
                 }
-                $f = (string)$photo['filename'];
-                if ($f !== '' && is_file($dir . $f)) {
-                    if (!unlink($dir . $f)) {
-                        adminBulkLogFileDeleteFailure('gallery_photos', (int)$photo['id'], 'filename', $dir . $f);
-                    }
-                }
-                if ($f !== '' && is_file($thumbDir . $f)) {
-                    if (!unlink($thumbDir . $f)) {
-                        adminBulkLogFileDeleteFailure('gallery_photos', (int)$photo['id'], 'thumb', $thumbDir . $f);
-                    }
-                }
+                deleteGalleryPhotoFile((string)$photo['filename']);
                 $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                 $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
             }
@@ -199,8 +187,6 @@ $moduleConfig = match ($module) {
         'own_check'  => null,
         'log_prefix' => 'gallery_album',
         'cleanup'    => static function (PDO $pdo, array $deleteIds): void {
-            $dir = dirname(__DIR__) . '/uploads/gallery/';
-            $thumbDir = $dir . 'thumbs/';
             // Rekurzivní sběr všech podalb
             $allIds = $deleteIds;
             $queue = $deleteIds;
@@ -224,17 +210,7 @@ $moduleConfig = match ($module) {
                 $photos = $pdo->prepare("SELECT id, filename, slug FROM cms_gallery_photos WHERE album_id = ?");
                 $photos->execute([$id]);
                 foreach ($photos->fetchAll() as $photo) {
-                    $f = (string)$photo['filename'];
-                    if ($f !== '' && is_file($dir . $f)) {
-                        if (!unlink($dir . $f)) {
-                            adminBulkLogFileDeleteFailure('gallery_albums', (int)$photo['id'], 'filename', $dir . $f);
-                        }
-                    }
-                    if ($f !== '' && is_file($thumbDir . $f)) {
-                        if (!unlink($thumbDir . $f)) {
-                            adminBulkLogFileDeleteFailure('gallery_albums', (int)$photo['id'], 'thumb', $thumbDir . $f);
-                        }
-                    }
+                    deleteGalleryPhotoFile((string)$photo['filename']);
                     $pdo->prepare("DELETE FROM cms_redirects WHERE new_path = ?")->execute([galleryPhotoPublicPath($photo)]);
                     $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([(int)$photo['id']]);
                 }

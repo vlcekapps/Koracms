@@ -808,7 +808,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           credit, license_label, license_url, taken_at, location_label, sort_order, created_at)
                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
+                    $skippedGalleryPhotos = 0;
                     foreach ($data['gallery_photos'] as $row) {
+                        $photoFilename = galleryStoredFilename((string)($row['filename'] ?? ''));
+                        if ($photoFilename === '') {
+                            $skippedGalleryPhotos++;
+                            continue;
+                        }
                         $photoTitle = (string)($row['title'] ?? '');
                         $photoSlugCandidate = trim((string)($row['slug'] ?? ''));
                         if ($photoSlugCandidate === '') {
@@ -820,7 +826,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $ins->execute([
                             (int)$row['id'],
                             (int)$row['album_id'],
-                            $row['filename'],
+                            $photoFilename,
                             $photoTitle,
                             $photoSlug,
                             (string)($row['alt_text'] ?? ''),
@@ -834,6 +840,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             (int)$row['sort_order'],
                             $row['created_at'] ?? date('Y-m-d H:i:s'),
                         ]);
+                    }
+                    if ($skippedGalleryPhotos > 0) {
+                        $summary[] = 'Přeskočené fotografie s neplatným názvem souboru: ' . $skippedGalleryPhotos . '.';
                     }
                     $summary[] = 'Galerie – fotografie importovány.';
                 }

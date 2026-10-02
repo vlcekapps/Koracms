@@ -4,6 +4,66 @@
 
 // ─────────────────────────────── Galerie ──────────────────────────────────
 
+function galleryStoredFilename(string $filename): string
+{
+    if ($filename === '' || strlen($filename) > 255
+        || preg_match('/[\x00-\x1f\x7f<>:"\/\\\\|?*]/', $filename) === 1
+        || preg_match('/\A(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|\z)/i', $filename) === 1
+        || !in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)
+    ) {
+        return '';
+    }
+
+    return $filename;
+}
+
+function galleryPhotoStoredPath(string $filename, string $size = 'full', ?string $galleryDirectory = null): string
+{
+    $filename = galleryStoredFilename($filename);
+    if ($filename === '') {
+        return '';
+    }
+    $root = realpath($galleryDirectory ?? galleryPhotoUploadDirectory());
+    if ($root === false) {
+        return '';
+    }
+    $directory = $size === 'thumb' ? realpath($root . '/thumbs') : $root;
+    if ($directory === false) {
+        return '';
+    }
+    $rootPrefix = rtrim(str_replace('\\', '/', $root), '/') . '/';
+    $directoryPrefix = rtrim(str_replace('\\', '/', $directory), '/') . '/';
+    if ($directoryPrefix !== $rootPrefix && !str_starts_with($directoryPrefix, $rootPrefix)) {
+        return '';
+    }
+    $candidate = $directory . DIRECTORY_SEPARATOR . $filename;
+    // Imported names and filesystem links must never turn a photo into a different file.
+    if (is_link($candidate)) {
+        return '';
+    }
+    $resolved = realpath($candidate);
+    if ($resolved === false || !str_starts_with(str_replace('\\', '/', $resolved), $directoryPrefix)
+        || !is_file($resolved) || !is_readable($resolved)) {
+        return '';
+    }
+
+    return $resolved;
+}
+
+function galleryArchiveSegment(string $name): string
+{
+    $name = preg_replace('/[\x00-\x1f\x7f<>:"\/\\\\|?*]/', '_', $name) ?? '';
+    $name = trim($name, " .\t\r\n");
+    if ($name === '') {
+        return 'album';
+    }
+    if (preg_match('/\A(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|\z)/i', $name) === 1) {
+        $name = '_' . $name;
+    }
+
+    return $name;
+}
+
 /**
  * Sestaví drobečkový trail od kořene po dané album.
  * Vrací pole [ ['id'=>…, 'name'=>…], … ] od nejstaršího k aktuálnímu.
@@ -279,7 +339,7 @@ function buildAlbumPath(PDO $pdo, int $albumId): string
         if (!$row) {
             break;
         }
-        $name = str_replace(['/', '\\', "\0"], '_', (string)$row['name']);
+        $name = galleryArchiveSegment((string)$row['name']);
         array_unshift($parts, $name);
         $id = $row['parent_id'] !== null ? (int)$row['parent_id'] : null;
     }
@@ -305,7 +365,7 @@ function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $gall
         $seen[] = $id;
 
         // Fotky tohoto alba
-        $stmt = $pdo->prepare("SELECT filename FROM cms_gallery_photos WHERE album_id = ? ORDER BY sort_order, id");
+        $stmt = $pdo->prepare("SELECT id, filename FROM cms_gallery_photos WHERE album_id = ? ORDER BY sort_order, id");
         $stmt->execute([$id]);
         $photos = $stmt->fetchAll();
 
@@ -314,13 +374,10 @@ function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $gall
         }
 
         foreach ($photos as $photo) {
-            $filename = (string)$photo['filename'];
-            if ($filename === '') {
-                continue;
-            }
-            $diskPath = $galleryDir . $filename;
+            $filename = galleryStoredFilename((string)$photo['filename']);
+            $diskPath = galleryPhotoStoredPath($filename, 'full', $galleryDir);
             $entries[] = [
-                'zip_path' => $path . '/' . $filename,
+                'zip_path' => $path . '/' . ($filename !== '' ? $filename : 'fotografie-' . (int)$photo['id']),
                 'disk_path' => $diskPath,
                 'empty_dir' => false,
             ];
@@ -330,11 +387,12 @@ function collectAlbumTree(PDO $pdo, int $albumId, string $basePath, string $gall
         $subStmt = $pdo->prepare("SELECT id, name FROM cms_gallery_albums WHERE parent_id = ? ORDER BY name");
         $subStmt->execute([$id]);
         foreach ($subStmt->fetchAll() as $sub) {
-            $subName = str_replace(['/', '\\', "\0"], '_', (string)$sub['name']);
+            $subName = galleryArchiveSegment((string)$sub['name']);
             $collect((int)$sub['id'], $path . '/' . $subName);
         }
     };
 
-    $collect($albumId, $basePath);
+    $safeBasePath = implode('/', array_map(static fn (string $segment): string => galleryArchiveSegment($segment), explode('/', str_replace('\\', '/', $basePath))));
+    $collect($albumId, $safeBasePath);
     return $entries;
 }
