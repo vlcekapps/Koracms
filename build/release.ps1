@@ -276,7 +276,9 @@ function Compress-ReleaseDirectory {
             Get-ChildItem -LiteralPath $sourceRoot -Recurse -Force -File | Sort-Object FullName | ForEach-Object {
                 $relativePath = $_.FullName.Substring($sourceRoot.Length).TrimStart([char][System.IO.Path]::DirectorySeparatorChar, [char][System.IO.Path]::AltDirectorySeparatorChar)
                 $entryName = $relativePath -replace '\\', '/'
-                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+                if ($entryName -notin @('lib/third-party/shop/qrcodegen.py', 'lib/third-party/shop/verify.py')) {
+                    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+                }
             }
         } finally {
             $archive.Dispose()

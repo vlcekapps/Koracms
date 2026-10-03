@@ -478,6 +478,13 @@ try {
         'README.md',
         'LICENSE',
         'NOTICE.md',
+        'lib/shop.php',
+        'lib/shop_invoice.php',
+        'lib/third-party/shop/QrCode.php',
+        'lib/third-party/shop/DejaVuSans.ttf',
+        'lib/third-party/shop/LICENSE-Nayuki.txt',
+        'lib/third-party/shop/LICENSE-DejaVu.txt',
+        'lib/third-party/shop/NOTICE.md',
         'config.sample.php',
         'install.php',
         'migrate.php',
@@ -553,6 +560,8 @@ try {
         'config.php',
         'node_modules',
         'phpstan.neon.dist',
+        'lib/third-party/shop/qrcodegen.py',
+        'lib/third-party/shop/verify.py',
     ] as $excludedFile) {
         if (in_array($excludedFile, $entries, true)) {
             fail('Release smoke ZIP unexpectedly contains dev metadata: ' . $excludedFile);
@@ -597,6 +606,13 @@ try {
         'README.md',
         'LICENSE',
         'NOTICE.md',
+        'lib/shop.php',
+        'lib/shop_invoice.php',
+        'lib/third-party/shop/QrCode.php',
+        'lib/third-party/shop/DejaVuSans.ttf',
+        'lib/third-party/shop/LICENSE-Nayuki.txt',
+        'lib/third-party/shop/LICENSE-DejaVu.txt',
+        'lib/third-party/shop/NOTICE.md',
         'auth.php',
         'config.sample.php',
         'install.php',
@@ -670,6 +686,8 @@ try {
         'config.php',
         'node_modules',
         'phpstan.neon.dist',
+        'lib/third-party/shop/qrcodegen.py',
+        'lib/third-party/shop/verify.py',
     ] as $excludedFile) {
         if (in_array($excludedFile, $sourceEntries, true)) {
             fail('Source archive unexpectedly contains export-ignored file: ' . $excludedFile);

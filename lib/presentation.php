@@ -1052,7 +1052,7 @@ function reservedBlogSlugs(): array
         'admin', 'auth', 'authors', 'author', 'board', 'build', 'chat',
         'contact', 'dist', 'docs', 'downloads', 'events', 'faq', 'feed',
         'food', 'forms', 'gallery', 'lib', 'news', 'places', 'podcast',
-        'polls', 'public', 'reservations', 'search', 'sitemap', 'themes',
+        'polls', 'public', 'reservations', 'search', 'shop', 'sitemap', 'themes',
         'uploads', 'index', 'page', 'register', 'subscribe', 'unsubscribe',
     ];
 }

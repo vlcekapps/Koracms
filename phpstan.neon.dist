@@ -20,6 +20,10 @@ parameters:
         - lib/media_library.php
         - lib/messages.php
         - lib/recipes.php
+        - lib/shop.php
+        - lib/shop_invoice.php
+        - lib/shop_public.php
+        - lib/third-party/shop/QrCode.php
         - lib/presentation.php
         - lib/poll_voting.php
         - lib/revisions.php
@@ -78,6 +82,9 @@ parameters:
         - lib/media_library.php
         - lib/messages.php
         - lib/recipes.php
+        - lib/shop.php
+        - lib/shop_invoice.php
+        - lib/shop_public.php
         - lib/pagination.php
         - lib/poll_voting.php
         - lib/presentation.php

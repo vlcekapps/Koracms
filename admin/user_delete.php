@@ -38,6 +38,7 @@ if (!$deleteConfirmed) {
 }
 
 try {
+    $pdo->prepare('UPDATE cms_shop_orders SET user_id=NULL WHERE user_id=?')->execute([$id]);
     $pdo->prepare("DELETE FROM cms_admin_shortcuts WHERE user_id = ?")->execute([$id]);
     $deleteStmt = $pdo->prepare("DELETE FROM cms_users WHERE id = ? AND is_superadmin = 0");
     $deleteStmt->execute([$id]);

@@ -24074,4 +24074,44 @@ if ($rc2RecipeIssues === []) {
     }
 }
 
+echo "=== digital_shop_security_accessibility_contract ===\n";
+$shopIssues = [];
+foreach ([
+    'db.php' => ["/lib/shop.php", "/lib/shop_invoice.php"],
+    'lib/shop.php' => ['shopCartQuote(', 'shopQuoteSignature(', 'hash_equals(', 'FOR UPDATE', 'shopApplyFioStatement(',
+        'https://fioapi.fio.cz/v1/rest/periods/', 'CURLOPT_SSL_VERIFYPEER => true', 'shopContractHtml(', 'mail_claim_token',
+        'JSON_THROW_ON_ERROR', 'shopPrivateDirectory(', 'token_expires_at', 'shopImportCatalog(', 'shopWithdrawOrder(',
+        'shopWithdrawalAvailable(', 'UTC_TIMESTAMP()', 'mail_claim_active', 'mail_retry_pending',
+        'function shopProductFileValid(', "hash_file('sha256', \$path)", 'shopFioMethods($pdo)',
+        "o.payment_method_id=m.id AND o.status='awaiting_payment'"],
+    'shop/checkout.php' => ['captchaVerify(', 'honeypotTriggered(', 'rateLimit(', 'shopCreateOrder(', 'quote_signature', 'checkout_nonce'],
+    'shop/download.php' => ['shopCanDownload(', 'shopPublicVerifiedFile(', 'shopPublicPrivate('],
+    'lib/shop_public.php' => ['shopPublicVerifiedFile(', 'shopProductFileValid($item)', 'is_link(', 'shopSafeHeaders('],
+    'shop/invoice.php' => ['shopPublicExistingInvoice(', 'shopPublicPrivate('],
+    'shop/withdraw.php' => ['shopPublicAuthorizedOrder(', 'shopPublicVerifyCsrf(', 'shopWithdrawOrder(', 'confirm_withdrawal'],
+    'admin/shop_order.php' => ['requireSuperAdmin(', 'verifyCsrf(', 'shopRecordPayment(', 'shopVerifyTax(', 'confirm_'],
+    'admin/shop_product.php' => ['shopStoreUpload(', 'verifyCsrf(', 'requireSuperAdmin('],
+    'lib/shop_invoice.php' => ['qr kód k platbě', 'shopInvoiceHtml(', 'shopInvoicePdf(', 'shopPaymentSpayd('],
+    'docs/accessibility/modules/shop.md' => ['3.3.1', '3.3.4', '3.3.7', 'PDF/UA', 'NVDA'],
+    'cron.php' => ['shopCron('],
+    'admin/export.php' => ['shop_categories', 'shop_products', 'shop_tax_rules', 'shop_payment_methods'],
+    'admin/import.php' => ['shopImportCatalog(', "'shop_ready'"],
+    'build/http_integration.php' => ['shopHttpChecks('],
+] as $file => $fragments) {
+    $source = is_file(__DIR__ . '/../' . $file) ? (string)file_get_contents(__DIR__ . '/../' . $file) : '';
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $shopIssues[] = $file . ': missing digital shop protection: ' . $fragment;
+        }
+    }
+}
+if ($shopIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($shopIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

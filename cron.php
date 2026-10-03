@@ -513,6 +513,12 @@ function runKoraCron(PDO $pdo): array
         cronAppendLog($log, 'Chyba připomínek rezervací: ' . $e->getMessage());
     }
 
+    try {
+        shopCron($pdo);
+    } catch (\Throwable $e) {
+        cronAppendLog($log, 'Digitální obchod: zpracování se nezdařilo; ověřte nastavení a stav objednávek.');
+    }
+
     // 6. Automatická záloha databáze (1x denně)
     $chatRetentionDays = chatRetentionDays();
     if ($chatRetentionDays > 0) {

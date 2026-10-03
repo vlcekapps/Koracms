@@ -65,6 +65,30 @@ function schemaParityTableContains(string $source, string $tableName, string $ne
 }
 
 /**
+ * Read literal DDL without executing the helper or installer.
+ * @return array<string,string>
+ */
+function schemaParityShopTables(string $source, bool $helper = false): array
+{
+    $tables = [];
+    foreach (token_get_all($source) as $token) {
+        if (!is_array($token) || $token[0] !== T_CONSTANT_ENCAPSED_STRING) {
+            continue;
+        }
+        $sql = substr($token[1], 1, -1);
+        if (preg_match('/\ACREATE TABLE IF NOT EXISTS (cms_shop_[a-z_]+) \(/', $sql, $matches) !== 1) {
+            continue;
+        }
+        if ($helper) {
+            $sql .= ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
+        }
+        $tables[$matches[1]] = preg_replace('/\s+/', ' ', $sql) ?? '';
+    }
+    ksort($tables);
+    return $tables;
+}
+
+/**
  * @param list<string> $issues
  */
 function schemaParityRequire(bool $condition, string $message, array &$issues): void
@@ -84,6 +108,164 @@ $sitemapSource = schemaParityReadFile($projectRoot, 'sitemap.php', $issues);
 $feedSource = schemaParityReadFile($projectRoot, 'feed.php', $issues);
 $dbSource = schemaParityReadFile($projectRoot, 'db.php', $issues);
 $cronSource = schemaParityReadFile($projectRoot, 'cron.php', $issues);
+$shopSource = schemaParityReadFile($projectRoot, 'lib/shop.php', $issues);
+
+$shopRequiredColumns = [
+    'cms_shop_categories' => ['id', 'name', 'slug', 'description', 'is_active', 'sort_order'],
+    'cms_shop_products' => [
+        'id', 'category_id', 'title', 'slug', 'description', 'requirements', 'license_text', 'update_policy',
+        'price_cents', 'tax_class', 'file_storage_name', 'file_original_name', 'file_size', 'file_sha256',
+        'is_active', 'created_at', 'updated_at',
+    ],
+    'cms_shop_payment_methods' => [
+        'id', 'name', 'account_number', 'iban', 'is_active', 'fio_token_encrypted', 'fio_last_polled_at',
+        'fio_last_error', 'created_at',
+    ],
+    'cms_shop_tax_rules' => [
+        'id', 'country_code', 'country_name', 'general_rate_bp', 'publication_rate_bp', 'tax_note', 'is_active',
+    ],
+    'cms_shop_sequences' => ['sequence_key', 'sequence_value'],
+    'cms_shop_orders' => [
+        'id', 'order_number', 'user_id', 'status', 'customer_name', 'email', 'address', 'city', 'postal_code',
+        'country_code', 'payment_method_id', 'total_cents', 'tax_cents', 'currency', 'seller_snapshot',
+        'legal_snapshot', 'payment_snapshot', 'token_hash', 'token_encrypted', 'token_expires_at', 'consent_at',
+        'tax_verified_at', 'tax_evidence', 'created_at', 'paid_at', 'fulfilled_at', 'cancelled_at',
+        'confirmation_sent_at', 'delivery_sent_at', 'mail_claim_until', 'mail_attempts', 'mail_retry_at',
+        'mail_last_error', 'mail_sent_status', 'mail_claim_token',
+    ],
+    'cms_shop_order_items' => [
+        'id', 'order_id', 'product_id', 'title', 'quantity', 'unit_price_cents', 'total_cents', 'tax_rate_bp',
+        'tax_cents', 'file_storage_name', 'file_original_name', 'file_size', 'file_sha256', 'product_snapshot',
+    ],
+    'cms_shop_payments' => [
+        'id', 'payment_method_id', 'bank_transaction_id', 'order_id', 'amount_cents', 'currency', 'received_at',
+    ],
+    'cms_shop_invoices' => ['id', 'order_id', 'kind', 'invoice_number', 'snapshot_json', 'created_at'],
+    'cms_shop_order_events' => ['id', 'order_id', 'event_type', 'note', 'user_id', 'created_at'],
+];
+$shopRequiredIndexes = [
+    'cms_shop_categories' => ['UNIQUE KEY uq_shop_category_slug (slug)'],
+    'cms_shop_products' => [
+        'UNIQUE KEY uq_shop_product_slug (slug)', 'INDEX idx_shop_product_category (category_id,is_active)',
+    ],
+    'cms_shop_tax_rules' => ['UNIQUE KEY uq_shop_tax_country (country_code)'],
+    'cms_shop_orders' => [
+        'UNIQUE KEY uq_shop_order_number (order_number)', 'UNIQUE KEY uq_shop_order_token (token_hash)',
+        'INDEX idx_shop_orders_user (user_id,created_at)', 'INDEX idx_shop_orders_status (status,created_at)',
+    ],
+    'cms_shop_order_items' => ['INDEX idx_shop_items_order (order_id,id)'],
+    'cms_shop_payments' => [
+        'UNIQUE KEY uq_shop_payment_movement (payment_method_id,bank_transaction_id)',
+        'UNIQUE KEY uq_shop_payment_order (order_id)',
+    ],
+    'cms_shop_invoices' => [
+        'UNIQUE KEY uq_shop_invoice_kind (order_id,kind)', 'UNIQUE KEY uq_shop_invoice_number (invoice_number)',
+    ],
+    'cms_shop_order_events' => ['INDEX idx_shop_events_order (order_id,id)'],
+];
+$shopRequiredDefinitions = [
+    'cms_shop_sequences' => ['sequence_key VARCHAR(40) PRIMARY KEY'],
+    'cms_shop_orders' => [
+        "status ENUM('accepted','awaiting_payment','paid','fulfilled','cancelled','refunded') NOT NULL",
+        'total_cents BIGINT NOT NULL', 'tax_cents BIGINT NOT NULL',
+        "currency CHAR(3) NOT NULL DEFAULT 'CZK'", 'token_hash CHAR(64) NOT NULL',
+        "mail_sent_status VARCHAR(24) NOT NULL DEFAULT ''", 'mail_claim_token CHAR(64) NULL',
+    ],
+    'cms_shop_order_items' => ['product_snapshot MEDIUMTEXT NOT NULL'],
+    'cms_shop_invoices' => ["kind ENUM('proforma','final','credit') NOT NULL", 'snapshot_json MEDIUMTEXT NOT NULL'],
+];
+$shopHelperTables = schemaParityShopTables($shopSource, true);
+$shopSchemaSources = [
+    'install.php' => schemaParityShopTables($installSource),
+    'migrate.php' => schemaParityShopTables($migrateSource),
+    'lib/shop.php' => $shopHelperTables,
+];
+schemaParityRequire(
+    str_contains($shopSource, "\$suffix = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';"),
+    'lib/shop.php shopSchema() must use the InnoDB/utf8mb4 suffix.',
+    $issues
+);
+foreach ($shopSchemaSources as $sourceName => $shopTables) {
+    foreach ($shopRequiredColumns as $tableName => $columns) {
+        $tableSql = $shopTables[$tableName] ?? '';
+        schemaParityRequire($tableSql !== '', $sourceName . ' is missing the shop table ' . $tableName . '.', $issues);
+        foreach ($columns as $columnName) {
+            schemaParityRequire(
+                preg_match('/(?:\(\s*|,\s*)' . preg_quote($columnName, '/') . '\s+[A-Z]+\b/', $tableSql) === 1,
+                $sourceName . ' shop schema is missing required column ' . $tableName . '.' . $columnName . '.',
+                $issues
+            );
+        }
+        foreach ($shopRequiredIndexes[$tableName] ?? [] as $index) {
+            schemaParityRequire(
+                str_contains($tableSql, $index),
+                $sourceName . ' shop schema is missing required index ' . $tableName . ': ' . $index . '.',
+                $issues
+            );
+        }
+        foreach ($shopRequiredDefinitions[$tableName] ?? [] as $definition) {
+            schemaParityRequire(
+                preg_match('/(?:\(\s*|,\s*)' . preg_quote($definition, '/') . '(?=\s*[,\)])/', $tableSql) === 1,
+                $sourceName . ' shop schema has an incompatible definition for ' . $tableName . ': ' . $definition . '.',
+                $issues
+            );
+        }
+        schemaParityRequire(
+            str_ends_with($tableSql, ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
+            && preg_match('/\b(?:FOREIGN KEY|REFERENCES)\b/i', $tableSql) !== 1,
+            $sourceName . ' shop table ' . $tableName . ' must use InnoDB/utf8mb4 without foreign keys.',
+            $issues
+        );
+        if ($tableName !== 'cms_shop_sequences') {
+            schemaParityRequire(
+                str_contains($tableSql, 'id INT AUTO_INCREMENT PRIMARY KEY'),
+                $sourceName . ' shop table ' . $tableName . ' must retain its auto-increment primary key.',
+                $issues
+            );
+        }
+    }
+    if ($sourceName !== 'lib/shop.php') {
+        schemaParityRequire(
+            array_keys($shopTables) === array_keys($shopHelperTables),
+            $sourceName . ' shop table set must match lib/shop.php shopSchema().',
+            $issues
+        );
+        foreach ($shopHelperTables as $tableName => $tableSql) {
+            schemaParityRequire(
+                ($shopTables[$tableName] ?? '') === $tableSql,
+                $sourceName . ' shop DDL must match lib/shop.php shopSchema() for ' . $tableName . '.',
+                $issues
+            );
+        }
+    }
+}
+foreach ([
+    'cms_shop_order_items.product_snapshot' => 'MEDIUMTEXT NOT NULL',
+    'cms_shop_orders.mail_sent_status' => "VARCHAR(24) NOT NULL DEFAULT ''",
+    'cms_shop_orders.mail_claim_token' => 'CHAR(64) NULL',
+] as $columnLabel => $definition) {
+    [$tableName, $columnName] = explode('.', $columnLabel, 2);
+    schemaParityRequire(
+        str_contains($migrateSource, "'" . $columnLabel . "' => \"ALTER TABLE " . $tableName . ' ADD COLUMN ' . $columnName . ' ' . $definition . '"'),
+        'migrate.php must register the shop upgrade for ' . $columnLabel . '.',
+        $issues
+    );
+}
+
+$shopSnapshotMigrationSource = preg_replace('/\s+/', ' ', $migrateSource) ?? '';
+schemaParityRequire(
+    str_contains(
+        $shopSnapshotMigrationSource,
+        "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_shop_order_items' AND COLUMN_NAME = 'product_snapshot'"
+    )
+    && str_contains(
+        $shopSnapshotMigrationSource,
+        '$shopSnapshotTypeStmt->execute(); if ($shopSnapshotTypeStmt->fetchColumn() === \'text\') { '
+        . '$pdo->exec("ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot MEDIUMTEXT NOT NULL");'
+    ),
+    'migrate.php must idempotently widen legacy TEXT product snapshots to MEDIUMTEXT NOT NULL.',
+    $issues
+);
 
 $criticalInstallColumns = [
     'cms_pages.blog_id' => ['cms_pages', 'blog_id'],

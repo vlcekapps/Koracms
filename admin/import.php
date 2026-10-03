@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT INTO cms_settings (`key`, value) VALUES (?, ?)
                          ON DUPLICATE KEY UPDATE value = VALUES(value)"
                     );
-                    $skip = ['admin_password'];
+                    $skip = ['admin_password','shop_ready','module_shop'];
                     foreach ($data['settings'] as $row) {
                         if (in_array($row['key'], $skip, true)) {
                             continue;
@@ -80,6 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $s->execute([$row['key'], $row['value']]);
                     }
                     $summary[] = 'Nastavení importována.';
+                }
+
+                // Kategorie (přidá jen chybějící podle jména)
+                if (shopImportCatalog($pdo, $data)) {
+                    $summary[] = 'Katalog obchodu importován bez souborů, objednávek a API klíčů; produkty, daňová pravidla a prodej jsou vypnuté do kontroly.';
                 }
 
                 // Kategorie (přidá jen chybějící podle jména)

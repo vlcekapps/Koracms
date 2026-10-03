@@ -17,6 +17,7 @@ require_once __DIR__ . '/http_test_helpers.php';
 require_once __DIR__ . '/rc_publication_http.php';
 require_once __DIR__ . '/rc_session_security_http.php';
 require_once __DIR__ . '/rc2_modules_http.php';
+require_once __DIR__ . '/shop_http.php';
 
 $baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
 if (!is_string($baseUrlInput) || $baseUrlInput === '') {
@@ -739,6 +740,7 @@ try {
     httpIntegrationPrintResult('rc2_trash_integrity_http', rc2TrashHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_gallery_file_boundaries_http', rc2GalleryFileHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_recipe_integrity_http', rc2RecipeIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+    httpIntegrationPrintResult('digital_shop_http', shopHttpChecks($pdo, $baseUrl, $adminSession), $failures);
 
     $baseSettingsState = settingsDefaultFormState();
     $settingsPostFields = httpIntegrationSettingsPostFields($baseSettingsState);

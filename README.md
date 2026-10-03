@@ -279,6 +279,7 @@ Moduly se zapínají a vypínají v administraci: **Obecná nastavení → Sprá
 | **Kontakt** | Kontaktní formulář s tématy dotazů, CAPTCHA, honeypotem, rate limitingem, referenčními kódy a odpověďmi z administrace |
 | **Chat** | Moderovaná veřejná nástěnka s tématy, připnutými zprávami, vlákny a soukromým podpůrným inboxem |
 | **Newsletter** | Odběr e-mailem s potvrzením, odhlášením a historií rozesílek |
+| **Digitální obchod** | Virtuální produkty, host i stávající účet, bankovní převod/QR, faktury a chráněné doručení po úhradě |
 
 README drží jen vysokou úroveň: co CMS umí, jak se instaluje, konfiguruje a provozuje. Podrobné administrační workflow, volby formulářů, podcastů a multiblogu jsou záměrně v [docs/admin-guide.md](docs/admin-guide.md).
 
@@ -365,6 +366,16 @@ CMS automaticky generuje XML sitemapu (`sitemap.xml`) ze všech publikovaných v
 Součástí veřejného provozu je také dynamický `robots.txt`, který zakazuje indexaci administrace a citlivých upload adresářů a odkazuje na XML sitemapu. Veřejné stránky, které předávají kanonickou URL do SEO metadat, zároveň generují `<link rel="canonical">`; canonical helper přijímá jen interní cesty nebo platné `http://` / `https://` adresy bez přihlašovacích údajů, řídicích znaků a protocol-relative tvaru.
 
 ---
+
+## Digitální obchod
+
+Volitelný modul `/shop/` prodává soubory jednoho provozovatele, nikoli fyzické zboží nebo produkty více prodejců. Obsahuje kategorie, košík, serverovou rekapitulaci ceny, bankovní převod, neměnné doklady v PDF/HTML/textu a unikátní soukromé stažení po úhradě. QR má textovou alternativu `qr kód k platbě`; účet, částka a VS jsou uvedené také běžným textem. Fio je volitelné; úhradu může potvrdit superadmin po kontrole výpisu.
+
+Před zpřístupněním obsahu může zákazník v soukromém detailu objednávky použít `Odstoupit od smlouvy` a samostatně potvrdit celé odstoupení. Dostane trvalé potvrzení s obsahem a časem prohlášení; již přijaté peníze musí prodejce skutečně vrátit, nejde o automatický bankovní příkaz. Ztráta práva na běžné odstoupení po výslovně odsouhlaseném digitálním dodání neomezuje reklamace ani jiná zákonná práva.
+
+Výchozí stav je vypnutý. Prodej vyžaduje kontrolu identity, právních textů, sazeb, účtu a důvěryhodné `site_url`. První verze podporuje českého prodejce, spotřebitelský prodej v CZK a nastavení neplátce/plátce/OSS, nikoli automatické rozhodnutí o DPH nebo B2B reverse charge. Zahraniční země musí mít aktivní pravidlo a každá zahraniční objednávka čeká na ověření země/daňového režimu před platební výzvou a dodáním. Povinnosti mimo ČR/EU může být nutné řešit další registrací či místní dokumentací; před spuštěním je ověřte s odborníkem.
+
+Aktualizace vyžaduje `migrate.php`. Soukromé `KORA_STORAGE_DIR/shop` musí být mimo webroot; zálohujte i jeho `secret.key`, bez kterého nelze obnovit zašifrované tokeny. JSON export přenáší katalog a konfiguraci bez souborů, objednávek, bankovních klíčů a připravenosti prodeje. Importované produkty a pravidla zůstávají vypnuté do kontroly. Podrobnosti jsou v [příručce](docs/admin-guide.md#digitální-obchod) a [modulovém ACR](docs/accessibility/modules/shop.md).
 
 ## Šablony a vzhled
 
@@ -956,6 +967,8 @@ server {
     location ~ ^/podcast/([a-z0-9\-]+)/([a-z0-9\-]+)/?$ { rewrite ^/podcast/(.+?)/(.+?)/?$ /podcast/episode.php?show=$1&slug=$2 last; }
     location ~ ^/podcast/([a-z0-9\-]+)/?$ { rewrite ^/podcast/(.+?)/?$ /podcast/show.php?slug=$1 last; }
     location ~ ^/recipes/?$ { rewrite ^ /recipes/index.php last; }
+    location ~ ^/shop/?$ { rewrite ^ /shop/index.php last; }
+    location ~ ^/shop/produkt/([a-z0-9\-]+)/?$ { rewrite ^/shop/produkt/(.+?)/?$ /shop/product.php?slug=$1 last; }
     location = /recipes/kucharka.epub { rewrite ^ /recipes/cookbook.php last; }
     location ~ ^/recipes/kucharka/([a-z0-9\-]+)\.epub$ { rewrite ^/recipes/kucharka/(.+?)\.epub$ /recipes/cookbook.php?category_slug=$1 last; }
     location ~ ^/recipes/kategorie/([a-z0-9\-]+)/?$ { rewrite ^/recipes/kategorie/(.+?)/?$ /recipes/index.php?category_slug=$1 last; }

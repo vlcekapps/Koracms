@@ -734,6 +734,9 @@ function adminRouteCapability(?string $scriptPath = null): ?string
     if (str_starts_with($file, 'appmarket')) {
         return 'appmarket_manage';
     }
+    if (str_starts_with($file, 'shop')) {
+        return 'shop_manage';
+    }
 
     if (in_array($file, ['blog.php', 'blog_form.php', 'blog_save.php', 'blog_delete.php', 'blog_bulk.php', 'blog_series.php', 'blog_preview_token.php'], true)) {
         return 'blog_manage_own';
@@ -878,6 +881,10 @@ function adminRouteModuleRequirements(): array
                 'recipes.php', 'recipe_form.php', 'recipe_save.php', 'recipe_action.php',
                 'recipe_content.php', 'recipe_history.php', 'recipe_clone.php', 'recipe_categories.php',
             ],
+        ],
+        'shop' => [
+            'message' => adminRouteModuleDisabledMessage('shop'),
+            'files' => ['shop.php','shop_product.php','shop_categories.php','shop_settings.php','shop_orders.php','shop_order.php','shop_invoice.php'],
         ],
         'polls' => [
             'message' => adminRouteModuleDisabledMessage('polls'),

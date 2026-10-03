@@ -74,7 +74,11 @@ $data = [
 ];
 
 $tables = [
-    'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password')",
+    'settings'    => "SELECT `key`, value FROM cms_settings WHERE `key` NOT IN ('admin_password','shop_ready')",
+    'shop_categories' => 'SELECT id,name,slug,description,is_active,sort_order FROM cms_shop_categories',
+    'shop_products' => 'SELECT id,category_id,title,slug,description,requirements,license_text,update_policy,price_cents,tax_class FROM cms_shop_products',
+    'shop_tax_rules' => 'SELECT country_code,country_name,general_rate_bp,publication_rate_bp,tax_note FROM cms_shop_tax_rules',
+    'shop_payment_methods' => 'SELECT name,account_number,iban FROM cms_shop_payment_methods',
     'categories'  => "SELECT id, name, slug, blog_id, parent_id, description, meta_title, meta_description, created_at, updated_at FROM cms_categories",
     'blogs'       => "SELECT id, name, slug, description, intro_content, logo_file, logo_alt_text, meta_title, meta_description,
                              rss_subtitle, comments_default, feed_item_limit, sort_order, show_in_nav,

@@ -186,6 +186,8 @@ require_once __DIR__ . '/lib/admin_command.php';
 require_once __DIR__ . '/lib/gallery.php';
 require_once __DIR__ . '/lib/media_library.php';
 require_once __DIR__ . '/lib/recipes.php';
+require_once __DIR__ . '/lib/shop_invoice.php';
+require_once __DIR__ . '/lib/shop.php';
 require_once __DIR__ . '/lib/content.php';
 require_once __DIR__ . '/lib/filedownloads.php';
 require_once __DIR__ . '/lib/backup.php';

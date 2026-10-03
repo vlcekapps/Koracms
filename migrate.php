@@ -657,6 +657,70 @@ $tables = [
         UNIQUE KEY uq_cms_downloads_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+    'cms_shop_categories' => "CREATE TABLE IF NOT EXISTS cms_shop_categories (
+            id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, slug VARCHAR(150) NOT NULL,
+            description TEXT, is_active TINYINT NOT NULL DEFAULT 1, sort_order INT NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_shop_category_slug (slug)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_products' => "CREATE TABLE IF NOT EXISTS cms_shop_products (
+            id INT AUTO_INCREMENT PRIMARY KEY, category_id INT NOT NULL, title VARCHAR(255) NOT NULL,
+            slug VARCHAR(150) NOT NULL, description TEXT, requirements TEXT, license_text TEXT, update_policy TEXT,
+            price_cents BIGINT NOT NULL, tax_class VARCHAR(20) NOT NULL DEFAULT 'general',
+            file_storage_name VARCHAR(80) NOT NULL DEFAULT '', file_original_name VARCHAR(255) NOT NULL DEFAULT '',
+            file_size BIGINT NOT NULL DEFAULT 0, file_sha256 VARCHAR(64) NOT NULL DEFAULT '',
+            is_active TINYINT NOT NULL DEFAULT 0, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_shop_product_slug (slug), INDEX idx_shop_product_category (category_id,is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_payment_methods' => "CREATE TABLE IF NOT EXISTS cms_shop_payment_methods (
+            id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, account_number VARCHAR(100) NOT NULL,
+            iban VARCHAR(34) NOT NULL, is_active TINYINT NOT NULL DEFAULT 1,
+            fio_token_encrypted TEXT, fio_last_polled_at DATETIME NULL, fio_last_error VARCHAR(255) NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_tax_rules' => "CREATE TABLE IF NOT EXISTS cms_shop_tax_rules (
+            id INT AUTO_INCREMENT PRIMARY KEY, country_code CHAR(2) NOT NULL, country_name VARCHAR(100) NOT NULL,
+            general_rate_bp INT NOT NULL DEFAULT 0, publication_rate_bp INT NOT NULL DEFAULT 0,
+            tax_note TEXT, is_active TINYINT NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_shop_tax_country (country_code)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_sequences' => "CREATE TABLE IF NOT EXISTS cms_shop_sequences (
+            sequence_key VARCHAR(40) PRIMARY KEY, sequence_value INT NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_orders' => "CREATE TABLE IF NOT EXISTS cms_shop_orders (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_number VARCHAR(10) NOT NULL, user_id INT NULL,
+            status ENUM('accepted','awaiting_payment','paid','fulfilled','cancelled','refunded') NOT NULL,
+            customer_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, address VARCHAR(255) NOT NULL,
+            city VARCHAR(150) NOT NULL, postal_code VARCHAR(30) NOT NULL, country_code CHAR(2) NOT NULL,
+            payment_method_id INT NOT NULL, total_cents BIGINT NOT NULL, tax_cents BIGINT NOT NULL,
+            currency CHAR(3) NOT NULL DEFAULT 'CZK', seller_snapshot MEDIUMTEXT NOT NULL,
+            legal_snapshot MEDIUMTEXT NOT NULL, payment_snapshot TEXT NOT NULL,
+            token_hash CHAR(64) NOT NULL, token_encrypted TEXT NOT NULL, token_expires_at DATETIME NOT NULL,
+            consent_at DATETIME NOT NULL, tax_verified_at DATETIME NULL, tax_evidence TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, paid_at DATETIME NULL, fulfilled_at DATETIME NULL,
+            cancelled_at DATETIME NULL, confirmation_sent_at DATETIME NULL, delivery_sent_at DATETIME NULL,
+            mail_claim_until DATETIME NULL, mail_attempts INT NOT NULL DEFAULT 0, mail_retry_at DATETIME NULL,
+            mail_last_error VARCHAR(255) NOT NULL DEFAULT '',
+            mail_sent_status VARCHAR(24) NOT NULL DEFAULT '', mail_claim_token CHAR(64) NULL,
+            UNIQUE KEY uq_shop_order_number (order_number), UNIQUE KEY uq_shop_order_token (token_hash),
+            INDEX idx_shop_orders_user (user_id,created_at), INDEX idx_shop_orders_status (status,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_order_items' => "CREATE TABLE IF NOT EXISTS cms_shop_order_items (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, product_id INT NOT NULL, title VARCHAR(255) NOT NULL,
+            quantity INT NOT NULL, unit_price_cents BIGINT NOT NULL, total_cents BIGINT NOT NULL,
+            tax_rate_bp INT NOT NULL, tax_cents BIGINT NOT NULL, file_storage_name VARCHAR(80) NOT NULL,
+            file_original_name VARCHAR(255) NOT NULL, file_size BIGINT NOT NULL, file_sha256 CHAR(64) NOT NULL,
+            product_snapshot MEDIUMTEXT NOT NULL,
+            INDEX idx_shop_items_order (order_id,id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_payments' => "CREATE TABLE IF NOT EXISTS cms_shop_payments (
+            id INT AUTO_INCREMENT PRIMARY KEY, payment_method_id INT NOT NULL, bank_transaction_id VARCHAR(100) NOT NULL,
+            order_id INT NOT NULL, amount_cents BIGINT NOT NULL, currency CHAR(3) NOT NULL, received_at DATETIME NOT NULL,
+            UNIQUE KEY uq_shop_payment_movement (payment_method_id,bank_transaction_id),
+            UNIQUE KEY uq_shop_payment_order (order_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_invoices' => "CREATE TABLE IF NOT EXISTS cms_shop_invoices (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, kind ENUM('proforma','final','credit') NOT NULL,
+            invoice_number VARCHAR(40) NOT NULL, snapshot_json MEDIUMTEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_shop_invoice_kind (order_id,kind), UNIQUE KEY uq_shop_invoice_number (invoice_number)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    'cms_shop_order_events' => "CREATE TABLE IF NOT EXISTS cms_shop_order_events (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, event_type VARCHAR(40) NOT NULL,
+            note TEXT, user_id INT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_shop_events_order (order_id,id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
     'cms_appmarket_apps' => "CREATE TABLE IF NOT EXISTS cms_appmarket_apps (
         id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name              VARCHAR(255) NOT NULL,
@@ -1994,6 +2058,9 @@ $addColumns = [
     'cms_food_order_items.variant_id' => "ALTER TABLE cms_food_order_items ADD COLUMN variant_id INT NULL DEFAULT NULL AFTER item_id",
     'cms_food_order_items.variant_label' => "ALTER TABLE cms_food_order_items ADD COLUMN variant_label VARCHAR(120) NOT NULL DEFAULT '' AFTER item_title",
     'cms_food_order_items.portion_label' => "ALTER TABLE cms_food_order_items ADD COLUMN portion_label VARCHAR(80) NOT NULL DEFAULT '' AFTER variant_label",
+    'cms_shop_order_items.product_snapshot' => "ALTER TABLE cms_shop_order_items ADD COLUMN product_snapshot MEDIUMTEXT NOT NULL",
+    'cms_shop_orders.mail_sent_status' => "ALTER TABLE cms_shop_orders ADD COLUMN mail_sent_status VARCHAR(24) NOT NULL DEFAULT ''",
+    'cms_shop_orders.mail_claim_token' => "ALTER TABLE cms_shop_orders ADD COLUMN mail_claim_token CHAR(64) NULL",
     'cms_recipe_ingredients.quantity_min' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_min DECIMAL(12,4) NULL DEFAULT NULL AFTER amount",
     'cms_recipe_ingredients.quantity_max' => "ALTER TABLE cms_recipe_ingredients ADD COLUMN quantity_max DECIMAL(12,4) NULL DEFAULT NULL AFTER quantity_min",
 ];
@@ -2015,6 +2082,21 @@ foreach ($addColumns as $tableCol => $sql) {
     } catch (\PDOException $e) {
         $log[] = "✗ Sloupec <code>{$tableCol}</code> – CHYBA: " . h($e->getMessage());
     }
+}
+
+// Snapshots combine multiple TEXT fields; widen only legacy TEXT columns.
+try {
+    $shopSnapshotTypeStmt = $pdo->prepare(
+        "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_shop_order_items' AND COLUMN_NAME = 'product_snapshot'"
+    );
+    $shopSnapshotTypeStmt->execute();
+    if ($shopSnapshotTypeStmt->fetchColumn() === 'text') {
+        $pdo->exec("ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot MEDIUMTEXT NOT NULL");
+        $log[] = 'Snapshot produktu rozšířen na MEDIUMTEXT.';
+    }
+} catch (\PDOException $e) {
+    $log[] = 'CHYBA: Rozšíření snapshotu produktu: ' . h($e->getMessage());
 }
 
 // Legacy rows contain no window length (the key is a hash). Current bundled

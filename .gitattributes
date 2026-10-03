@@ -55,3 +55,7 @@ node_modules export-ignore
 node_modules/** export-ignore
 vendor export-ignore
 vendor/** export-ignore
+lib/third-party/shop/*.txt text eol=lf
+lib/third-party/shop/*.py text eol=lf
+lib/third-party/shop/qrcodegen.py export-ignore
+lib/third-party/shop/verify.py export-ignore

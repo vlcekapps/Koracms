@@ -94,7 +94,7 @@ function runSchemaParityAuditSelfTestCommand(array $command, string $cwd): array
  */
 function validSchemaParityFixture(): array
 {
-    return [
+    $files = [
         'install.php' => <<<'PHP'
 <?php
 CREATE TABLE IF NOT EXISTS cms_rate_limit (
@@ -933,6 +933,136 @@ PHP,
 require_once __DIR__ . '/lib/presentation.php';
 PHP,
     ];
+    $shopFiles = validShopSchemaParityFixture();
+    $files['install.php'] .= "\n" . $shopFiles['install.php'];
+    $files['migrate.php'] .= "\n" . $shopFiles['migrate.php'];
+    $files['lib/shop.php'] = $shopFiles['lib/shop.php'];
+    return $files;
+}
+
+/**
+ * Independent contract data: never include production helpers or connect to DB.
+ * @return array<string,string>
+ */
+function validShopSchemaParityTables(): array
+{
+    return [
+        'cms_shop_categories' => "CREATE TABLE IF NOT EXISTS cms_shop_categories (
+            id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, slug VARCHAR(150) NOT NULL,
+            description TEXT, is_active TINYINT NOT NULL DEFAULT 1, sort_order INT NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_shop_category_slug (slug)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_products' => "CREATE TABLE IF NOT EXISTS cms_shop_products (
+            id INT AUTO_INCREMENT PRIMARY KEY, category_id INT NOT NULL, title VARCHAR(255) NOT NULL,
+            slug VARCHAR(150) NOT NULL, description TEXT, requirements TEXT, license_text TEXT, update_policy TEXT,
+            price_cents BIGINT NOT NULL, tax_class VARCHAR(20) NOT NULL DEFAULT 'general',
+            file_storage_name VARCHAR(80) NOT NULL DEFAULT '', file_original_name VARCHAR(255) NOT NULL DEFAULT '',
+            file_size BIGINT NOT NULL DEFAULT 0, file_sha256 VARCHAR(64) NOT NULL DEFAULT '',
+            is_active TINYINT NOT NULL DEFAULT 0, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_shop_product_slug (slug), INDEX idx_shop_product_category (category_id,is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_payment_methods' => "CREATE TABLE IF NOT EXISTS cms_shop_payment_methods (
+            id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, account_number VARCHAR(100) NOT NULL,
+            iban VARCHAR(34) NOT NULL, is_active TINYINT NOT NULL DEFAULT 1,
+            fio_token_encrypted TEXT, fio_last_polled_at DATETIME NULL, fio_last_error VARCHAR(255) NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_tax_rules' => "CREATE TABLE IF NOT EXISTS cms_shop_tax_rules (
+            id INT AUTO_INCREMENT PRIMARY KEY, country_code CHAR(2) NOT NULL, country_name VARCHAR(100) NOT NULL,
+            general_rate_bp INT NOT NULL DEFAULT 0, publication_rate_bp INT NOT NULL DEFAULT 0,
+            tax_note TEXT, is_active TINYINT NOT NULL DEFAULT 0,
+            UNIQUE KEY uq_shop_tax_country (country_code)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_sequences' => "CREATE TABLE IF NOT EXISTS cms_shop_sequences (
+            sequence_key VARCHAR(40) PRIMARY KEY, sequence_value INT NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_orders' => "CREATE TABLE IF NOT EXISTS cms_shop_orders (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_number VARCHAR(10) NOT NULL, user_id INT NULL,
+            status ENUM('accepted','awaiting_payment','paid','fulfilled','cancelled','refunded') NOT NULL,
+            customer_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, address VARCHAR(255) NOT NULL,
+            city VARCHAR(150) NOT NULL, postal_code VARCHAR(30) NOT NULL, country_code CHAR(2) NOT NULL,
+            payment_method_id INT NOT NULL, total_cents BIGINT NOT NULL, tax_cents BIGINT NOT NULL,
+            currency CHAR(3) NOT NULL DEFAULT 'CZK', seller_snapshot MEDIUMTEXT NOT NULL,
+            legal_snapshot MEDIUMTEXT NOT NULL, payment_snapshot TEXT NOT NULL,
+            token_hash CHAR(64) NOT NULL, token_encrypted TEXT NOT NULL, token_expires_at DATETIME NOT NULL,
+            consent_at DATETIME NOT NULL, tax_verified_at DATETIME NULL, tax_evidence TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, paid_at DATETIME NULL, fulfilled_at DATETIME NULL,
+            cancelled_at DATETIME NULL, confirmation_sent_at DATETIME NULL, delivery_sent_at DATETIME NULL,
+            mail_claim_until DATETIME NULL, mail_attempts INT NOT NULL DEFAULT 0, mail_retry_at DATETIME NULL,
+            mail_last_error VARCHAR(255) NOT NULL DEFAULT '',
+            mail_sent_status VARCHAR(24) NOT NULL DEFAULT '', mail_claim_token CHAR(64) NULL,
+            UNIQUE KEY uq_shop_order_number (order_number), UNIQUE KEY uq_shop_order_token (token_hash),
+            INDEX idx_shop_orders_user (user_id,created_at), INDEX idx_shop_orders_status (status,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_order_items' => "CREATE TABLE IF NOT EXISTS cms_shop_order_items (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, product_id INT NOT NULL, title VARCHAR(255) NOT NULL,
+            quantity INT NOT NULL, unit_price_cents BIGINT NOT NULL, total_cents BIGINT NOT NULL,
+            tax_rate_bp INT NOT NULL, tax_cents BIGINT NOT NULL, file_storage_name VARCHAR(80) NOT NULL,
+            file_original_name VARCHAR(255) NOT NULL, file_size BIGINT NOT NULL, file_sha256 CHAR(64) NOT NULL,
+            product_snapshot MEDIUMTEXT NOT NULL,
+            INDEX idx_shop_items_order (order_id,id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_payments' => "CREATE TABLE IF NOT EXISTS cms_shop_payments (
+            id INT AUTO_INCREMENT PRIMARY KEY, payment_method_id INT NOT NULL, bank_transaction_id VARCHAR(100) NOT NULL,
+            order_id INT NOT NULL, amount_cents BIGINT NOT NULL, currency CHAR(3) NOT NULL, received_at DATETIME NOT NULL,
+            UNIQUE KEY uq_shop_payment_movement (payment_method_id,bank_transaction_id),
+            UNIQUE KEY uq_shop_payment_order (order_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_invoices' => "CREATE TABLE IF NOT EXISTS cms_shop_invoices (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, kind ENUM('proforma','final','credit') NOT NULL,
+            invoice_number VARCHAR(40) NOT NULL, snapshot_json MEDIUMTEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_shop_invoice_kind (order_id,kind), UNIQUE KEY uq_shop_invoice_number (invoice_number)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'cms_shop_order_events' => "CREATE TABLE IF NOT EXISTS cms_shop_order_events (
+            id INT AUTO_INCREMENT PRIMARY KEY, order_id INT NOT NULL, event_type VARCHAR(40) NOT NULL,
+            note TEXT, user_id INT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_shop_events_order (order_id,id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    ];
+}
+
+/** @return array<string,string> */
+function validShopSchemaParityFixture(): array
+{
+    $suffix = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
+    $tableSource = '$shopTables = [' . "\n";
+    $helperSource = "<?php\nthrow new RuntimeException('Shop fixture must never execute.');\n"
+        . "function shopSchema(): array\n{\n"
+        . "    \$suffix = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';\n    return [\n";
+    foreach (validShopSchemaParityTables() as $tableName => $sql) {
+        $tableSource .= "    '" . $tableName . "' => \"" . $sql . "\",\n";
+        $helperSource .= "        '" . $tableName . "' => \"" . substr($sql, 0, -strlen($suffix)) . '" . $suffix,' . "\n";
+    }
+    $tableSource .= "];\n";
+    $helperSource .= "    ];\n}\n";
+    $upgradeSource = <<<'PHP'
+$addColumns = [
+    'cms_shop_order_items.product_snapshot' => "ALTER TABLE cms_shop_order_items ADD COLUMN product_snapshot MEDIUMTEXT NOT NULL",
+    'cms_shop_orders.mail_sent_status' => "ALTER TABLE cms_shop_orders ADD COLUMN mail_sent_status VARCHAR(24) NOT NULL DEFAULT ''",
+    'cms_shop_orders.mail_claim_token' => "ALTER TABLE cms_shop_orders ADD COLUMN mail_claim_token CHAR(64) NULL",
+];
+$shopSnapshotTypeStmt = $pdo->prepare(
+    "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cms_shop_order_items' AND COLUMN_NAME = 'product_snapshot'"
+);
+$shopSnapshotTypeStmt->execute();
+if ($shopSnapshotTypeStmt->fetchColumn() === 'text') {
+    $pdo->exec("ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot MEDIUMTEXT NOT NULL");
+}
+PHP;
+    return [
+        'install.php' => $tableSource,
+        'migrate.php' => $tableSource . $upgradeSource,
+        'lib/shop.php' => $helperSource,
+    ];
+}
+
+/** @param callable(string):string $mutation */
+function mutateShopSchemaParityTable(string $source, string $tableName, callable $mutation): string
+{
+    $mutatedSource = preg_replace_callback(
+        '/"CREATE TABLE IF NOT EXISTS ' . preg_quote($tableName, '/') . ' \([^"]*"/',
+        static fn (array $matches): string => $mutation($matches[0]),
+        $source,
+        1,
+        $count
+    );
+    if (!is_string($mutatedSource) || $count !== 1 || $mutatedSource === $source) {
+        schemaParityAuditSelfTestFail('Shop mutation did not change exactly one DDL literal: ' . $tableName);
+    }
+    return $mutatedSource;
 }
 
 /**
@@ -1007,6 +1137,220 @@ if (!is_file($schemaParityAuditPath)) {
 $validFiles = validSchemaParityFixture();
 
 assertSchemaParityAuditPasses('Clean schema parity fixture', $validFiles);
+
+$shopTables = validShopSchemaParityTables();
+if (count($shopTables) !== 10) {
+    schemaParityAuditSelfTestFail('Shop contract fixture must contain exactly ten tables.');
+}
+$shopMutationCount = 0;
+foreach (['install.php', 'migrate.php', 'lib/shop.php'] as $sourceName) {
+    foreach ($shopTables as $tableName => $sql) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+            $mutatedFiles[$sourceName],
+            $tableName,
+            static fn (string $literal): string => ''
+        );
+        assertSchemaParityAuditFails(
+            'Shop missing table ' . $sourceName . ' ' . $tableName,
+            $mutatedFiles,
+            $sourceName . ' is missing the shop table ' . $tableName . '.'
+        );
+        $shopMutationCount++;
+
+        preg_match_all('/(?:\(\s*|,\s*)([a-z_]+)\s+[A-Z]+\b/', $sql, $columnMatches);
+        if ($columnMatches[1] === []) {
+            schemaParityAuditSelfTestFail('Shop fixture has no column definitions: ' . $tableName);
+        }
+        foreach ($columnMatches[1] as $columnName) {
+            $mutatedFiles = $validFiles;
+            $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+                $mutatedFiles[$sourceName],
+                $tableName,
+                static fn (string $literal): string => preg_replace(
+                    '/\b' . preg_quote($columnName, '/') . '(?=\s+[A-Z]+\b)/',
+                    $columnName . '_missing',
+                    $literal,
+                    1
+                ) ?? ''
+            );
+            assertSchemaParityAuditFails(
+                'Shop required column ' . $sourceName . ' ' . $tableName . '.' . $columnName,
+                $mutatedFiles,
+                $sourceName . ' shop schema is missing required column ' . $tableName . '.' . $columnName . '.'
+            );
+            $shopMutationCount++;
+        }
+
+        preg_match_all('/(?:UNIQUE KEY|INDEX) [a-z_]+ \([a-z_,]+\)/', $sql, $indexMatches);
+        foreach ($indexMatches[0] as $index) {
+            foreach (['', preg_replace('/\([^)]*\)$/', '(missing_column)', $index) ?? ''] as $replacement) {
+                $mutatedFiles = $validFiles;
+                $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+                    $mutatedFiles[$sourceName],
+                    $tableName,
+                    static fn (string $literal): string => str_replace($index, $replacement, $literal)
+                );
+                assertSchemaParityAuditFails(
+                    'Shop required index ' . $sourceName . ' ' . $tableName . ' ' . $index,
+                    $mutatedFiles,
+                    $sourceName . ' shop schema is missing required index ' . $tableName . ': ' . $index . '.'
+                );
+                $shopMutationCount++;
+            }
+        }
+    }
+    foreach ([
+        ['cms_shop_sequences', 'sequence_key VARCHAR(40) PRIMARY KEY', 'sequence_key VARCHAR(40)'],
+        ['cms_shop_orders', "status ENUM('accepted','awaiting_payment','paid','fulfilled','cancelled','refunded') NOT NULL", "status ENUM('accepted','paid') NOT NULL"],
+        ['cms_shop_orders', 'total_cents BIGINT NOT NULL', 'total_cents DECIMAL(12,2) NOT NULL'],
+        ['cms_shop_orders', 'tax_cents BIGINT NOT NULL', 'tax_cents FLOAT NOT NULL'],
+        ['cms_shop_orders', "currency CHAR(3) NOT NULL DEFAULT 'CZK'", "currency CHAR(3) NOT NULL DEFAULT 'EUR'"],
+        ['cms_shop_orders', 'token_hash CHAR(64) NOT NULL', 'token_hash CHAR(64) NULL'],
+        ['cms_shop_orders', "mail_sent_status VARCHAR(24) NOT NULL DEFAULT ''", "mail_sent_status VARCHAR(24) NOT NULL DEFAULT 'paid'"],
+        ['cms_shop_orders', 'mail_claim_token CHAR(64) NULL', 'mail_claim_token CHAR(64) NOT NULL'],
+        ['cms_shop_order_items', 'product_snapshot MEDIUMTEXT NOT NULL', 'product_snapshot MEDIUMTEXT NULL'],
+        ['cms_shop_order_items', 'product_snapshot MEDIUMTEXT NOT NULL', 'product_snapshot TEXT NOT NULL'],
+        ['cms_shop_invoices', "kind ENUM('proforma','final','credit') NOT NULL", "kind ENUM('proforma','final') NOT NULL"],
+        ['cms_shop_invoices', 'snapshot_json MEDIUMTEXT NOT NULL', 'snapshot_json TEXT NOT NULL'],
+    ] as [$tableName, $definition, $replacement]) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+            $mutatedFiles[$sourceName],
+            $tableName,
+            static fn (string $literal): string => str_replace($definition, $replacement, $literal)
+        );
+        assertSchemaParityAuditFails(
+            'Shop critical definition ' . $sourceName . ' ' . $definition,
+            $mutatedFiles,
+            $sourceName . ' shop schema has an incompatible definition for ' . $tableName . ': ' . $definition . '.'
+        );
+        $shopMutationCount++;
+    }
+    foreach ([
+        ['id INT AUTO_INCREMENT PRIMARY KEY', 'id INT PRIMARY KEY', ' must retain its auto-increment primary key.'],
+        ['user_id INT NULL,', 'user_id INT NULL, FOREIGN KEY (user_id) REFERENCES cms_users(id),', ' must use InnoDB/utf8mb4 without foreign keys.'],
+        ['user_id INT NULL,', 'user_id INT NULL REFERENCES cms_users(id),', ' must use InnoDB/utf8mb4 without foreign keys.'],
+    ] as [$original, $replacement, $expectedOutput]) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+            $mutatedFiles[$sourceName],
+            'cms_shop_orders',
+            static fn (string $literal): string => str_replace($original, $replacement, $literal)
+        );
+        assertSchemaParityAuditFails(
+            'Shop primary key/foreign key contract ' . $sourceName,
+            $mutatedFiles,
+            $sourceName . ' shop table cms_shop_orders' . $expectedOutput
+        );
+        $shopMutationCount++;
+    }
+
+    if ($sourceName !== 'lib/shop.php') {
+        foreach (['ENGINE=MyISAM DEFAULT CHARSET=utf8mb4', 'ENGINE=InnoDB DEFAULT CHARSET=latin1'] as $replacement) {
+            $mutatedFiles = $validFiles;
+            $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+                $mutatedFiles[$sourceName],
+                'cms_shop_orders',
+                static fn (string $literal): string => str_replace('ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', $replacement, $literal)
+            );
+            assertSchemaParityAuditFails(
+                'Shop engine/charset contract ' . $sourceName,
+                $mutatedFiles,
+                $sourceName . ' shop table cms_shop_orders must use InnoDB/utf8mb4 without foreign keys.'
+            );
+            $shopMutationCount++;
+        }
+    }
+
+    $mutatedFiles = $validFiles;
+    $mutatedFiles[$sourceName] = mutateShopSchemaParityTable(
+        $mutatedFiles[$sourceName],
+        'cms_shop_products',
+        static fn (string $literal): string => str_replace('title VARCHAR(255)', 'title VARCHAR(100)', $literal)
+    );
+    $paritySourceName = $sourceName === 'lib/shop.php' ? 'install.php' : $sourceName;
+    assertSchemaParityAuditFails(
+        'Shop complete DDL parity ' . $sourceName,
+        $mutatedFiles,
+        $paritySourceName . ' shop DDL must match lib/shop.php shopSchema() for cms_shop_products.'
+    );
+    $shopMutationCount++;
+
+    $mutatedFiles = $validFiles;
+    $mutatedFiles[$sourceName] .= "\n" . '$unexpected = "CREATE TABLE IF NOT EXISTS cms_shop_unexpected (id INT)'
+        . ($sourceName === 'lib/shop.php' ? '" . $suffix;' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";');
+    assertSchemaParityAuditFails(
+        'Shop complete table set ' . $sourceName,
+        $mutatedFiles,
+        $paritySourceName . ' shop table set must match lib/shop.php shopSchema().'
+    );
+    $shopMutationCount++;
+}
+
+foreach ([
+    'cms_shop_order_items.product_snapshot' => 'MEDIUMTEXT NOT NULL',
+    'cms_shop_orders.mail_sent_status' => "VARCHAR(24) NOT NULL DEFAULT ''",
+    'cms_shop_orders.mail_claim_token' => 'CHAR(64) NULL',
+] as $columnLabel => $definition) {
+    [$tableName, $columnName] = explode('.', $columnLabel, 2);
+    foreach ([
+        ["'" . $columnLabel . "' =>", "'" . $columnLabel . "_missing' =>"],
+        ['ALTER TABLE ' . $tableName . ' ADD COLUMN ' . $columnName . ' ' . $definition, 'SELECT 1'],
+    ] as [$original, $replacement]) {
+        $mutatedFiles = $validFiles;
+        $mutatedFiles['migrate.php'] = str_replace($original, $replacement, $mutatedFiles['migrate.php']);
+        assertSchemaParityAuditFails(
+            'Shop existing installation upgrade ' . $columnLabel,
+            $mutatedFiles,
+            'migrate.php must register the shop upgrade for ' . $columnLabel . '.'
+        );
+        $shopMutationCount++;
+    }
+}
+
+foreach ([
+    ['SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS', 'SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS'],
+    ["TABLE_NAME = 'cms_shop_order_items' AND COLUMN_NAME = 'product_snapshot'", "TABLE_NAME = 'cms_shop_orders' AND COLUMN_NAME = 'product_snapshot'"],
+    ["COLUMN_NAME = 'product_snapshot'", "COLUMN_NAME = 'title'"],
+    ['$shopSnapshotTypeStmt->execute();', ''],
+    ["\$shopSnapshotTypeStmt->fetchColumn() === 'text'", 'true'],
+    ['ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot MEDIUMTEXT NOT NULL', ''],
+    ['ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot MEDIUMTEXT NOT NULL', 'ALTER TABLE cms_shop_order_items MODIFY COLUMN product_snapshot TEXT NOT NULL'],
+] as [$original, $replacement]) {
+    $mutatedFiles = $validFiles;
+    $mutatedFiles['migrate.php'] = str_replace($original, $replacement, $mutatedFiles['migrate.php'], $count);
+    if ($count !== 1) {
+        schemaParityAuditSelfTestFail('Shop snapshot widening mutation must change exactly one upgrade guard.');
+    }
+    assertSchemaParityAuditFails(
+        'Shop idempotent legacy snapshot widening',
+        $mutatedFiles,
+        'migrate.php must idempotently widen legacy TEXT product snapshots to MEDIUMTEXT NOT NULL.'
+    );
+    $shopMutationCount++;
+}
+
+$missingShopHelperFiles = $validFiles;
+unset($missingShopHelperFiles['lib/shop.php']);
+assertSchemaParityAuditFails('Shop helper source required', $missingShopHelperFiles, 'lib/shop.php is missing.');
+$shopMutationCount++;
+
+$wrongShopSuffixFiles = $validFiles;
+$wrongShopSuffixFiles['lib/shop.php'] = str_replace('ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', 'ENGINE=MyISAM DEFAULT CHARSET=latin1', $wrongShopSuffixFiles['lib/shop.php']);
+assertSchemaParityAuditFails('Shop helper suffix required', $wrongShopSuffixFiles, 'lib/shop.php shopSchema() must use the InnoDB/utf8mb4 suffix.');
+$shopMutationCount++;
+
+$shopCommentsAndWhitespaceFiles = $validFiles;
+foreach (['install.php', 'migrate.php', 'lib/shop.php'] as $sourceName) {
+    $shopCommentsAndWhitespaceFiles[$sourceName] = mutateShopSchemaParityTable(
+        $shopCommentsAndWhitespaceFiles[$sourceName],
+        'cms_shop_orders',
+        static fn (string $literal): string => str_replace('id INT', 'id     INT', $literal)
+    );
+    $shopCommentsAndWhitespaceFiles[$sourceName] .= "\n" . '// "CREATE TABLE IF NOT EXISTS cms_shop_commented (id INT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";';
+}
+assertSchemaParityAuditPasses('Shop DDL whitespace and commented-out tables ignored', $shopCommentsAndWhitespaceFiles);
 
 $rateLimitMutationCount = 0;
 foreach (['install.php', 'migrate.php'] as $sourceName) {
@@ -1289,4 +1633,5 @@ assertSchemaParityAuditFails(
 
 echo 'Rate-limit schema/cleanup mutations rejected: ' . $rateLimitMutationCount . "\n";
 echo 'Appmarket schema mutations rejected: ' . $appmarketMutationCount . "\n";
+echo 'Shop schema mutations rejected: ' . $shopMutationCount . "\n";
 echo "Schema parity audit self-test OK\n";

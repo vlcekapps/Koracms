@@ -117,8 +117,11 @@ if ($routePath === '') {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('changelog.php');
 } elseif (preg_match('#^recipes/?$#i', $routePath) === 1) {
     [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('recipes/index.php');
+} elseif (preg_match('#^shop/?$#i', $routePath) === 1) {
+    [$routeScriptPath, $routeScriptWebPath, $routeParams, $routeHandled] = routeToScript('shop/index.php');
 } else {
     $routeMap = [
+        '#^shop/produkt/([a-z0-9-]+)/?$#i' => ['shop/product.php', ['slug']],
         '#^api/appmarket/v3/update/?$#i' => ['appmarket/update_v3.php', []],
         '#^api/appmarket/v2/update/?$#i' => ['appmarket/update_v2.php', []],
         '#^api/appmarket/v1/update/?$#i' => ['appmarket/update.php', []],

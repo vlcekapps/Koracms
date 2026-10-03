@@ -1923,3 +1923,55 @@ Content/media picker dál nabízí jen veřejná média. Výsledky vyhledáván�
 
 - [README.md](../README.md) stručně říká, že knihovna médií podporuje `public/private`, kolekce, metadata, licence, canonical media helpery, blokaci mazání používaných souborů a náhradu souboru.
 - Tento dokument popisuje konkrétní redakční workflow, kolekce, bezpečnostní pravidla a chování správy médií v administraci.
+
+## Digitální obchod
+
+### Online odstoupení
+
+Zákazník před zpřístupněním obsahu najde v soukromém detailu objednávky odkaz `Odstoupit od smlouvy`. Po rekapitulaci samostatně potvrdí své rozhodnutí; jméno, e-mail a číslo smlouvy se předvyplní z objednávky. Prohlášení se uloží s UTC časem a potvrzení přijde jako trvalá HTML/textová příloha. Nevyžaduje se registrace. Odstoupení zastaví dodání i u již zaplacené objednávky, ale samo peníze nevrací: správce musí provést vrácení a teprve potom zaznamenat skutečnou refundaci a opravný doklad. Po řádně odsouhlaseném zpřístupnění digitálního obsahu zůstávají práva z vad a kontakt pro reklamace; běžné online odstoupení se nenabízí.
+
+Soukromý odkaz ke stažení platí 365 dní od zpřístupnění objednávky; běžné opakování e-mailu tuto dobu neprodlužuje. Stažený soubor tím nezaniká a jeho licence se řídí podmínkami produktu. Před zaplacením je soukromý odkaz k objednávce platný 365 dní od přijetí. Přihlášený vlastník má také přístup ke svému přehledu objednávek.
+
+### Spuštění a právní kontrola
+
+Modul `shop` je výchozím stavem vypnutý. Po záloze spusťte `migrate.php`, povolte Digitální obchod v nastavení modulů a jako superadmin otevřete jeho nastavení. Vyplňte jméno/název prodejce, adresu, IČO, telefon, e-mail a údaj o příslušném zápisu; u plátce/OSS také DIČ. Nastavte důvěryhodnou HTTPS `site_url`, banku, podporované země, sazby podle druhu obsahu a právní texty. Prodej povolte až po jejich výslovné kontrole.
+
+První verze je pro českého prodejce a spotřebitele, také zahraniční, v jedné měně CZK. Není určena pro B2B reverse charge, automatické registrace OSS, odvody daně, daňová přiznání nebo univerzální prodej do každé jurisdikce. Volba neplátce neznamená automaticky nulovou daň v zahraničí. Konkrétní režim, osvobození a sazby musí ověřit účetní/daňový poradce. Neaktivní nebo chybějící pravidlo země nákup nepovolí.
+
+OSS není automaticky české plátcovství. Kromě neplátce, plátce a plátce v OSS lze zvolit neplátce v tuzemsku / identifikovanou osobu v OSS. Tato kombinace vyžaduje DIČ; tuzemské sazby musejí zůstat nulové, zahraniční pravidla se ověřují samostatně. Nastavení nenahrazuje skutečnou registraci v daném režimu.
+
+Obchodní podmínky musí odpovídat skutečné smlouvě: cena včetně daně, způsob a okamžik dodání, funkčnost/kompatibilita a aktualizace digitálního obsahu, reklamace, kontakty, odstoupení včetně vzorového formuláře a mimosoudní řešení sporů. Ochrana soukromí má vysvětlit zákonný účel a dobu uchování objednávek; nejde o souhlas s marketingem. CMS neposkytuje hotové univerzálně platné právní texty. Zkontrolujte pravidla ČOI a Finanční správy v [implementačním dokumentu](digital-shop-design.md).
+
+### Katalog a soubory
+
+Vytvořte aktivní kategorii, produkt s cenou v korunách, popisem, požadavky, licencí a informací o aktualizacích. Nahrajte skutečný soubor. Balíčky se nerozbalují ani nespouštějí; chráněné soubory se ukládají do `KORA_STORAGE_DIR/shop/files` mimo veřejný web pod SHA-256 jménem. Pouhé skrytí produktu nesmaže dříve zakoupenou verzi. Náhrada produktu ponechá původní soubor a neměnné objednávkové snapshoty.
+
+Zálohujte soukromé úložiště včetně `shop/secret.key` odděleně a bezpečně společně s databází. Ztráta klíče znemožní přečtení zašifrovaných Fio/objednávkových tokenů. Veřejný ZIP ani JSON export soukromé soubory neobsahuje. JSON přenáší pouze katalog, právní nastavení, neaktivní daňová pravidla a bankovní konfiguraci bez API klíče. Import nezapne prodej a nepřenáší objednávky, zákaznická data, faktury nebo bankovní pohyby; produkty je třeba znovu vybavit soubory a ověřit.
+
+### Nákup a doklady
+
+Zákazník nakupuje jako host nebo přes stávající účet CMS. Hostova objednávka se nikdy nepřiřadí k účtu jen podle e-mailu. Košík přejde do zadání údajů a následné serverové rekapitulace. Finální krok vyžaduje captchu, nové souhlasy s podmínkami/elektronickým dokladem a předčasným digitálním dodáním; tlačítko je `Objednávka zavazující k platbě`. Odmítnutí zachová běžná pole, nikoli captchu nebo starý souhlas. Změna ceny nebo podmínek v druhém okně vyžaduje novou kontrolu; refresh odeslaného formuláře neobjedná znovu.
+
+Česká objednávka čeká na bankovní převod; zahraniční je nejprve přijatá k daňové kontrole. V jejím detailu ověřte zemi podle dvou různých nezávislých a souhlasných podkladů, jejich konkrétní popis a režim. Dvě prohlášení zákazníka nestačí. Pokud údaje nesouhlasí, nedodávejte obsah; objednávku zrušte a vyřešte správné údaje. Teprve ověřená objednávka dostane platební výzvu. Ta není daňovým dokladem.
+
+Číslo objednávky má deset číslic (rok + pořadí) a slouží také jako variabilní symbol. Platební výzva obsahuje QR, účet/IBAN, přesnou částku a VS; QR má alt `qr kód k platbě`. Po úhradě vzniká finální faktura, u tuzemského neplátce označená jako nedaňová. Faktura i smlouva se posílají v trvalé HTML příloze, faktura také jako text a při podpoře všech použitých znaků v PDF. Nepodporované písmo nezablokuje dodání: úplný doklad zůstane v HTML a textu. Přístupná HTML a textová podoba nezávisí na QR obrázku. Doklady vycházejí ze snapshotu, ne z pozdější změny katalogu nebo podmínek. Datum přijetí úplaty není automaticky datem zpřístupnění obsahu. PDF je značkované, ale neprohlašujeme automaticky PDF/UA shodu.
+
+Právo na odstoupení nezaniká samotným nákupem; výslovný souhlas a poučení se vztahují ke zpřístupnění digitálního obsahu. Práva z vad zůstávají zachovaná. Objednávka a smluvní příloha obsahují uloženou verzi souhlasu. Reklamace nebo odstoupení, pokud na ně zákazník má právo, řeší prodejce podle poskytnutých právních informací; tento modul není automatický právní posuzovatel.
+
+### Platby, cron a doručení
+
+Bankovní účet se spravuje v platebních možnostech. Účet s existujícími objednávkami nelze přepsat; založte novou možnost. Fio je volitelné: použijte samostatný read-only token pro sledování účtu, nastavte jeho platnost v bance a chraňte zálohy. Cron volá jen oficiální HTTPS periodové API, nepřepisuje bankovní kurzor a kontroluje přesnou částku, měnu, účet, VS, datum a ID pohybu. Podplatba, přeplatek, chybějící VS nebo jiná měna se automaticky neoznačí jako úhrada. Objednávky starší než 90 dní nebo neobvyklé platby vyřešte ručně podle výpisu. Změna Fio tokenu nevyžaduje změnu účtu.
+
+Volba `Aktivní pro nové objednávky` řídí jen nové nákupy. Vypnutá metoda s uloženým Fio tokenem dál kontroluje dříve přijaté objednávky čekající na platbu; po poslední úhradě kontrola neaktivní metody skončí. Chcete-li zastavit automatickou kontrolu účtu úplně, výslovně odstraňte jeho Fio token.
+
+Pro včasné párování plateb a dodání nastavte pravidelné spouštění stávajícího `cron.php`, například každých pět až patnáct minut. Fio kontrola jednoho účtu má vlastní nejméně pětiminutový odstup. Chcete-li dočasně zastavit nové nákupy, vypněte připravenost prodeje v nastavení obchodu, nikoli celý modul: již přijaté objednávky musí mít dál dostupné soukromé doklady, odkazy a funkci odstoupení.
+
+Bez Fio potvrďte úhradu v administraci až po skutečné kontrole převodu a jeho jednoznačné reference. Zaplacená objednávka přejde na Vyřízená po přijetí oznámení dodání SMTP; při chybě zůstává Zaplacená a cron omezeně opakuje e-mail. Přijetí SMTP není zárukou doručení do schránky. Po pěti pokusech zkontrolujte SMTP a použijte výslovně potvrzené opakování. Havárie po odeslání může zopakovat stejné oznámení, nikoli fakturu nebo úhradu.
+
+Unikátní hostovský odkaz ke stažení platí 365 dní od prvního zpřístupnění a má se uchovávat soukromě; opakované oznámení dobu neprodlužuje. Přihlášený uživatel vidí pouze své objednávky. Stažení znovu ověřuje dodání, souhlas, daňovou kontrolu, platnost a SHA-256 konkrétní zakoupené verze. Nezaplacená, zrušená nebo refundovaná objednávka soubor neposkytne. Tokenové stránky se necachují a nejsou v sitemapě ani analytice.
+
+Administrátorské storno je pro nezaplacené objednávky; zákaznické odstoupení před dodáním může zrušit i zaplacenou objednávku. U zrušené objednávky s přijatou platbou je stále nutné vyřídit vrácení peněz. Refundaci zaznamenejte až po skutečném vrácení peněz, s důvodem a čerstvým potvrzením; CMS neodesílá bankovní příkaz. Vystaví opravný doklad a zruší přístup. Finanční historie se nemaže ani při smazání uživatelského účtu; pouze se zruší vazba na účet. Stavy zůstávají Přijatá / Čeká na platbu / Zaplacená / Vyřízená / Zrušená / Vrácená platba, nikoli desítky technických stavů.
+
+### Přístupnost a ověření
+
+Před produkčním spuštěním projděte [modulový ACR a ruční protokol](accessibility/modules/shop.md), nákup klávesnicí/NVDA, chybné údaje, rekapitulaci, QR v bankovní aplikaci, faktury a skutečnou platbu/e-mail na hostingu. Automatické fixture výpisy banky nejsou provedená reálná platba. Regrese jsou součástí `composer ci:module-ready`; neveřejné objednávky ani bankovní tajemství nejsou publikovaným obsahem.

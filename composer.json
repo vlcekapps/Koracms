@@ -16,6 +16,9 @@
   },
   "scripts": {
     "analyse": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G",
+    "analyse:strict:shop": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --level=6 lib/shop.php lib/shop_invoice.php lib/shop_public.php admin/shop.php admin/shop_product.php admin/shop_categories.php admin/shop_settings.php admin/shop_orders.php admin/shop_order.php admin/shop_invoice.php shop/index.php shop/product.php shop/cart.php shop/checkout.php shop/order.php shop/download.php shop/invoice.php shop/my.php shop/legal.php themes/default/views/modules/shop-navigation.php themes/default/views/modules/shop-status.php themes/default/views/modules/shop-index.php themes/default/views/modules/shop-product.php themes/default/views/modules/shop-cart.php themes/default/views/modules/shop-checkout.php themes/default/views/modules/shop-order.php themes/default/views/modules/shop-my.php themes/default/views/modules/shop-legal.php themes/default/views/modules/shop-captcha.php themes/default/views/modules/shop-legal-texts.php themes/default/views/modules/shop-seller.php themes/default/views/modules/shop-summary.php shop/withdraw.php themes/default/views/modules/shop-withdraw.php",
+    "format:check:shop": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --using-cache=no --allow-unsupported-php-version=yes --path-mode=intersection lib/shop.php lib/shop_invoice.php lib/shop_public.php admin/shop.php admin/shop_product.php admin/shop_categories.php admin/shop_settings.php admin/shop_orders.php admin/shop_order.php admin/shop_invoice.php shop/index.php shop/product.php shop/cart.php shop/checkout.php shop/order.php shop/download.php shop/invoice.php shop/my.php shop/legal.php themes/default/views/modules/shop-navigation.php themes/default/views/modules/shop-status.php themes/default/views/modules/shop-index.php themes/default/views/modules/shop-product.php themes/default/views/modules/shop-cart.php themes/default/views/modules/shop-checkout.php themes/default/views/modules/shop-order.php themes/default/views/modules/shop-my.php themes/default/views/modules/shop-legal.php themes/default/views/modules/shop-captcha.php themes/default/views/modules/shop-legal-texts.php themes/default/views/modules/shop-seller.php themes/default/views/modules/shop-summary.php shop/withdraw.php themes/default/views/modules/shop-withdraw.php",
+    "format:fix:shop": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --using-cache=no --allow-unsupported-php-version=yes --path-mode=intersection lib/shop.php lib/shop_invoice.php lib/shop_public.php admin/shop.php admin/shop_product.php admin/shop_categories.php admin/shop_settings.php admin/shop_orders.php admin/shop_order.php admin/shop_invoice.php shop/index.php shop/product.php shop/cart.php shop/checkout.php shop/order.php shop/download.php shop/invoice.php shop/my.php shop/legal.php themes/default/views/modules/shop-navigation.php themes/default/views/modules/shop-status.php themes/default/views/modules/shop-index.php themes/default/views/modules/shop-product.php themes/default/views/modules/shop-cart.php themes/default/views/modules/shop-checkout.php themes/default/views/modules/shop-order.php themes/default/views/modules/shop-my.php themes/default/views/modules/shop-legal.php themes/default/views/modules/shop-captcha.php themes/default/views/modules/shop-legal-texts.php themes/default/views/modules/shop-seller.php themes/default/views/modules/shop-summary.php shop/withdraw.php themes/default/views/modules/shop-withdraw.php",
     "analyse:strict:build-tests": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --level=6 build/http_server_router.php build/http_server_router_selftest.php build/http_test_helpers.php build/http_test_helpers_selftest.php build/test_run_lock.php build/test_run_lock_selftest.php build/lint_php_selftest.php build/phpstan_bootstrap_selftest.php build/repository_guardrails_audit_selftest.php build/redirect_guardrails_audit_selftest.php build/config_sample_audit_selftest.php build/version_metadata_audit_selftest.php build/schema_parity_audit_selftest.php build/source_encoding_audit_selftest.php build/mojibake_audit_selftest.php build/whitespace_audit_selftest.php build/module_contract_audit.php build/module_contract_audit_selftest.php build/accessibility_conformance_audit.php build/accessibility_conformance_audit_selftest.php build/release_package_audit.php build/release_package_audit_selftest.php build/release_smoke.php build/theme_view_audit.php build/theme_view_audit_selftest.php build/unit_test_bootstrap.php build/unit_tests.php",
     "analyse:strict:imports": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --level=6 admin/import.php admin/export.php admin/wp_import.php admin/estranky_import.php admin/estranky_download_photos.php admin/podcast_feed_health.php admin/podcast_chapters.php admin/podcast_people.php admin/podcast_platforms.php",
     "analyse:strict:public-authors": "phpstan analyse --configuration=phpstan.neon.dist --memory-limit=1G --level=6 authors/index.php",
@@ -81,6 +84,9 @@
     "test:phpstan-bootstrap-selftest": "php build/phpstan_bootstrap_selftest.php",
     "test:composer-validate": "composer validate --strict",
     "test:unit": "php build/unit_tests.php",
+    "test:shop-selftest": "php build/shop_selftest.php",
+    "test:shop-invoice-selftest": "php build/shop_invoice_selftest.php",
+    "test:shop-mysql": "php build/shop_mysql_selftest.php --allow-db",
     "test:rc-core": [
       "php build/rate_limit_expiry_selftest.php",
       "php build/rc_session_security_selftest.php",
@@ -94,6 +100,7 @@
       "php build/rc_pdo_fetch_selftest.php"
     ],
     "test:rc-runtime": [
+      "@test:shop-mysql",
       "php build/rc_rate_limit_db_selftest.php",
       "php build/rc_reservation_mysql_selftest.php",
       "php build/rc_poll_mysql_selftest.php",
@@ -178,6 +185,7 @@
       "@format:check:public-csp",
       "@format:check:recipes",
       "@format:check:food-v4",
+      "@format:check:shop",
       "@analyse",
       "@analyse:strict:build-tests",
       "@analyse:strict",
@@ -201,11 +209,14 @@
       "@analyse:strict:public-podcast",
       "@analyse:strict:public-polls",
       "@analyse:strict:recipes",
+      "@analyse:strict:shop",
       "@analyse:strict:public-reservations",
       "@test:release-package",
       "@test:release-package-selftest",
       "@test:release-smoke",
       "@test:unit",
+      "@test:shop-selftest",
+      "@test:shop-invoice-selftest",
       "@test:rc-core"
     ],
     "ci:module-ready": [

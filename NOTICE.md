@@ -21,3 +21,10 @@ specific file states otherwise. Website content created by administrators,
 authors or visitors, uploaded media, database records and site-specific data
 remain under the ownership and licensing terms chosen by the respective site
 owner or content author.
+
+The shop document renderer bundles a QR encoder derived from Project Nayuki's
+QR Code generator under the MIT license and the unmodified DejaVu Sans font
+under its original font license. Their copyright notices and complete license
+texts are retained in `lib/third-party/shop/NOTICE.md`,
+`lib/third-party/shop/LICENSE-Nayuki.txt` and
+`lib/third-party/shop/LICENSE-DejaVu.txt`.
