@@ -74,46 +74,35 @@ if ($isPostRequest) {
     }
 
     if (empty($errors)) {
+        $submission = null;
         try {
-            $referenceCode = $conversationType === 'support' ? uniqueChatReferenceCode($pdo) : '';
             $topicLabel = is_array($selectedTopic) ? (string)($selectedTopic['name'] ?? '') : '';
-            $publicVisibility = $conversationType === 'support' ? 'hidden' : 'pending';
-            $pdo->prepare(
-                "INSERT INTO cms_chat
-                 (topic_id, topic_label, conversation_type, reference_code, name, email, web, message, status, public_visibility)
-                 VALUES (?, ?, ?, ?, ?, ?, '', ?, 'new', ?)"
-            )->execute([
+            $submission = chatCreateSubmission(
+                $pdo,
                 is_array($selectedTopic) ? (int)$selectedTopic['id'] : null,
                 $topicLabel,
                 $conversationType,
-                $referenceCode,
                 $name,
                 $email,
-                $message,
-                $publicVisibility,
-            ]);
-            $messageId = (int)$pdo->lastInsertId();
-            chatHistoryCreate(
-                $pdo,
-                $messageId,
-                null,
-                'submitted',
-                $conversationType === 'support'
-                    ? 'Soukromý dotaz byl přijat do podpůrného inboxu.'
-                    : 'Zpráva byla přijata a čeká na schválení.'
+                $message
             );
-
-            notifyChatMessage($name, $message);
-
+        } catch (\Throwable $e) {
+            koraLog('warning', 'chat submission insert failed', ['exception' => $e]);
+            $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
+        }
+        if ($submission !== null) {
+            // Notification failure must not turn a committed message into a retry prompt.
+            try {
+                notifyChatMessage($name, $message);
+            } catch (\Throwable $e) {
+                koraLog('warning', 'chat notification failed', ['exception' => $e]);
+            }
             $targetPath = $activeTopic !== null ? chatTopicPath($activeTopic) : BASE_URL . '/chat/index.php';
             $targetQuery = $conversationType === 'support'
-                ? ['ok' => 'support', 'ref' => $referenceCode]
+                ? ['ok' => 'support', 'ref' => $submission['reference_code']]
                 : ['ok' => 'pending'];
             header('Location: ' . appendUrlQuery($targetPath, $targetQuery));
             exit;
-        } catch (\PDOException $e) {
-            koraLog('warning', 'chat submission insert failed', ['exception' => $e]);
-            $errors[] = 'Zprávu se nepodařilo uložit. Zkuste to prosím později.';
         }
     }
 }

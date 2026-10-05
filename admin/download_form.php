@@ -46,6 +46,21 @@ if ($id !== null) {
 }
 
 $download = hydrateDownloadPresentation($download);
+$downloadFormFlash = is_array($_SESSION['download_form_flash'] ?? null) ? $_SESSION['download_form_flash'] : [];
+$downloadFilesNeedReselect = false;
+if (array_key_exists('download_id', $downloadFormFlash) && $downloadFormFlash['download_id'] === $id) {
+    unset($_SESSION['download_form_flash']);
+    $downloadFormValues = is_array($downloadFormFlash['values'] ?? null) ? $downloadFormFlash['values'] : [];
+    // Obnovujeme jen editovatelná data, nikdy soubory, ID ani souhlas s jejich mazáním.
+    $downloadEditableFields = [
+        'title', 'slug', 'download_type', 'dl_category_id', 'excerpt', 'description',
+        'version_label', 'platform_label', 'license_label', 'project_url', 'release_date',
+        'requirements', 'checksum_sha256', 'download_series_id', 'is_current_version',
+        'external_url', 'is_published', 'is_featured', 'status',
+    ];
+    $download = array_merge($download, array_intersect_key($downloadFormValues, array_flip($downloadEditableFields)));
+    $downloadFilesNeedReselect = !empty($downloadFormFlash['files_need_reselect']);
+}
 $categories = $pdo->query("SELECT id, name FROM cms_dl_categories ORDER BY name")->fetchAll();
 $downloadSeriesOptions = $pdo->query(
     "SELECT id, title, slug, is_active
@@ -74,6 +89,8 @@ $errorMessage = match ($err) {
     'checksum' => $downloadChecksumErrorMessage,
     'image' => $downloadImageUploadErrorMessage,
     'file' => $downloadFileErrorMessage,
+    'file_delete_confirmation' => 'Soubor nebyl odebrán. Pokud ho chcete smazat, znovu potvrďte odebrání stávajícího souboru.',
+    'image_delete_confirmation' => 'Náhledový obrázek nebyl odebrán. Pokud ho chcete smazat, znovu potvrďte odebrání stávajícího obrázku.',
     default => '',
 };
 $fieldErrorMap = [
@@ -88,6 +105,8 @@ $fieldErrorMap = [
     'checksum' => ['checksum_sha256'],
     'image' => ['download_image'],
     'file' => ['file'],
+    'file_delete_confirmation' => ['confirm_download_file_delete'],
+    'image_delete_confirmation' => ['confirm_download_image_delete'],
 ];
 $fieldErrorMessages = [
     'title' => 'Doplňte krátký název položky, například Instalační balíček Kora CMS 2.4.',
@@ -115,6 +134,10 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
 
 <?php if ($errorMessage !== ''): ?>
   <p class="error" role="alert" id="form-error" aria-atomic="true"><?= h($errorMessage) ?></p>
+<?php endif; ?>
+
+<?php if ($downloadFilesNeedReselect): ?>
+  <p class="field-help" role="status">Zadané údaje zůstaly zachované. Soubor a náhledový obrázek je po chybě nutné vybrat znovu; původní soubory se nezměnily.</p>
 <?php endif; ?>
 
 <?php if ($id !== null): ?>
@@ -197,10 +220,13 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
     <?php adminRenderFieldError('file', $err, $fieldErrorMap, $err === 'source' ? $fieldErrorMessages['source'] : $fieldErrorMessages['file'], 'download-file-error'); ?>
     <?php if ((string)$download['filename'] !== ''): ?>
       <div class="admin-field-row">
-        <label class="admin-checkbox-label">
-          <input type="checkbox" name="file_delete" value="1">
+        <label for="confirm-download-file-delete" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm-download-file-delete" name="confirm_download_file_delete" value="1"
+                 <?= adminFieldAttributes('confirm_download_file_delete', $err, $fieldErrorMap, ['download-file-delete-help']) ?>>
           Odebrat stávající soubor a ponechat jen detail / externí odkaz
         </label>
+        <small id="download-file-delete-help" class="field-help">Potvrzuji trvalé odebrání souboru při uložení. Soubor nepůjde obnovit z koše; položka musí mít jiný zdroj ke stažení.</small>
+        <?php adminRenderFieldError('confirm_download_file_delete', $err, $fieldErrorMap, 'Pro odebrání souboru je nutné nové potvrzení.'); ?>
       </div>
     <?php endif; ?>
 
@@ -292,10 +318,13 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
         <img src="<?= h((string)$download['image_url']) ?>" alt="Náhled obrázku" class="admin-image-preview">
       </div>
       <small id="download-image-current" class="field-help">Aktuální náhledový obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
-      <label class="admin-checkbox-label">
-        <input type="checkbox" name="download_image_delete" value="1">
+      <label for="confirm-download-image-delete" class="admin-checkbox-label">
+        <input type="checkbox" id="confirm-download-image-delete" name="confirm_download_image_delete" value="1"
+               <?= adminFieldAttributes('confirm_download_image_delete', $err, $fieldErrorMap, ['download-image-delete-help']) ?>>
         Odebrat stávající náhledový obrázek
       </label>
+      <small id="download-image-delete-help" class="field-help">Potvrzuji trvalé odebrání náhledového obrázku při uložení. Obrázek nepůjde obnovit z koše.</small>
+      <?php adminRenderFieldError('confirm_download_image_delete', $err, $fieldErrorMap, 'Pro odebrání obrázku je nutné nové potvrzení.'); ?>
     <?php endif; ?>
 
     <div class="admin-field-row">
@@ -331,8 +360,8 @@ adminHeader($id ? 'Upravit položku ke stažení' : 'Nová položka ke stažení
   <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id !== null ? 'Uložit změny' : 'Přidat položku ke stažení' ?></button>
     <a href="downloads.php">Zrušit</a>
-    <?php if ($id !== null && (string)$download['slug'] !== '' && (string)$download['status'] === 'published' && (int)($download['is_published'] ?? 0) === 1): ?>
-      <a href="<?= h(downloadPublicPath($download)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+    <?php if ($id !== null && (string)$existing['slug'] !== '' && (string)$existing['status'] === 'published' && (int)($existing['is_published'] ?? 0) === 1): ?>
+      <a href="<?= h(downloadPublicPath($existing)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
   </div>
 </form>

@@ -1,7 +1,9 @@
+<?php $threadAvailable = (bool)($threadAvailable ?? true); ?>
 <div class="listing-shell">
   <article class="surface" aria-labelledby="chat-message-title">
     <p class="section-kicker">Chat</p>
-    <h1 id="chat-message-title" class="section-title section-title--hero">Zpráva od <?= h((string)$message['name']) ?></h1>
+    <h1 id="chat-message-title" class="section-title section-title--hero"><?php if ($threadAvailable): ?>Zpráva od <?= h((string)$message['name']) ?><?php else: ?>Vlákno chatu již není dostupné<?php endif; ?></h1>
+    <?php if ($threadAvailable): ?>
     <p class="meta-row">
       <time datetime="<?= h(str_replace(' ', 'T', (string)$message['created_at'])) ?>">
         <?= formatCzechDate((string)$message['created_at']) ?>
@@ -21,6 +23,7 @@
       </p>
     <?php endif; ?>
     <p class="chat-message__body"><?= nl2br(h((string)$message['message'])) ?></p>
+    <?php endif; ?>
     <p><a href="<?= h($backUrl) ?>">Zpět na chat</a></p>
   </article>
 
@@ -32,7 +35,9 @@
       </div>
     <?php endif; ?>
 
-    <?php if ($replies === []): ?>
+    <?php if (!$threadAvailable): ?>
+      <p class="empty-state">Vlákno již není veřejně dostupné.</p>
+    <?php elseif ($replies === []): ?>
       <p class="empty-state">Zatím tu nejsou žádné schválené odpovědi.</p>
     <?php else: ?>
       <div class="chat-stream" role="list" aria-labelledby="chat-replies-title">
@@ -93,7 +98,7 @@
                  aria-required="true" inputmode="numeric" autocomplete="off">
         </div>
         <div class="button-row button-row--start">
-          <button type="submit" class="button-primary">Odeslat odpověď</button>
+          <button type="submit" class="button-primary"<?= !$threadAvailable ? ' disabled' : '' ?>>Odeslat odpověď</button>
         </div>
       </fieldset>
     </form>

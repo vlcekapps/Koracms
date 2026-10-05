@@ -6,17 +6,31 @@ requireModuleEnabled('events');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
-if ($id !== null) {
-    $pdo = db_connect();
-    $stmt = $pdo->prepare("SELECT image_file FROM cms_events WHERE id = ?");
-    $stmt->execute([$id]);
-    $event = $stmt->fetch() ?: null;
-    if ($event) {
-        deleteEventImageFile((string)($event['image_file'] ?? ''));
+$redirectDeleteError = static function (string $error) use ($id): void {
+    $target = BASE_URL . '/admin/events.php?delete_error=' . rawurlencode($error);
+    if ($id !== null) {
+        $target .= '&delete_error_id=' . $id;
     }
-    $pdo->prepare("UPDATE cms_events SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
-    logAction('event_delete', "id={$id}");
+    header('Location: ' . internalRedirectTarget($target, BASE_URL . '/admin/events.php'));
+    exit;
+};
+if ($id === null) {
+    $redirectDeleteError('invalid');
 }
+
+$confirmFieldName = 'confirm_event_delete_' . $id;
+if (($_POST[$confirmFieldName] ?? '') !== '1') {
+    $redirectDeleteError('confirm_required');
+}
+
+$pdo = db_connect();
+// Přesun do Koše musí zachovat obrázek pro obnovení i ostatní termíny série.
+$deleteStmt = $pdo->prepare("UPDATE cms_events SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL");
+$deleteStmt->execute([$id]);
+if ($deleteStmt->rowCount() !== 1) {
+    $redirectDeleteError('invalid');
+}
+logAction('event_delete', "id={$id}");
 
 header('Location: ' . BASE_URL . '/admin/events.php');
 exit;

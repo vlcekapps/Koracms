@@ -107,11 +107,13 @@ $formError = match ($err) {
     'registration_url' => 'Registrační odkaz není použitelný. U pole Registrační odkaz je konkrétní nápověda.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
     'image' => $eventImageUploadErrorMessage,
+    'image_confirm' => 'Staré potvrzení odstranění obrázku nebylo přijato. Zkontrolujte obnovené údaje a případné odebrání obrázku potvrďte znovu v aktuálním formuláři.',
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Typ akce není dostupný. U pole Typ akce je konkrétní nápověda.',
     'place' => 'Vybrané místo není dostupné. U pole Spravované místo konání je konkrétní nápověda.',
     'recurrence' => 'Opakování události není použitelné. U polí opakování je konkrétní nápověda.',
+    'save' => 'Událost se nepodařilo uložit. Zadané údaje zůstaly zachované; zkuste uložení znovu.',
     default => '',
 };
 $fieldErrorMap = [
@@ -121,6 +123,7 @@ $fieldErrorMap = [
     'registration_url' => ['registration_url'],
     'organizer_email' => ['organizer_email'],
     'image' => ['event_image'],
+    'image_confirm' => ['confirm_event_image_delete'],
     'unpublish_at' => ['unpublish_at'],
     'publish_at' => ['publish_at'],
     'event_type' => ['event_type_id'],
@@ -135,6 +138,7 @@ $fieldErrorMessages = [
     'registration_url' => 'Zadejte úplnou http/https adresu registrace, nebo pole nechte prázdné.',
     'organizer_email' => $eventOrganizerEmailErrorMessage,
     'image' => $eventImageUploadErrorMessage,
+    'image_confirm' => 'Odebrání obrázku z této události potvrďte znovu. Starý souhlas z rozepsaného formuláře nelze použít.',
     'unpublish_at' => $eventUnpublishAtErrorMessage,
     'publish_at' => $eventPublishAtErrorMessage,
     'event_type' => 'Vyberte některý z dostupných typů akce, nebo typ nejdřív vytvořte ve správě typů.',
@@ -371,10 +375,12 @@ adminHeader($id ? 'Upravit událost' : 'Nová událost');
       </div>
       <small id="event-image-current" class="field-help">Aktuální obrázek je nahraný. Nahrajte nový, pokud ho chcete nahradit.</small>
       <div class="admin-field-row">
-        <label class="admin-checkbox-label">
-          <input type="checkbox" id="event_image_delete" name="event_image_delete" value="1"<?= !empty($event['event_image_delete']) ? ' checked' : '' ?>>
-          Smazat aktuální obrázek
+        <label for="confirm_event_image_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_event_image_delete" name="confirm_event_image_delete" value="1"<?= adminFieldAttributes('confirm_event_image_delete', $err, $fieldErrorMap, ['event-image-delete-help']) ?>>
+          Odebrat obrázek z této události
         </label>
+        <small id="event-image-delete-help" class="field-help">Odebere vazbu pouze u této události. Sdílený soubor zůstane zachovaný pro ostatní termíny a kopie včetně Koše; jinak bude odstraněn.</small>
+        <?php adminRenderFieldError('confirm_event_image_delete', $err, $fieldErrorMap, $fieldErrorMessages['image_confirm']); ?>
       </div>
     <?php endif; ?>
 

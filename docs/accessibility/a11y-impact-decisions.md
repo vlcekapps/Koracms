@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-05: RC audit ukládání Chatu, Ke stažení a Událostí
+
+- Datum a rozsah: veřejné zprávy a odpovědi Chatu, retenční úklid a administrační uložení/mazání Ke stažení a Událostí. Registr nálezů a konkrétní výsledky: `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: provozní chyba zápisu nesmí předstírat úspěch ani uložit jen část změny. Veřejný Chat zachová text a oznámí chybu ve stávajícím pojmenovaném alertu; pokud během odesílání zmizí oprávněný veřejný cíl, skryje původní obsah, zachová rozepsanou odpověď a zakáže nové odeslání. Zápis a úklid používají stejný parent-first zámek. Notifikační chyba po uložení se nevydává za neuloženou zprávu. Nevzniká nový časový limit, ovládací model ani automaticky obnovený souhlas; hlavní ACR se nezvyšuje na Supports.
+- Automatizovaný důkaz: `build/rc_chat_integrity_selftest.php` vykonává produkční helpery, rollback a šablonu včetně zachování escapovaného textu, labelů a existujících ARIA cílů. SQLite instrumentace dokazuje pořadí SQL, nikoli reálný souběh. `build/rc_chat_mysql_selftest.php` používá dva skutečné procesy a starý REPEATABLE READ snapshot; HTTP `rc2_chat_integrity_http` vyvolává chybu historie v reálném handleru a ověřuje zachované hodnoty, alert i přesný DB rollback. Nové izolované testy Ke stažení a Událostí a jejich integrační výsledky jsou popsané v registru; runtime audit hlídá produkční napojení a Composer sady.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox a klávesnicí projít neúspěšné odeslání, chybu editoru, chování souborového vstupu a review mazání; ověřit reflow a hostingový cron/log smoke. Automatické důkazy nejsou ručním průchodem ani potvrzením skutečné doručitelnosti SMTP. Math captcha zůstává existujícím mechanismem, tento blok ji neprohlašuje za univerzálně přístupnou. Souběžné textové změny se automaticky neslučují.
+
 ### 2026-10-05: navazující RC audit Rezervací, médií Food a odběru Vývěsky
 
 - Datum a rozsah: veřejné ověřovací otázky, odběr/odhlášení Vývěsky, ruční rezervace, blokované dny, intervalové rezervace, schválení a no-show, cron připomínek a kontrola použití obrázků Food. Nálezy RC2-20 až RC2-29 v `docs/rc2-module-audit-2026-09.md`.

@@ -4,6 +4,14 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu soub
 requireModuleEnabled('downloads');
 
 $pdo = db_connect();
+$message = trim((string)($_GET['msg'] ?? ''));
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorDownloadId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Položka ke stažení nebyla smazána. Potvrďte přesun vybrané položky do koše.',
+    'invalid' => 'Položku ke stažení nejde smazat, protože už není dostupná.',
+    default => '',
+};
 $q = trim((string)($_GET['q'] ?? ''));
 $statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $categoryFilter = inputInt('get', 'kat');
@@ -120,6 +128,8 @@ $items = array_map(
 
 adminHeader('Ke stažení');
 ?>
+<?php if ($message === 'deleted'): ?><p class="success" role="status">Položka ke stažení byla přesunuta do koše.</p><?php endif; ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="download-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
 <p><a href="download_form.php" class="btn">+ Přidat položku</a></p>
 
 <form method="get" class="button-row button-row--baseline admin-stack-sm">
@@ -215,6 +225,14 @@ adminHeader('Ke stažení');
     </thead>
     <tbody>
     <?php foreach ($items as $download): ?>
+      <?php
+        $downloadId = (int)$download['id'];
+        $deleteConfirmField = 'confirm_download_delete_' . $downloadId;
+        $deleteConfirmId = 'confirm-download-delete-' . $downloadId;
+        $deleteReviewId = 'download-delete-review-' . $downloadId;
+        $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorDownloadId === $downloadId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
         <td><label for="download-select-<?= (int)$download['id'] ?>" class="sr-only">Vybrat <?= h((string)$download['title']) ?></label><input type="checkbox" id="download-select-<?= (int)$download['id'] ?>" name="ids[]" value="<?= (int)$download['id'] ?>" form="bulk-form"></td>
         <td>
@@ -302,11 +320,21 @@ adminHeader('Ke stažení');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="download_delete.php" method="post">
+          <form action="download_delete.php" method="post" novalidate<?= $deleteHasError ? ' aria-describedby="download-delete-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$download['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat položku ke stažení?">Smazat</button>
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání položky <?= h((string)$download['title']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">Položka <?= h((string)$download['title']) ?> přestane být veřejně dostupná. Soubor, obrázek a zařazení do série zůstanou zachované pro obnovení z koše.</p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"
+                       <?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId]) ?>>
+                Potvrzuji přesun této položky do koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním znovu potvrďte přesun této položky do koše.'); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Smazat položku ke stažení?">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

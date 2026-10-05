@@ -23,15 +23,17 @@ $priceNote = trim((string)($_POST['price_note'] ?? ''));
 $accessibilityNote = trim((string)($_POST['accessibility_note'] ?? ''));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $adminNote = trim((string)($_POST['admin_note'] ?? ''));
-$deleteImage = isset($_POST['event_image_delete']);
+$deleteImage = ($_POST['confirm_event_image_delete'] ?? '') === '1';
 
 $redirectBase = BASE_URL . '/admin/event_form.php';
 $redirectToForm = static function (string $errorCode) use ($redirectBase, $id) {
-    adminEditorFormFlashStore('event', $id, $_POST);
+    $formInput = $_POST;
+    unset($formInput['event_image_delete'], $formInput['confirm_event_image_delete']);
+    adminEditorFormFlashStore('event', $id, $formInput);
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
-    header('Location: ' . $redirectBase . $query);
+    header('Location: ' . internalRedirectTarget($redirectBase . $query, BASE_URL . '/admin/events.php'));
     exit;
 };
 
@@ -44,6 +46,10 @@ if ($id !== null) {
         header('Location: ' . BASE_URL . '/admin/events.php');
         exit;
     }
+}
+
+if (array_key_exists('event_image_delete', $_POST)) {
+    $redirectToForm('image_confirm');
 }
 
 $eventType = null;
@@ -163,194 +169,231 @@ if ($submittedSlug !== '' && $uniqueSlug !== $slug) {
 }
 $slug = $uniqueSlug;
 
-$imageFilename = (string)($existingEvent['image_file'] ?? '');
-$imageUpload = uploadEventImage($_FILES['event_image'] ?? [], $imageFilename);
+$oldImageFilename = (string)($existingEvent['image_file'] ?? '');
+// Kopie a opakované termíny mohou sdílet soubor; upload nesmí smazat původní obrázek.
+$imageUpload = uploadEventImage($_FILES['event_image'] ?? [], '');
 if ($imageUpload['error'] !== '') {
     $redirectToForm('image');
 }
-$imageFilename = $imageUpload['filename'];
-if ($deleteImage && $imageFilename !== '') {
-    deleteEventImageFile($imageFilename);
+$imageFilename = $imageUpload['uploaded'] ? $imageUpload['filename'] : $oldImageFilename;
+if ($deleteImage) {
     $imageFilename = '';
 }
 
-if ($id !== null) {
-    if (($existingEvent['preview_token'] ?? '') === '') {
+try {
+    $pdo->beginTransaction();
+    if ($id !== null) {
+        if (($existingEvent['preview_token'] ?? '') === '') {
+            $previewToken = bin2hex(random_bytes(16));
+            $pdo->prepare("UPDATE cms_events SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
+        }
+
+        $oldSnapshot = eventRevisionSnapshot($existingEvent);
+        $oldPath = eventPublicPath($existingEvent);
+
+        // Zpracování stavu (article_status z formuláře)
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $existingEvent['status'] ?? 'published';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = (($existingEvent['status'] ?? '') === 'published') ? 'published' : 'pending';
+        }
+
+        // Při první publikaci (status draft/pending → published) aktualizovat created_at
+        $publishingNow = $requestedStatus === 'published' && ($existingEvent['status'] ?? '') !== 'published';
+        $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
+        $stmt = $pdo->prepare(
+            "UPDATE cms_events
+             SET title = ?, slug = ?, event_kind = ?, event_type_id = ?, place_id = ?, excerpt = ?, description = ?, program_note = ?,
+                 location = ?, organizer_name = ?, organizer_email = ?, registration_url = ?, price_note = ?,
+                 accessibility_note = ?, image_file = ?, event_date = ?, event_end = ?, is_published = ?,
+                 publish_at = ?, unpublish_at = ?, admin_note = ?, status = ?, updated_at = NOW(){$createdAtClause}
+             WHERE id = ?"
+        );
+        $stmt->execute([
+            $title,
+            $slug,
+            $eventKind,
+            $eventTypeId,
+            $placeId,
+            $excerpt,
+            $description,
+            $programNote,
+            $location,
+            $organizerName,
+            $organizerEmail,
+            $registrationUrl,
+            $priceNote,
+            $accessibilityNote,
+            $imageFilename,
+            $eventDate,
+            $eventEnd,
+            $isPublished,
+            $publishAtSql,
+            $unpublishAtSql,
+            $adminNote,
+            $requestedStatus,
+            $id,
+        ]);
+
+        saveRevision($pdo, 'event', $id, $oldSnapshot, eventRevisionSnapshot([
+            'title' => $title,
+            'slug' => $slug,
+            'event_kind' => $eventKind,
+            'event_type_id' => $eventTypeId,
+            'place_id' => $placeId,
+            'excerpt' => $excerpt,
+            'description' => $description,
+            'program_note' => $programNote,
+            'location' => $location,
+            'event_date' => $eventDate,
+            'event_end' => $eventEnd,
+            'organizer_name' => $organizerName,
+            'organizer_email' => $organizerEmail,
+            'registration_url' => $registrationUrl,
+            'price_note' => $priceNote,
+            'accessibility_note' => $accessibilityNote,
+            'publish_at' => $publishAtSql,
+            'unpublish_at' => $unpublishAtSql,
+            'admin_note' => $adminNote,
+            'is_published' => $isPublished,
+        ]));
+        upsertPathRedirect($pdo, $oldPath, eventPublicPath(['id' => $id, 'slug' => $slug]));
+        logAction('event_edit', "id={$id} title={$title} slug={$slug} kind={$eventKind}");
+    } else {
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
+        $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
+
         $previewToken = bin2hex(random_bytes(16));
-        $pdo->prepare("UPDATE cms_events SET preview_token = ? WHERE id = ?")->execute([$previewToken, $id]);
-    }
-
-    $oldSnapshot = eventRevisionSnapshot($existingEvent);
-    $oldPath = eventPublicPath($existingEvent);
-
-    // Zpracování stavu (article_status z formuláře)
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = $existingEvent['status'] ?? 'published';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = (($existingEvent['status'] ?? '') === 'published') ? 'published' : 'pending';
-    }
-
-    // Při první publikaci (status draft/pending → published) aktualizovat created_at
-    $publishingNow = $requestedStatus === 'published' && ($existingEvent['status'] ?? '') !== 'published';
-    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
-
-    $stmt = $pdo->prepare(
-        "UPDATE cms_events
-         SET title = ?, slug = ?, event_kind = ?, event_type_id = ?, place_id = ?, excerpt = ?, description = ?, program_note = ?,
-             location = ?, organizer_name = ?, organizer_email = ?, registration_url = ?, price_note = ?,
-             accessibility_note = ?, image_file = ?, event_date = ?, event_end = ?, is_published = ?,
-             publish_at = ?, unpublish_at = ?, admin_note = ?, status = ?, updated_at = NOW(){$createdAtClause}
-         WHERE id = ?"
-    );
-    $stmt->execute([
-        $title,
-        $slug,
-        $eventKind,
-        $eventTypeId,
-        $placeId,
-        $excerpt,
-        $description,
-        $programNote,
-        $location,
-        $organizerName,
-        $organizerEmail,
-        $registrationUrl,
-        $priceNote,
-        $accessibilityNote,
-        $imageFilename,
-        $eventDate,
-        $eventEnd,
-        $isPublished,
-        $publishAtSql,
-        $unpublishAtSql,
-        $adminNote,
-        $requestedStatus,
-        $id,
-    ]);
-
-    saveRevision($pdo, 'event', $id, $oldSnapshot, eventRevisionSnapshot([
-        'title' => $title,
-        'slug' => $slug,
-        'event_kind' => $eventKind,
-        'event_type_id' => $eventTypeId,
-        'place_id' => $placeId,
-        'excerpt' => $excerpt,
-        'description' => $description,
-        'program_note' => $programNote,
-        'location' => $location,
-        'event_date' => $eventDate,
-        'event_end' => $eventEnd,
-        'organizer_name' => $organizerName,
-        'organizer_email' => $organizerEmail,
-        'registration_url' => $registrationUrl,
-        'price_note' => $priceNote,
-        'accessibility_note' => $accessibilityNote,
-        'publish_at' => $publishAtSql,
-        'unpublish_at' => $unpublishAtSql,
-        'admin_note' => $adminNote,
-        'is_published' => $isPublished,
-    ]));
-    upsertPathRedirect($pdo, $oldPath, eventPublicPath(['id' => $id, 'slug' => $slug]));
-    logAction('event_edit', "id={$id} title={$title} slug={$slug} kind={$eventKind}");
-} else {
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = 'draft';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = 'pending';
-    }
-    $status = $requestedStatus;
-    $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
-
-    $previewToken = bin2hex(random_bytes(16));
-    $recurrenceGroupId = $recurrenceFrequency !== 'none' ? eventRecurrenceGroupId() : '';
-    $stmt = $pdo->prepare(
-        "INSERT INTO cms_events (
-            title, slug, event_kind, event_type_id, place_id, recurrence_group_id, excerpt, description, program_note, location,
-            organizer_name, organizer_email, registration_url, price_note, accessibility_note,
-            image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
-         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    );
-    $stmt->execute([
-        $title,
-        $slug,
-        $eventKind,
-        $eventTypeId,
-        $placeId,
-        $recurrenceGroupId,
-        $excerpt,
-        $description,
-        $programNote,
-        $location,
-        $organizerName,
-        $organizerEmail,
-        $registrationUrl,
-        $priceNote,
-        $accessibilityNote,
-        $imageFilename,
-        $eventDate,
-        $eventEnd,
-        $visible,
-        $publishAtSql,
-        $unpublishAtSql,
-        $adminNote,
-        $status,
-        $previewToken,
-    ]);
-    $id = (int)$pdo->lastInsertId();
-
-    if ($recurrenceFrequency !== 'none') {
-        $copyStmt = $pdo->prepare(
+        $recurrenceGroupId = $recurrenceFrequency !== 'none' ? eventRecurrenceGroupId() : '';
+        $stmt = $pdo->prepare(
             "INSERT INTO cms_events (
                 title, slug, event_kind, event_type_id, place_id, recurrence_group_id, excerpt, description, program_note, location,
                 organizer_name, organizer_email, registration_url, price_note, accessibility_note,
                 image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
              ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         );
+        $stmt->execute([
+            $title,
+            $slug,
+            $eventKind,
+            $eventTypeId,
+            $placeId,
+            $recurrenceGroupId,
+            $excerpt,
+            $description,
+            $programNote,
+            $location,
+            $organizerName,
+            $organizerEmail,
+            $registrationUrl,
+            $priceNote,
+            $accessibilityNote,
+            $imageFilename,
+            $eventDate,
+            $eventEnd,
+            $visible,
+            $publishAtSql,
+            $unpublishAtSql,
+            $adminNote,
+            $status,
+            $previewToken,
+        ]);
+        $id = (int)$pdo->lastInsertId();
 
-        for ($index = 1; $index < $recurrenceCount; $index++) {
-            $offset = $recurrenceInterval * $index;
-            $shiftedStart = eventRecurrenceShift($eventDateTime, $recurrenceFrequency, $offset);
-            $shiftedEnd = $eventEndTime instanceof DateTimeImmutable
-                ? eventRecurrenceShift($eventEndTime, $recurrenceFrequency, $offset)
+        if ($recurrenceFrequency !== 'none') {
+            $copyStmt = $pdo->prepare(
+                "INSERT INTO cms_events (
+                    title, slug, event_kind, event_type_id, place_id, recurrence_group_id, excerpt, description, program_note, location,
+                    organizer_name, organizer_email, registration_url, price_note, accessibility_note,
+                    image_file, event_date, event_end, is_published, publish_at, unpublish_at, admin_note, status, preview_token
+                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+            );
+
+            $eventDuration = $eventEndTime instanceof DateTimeImmutable
+                ? $eventDateTime->diff($eventEndTime)
                 : null;
-            $copySlug = uniqueEventSlug($pdo, $slug . '-' . $shiftedStart->format('Y-m-d'), null);
+            for ($index = 1; $index < $recurrenceCount; $index++) {
+                $offset = $recurrenceInterval * $index;
+                $shiftedStart = eventRecurrenceShift($eventDateTime, $recurrenceFrequency, $offset);
+                // Nezávislý posun konce po měsících může skončit před posunutým začátkem.
+                $shiftedEnd = $eventDuration !== null
+                    ? $shiftedStart->add($eventDuration)
+                    : null;
+                $copySlug = uniqueEventSlug($pdo, $slug . '-' . $shiftedStart->format('Y-m-d'), null);
 
-            $copyStmt->execute([
-                $title,
-                $copySlug,
-                $eventKind,
-                $eventTypeId,
-                $placeId,
-                $recurrenceGroupId,
-                $excerpt,
-                $description,
-                $programNote,
-                $location,
-                $organizerName,
-                $organizerEmail,
-                $registrationUrl,
-                $priceNote,
-                $accessibilityNote,
-                $imageFilename,
-                $shiftedStart->format('Y-m-d H:i:s'),
-                $shiftedEnd?->format('Y-m-d H:i:s'),
-                $visible,
-                $publishAtSql,
-                $unpublishAtSql,
-                $adminNote,
-                $status,
-                bin2hex(random_bytes(16)),
-            ]);
+                $copyStmt->execute([
+                    $title,
+                    $copySlug,
+                    $eventKind,
+                    $eventTypeId,
+                    $placeId,
+                    $recurrenceGroupId,
+                    $excerpt,
+                    $description,
+                    $programNote,
+                    $location,
+                    $organizerName,
+                    $organizerEmail,
+                    $registrationUrl,
+                    $priceNote,
+                    $accessibilityNote,
+                    $imageFilename,
+                    $shiftedStart->format('Y-m-d H:i:s'),
+                    $shiftedEnd?->format('Y-m-d H:i:s'),
+                    $visible,
+                    $publishAtSql,
+                    $unpublishAtSql,
+                    $adminNote,
+                    $status,
+                    bin2hex(random_bytes(16)),
+                ]);
+            }
         }
+        logAction('event_add', "id={$id} title={$title} slug={$slug} kind={$eventKind} status={$status}");
     }
-    logAction('event_add', "id={$id} title={$title} slug={$slug} kind={$eventKind} status={$status}");
-    if ($status === 'pending') {
-        notifyPendingContent('Událost', $title, '/admin/events.php');
+    $pdo->commit();
+} catch (Throwable $exception) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
     }
+    if ($imageUpload['uploaded']) {
+        deleteEventImageFile((string)$imageUpload['filename']);
+    }
+    koraLog('error', 'event save failed', ['event_id' => $id, 'exception' => $exception]);
+    $redirectToForm('save');
+}
+
+$obsoleteImageFiles = [$oldImageFilename];
+if ($imageUpload['uploaded']) {
+    $obsoleteImageFiles[] = (string)$imageUpload['filename'];
+}
+foreach (array_unique($obsoleteImageFiles) as $obsoleteImageFile) {
+    if ($obsoleteImageFile === '' || $obsoleteImageFile === $imageFilename) {
+        continue;
+    }
+    try {
+        // I položky v Koši vlastní obrázek, který potřebují při obnovení.
+        $imageUsageStmt = $pdo->prepare('SELECT COUNT(*) FROM cms_events WHERE image_file = ?');
+        $imageUsageStmt->execute([$obsoleteImageFile]);
+        if ((int)$imageUsageStmt->fetchColumn() === 0) {
+            deleteEventImageFile($obsoleteImageFile);
+        }
+    } catch (PDOException $exception) {
+        koraLog('warning', 'event image cleanup failed', ['event_id' => $id, 'exception' => $exception]);
+    }
+}
+if ($existingEvent === null && $requestedStatus === 'pending') {
+    notifyPendingContent('Událost', $title, '/admin/events.php');
 }
 
 // Uvolnění zámku obsahu po úspěšném uložení

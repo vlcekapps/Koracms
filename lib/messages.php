@@ -461,6 +461,78 @@ function uniqueChatReferenceCode(PDO $pdo): string
     return $code;
 }
 
+/** @return array{id:int, reference_code:string} */
+function chatCreateSubmission(
+    PDO $pdo,
+    ?int $topicId,
+    string $topicLabel,
+    string $conversationType,
+    string $name,
+    string $email,
+    string $body
+): array {
+    $conversationType = normalizeChatConversationType($conversationType);
+    $pdo->beginTransaction();
+    try {
+        $referenceCode = $conversationType === 'support' ? uniqueChatReferenceCode($pdo) : '';
+        $pdo->prepare(
+            "INSERT INTO cms_chat
+             (topic_id, topic_label, conversation_type, reference_code, name, email, web, message, status, public_visibility)
+             VALUES (?, ?, ?, ?, ?, ?, '', ?, 'new', ?)"
+        )->execute([
+            $topicId, $topicLabel, $conversationType, $referenceCode, $name, $email, $body,
+            $conversationType === 'support' ? 'hidden' : 'pending',
+        ]);
+        $messageId = (int)$pdo->lastInsertId();
+        chatHistoryCreate(
+            $pdo,
+            $messageId,
+            null,
+            'submitted',
+            $conversationType === 'support'
+                ? 'Soukromý dotaz byl přijat do podpůrného inboxu.'
+                : 'Zpráva byla přijata a čeká na schválení.'
+        );
+        $pdo->commit();
+        return ['id' => $messageId, 'reference_code' => $referenceCode];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
+function chatCreatePublicReply(PDO $pdo, int $chatId, string $name, string $email, string $body): bool
+{
+    $pdo->beginTransaction();
+    try {
+        $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+        $parent = $pdo->prepare(
+            "SELECT id FROM cms_chat
+             WHERE id = ? AND conversation_type = 'public' AND public_visibility = 'approved'" . $lock
+        );
+        $parent->execute([$chatId]);
+        if ($parent->fetchColumn() === false) {
+            $pdo->commit();
+            return false;
+        }
+        $pdo->prepare(
+            "INSERT INTO cms_chat_replies (chat_id, name, email, message, status)
+             VALUES (?, ?, ?, ?, 'pending')"
+        )->execute([$chatId, $name, $email, $body]);
+        chatHistoryCreate($pdo, $chatId, null, 'reply_submitted', 'Veřejná odpověď byla přijata a čeká na schválení.');
+        $pdo->prepare('UPDATE cms_chat SET updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$chatId]);
+        $pdo->commit();
+        return true;
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
 /**
  * @param array<string,mixed> $message
  */
@@ -735,7 +807,7 @@ function chatHistoryActorLabel(array $entry): string
     return 'Systém';
 }
 
-function deleteChatMessage(PDO $pdo, int $messageId): bool
+function deleteChatMessage(PDO $pdo, int $messageId, ?string $retentionCutoff = null): bool
 {
     $startedTransaction = !$pdo->inTransaction();
     if ($startedTransaction) {
@@ -743,11 +815,25 @@ function deleteChatMessage(PDO $pdo, int $messageId): bool
     }
 
     try {
+        // Public replies and cleanup must lock the parent before touching its children.
+        $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+        $eligibility = $retentionCutoff !== null ? " AND status = 'handled' AND updated_at < ?" : '';
+        $parent = $pdo->prepare('SELECT id FROM cms_chat WHERE id = ?' . $eligibility . $lock);
+        $parent->execute($retentionCutoff !== null ? [$messageId, $retentionCutoff] : [$messageId]);
+        if ($parent->fetchColumn() === false) {
+            if ($startedTransaction) {
+                $pdo->commit();
+            }
+            return false;
+        }
         $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id = ?")->execute([$messageId]);
         $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id = ?")->execute([$messageId]);
         $deleteStmt = $pdo->prepare("DELETE FROM cms_chat WHERE id = ?");
         $deleteStmt->execute([$messageId]);
         $deleted = $deleteStmt->rowCount() > 0;
+        if (!$deleted) {
+            throw new RuntimeException('Zamčenou chat zprávu se nepodařilo odstranit.');
+        }
 
         if ($startedTransaction) {
             $pdo->commit();

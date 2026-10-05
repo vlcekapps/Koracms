@@ -867,6 +867,8 @@ Modul chatu funguje jako moderovaná veřejná nástěnka, ne jako okamžitě pu
 
 Stejný formulář umí také soukromý podpůrný dotaz správci. V tom režimu je povinný e-mail pro odpověď, CMS vygeneruje referenční kód ve tvaru `CHT-YYYYMMDD-XXXX` a zpráva se nikdy nezobrazí ve veřejném chatu, v detailu veřejné zprávy ani v sitemapě.
 
+Veřejná zpráva i odpověď se ukládají společně s historií v jedné transakci. Pokud zápis selže, formulář zachová zadané hodnoty a zobrazí textovou chybu; nehlásí přijetí částečně uložené zprávy. Odpověď znovu ověří aktuální veřejnou dostupnost vlákna pod zámkem. Při odmítnutí touto závěrečnou kontrolou rozepsaná odpověď zůstane čitelná, ale odesílání se zakáže a původní obsah vlákna se nezobrazí. Již nedostupný detail při počátečním načtení dál vrací 404. Nová odpověď aktualizuje aktivitu vlákna, takže jej retenční úklid nepovažuje za staré neaktivní. Cron před smazáním znovu ověří stav `Vyřízené` a datum poslední aktivity; nedávno aktivní nebo znovu otevřená zpráva zůstane zachovaná.
+
 ### Co se zobrazuje veřejně
 
 Veřejný chat ukazuje jen:
@@ -1070,6 +1072,8 @@ Při chybě u názvu, slugu nebo meta title se správa kategorií a sérií neza
 
 Smazání kategorie nebo série je samostatně potvrzované. Řádkový formulář nejdřív ukáže, kolika položek ke stažení se změna dotkne, u série také kolik položek přijde o označení aktuální verze. Bez potvrzovacího checkboxu server smazání odmítne, položky zůstanou zachované a nezmění se ani audit log.
 
+Validační chyba nebo selhání ukládání zachová rozepsané údaje pouze pro konkrétní editor. Běžné checkboxy se obnoví, potvrzení odebrání souboru či obrázku nikoli: po kontrole je nutné udělit nový souhlas. Vybraný lokální soubor nelze z bezpečnostních důvodů znovu vložit do file inputu za uživatele; případnou nutnost nového výběru formulář vysvětlí. Samostatný přesun do koše také vyžaduje potvrzovací checkbox ověřovaný serverem; přílohy v koši zůstávají pro obnovu.
+
 ### Co se nastavuje u položky
 
 Každá položka může mít:
@@ -1248,6 +1252,8 @@ Textové místo zůstává vhodné pro doplnění sálu, patra nebo jiné prakti
 Při vytváření nové události lze zvolit opakování: žádné, denně, týdně nebo měsíčně. Nastavuje se interval a počet termínů v rozsahu 2 až 52. CMS při uložení vytvoří skutečné samostatné události s posunutým začátkem i koncem, unikátním slugem a společným `recurrence_group_id`.
 
 Důležité: opakování je jednorázový generátor, ne živé kalendářové pravidlo. Pozdější úprava jednoho termínu se automaticky nepropíše do celé série. Detail opakované události zobrazí sekci **Další termíny této akce** a aktuální termín označí pro čtečky obrazovky přes `aria-current`.
+
+Celá opakovaná série se uloží atomicky. Pokud zápis některého termínu selže, žádný její nový termín nezůstane uložený a editor zachová zadané hodnoty s textovým upozorněním. Opakování posouvá začátek a zachovává původní délku akce; u měsíčního posunu CMS dál používá kalendářní posun PHP, takže například konec ledna může přesáhnout krátký únor. Náhledový obrázek mohou sdílet kopie nebo jednotlivé termíny: přesun do koše jej nesmaže, odpojení či výměna odstraní soubor jen bez další reference včetně koše. Po trvalém smazání poslední reference se soubor uklidí. Přesun do koše i odpojení obrázku vyžadují čerstvé potvrzení, které se neobnovuje z konceptu.
 
 ### Veřejný výstup a SEO
 

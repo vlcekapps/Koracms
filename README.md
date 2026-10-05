@@ -14,9 +14,11 @@ Release ZIP ani source archive neobsahují lokální `.agents/`, `.php-cs-fixer.
 
 Zdrojové repository, redirect, encoding, mojibake a whitespace audity zahrnují také nové neignorované soubory před `git add`, aby lokální kontrola nepřehlédla kód, který až po commitu uvidí CI. Ignorované lokální konfigurace a nástrojové cache se nenačítají; vynucené verzování tajné konfigurace repository audit dál odmítne.
 
-`composer test:rc-core` opakuje sedm izolovaných SQLite sad také v režimu PDO s číselnými řetězci (`build/rc_pdo_fetch_selftest.php`). Tím kontroluje reprezentaci databázových hodnot používanou staršími PHP ovladači i na novějším místním PHP; nejde o náhradu CI na nejnižší podporované verzi PHP.
+`composer test:rc-core` opakuje izolované SQLite sady také v režimu PDO s číselnými řetězci (`build/rc_pdo_fetch_selftest.php`). Tím kontroluje reprezentaci databázových hodnot používanou staršími PHP ovladači i na novějším místním PHP; nejde o náhradu CI na nejnižší podporované verzi PHP.
 
 Navazující [modulový audit pro RC.2](docs/rc2-module-audit-2026-09.md) chrání neveřejné revize, zachovává odmítnuté formuláře Galerie a Anket a zpřesňuje poptávky Food i stavová hlášení Kontaktu. Regrese běží ve stejném `composer ci:module-ready`; databázové schéma ani číslo vydání se tímto blokem nemění.
+
+Audit dále pokrývá atomické zprávy/odpovědi a čerstvou retenční kontrolu Chatu, zachování editoru a čerstvý souhlas s mazáním Ke stažení a Událostí. Opakované akce zachovávají délku a při chybě nevzniká částečná série; sdílené obrázky zůstávají i pro obnovu z koše. Izolované testy vykonávají produkční handlery, skutečné MySQL procesy ověřují zámky Chatu a HTTP testy vyvolávají kontrolované chyby zápisu. Automatické důkazy nenahrazují ruční NVDA, reflow ani hostingový smoke.
 
 Další průchod chrání souběh hlasování, editace a trvalého mazání Anket; `composer test:rc-runtime` ověřuje sedm skutečných InnoDB souběhů i se starým transakčním snapshotem. Odmítnutý hlas zachová výběr, databázová chyba má vlastní vysvětlení a starý FAQ endpoint nepřesměruje odeslané hodnocení před zpracováním. Bez změny schématu nebo vydání RC.2.
 

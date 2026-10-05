@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             } else {
                 $genericPurge = !in_array($module, ['places', 'articles', 'polls'], true);
+                $purgedEventImageFile = '';
                 try {
                     if ($genericPurge) {
                         $pdo->beginTransaction();
@@ -197,6 +198,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } catch (Throwable $e) {
                             koraLog('warning', 'poll permanent deletion failed', ['poll_id' => $itemId, 'exception' => $e]);
                         }
+                    } elseif ($module === 'events') {
+                        $imageStmt = $pdo->prepare('SELECT image_file FROM cms_events WHERE id = ?');
+                        $imageStmt->execute([$itemId]);
+                        $purgedEventImageFile = (string)$imageStmt->fetchColumn();
+                        $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'event' AND entity_id = ?")->execute([$itemId]);
                     } elseif ($module === 'downloads') {
                         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'download' AND entity_id = ?")->execute([$itemId]);
                     } elseif ($module === 'food_cards') {
@@ -258,6 +264,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         logAction('trash_purge', "module={$module} id={$itemId}");
                         $pdo->commit();
+                        if ($module === 'events') {
+                            deleteUnusedEventImageFile($pdo, $purgedEventImageFile);
+                        }
                         $redirectQuery = 'ok=purged';
                     }
                 } catch (Throwable $e) {

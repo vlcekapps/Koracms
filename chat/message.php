@@ -39,9 +39,13 @@ if (!$message) {
 }
 
 $errors = [];
+$threadAvailable = true;
 $successState = trim((string)($_GET['reply'] ?? ''));
 $contactDefaults = currentUserContactDefaults($pdo);
 $isPostRequest = $_SERVER['REQUEST_METHOD'] === 'POST';
+if ($isPostRequest) {
+    $successState = '';
+}
 $formData = [
     'name' => $contactDefaults['name'],
     'email' => $contactDefaults['email'],
@@ -80,27 +84,33 @@ if ($isPostRequest) {
     }
 
     if ($errors === []) {
-        $pdo->prepare(
-            "INSERT INTO cms_chat_replies (chat_id, name, email, message, status)
-             VALUES (?, ?, ?, ?, 'pending')"
-        )->execute([
-            (int)$message['id'],
-            $formData['name'],
-            $formData['email'],
-            $formData['message'],
-        ]);
-        chatHistoryCreate($pdo, (int)$message['id'], null, 'reply_submitted', 'Veřejná odpověď byla přijata a čeká na schválení.');
-
-        header('Location: ' . appendUrlQuery(chatMessagePath($message), ['reply' => 'pending']));
-        exit;
+        try {
+            $replyStored = chatCreatePublicReply(
+                $pdo,
+                (int)$message['id'],
+                $formData['name'],
+                $formData['email'],
+                $formData['message']
+            );
+            if ($replyStored) {
+                header('Location: ' . appendUrlQuery(chatMessagePath($message), ['reply' => 'pending']));
+                exit;
+            }
+            $threadAvailable = false;
+            http_response_code(409);
+            $errors[] = 'Na tuto zprávu již nelze odpovědět. Vlákno bylo skryto nebo odstraněno; rozepsaná odpověď zůstala zachovaná.';
+        } catch (\Throwable $e) {
+            koraLog('warning', 'chat reply insert failed', ['exception' => $e]);
+            $errors[] = 'Odpověď se nepodařilo uložit. Rozepsaný obsah zůstal zachovaný; zkuste to prosím později.';
+        }
     }
 }
 
-$replies = chatPublicReplies($pdo, (int)$message['id']);
+$replies = $threadAvailable ? chatPublicReplies($pdo, (int)$message['id']) : [];
 $captchaExpr = captchaGenerate();
 $siteName = getSetting('site_name', 'Kora CMS');
 $topicName = trim((string)($message['topic_name'] ?? $message['topic_label'] ?? ''));
-$pageTitle = 'Zpráva od ' . (string)$message['name'];
+$pageTitle = $threadAvailable ? 'Zpráva od ' . (string)$message['name'] : 'Vlákno chatu již není dostupné';
 $backUrl = $topicName !== '' && trim((string)($message['topic_slug'] ?? '')) !== ''
     ? chatTopicPath(['slug' => (string)$message['topic_slug']])
     : BASE_URL . '/chat/index.php';
@@ -109,13 +119,14 @@ renderPublicPage([
     'title' => $pageTitle . ' – Chat – ' . $siteName,
     'meta' => [
         'title' => $pageTitle . ' – Chat – ' . $siteName,
-        'description' => mb_strimwidth(normalizePlainText((string)$message['message']), 0, 180, '…', 'UTF-8'),
+        'description' => $threadAvailable ? mb_strimwidth(normalizePlainText((string)$message['message']), 0, 180, '…', 'UTF-8') : $pageTitle,
         'url' => chatMessagePath($message),
         'type' => 'article',
     ],
     'view' => 'modules/chat-message',
     'view_data' => [
         'message' => $message,
+        'threadAvailable' => $threadAvailable,
         'replies' => $replies,
         'errors' => $errors,
         'successState' => $successState,

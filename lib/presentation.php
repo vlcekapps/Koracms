@@ -5127,6 +5127,23 @@ function eventImageUrl(array $event): string
     return BASE_URL . '/uploads/events/images/' . rawurlencode($filename);
 }
 
+function deleteUnusedEventImageFile(PDO $pdo, string $filename): void
+{
+    if ($filename === '' || basename($filename) !== $filename) {
+        return;
+    }
+    try {
+        // Trashed events still need their image for a later restore.
+        $usage = $pdo->prepare('SELECT COUNT(*) FROM cms_events WHERE image_file = ?');
+        $usage->execute([$filename]);
+        if ((int)$usage->fetchColumn() === 0) {
+            deleteEventImageFile($filename);
+        }
+    } catch (PDOException $exception) {
+        koraLog('warning', 'event image cleanup failed', ['exception' => $exception]);
+    }
+}
+
 function deleteEventImageFile(string $filename): void
 {
     $filename = basename($filename);

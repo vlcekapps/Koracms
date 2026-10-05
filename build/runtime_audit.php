@@ -4458,7 +4458,7 @@ foreach ($pages as $page) {
             'name="platform_label"',
             'name="license_label"',
             'name="external_url"',
-            'name="file_delete"',
+            'name="confirm_download_file_delete"',
             'Zpět na přehled ke stažení',
         ] as $expectedField) {
             if (!str_contains($result['body'], $expectedField)) {
@@ -10136,9 +10136,11 @@ foreach ([
     'chat pinned helper' => str_contains($messagesSource, 'function chatMessageIsPinned('),
     'public chat hides support messages' => str_contains($chatIndexSource, "c.conversation_type = 'public'"),
     'public chat supports private support mode' => str_contains($chatIndexSource, "\$conversationType === 'support'"),
-    'public chat stores support reference codes' => str_contains($chatIndexSource, 'uniqueChatReferenceCode('),
+    'public chat stores support reference codes' => str_contains($chatIndexSource, 'chatCreateSubmission(')
+        && str_contains($messagesSource, "\$conversationType === 'support' ? uniqueChatReferenceCode(\$pdo)"),
     'public chat detail hides private messages' => str_contains($chatMessageSource, "c.conversation_type = 'public'"),
-    'public chat detail stores replies pending' => str_contains($chatMessageSource, 'cms_chat_replies') && str_contains($chatMessageSource, "'pending'"),
+    'public chat detail stores replies pending' => str_contains($chatMessageSource, 'chatCreatePublicReply(')
+        && str_contains($messagesSource, 'INSERT INTO cms_chat_replies') && str_contains($messagesSource, "'pending'"),
     'admin chat supports pin and unpin actions' => str_contains($adminChatSource, "?'unpin':'pin'")
         || str_contains($adminChatSource, "? 'unpin' : 'pin'"),
     'admin chat detail supports reply moderation actions' => str_contains($adminChatMessageSource, '/admin/chat_reply_action.php'),
@@ -10152,7 +10154,8 @@ foreach ([
         && str_contains($exportAdminSource, "'chat_replies'"),
     'chat import includes fallback conversation type' => str_contains($importAdminSource, "normalizeChatConversationType((string)(\$row['conversation_type'] ?? 'public'))")
         && str_contains($importAdminSource, "normalizeChatReplyStatus((string)(\$row['status'] ?? 'pending'))"),
-    'chat cron cleanup removes replies' => str_contains($cronSource, 'DELETE FROM cms_chat_replies WHERE chat_id IN'),
+    'chat cron cleanup removes replies' => str_contains($cronSource, 'deleteChatMessage($pdo, $expiredChatId, $chatRetentionCutoff)')
+        && str_contains($messagesSource, 'DELETE FROM cms_chat_replies WHERE chat_id = ?'),
     'chat router self-test covers clean URLs' => str_contains($httpServerRouterSelftestSource, '/chat/tema/obecne')
         && str_contains($httpServerRouterSelftestSource, '/chat/zprava/42'),
 ] as $chatGuardLabel => $chatGuardOk) {
@@ -19065,7 +19068,7 @@ if (!str_contains($chatActionSource, "\$confirmFieldName = 'confirm_chat_delete_
     || !str_contains($chatReplyActionSource, "\$confirmFieldName = 'confirm_chat_reply_delete_' . \$replyId;")
     || !str_contains($chatReplyActionSource, "'error' => 'chat_reply_delete_confirm_required'")
     || !str_contains($chatReplyActionSource, '$pdo->beginTransaction();')
-    || !str_contains($messagesSource, 'function deleteChatMessage(PDO $pdo, int $messageId): bool')
+    || !str_contains($messagesSource, 'function deleteChatMessage(PDO $pdo, int $messageId, ?string $retentionCutoff = null): bool')
     || !str_contains($messagesSource, '$startedTransaction = !$pdo->inTransaction();')
     || !str_contains($messagesSource, 'DELETE FROM cms_chat_replies WHERE chat_id = ?')
     || !str_contains($messagesSource, 'DELETE FROM cms_chat_history WHERE chat_id = ?')) {
@@ -24154,6 +24157,74 @@ if ($followupIssues === []) {
 } else {
     $failures++;
     foreach ($followupIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_chat_write_integrity_contract ===\n";
+$chatIntegrityIssues = [];
+foreach ([
+    'lib/messages.php' => ['function chatCreateSubmission(', 'function chatCreatePublicReply(',
+        '$pdo->beginTransaction()', '$pdo->rollBack()', 'FOR UPDATE',
+        "AND conversation_type = 'public' AND public_visibility = 'approved'",
+        'UPDATE cms_chat SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        "AND status = 'handled' AND updated_at < ?"],
+    'chat/index.php' => ['chatCreateSubmission(', 'chat submission insert failed'],
+    'chat/message.php' => ['chatCreatePublicReply(', 'http_response_code(409)', "'threadAvailable' => \$threadAvailable", 'Rozepsaný obsah zůstal zachovaný'],
+    'cron.php' => ['deleteChatMessage($pdo, $expiredChatId, $chatRetentionCutoff)'],
+    'themes/default/views/modules/chat-message.php' => ['if ($threadAvailable)', 'chat-reply-errors', "!\$threadAvailable ? ' disabled'"],
+    'build/http_integration.php' => ['rcChatIntegrityHttpChecks('],
+    'build/rc_chat_integrity_http.php' => ['Owned reply history failure', '$read($parentId) === $parentBefore', '$checkAria('],
+    'build/rc_chat_integrity_selftest.php' => ['chatCreateSubmission(', 'chatCreatePublicReply(', 'deleteChatMessage('],
+    'build/rc_chat_mysql_selftest.php' => ['REPEATABLE READ', 'PROCESSLIST', 'hidden-support', 'retention'],
+    'composer.json' => ['rc_chat_integrity_selftest.php', 'rc_chat_mysql_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_chat_integrity_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $chatIntegrityIssues[] = $file . ' missing Chat integrity protection: ' . $fragment;
+        }
+    }
+}
+if ($chatIntegrityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($chatIntegrityIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_editor_integrity_contract ===\n";
+$editorIntegrityIssues = [];
+foreach ([
+    'admin/download_save.php' => ['download_form_flash', 'confirm_download_file_delete', 'confirm_download_image_delete'],
+    'admin/download_form.php' => ['downloadEditableFields', "\$downloadFormFlash['download_id'] === \$id", 'files_need_reselect'],
+    'admin/download_delete.php' => ['confirm_download_delete_', 'confirm_required', 'rowCount()'],
+    'admin/downloads.php' => ['download-delete-review-', '<fieldset', 'download-delete-error'],
+    'admin/event_save.php' => ['$pdo->beginTransaction()', '$pdo->rollBack()', '$shiftedStart->add($eventDuration)', 'confirm_event_image_delete'],
+    'admin/event_delete.php' => ['confirm_event_delete_', 'confirm_required'],
+    'admin/events.php' => ['event-delete-review-', '<fieldset', 'event-delete-error'],
+    'admin/trash.php' => ['deleteUnusedEventImageFile($pdo, $purgedEventImageFile)'],
+    'lib/presentation.php' => ['function deleteUnusedEventImageFile(', 'SELECT COUNT(*) FROM cms_events WHERE image_file = ?'],
+    'build/http_integration.php' => ['rcEditorIntegrityHttpChecks('],
+    'build/rc_editor_integrity_http.php' => ['Owned third event failure', '$rows(\'cms_events\') === []', '$checkAria('],
+    'composer.json' => ['rc_download_integrity_selftest.php', 'rc_event_integrity_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_download_integrity_selftest.php', 'rc_event_integrity_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $editorIntegrityIssues[] = $file . ' missing editor integrity protection: ' . $fragment;
+        }
+    }
+}
+if ($editorIntegrityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($editorIntegrityIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

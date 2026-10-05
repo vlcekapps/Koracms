@@ -6,11 +6,30 @@ requireModuleEnabled('downloads');
 verifyCsrf();
 
 $id = inputInt('post', 'id');
-if ($id !== null) {
-    $pdo = db_connect();
-    $pdo->prepare("UPDATE cms_downloads SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL")->execute([$id]);
-    logAction('download_delete', "id={$id} soft=true");
+$redirectDeleteError = static function (string $error) use ($id): void {
+    $target = BASE_URL . '/admin/downloads.php?delete_error=' . rawurlencode($error);
+    if ($id !== null) {
+        $target .= '&delete_error_id=' . $id;
+    }
+    header('Location: ' . internalRedirectTarget($target, BASE_URL . '/admin/downloads.php'));
+    exit;
+};
+if ($id === null) {
+    $redirectDeleteError('invalid');
 }
 
-header('Location: ' . BASE_URL . '/admin/downloads.php');
+$confirmFieldName = 'confirm_download_delete_' . $id;
+if (($_POST[$confirmFieldName] ?? '') !== '1') {
+    $redirectDeleteError('confirm_required');
+}
+
+$pdo = db_connect();
+$deleteStmt = $pdo->prepare("UPDATE cms_downloads SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL");
+$deleteStmt->execute([$id]);
+if ($deleteStmt->rowCount() !== 1) {
+    $redirectDeleteError('invalid');
+}
+logAction('download_delete', "id={$id} soft=true");
+
+header('Location: ' . BASE_URL . '/admin/downloads.php?msg=deleted');
 exit;

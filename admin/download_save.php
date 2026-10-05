@@ -25,17 +25,53 @@ $isCurrentVersion = isset($_POST['is_current_version']) ? 1 : 0;
 $externalUrlInput = trim((string)($_POST['external_url'] ?? ''));
 $isPublished = isset($_POST['is_published']) ? 1 : 0;
 $isFeatured = isset($_POST['is_featured']) ? 1 : 0;
-$deleteStoredFile = isset($_POST['file_delete']);
-$deleteImage = isset($_POST['download_image_delete']);
+$deleteStoredFile = ($_POST['confirm_download_file_delete'] ?? '') === '1';
+$deleteImage = ($_POST['confirm_download_image_delete'] ?? '') === '1';
+
+$formValues = [
+    'title' => $title,
+    'slug' => $slugInput,
+    'download_type' => $downloadType,
+    'dl_category_id' => $dlCategoryId,
+    'excerpt' => $excerpt,
+    'description' => $description,
+    'version_label' => $versionLabel,
+    'platform_label' => $platformLabel,
+    'license_label' => $licenseLabel,
+    'project_url' => $projectUrlInput,
+    'release_date' => $releaseDateInput,
+    'requirements' => $requirements,
+    'checksum_sha256' => $checksumInput,
+    'download_series_id' => $downloadSeriesId,
+    'is_current_version' => $isCurrentVersion,
+    'external_url' => $externalUrlInput,
+    'is_published' => $isPublished,
+    'is_featured' => $isFeatured,
+    'status' => trim((string)($_POST['article_status'] ?? '')),
+];
 
 $redirectBase = BASE_URL . '/admin/download_form.php';
-$redirectWithError = static function (string $errorCode) use ($redirectBase, $id) {
+$redirectWithError = static function (string $errorCode) use ($redirectBase, $id, $formValues) {
+    // Potvrzení mazání není obsah konceptu a při opakovaném odeslání musí být čerstvé.
+    $_SESSION['download_form_flash'] = [
+        'download_id' => $id,
+        'values' => $formValues,
+        'files_need_reselect' => koraUploadHasFile($_FILES['file'] ?? [])
+            || koraUploadHasFile($_FILES['download_image'] ?? []),
+    ];
     $query = $id !== null
         ? '?id=' . $id . '&err=' . rawurlencode($errorCode)
         : '?err=' . rawurlencode($errorCode);
     header('Location: ' . $redirectBase . $query);
     exit;
 };
+
+if (isset($_POST['file_delete']) || (isset($_POST['confirm_download_file_delete']) && !$deleteStoredFile)) {
+    $redirectWithError('file_delete_confirmation');
+}
+if (isset($_POST['download_image_delete']) || (isset($_POST['confirm_download_image_delete']) && !$deleteImage)) {
+    $redirectWithError('image_delete_confirmation');
+}
 
 if ($title === '') {
     $redirectWithError('required');
@@ -282,6 +318,11 @@ try {
     $redirectWithError('file');
 }
 mediaRemoveWorkDirectory($prepared['directory']);
+if (is_array($_SESSION['download_form_flash'] ?? null)
+    && array_key_exists('download_id', $_SESSION['download_form_flash'])
+    && $_SESSION['download_form_flash']['download_id'] === $id) {
+    unset($_SESSION['download_form_flash']);
+}
 if ($notifyNewDownload) {
     notifyPendingContent('Soubor ke stažení', $title, '/admin/downloads.php');
 }

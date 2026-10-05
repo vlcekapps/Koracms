@@ -4,6 +4,13 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu udá
 requireModuleEnabled('events');
 
 $pdo = db_connect();
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorEventId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Událost nebyla přesunuta do Koše. Zkontrolujte vybraný termín a potvrďte jeho přesun.',
+    'invalid' => 'Událost nejde přesunout do Koše, protože už není dostupná.',
+    default => '',
+};
 $q = trim((string)($_GET['q'] ?? ''));
 $statusFilter = trim((string)($_GET['status'] ?? 'all'));
 $typeFilter = trim((string)($_GET['typ'] ?? 'all'));
@@ -96,6 +103,9 @@ $events = array_map(
 
 adminHeader('Události');
 ?>
+<?php if ($deleteErrorMessage !== ''): ?>
+  <p id="event-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p>
+<?php endif; ?>
 <p class="button-row button-row--start">
   <a href="event_form.php" class="btn">+ Přidat událost</a>
   <a href="event_types.php" class="btn">Typy akcí</a>
@@ -166,6 +176,14 @@ adminHeader('Události');
     </thead>
     <tbody>
     <?php foreach ($events as $event): ?>
+      <?php
+        $eventId = (int)$event['id'];
+        $deleteConfirmField = 'confirm_event_delete_' . $eventId;
+        $deleteConfirmId = 'confirm-event-delete-' . $eventId;
+        $deleteReviewId = 'event-delete-review-' . $eventId;
+        $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorEventId === $eventId;
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr>
         <td><label for="event-select-<?= (int)$event['id'] ?>" class="sr-only">Vybrat <?= h((string)$event['title']) ?></label><input type="checkbox" id="event-select-<?= (int)$event['id'] ?>" name="ids[]" value="<?= (int)$event['id'] ?>" form="bulk-form"></td>
         <td>
@@ -212,8 +230,21 @@ adminHeader('Události');
           <form action="event_delete.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$event['id'] ?>">
-            <button type="submit" class="btn btn-danger"
-                    data-confirm="Smazat událost?">Smazat</button>
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Přesun události <?= h((string)$event['title']) ?> do Koše</legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">
+                Do Koše přesunete pouze událost <?= h((string)$event['title']) ?> s termínem <?= h(formatCzechDate((string)$event['event_date'])) ?>.
+                Ostatní termíny série a sdílené obrázky zůstanou zachované. Událost lze obnovit z Koše.
+              </p>
+              <label for="<?= h($deleteConfirmId) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmId) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"
+                       <?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId]) ?>>
+                Potvrzuji přesun této události do Koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před přesunem do Koše znovu potvrďte tento konkrétní termín.'); ?>
+              <button type="submit" class="btn btn-danger"
+                      data-confirm="Přesunout tuto událost do Koše?">Přesunout do Koše</button>
+            </fieldset>
           </form>
         </td>
       </tr>

@@ -94,6 +94,9 @@
       "php build/rc_module_state_selftest.php",
       "php build/rc_reservations_audit_selftest.php",
       "php build/rc_food_media_usage_selftest.php",
+      "php build/rc_chat_integrity_selftest.php",
+      "php build/rc_download_integrity_selftest.php",
+      "php build/rc_event_integrity_selftest.php",
       "php build/rc_recipe_integrity_selftest.php",
       "php build/rc_editor_publication_selftest.php",
       "php build/rc_media_security_selftest.php",
@@ -109,6 +112,7 @@
       "php build/rc_reservation_reminder_mysql_selftest.php",
       "php build/rc_poll_mysql_selftest.php",
       "php build/rc_recipe_mysql_selftest.php",
+      "php build/rc_chat_mysql_selftest.php",
       "php build/rc_upload_http_selftest.php"
     ],
     "test:runtime": "php build/runtime_audit.php",

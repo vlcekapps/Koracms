@@ -1,5 +1,34 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit ukládání Chatu, Ke stažení a Událostí, 2026-10-05
+
+Výchozí revize `8f3d631f`, čistá synchronizovaná větev `main`. Cílený průchod pokrývá veřejné podání/odpovědi a retenci Chatu, zdroje a verze Ke stažení, ukládání/opakování a mazání Událostí. Agenti pracovali v oddělených souborech, společné DB/HTTP sady spouští jediný vlastník sekvenčně. Tento blok není nový řádkový audit celého CMS. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění; opravují se hranice existujícího modelu, nevzniká nové vydání.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-30 | P2 | Nová zpráva Chatu a její historie se ukládaly odděleně. Selhání historie ponechalo zprávu, ale vybízelo návštěvníka k opakování. | Společná transakce, úplný rollback, pravdivá chyba se zachovaným formulářem; notifikace až po commitnutí a oddělené zachycení její chyby. Izolované i HTTP selhání historie a následné úspěšné opakování. |
+| RC2-31 | P2 | Veřejná odpověď měla stejný částečný zápis a neověřovala aktuální veřejný stav pod zámkem; souběžné skrytí/smazání mohlo přijmout odpověď na nedostupné vlákno. | Parent-first locking read, odpověď/historie/aktivita v transakci, nedostupný cíl bez zápisu. Chyba zachová text, souběžně nedostupný cíl neukazuje staré tělo. Izolované snapshoty, produkční DOM, HTTP rollback a skutečné MySQL souběhy. |
+| RC2-32 | P2 | Chat retence mazala dříve načtená ID bez nové kontroly stavu/stáří a odpověď neobnovovala aktivitu vlákna. | Čerstvá odpověď mění `updated_at`; úklid pod parent zámkem znovu vyžaduje vyřízený a starý řádek. Mazání historie/odpovědí/rodiče je atomické a chybějící rodič nezpůsobí úklid cizích či sirotčích řádků. MySQL stale-snapshot retence a rollback finálního DELETE. |
+| RC2-33 | P2 | Validační chyba Ke stažení zahazovala rozepsaná data editoru. | Jednorázová obnova hodnot omezená konkrétním ID, včetně vypnutých datových checkboxů, bez souborových cest a potvrzení mazání. Produkční handler/editor, izolované snapshoty, DOM a HTTP chybná externí URL. |
+| RC2-34 | P2 | Smazání souboru nebo náhledu Ke stažení používalo běžný datový checkbox, který mohl obnovit autosave. | Nové `confirm_download_*` musí mít přesnou hodnotu `1`; legacy mazací pole se odmítnou s vysvětlením. Potvrzení nejsou ve flash ani obnoveném formuláři; existující soubory a DB zůstávají při odmítnutí zachované. |
+| RC2-35 | P2 | Samostatné mazání Ke stažení mělo jen klientské potvrzení a server přijímal nepotvrzený platný POST. | Review text a nativní checkbox ve fieldsetu, serverově ověřený `confirm_download_delete_ID`, textový alert a field-level vazba. Neplatný/no-op stav se nevydává za úspěšný přechod. Izolovaný handler a skutečné HTTP odmítnutí/potvrzení. |
+| RC2-36 | P2 | Smazání nebo výměna obrázku jedné Události odstranily soubor sdílený opakovanými termíny či kopií; koš jej nezachoval pro obnovu. | Koš soubor nemění, výměna nejprve uloží změnu a ověří všechny reference včetně koše. Trvalý purge odstraní poslední nepoužitý obrázek po commitnutí. Izolované clone/edit/rollback testy a skutečný HTTP purge dvou sdílených referencí. |
+| RC2-37 | P2 | Nezávislý měsíční posun začátku a konce mohl vytvořit konec před začátkem události. | Posouvá se původní začátek a konec se odvodí z původní délky. Výchozí politika posunu data začátku zůstává; izolované a HTTP scénáře přelomu měsíců ověřují kladnou nezměněnou délku. |
+| RC2-38 | P2 | Selhání třetího INSERTu Událostí zanechalo neúplnou opakovanou sérii, provozní chyba končila bez zachování formuláře. | Hlavní a všechny opakované termíny v transakci, rollback a odstranění nepřiřazeného nového uploadu, notifikace až po commitnutí. Produkční izolovaný handler a HTTP trigger třetího INSERTu prokazují nulovou částečnou sérii a zachovaný přístupný editor. |
+| RC2-39 | P2 | Ani samostatné mazání Události nevyžadovalo serverové potvrzení; starý souhlas s obrázkem byl obnovitelný jako koncept. | Stejný čerstvý `confirm_*` model pro koš a odpojení obrázku, přístupné vysvětlení, bez převzetí starého souhlasu. Izolované negativní/pozitivní handlery a HTTP odmítnutí bez změny dat/souboru. |
+
+### Ověření a omezení
+
+Nové testy patří do `composer ci:module-ready` a opakují obsahové izolované regrese s číselnými PDO řetězci. Testy používají vlastní označené fixtures a řízené databázové chyby; souběh se ověřuje skutečně v MySQL, nikoli prohlašováním SQLite simulace za InnoDB důkaz.
+
+Finální úplný `composer ci:module-ready` na PHP 8.4.12 skončil s kódem 0: lint, 1 629 unit testů, statická analýza, modulové/schémové/ACR a release audity, izolované regrese, skutečné MySQL souběhy, runtime audit a celá HTTP integrace. Nové izolované sady Chatu, Ke stažení a Událostí prošly 1 711, 164 a 836 kontrolami; sady se ověřují také s číselnými PDO řetězci. MySQL ověřil tři skutečné souběhy Chatu a úklid vlastních fixtures. Scénáře `rc2_chat_integrity_http` a `rc2_editor_integrity_http` oba prošly. `git diff --check` je čistý; jediná očekávaná výjimka runtime auditu zůstává `smtp_connectivity = SKIP`.
+
+Předchozí běhy odhalily dvě zastaralé testovací předpoklady: runtime guard očekával původní signaturu mazacího helperu bez volitelné retenční hranice a HTTP test po purge četl cache souborového stavu vlastního procesu. Guard nyní kontroluje rozšířenou signaturu při zachování potvrzení a transakčního cleanupu, HTTP test po operaci načítá čerstvý stav přes `clearstatcache()`. Produkční požadavky ani assertions se neoslabily; po obou opravách se celá sada zopakovala bez přeskočených kontrol.
+
+Při zahájení byly ověřeny zelené GitHub běhy `CI` 37307795407 a `Full CI` 37307805920 na přesné výchozí revizi `8f3d631f602cb32a7634df310163663e84530064`. Nové změny vyžadují vlastní ověření na pushnutém commitu; tyto předchozí běhy ani lokální úspěch samy nepotvrzují novou revizi na Linuxu/PHP 8.0.
+
+Ručně zůstává NVDA/Firefox, klávesnice, zoom/reflow, kontrola vlastních šablon a hostingový cron/log smoke. Skutečné SMTP není testem doručované. Při návratu na nezobrazený formulář nemusí prohlížeč dovolit obnovit vybraný lokální soubor; nesmí tím ale zmizet ostatní texty. Přístupnostní rozhodnutí je v `docs/accessibility/a11y-impact-decisions.md`; hlavní ACR není tímto průchodem zvýšen na Supports.
+
 ## Navazující audit Rezervací, Food a veřejných odběrů, 2026-10-05
 
 Výchozí revize `309e0690`, čistá a synchronizovaná větev `main`. Tento blok navazuje na audit celého CMS, ale nové hloubkové čtení má vymezený rozsah: společná captcha, odběr Vývěsky, Rezervace včetně připomínek a použití médií ve Food. Dva agenti provedli oddělené čtení modulů; databázové a HTTP sady běží sekvenčně pod jedním vlastníkem. Nejde o nový řádkový audit každého souboru CMS ani o certifikaci. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění: problémem je použití existujícího modelu, ne chybějící tabulka. Nové vydání není součástí kroku.

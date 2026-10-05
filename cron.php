@@ -551,20 +551,15 @@ function runKoraCron(PDO $pdo): array
             $expiredChatIds = array_map('intval', $expiredChatIdsStmt->fetchAll(PDO::FETCH_COLUMN));
 
             if ($expiredChatIds !== []) {
-                $placeholders = implode(',', array_fill(0, count($expiredChatIds), '?'));
-                $pdo->beginTransaction();
-                try {
-                    $pdo->prepare("DELETE FROM cms_chat_replies WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
-                    $pdo->prepare("DELETE FROM cms_chat_history WHERE chat_id IN ({$placeholders})")->execute($expiredChatIds);
-                    $pdo->prepare("DELETE FROM cms_chat WHERE id IN ({$placeholders})")->execute($expiredChatIds);
-                    $pdo->commit();
-                } catch (\PDOException $txe) {
-                    $pdo->rollBack();
-                    throw $txe;
+                $deletedChatCount = 0;
+                foreach ($expiredChatIds as $expiredChatId) {
+                    if (deleteChatMessage($pdo, $expiredChatId, $chatRetentionCutoff)) {
+                        $deletedChatCount++;
+                    }
                 }
-                cronAppendLog($log, 'Smazáno ' . count($expiredChatIds) . ' starých vyřízených chat zpráv');
+                cronAppendLog($log, 'Smazáno ' . $deletedChatCount . ' starých vyřízených chat zpráv');
             }
-        } catch (\PDOException $e) {
+        } catch (\Throwable $e) {
             cronAppendLog($log, 'Chyba čištění chat zpráv: ' . $e->getMessage());
         }
     }
