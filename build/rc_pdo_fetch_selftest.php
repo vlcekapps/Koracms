@@ -12,6 +12,8 @@ foreach ([
     'rc_legacy_auth_selftest.php',
     'rc_reservations_selftest.php',
     'rc_module_state_selftest.php',
+    'rc_reservations_audit_selftest.php',
+    'rc_food_media_usage_selftest.php',
     'rc_recipe_integrity_selftest.php',
     'rc_editor_publication_selftest.php',
     'rc_media_security_selftest.php',

@@ -98,6 +98,7 @@ $existingBookings = $existingStmt->fetchAll();
 
 $slotMode = $resource['slot_mode'];
 $slots = [];
+$endSlots = [];
 $predefinedSlots = [];
 
 if ($slotMode === 'slots') {
@@ -126,6 +127,10 @@ if ($slotMode === 'slots') {
     $endDt = new DateTime($dateStr . ' ' . $closeTime);
     $current = clone $startDt;
     while ($current <= $endDt) {
+        // An end boundary stays valid when another booking starts there.
+        if ($current > $startDt) {
+            $endSlots[] = $current->format('H:i');
+        }
         $currentStr = $current->format('H:i:s');
         $overlap = 0;
         foreach ($existingBookings as $booking) {
@@ -133,7 +138,7 @@ if ($slotMode === 'slots') {
                 $overlap++;
             }
         }
-        if ($overlap < $maxConcurrent) {
+        if ($current < $endDt && $overlap < $maxConcurrent) {
             $slots[] = $current->format('H:i');
         }
         $current->modify('+30 minutes');
@@ -345,6 +350,7 @@ if (!empty($errors)) {
     $existingStmt->execute([$resId, $dateStr]);
     $existingBookings = $existingStmt->fetchAll();
     $slots = [];
+    $endSlots = [];
     $maxConcurrent = (int)$resource['max_concurrent'];
 
     if ($slotMode === 'slots') {
@@ -366,6 +372,9 @@ if (!empty($errors)) {
         $endDt = new DateTime($dateStr . ' ' . $closeTime);
         $current = clone $startDt;
         while ($current <= $endDt) {
+            if ($current > $startDt) {
+                $endSlots[] = $current->format('H:i');
+            }
             $currentStr = $current->format('H:i:s');
             $overlap = 0;
             foreach ($existingBookings as $booking) {
@@ -373,7 +382,7 @@ if (!empty($errors)) {
                     $overlap++;
                 }
             }
-            if ($overlap < $maxConcurrent) {
+            if ($current < $endDt && $overlap < $maxConcurrent) {
                 $slots[] = $current->format('H:i');
             }
             $current->modify('+30 minutes');
@@ -419,6 +428,7 @@ renderPublicPage([
         'closeTime' => $closeTime,
         'slotMode' => $slotMode,
         'slots' => $slots,
+        'endSlots' => $endSlots,
         'slotsEmpty' => empty($slots),
         'errors' => $errors,
         'fieldErrors' => $fieldErrors,

@@ -51,13 +51,15 @@ $postedEmail = (string)($postedEmail ?? '');
           </div>
 
           <?php if ($categories !== []): ?>
-            <fieldset class="form-fieldset">
+            <fieldset class="form-fieldset" aria-describedby="board-subscribe-scope-help">
               <legend>Rozsah odběru</legend>
-              <p class="field-help">Pokud nevyberete žádnou kategorii, budete dostávat upozornění na všechny nové položky vývěsky.</p>
+              <p id="board-subscribe-scope-help" class="field-help">Pokud nevyberete žádnou kategorii, budete dostávat upozornění na všechny nové položky vývěsky. Opakované přihlášení původní rozsah nemění; pro změnu se nejprve odhlaste odkazem z e-mailu a přihlaste znovu.</p>
               <div class="checkbox-grid">
                 <?php foreach ($categories as $category): ?>
                   <?php $categoryId = (int)($category['id'] ?? 0); ?>
-                  <?php if ($categoryId <= 0) { continue; } ?>
+                  <?php if ($categoryId <= 0) {
+                      continue;
+                  } ?>
                   <label class="checkbox-line" for="board-subscribe-category-<?= $categoryId ?>">
                     <input type="checkbox" id="board-subscribe-category-<?= $categoryId ?>" name="category_ids[]" value="<?= $categoryId ?>"
                            <?= in_array($categoryId, $selectedCategoryIds, true) ? 'checked' : '' ?>>

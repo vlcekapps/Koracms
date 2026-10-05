@@ -103,9 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )->execute([
                     $resourceId,
                     $userId,
-                    $guestName ?: null,
-                    $guestEmail ?: null,
-                    $guestPhone ?: null,
+                    $guestName,
+                    $guestEmail,
+                    $guestPhone,
                     $bookingDate,
                     $startTime,
                     $endTime,

@@ -164,38 +164,55 @@ function cronProcessReservationReminders(PDO $pdo): array
     $bookingIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 
     foreach ($bookingIds as $bookingId) {
-        $booking = reservationBookingForNotification($pdo, $bookingId);
-        if ($booking === null || !reservationReminderIsDue($booking)) {
-            continue;
+        $pdo->beginTransaction();
+        try {
+            $routing = $pdo->prepare('SELECT resource_id FROM cms_res_bookings WHERE id = ?');
+            $routing->execute([$bookingId]);
+            $resourceId = (int)$routing->fetchColumn();
+            // Use the cancellation lock order: resource first, then current booking.
+            $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+            $resource = $pdo->prepare('SELECT id FROM cms_res_resources WHERE id = ?' . $lock);
+            $resource->execute([$resourceId]);
+            $booking = $resource->fetchColumn() === false ? null : reservationBookingForNotification($pdo, $bookingId, true);
+            if ($booking === null || (int)$booking['resource_id'] !== $resourceId
+                || trim((string)($booking['reminder_last_error'] ?? '')) !== ''
+                || !reservationReminderIsDue($booking)) {
+                $pdo->commit();
+                continue;
+            }
+
+            // Keep the locks through SMTP: a second worker or cancellation cannot pass the check.
+            $sent = reservationSendMail(
+                $booking,
+                reservationReminderSubject($booking),
+                reservationReminderBody($booking),
+                'reservation_reminder',
+                true
+            );
+            if ($sent) {
+                $pdo->prepare(
+                    "UPDATE cms_res_bookings
+                     SET reminder_sent_at = NOW(), reminder_last_error = '', updated_at = NOW()
+                     WHERE id = ?"
+                )->execute([$bookingId]);
+                reservationRecordBookingEvent($pdo, $bookingId, 'reminder_sent', 'E-mailová připomínka byla odeslána.');
+            } else {
+                $errorMessage = 'E-mailovou připomínku se nepodařilo odeslat.';
+                $pdo->prepare(
+                    "UPDATE cms_res_bookings
+                     SET reminder_last_error = ?, updated_at = NOW()
+                     WHERE id = ?"
+                )->execute([$errorMessage, $bookingId]);
+                reservationRecordBookingEvent($pdo, $bookingId, 'reminder_failed', $errorMessage);
+            }
+            $pdo->commit();
+            $result[$sent ? 'sent' : 'failed']++;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
-
-        $sent = reservationSendMail(
-            $booking,
-            reservationReminderSubject($booking),
-            reservationReminderBody($booking),
-            'reservation_reminder',
-            true
-        );
-
-        if ($sent) {
-            $pdo->prepare(
-                "UPDATE cms_res_bookings
-                 SET reminder_sent_at = NOW(), reminder_last_error = '', updated_at = NOW()
-                 WHERE id = ?"
-            )->execute([$bookingId]);
-            reservationRecordBookingEvent($pdo, $bookingId, 'reminder_sent', 'E-mailová připomínka byla odeslána.');
-            $result['sent']++;
-            continue;
-        }
-
-        $errorMessage = 'E-mailovou připomínku se nepodařilo odeslat.';
-        $pdo->prepare(
-            "UPDATE cms_res_bookings
-             SET reminder_last_error = ?, updated_at = NOW()
-             WHERE id = ?"
-        )->execute([$errorMessage, $bookingId]);
-        reservationRecordBookingEvent($pdo, $bookingId, 'reminder_failed', $errorMessage);
-        $result['failed']++;
     }
 
     return $result;

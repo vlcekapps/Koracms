@@ -71,6 +71,15 @@ if ($action === 'complete') {
     }
 }
 
+if ($action === 'no_show' && (string)$booking['booking_date'] >= date('Y-m-d')) {
+    header('Location: ' . appendUrlQuery(BASE_URL . '/admin/res_booking_detail.php', [
+        'id' => $bookingId,
+        'error' => 'no_show_not_available',
+        'action' => $action,
+    ]));
+    exit;
+}
+
 $statusActionConfirmationField = 'confirm_reservation_status_' . $action;
 $statusActionConfirmed = isset($_POST[$statusActionConfirmationField])
     && (string)$_POST[$statusActionConfirmationField] === '1';

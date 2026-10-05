@@ -1441,7 +1441,11 @@ function captchaVerify(string $input): bool
     if ($expected === null) {
         return false;
     }
-    return (int)trim($input) === (int)$expected;
+    $answer = trim($input);
+    if (preg_match('/^[0-9]{1,3}$/D', $answer) !== 1) {
+        return false;
+    }
+    return (int)$answer === (int)$expected;
 }
 
 /**

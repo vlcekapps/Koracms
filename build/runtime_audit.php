@@ -13235,6 +13235,15 @@ if (!str_contains($boardSubscribeSource, "captchaVerify((string)(\$_POST['captch
     || !str_contains($boardSubscribeViewSource, 'aria-invalid="true"')) {
     $boardSourceIssues[] = 'board subscription flow is missing captcha, double opt-in, or field-level errors';
 }
+if (!str_contains($boardSubscribeSource, 'prepareBoardSubscription(')
+    || str_contains($boardSubscribeSource, 'SET token = ?')
+    || !str_contains($boardSubscribeSource, 'Přihlášení se nepodařilo uložit.')
+    || !str_contains($boardSubscribeSource, 'sendNoStoreNoIndexHeaders()')
+    || !str_contains($presentationSource, 'function prepareBoardSubscription(')
+    || !str_contains($presentationSource, 'ON DUPLICATE KEY UPDATE email = cms_board_subscribers.email')
+    || !str_contains((string)file_get_contents(dirname(__DIR__) . '/board/unsubscribe.php'), 'removeBoardSubscription(')) {
+    $boardSourceIssues[] = 'board subscriptions must preserve persisted tokens, save atomically and report failures';
+}
 if (!str_contains($htaccessSource, 'RewriteRule ^board/kategorie/([a-z0-9\\-]+)/?$ board/index.php?category_slug=$1')
     || strpos($htaccessSource, 'RewriteRule ^board/kategorie/') > strpos($htaccessSource, 'RewriteRule ^board/([a-z0-9\\-]+)/?$ board/document.php')) {
     $boardSourceIssues[] = 'board category rewrite must be before board document catch-all route';
@@ -24110,6 +24119,41 @@ if ($shopIssues === []) {
 } else {
     $failures++;
     foreach ($shopIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_reservations_subscriptions_media_contract ===\n";
+$followupIssues = [];
+foreach ([
+    'auth.php' => ["preg_match('/^[0-9]{1,3}$/D'", "unset(\$_SESSION['captcha_answer'])"],
+    'lib/presentation.php' => ['function prepareBoardSubscription(', 'function removeBoardSubscription(', 'bool $forUpdate = false'],
+    'cron.php' => ['SELECT id FROM cms_res_resources WHERE id = ?', 'reservationBookingForNotification($pdo, $bookingId, true)', '$pdo->beginTransaction()', '$pdo->commit()'],
+    'admin/res_booking_save.php' => ["\$action === 'no_show'", "\$booking['booking_date'] >= date('Y-m-d')", 'confirm_reservation_status_'],
+    'admin/res_bookings.php' => ['Zkontrolovat a rozhodnout'],
+    'reservations/book.php' => ['$endSlots[]', "'endSlots' => \$endSlots"],
+    'themes/default/views/modules/reservations-book.php' => ['foreach ($endSlots as $timeOption)'],
+    'lib/media_library.php' => ["'table' => 'cms_food_items'", "'reference_column' => 'media_id'", '/admin/food_items.php?card='],
+    'build/http_integration.php' => ['rcReservationAuditHttpChecks(', 'rcFoodMediaUsageHttpChecks(', 'boardFailureTrigger'],
+    'composer.json' => ['rc_board_subscription_selftest.php', 'rc_reservation_reminder_mysql_selftest.php', 'rc_reservations_audit_selftest.php', 'rc_food_media_usage_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $followupIssues[] = $file . ' missing follow-up protection: ' . $fragment;
+        }
+    }
+}
+if (str_contains((string)file_get_contents(__DIR__ . '/../admin/res_bookings.php'), '<form action="res_booking_save.php"')
+    || str_contains((string)file_get_contents(__DIR__ . '/../admin/res_booking_add.php'), '$guestName ?: null')
+    || str_contains((string)file_get_contents(__DIR__ . '/../admin/res_resource_save.php'), "\$blockedReason !== '' ? \$blockedReason : null")) {
+    $followupIssues[] = 'Reservation list consent or NOT NULL defaults regressed.';
+}
+if ($followupIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($followupIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

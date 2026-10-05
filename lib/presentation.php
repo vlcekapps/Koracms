@@ -6068,8 +6068,9 @@ function reservationRecordBookingEvent(
 /**
  * @return array<string, mixed>|null
  */
-function reservationBookingForNotification(PDO $pdo, int $bookingId): ?array
+function reservationBookingForNotification(PDO $pdo, int $bookingId, bool $forUpdate = false): ?array
 {
+    $lock = $forUpdate && $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
     $stmt = $pdo->prepare(
         "SELECT b.*, r.name AS resource_name, r.slug AS resource_slug, r.location AS resource_location,
                 r.reminders_enabled, r.reminder_hours_before, r.reminder_message, r.calendar_invite_enabled,
@@ -6086,7 +6087,7 @@ function reservationBookingForNotification(PDO $pdo, int $bookingId): ?array
          FROM cms_res_bookings b
          JOIN cms_res_resources r ON r.id = b.resource_id
          LEFT JOIN cms_users u ON u.id = b.user_id
-         WHERE b.id = ?"
+         WHERE b.id = ?" . $lock
     );
     $stmt->execute([$bookingId]);
     $booking = $stmt->fetch();
@@ -7062,6 +7063,77 @@ function normalizeBoardSubscriberCategoryIds(array $values, array $validIds): ar
     $result = array_values($selected);
     sort($result);
     return $result;
+}
+
+/**
+ * @param list<int> $categoryIds
+ * @return array{id: int, email: string, token: string, confirmed: int}
+ */
+function prepareBoardSubscription(PDO $pdo, string $email, array $categoryIds): array
+{
+    $token = bin2hex(random_bytes(32));
+    $pdo->beginTransaction();
+    try {
+        // A repeated, unauthenticated request must not replace an existing token or scope.
+        $pdo->prepare(
+            "INSERT INTO cms_board_subscribers (email, token, confirmed, all_categories)
+             VALUES (?, ?, 0, ?)
+             ON DUPLICATE KEY UPDATE email = cms_board_subscribers.email"
+        )->execute([$email, $token, $categoryIds === [] ? 1 : 0]);
+        $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+        $stmt = $pdo->prepare('SELECT id, email, token, confirmed FROM cms_board_subscribers WHERE email = ?' . $lock);
+        $stmt->execute([$email]);
+        $subscriber = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($subscriber)) {
+            throw new RuntimeException('Připravený odběr se nepodařilo načíst.');
+        }
+        if (hash_equals($token, (string)$subscriber['token'])) {
+            $insert = $pdo->prepare('INSERT INTO cms_board_subscriber_categories (subscriber_id, category_id) VALUES (?, ?)');
+            foreach ($categoryIds as $categoryId) {
+                $insert->execute([(int)$subscriber['id'], $categoryId]);
+            }
+        }
+        $pdo->commit();
+        return [
+            'id' => (int)$subscriber['id'],
+            'email' => (string)$subscriber['email'],
+            'token' => (string)$subscriber['token'],
+            'confirmed' => (int)$subscriber['confirmed'],
+        ];
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
+
+function removeBoardSubscription(PDO $pdo, string $token): bool
+{
+    $pdo->beginTransaction();
+    try {
+        $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+        $stmt = $pdo->prepare('SELECT id FROM cms_board_subscribers WHERE token = ?' . $lock);
+        $stmt->execute([$token]);
+        $subscriberId = (int)$stmt->fetchColumn();
+        if ($subscriberId <= 0) {
+            $pdo->commit();
+            return false;
+        }
+        $pdo->prepare('DELETE FROM cms_board_subscriber_categories WHERE subscriber_id = ?')->execute([$subscriberId]);
+        $delete = $pdo->prepare('DELETE FROM cms_board_subscribers WHERE id = ? AND token = ?');
+        $delete->execute([$subscriberId, $token]);
+        if ($delete->rowCount() !== 1) {
+            throw new RuntimeException('Odběr se nepodařilo odstranit.');
+        }
+        $pdo->commit();
+        return true;
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 /**

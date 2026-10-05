@@ -17,6 +17,8 @@ require_once __DIR__ . '/http_test_helpers.php';
 require_once __DIR__ . '/rc_publication_http.php';
 require_once __DIR__ . '/rc_session_security_http.php';
 require_once __DIR__ . '/rc2_modules_http.php';
+require_once __DIR__ . '/rc_reservations_audit_http.php';
+require_once __DIR__ . '/rc_food_media_usage_http.php';
 require_once __DIR__ . '/shop_http.php';
 
 $baseUrlInput = $argv[1] ?? getenv('KORA_TEST_BASE_URL');
@@ -740,6 +742,8 @@ try {
     httpIntegrationPrintResult('rc2_trash_integrity_http', rc2TrashHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_gallery_file_boundaries_http', rc2GalleryFileHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_recipe_integrity_http', rc2RecipeIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+    httpIntegrationPrintResult('rc2_reservations_audit_http', rcReservationAuditHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+    httpIntegrationPrintResult('rc2_food_media_usage_http', rcFoodMediaUsageHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('digital_shop_http', shopHttpChecks($pdo, $baseUrl, $adminSession), $failures);
 
     $baseSettingsState = settingsDefaultFormState();
@@ -13276,13 +13280,15 @@ try {
                 'csrf_token' => $invalidBoardSubscribeCsrf,
                 'email' => $invalidBoardSubscribeEmail,
                 'category_ids[]' => (string)$boardCategoryId,
-                'captcha' => 'nespravne',
+                'captcha' => httpIntegrationExtractCaptchaAnswer($invalidBoardSubscribePage['body']) . 'spam',
             ],
             $invalidBoardSubscribeSession['cookie'],
             0
         );
         if (httpIntegrationStatusCode($invalidBoardSubscribeResponse) !== 200
             || !str_contains($invalidBoardSubscribeResponse['body'], $publicCaptchaErrorSuggestion)
+            || !str_contains($invalidBoardSubscribeResponse['body'], 'id="board-subscribe-scope-help"')
+            || !str_contains($invalidBoardSubscribeResponse['body'], 'aria-describedby="board-subscribe-scope-help"')
             || !httpIntegrationFieldHasAriaInvalid($invalidBoardSubscribeResponse['body'], 'board-subscribe-captcha')) {
             $boardIssues[] = 'odběr vývěsky se špatnou captchou nezobrazil přístupnou chybu';
         }
@@ -13329,11 +13335,39 @@ try {
                 $boardIssues[] = 'odběr vývěsky neuložil vybranou kategorii';
             }
 
+            httpIntegrationClearLocalRateLimits($pdo, ['board_subscribe']);
+            $repeatBoardPage = fetchUrl($baseUrl . BASE_URL . '/board/subscribe.php', $validBoardSubscribeSession['cookie'], 0);
+            $repeatBoardResponse = postUrl($baseUrl . BASE_URL . '/board/subscribe.php', [
+                'csrf_token' => extractHiddenInputValue($repeatBoardPage['body'], 'csrf_token'),
+                'email' => $validBoardSubscribeEmail,
+                'captcha' => httpIntegrationExtractCaptchaAnswer($repeatBoardPage['body']),
+            ], $validBoardSubscribeSession['cookie'], 0);
+            $subscriberStmt->execute([$validBoardSubscribeEmail]);
+            $repeatedBoardSubscriber = $subscriberStmt->fetch();
+            $subscriberCategoryStmt->execute([$boardSubscriberId, $boardCategoryId]);
+            if (httpIntegrationStatusCode($repeatBoardResponse) !== 200
+                || !is_array($repeatedBoardSubscriber)
+                || $repeatedBoardSubscriber !== $boardSubscriber
+                || (int)$subscriberCategoryStmt->fetchColumn() !== 1) {
+                $boardIssues[] = 'opakovaný odběr vývěsky změnil token, data nebo původní výběr kategorií';
+            }
+
             $confirmResponse = fetchUrl($baseUrl . BASE_URL . '/board/subscribe_confirm.php?token=' . rawurlencode((string)$boardSubscriber['token']), '', 0);
             $confirmedStmt = $pdo->prepare("SELECT confirmed FROM cms_board_subscribers WHERE id = ?");
             $confirmedStmt->execute([$boardSubscriberId]);
             if (httpIntegrationStatusCode($confirmResponse) !== 200 || (int)$confirmedStmt->fetchColumn() !== 1) {
                 $boardIssues[] = 'potvrzení odběru vývěsky tokenem nefunguje';
+            }
+
+            $confirmedRepeatPage = fetchUrl($baseUrl . BASE_URL . '/board/subscribe.php', $validBoardSubscribeSession['cookie'], 0);
+            $confirmedRepeatResponse = postUrl($baseUrl . BASE_URL . '/board/subscribe.php', [
+                'csrf_token' => extractHiddenInputValue($confirmedRepeatPage['body'], 'csrf_token'),
+                'email' => $validBoardSubscribeEmail,
+                'captcha' => httpIntegrationExtractCaptchaAnswer($confirmedRepeatPage['body']),
+            ], $validBoardSubscribeSession['cookie'], 0);
+            $confirmedStmt->execute([$boardSubscriberId]);
+            if (httpIntegrationStatusCode($confirmedRepeatResponse) !== 200 || (int)$confirmedStmt->fetchColumn() !== 1) {
+                $boardIssues[] = 'opakované přihlášení zneplatnilo potvrzený odběr vývěsky';
             }
 
             $unsubscribeResponse = fetchUrl($baseUrl . BASE_URL . '/board/unsubscribe.php?token=' . rawurlencode((string)$boardSubscriber['token']), '', 0);
@@ -13345,6 +13379,46 @@ try {
                 $createdBoardSubscriberIds = array_values(array_diff($createdBoardSubscriberIds, [$boardSubscriberId]));
             }
         }
+    }
+
+    $boardFailureEmail = 'http-board-rollback-' . bin2hex(random_bytes(6)) . '@example.test';
+    $boardFailureTrigger = 'kora_board_failure_' . bin2hex(random_bytes(6));
+    $boardFailureTriggerCreated = false;
+    try {
+        $pdo->exec("CREATE TRIGGER {$boardFailureTrigger} BEFORE INSERT ON cms_board_subscriber_categories FOR EACH ROW
+            BEGIN
+                IF EXISTS (SELECT 1 FROM cms_board_subscribers WHERE id = NEW.subscriber_id AND email = " . $pdo->quote($boardFailureEmail) . ") THEN
+                    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Board subscription fixture failure';
+                END IF;
+            END");
+        $boardFailureTriggerCreated = true;
+        httpIntegrationClearLocalRateLimits($pdo, ['board_subscribe']);
+        $boardFailureSession = koraPrimeTestSession([], 'kora-http-board-rollback');
+        $boardFailurePage = fetchUrl($baseUrl . BASE_URL . '/board/subscribe.php', $boardFailureSession['cookie'], 0);
+        $boardFailureResponse = postUrl($baseUrl . BASE_URL . '/board/subscribe.php', [
+            'csrf_token' => extractHiddenInputValue($boardFailurePage['body'], 'csrf_token'),
+            'email' => $boardFailureEmail,
+            'category_ids[]' => (string)$boardCategoryId,
+            'captcha' => httpIntegrationExtractCaptchaAnswer($boardFailurePage['body']),
+        ], $boardFailureSession['cookie'], 0);
+        $boardFailureCount = $pdo->prepare('SELECT COUNT(*) FROM cms_board_subscribers WHERE email = ?');
+        $boardFailureCount->execute([$boardFailureEmail]);
+        if ((int)$boardFailureCount->fetchColumn() !== 0
+            || httpIntegrationStatusCode($boardFailureResponse) !== 200
+            || !str_contains($boardFailureResponse['body'], 'Přihlášení se nepodařilo uložit.')
+            || str_contains($boardFailureResponse['body'], 'Téměř hotovo')
+            || !str_contains($boardFailureResponse['body'], 'value="' . h($boardFailureEmail) . '"')
+            || preg_match('/<input\b[^>]*id="board-subscribe-category-' . $boardCategoryId . '"[^>]*\bchecked\b/', $boardFailureResponse['body']) !== 1
+            || !str_contains($boardFailureResponse['body'], 'aria-describedby="board-subscribe-form-errors"')
+            || !str_contains($boardFailureResponse['body'], 'id="board-subscribe-form-errors"')) {
+            $boardIssues[] = 'selhání kategoriového zápisu nechalo částečný odběr nebo nezachovalo přístupnou chybu formuláře';
+        }
+    } finally {
+        if ($boardFailureTriggerCreated) {
+            $pdo->exec("DROP TRIGGER {$boardFailureTrigger}");
+        }
+        $pdo->prepare('DELETE sc FROM cms_board_subscriber_categories sc JOIN cms_board_subscribers s ON s.id = sc.subscriber_id WHERE s.email = ?')->execute([$boardFailureEmail]);
+        $pdo->prepare('DELETE FROM cms_board_subscribers WHERE email = ?')->execute([$boardFailureEmail]);
     }
 
     $boardDeleteCategorySlug = 'http-board-delete-category-' . bin2hex(random_bytes(4));

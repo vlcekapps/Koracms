@@ -153,7 +153,7 @@ function boardPublicPath(array $document): string
 }
 
 /** @return array<string,mixed>|null */
-function reservationBookingForNotification(PDO $pdo, int $bookingId): ?array
+function reservationBookingForNotification(PDO $pdo, int $bookingId, bool $forUpdate = false): ?array
 {
     $stmt = $pdo->prepare('SELECT b.*, r.reminders_enabled, r.reminder_hours_before
         FROM cms_res_bookings b JOIN cms_res_resources r ON r.id = b.resource_id WHERE b.id = ?');

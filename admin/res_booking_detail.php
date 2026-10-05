@@ -64,6 +64,7 @@ $statusActionErrorAction = in_array($statusActionErrorParam, ['approve', 'reject
 $statusActionErrorMessage = match ($statusActionErrorCode) {
     'status_confirm_required' => 'Změnu stavu rezervace nejde provést bez potvrzení kontroly rezervace, nového stavu a případného e-mailového oznámení.',
     'status_conflict' => 'Rezervace byla mezitím změněna. Požadovaná změna se neprovedla a žádné oznámení se neodeslalo. Zkontrolujte aktuální stav níže; případnou další akci znovu potvrďte.',
+    'no_show_not_available' => 'Neomluvenou absenci lze označit až následující den po termínu rezervace. Stav se nezměnil a žádné oznámení se neodeslalo.',
     default => '',
 };
 $statusActionFormErrorAttributes = static function (string $action) use ($statusActionErrorAction, $statusActionErrorMessage): string {

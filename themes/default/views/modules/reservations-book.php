@@ -102,7 +102,7 @@ $fieldAttributes = static function (string $key, array $extraDescriptions = []) 
               <label for="end_time">Konec <span aria-hidden="true">*</span></label>
               <select id="end_time" name="end_time" class="form-control" required aria-required="true"<?= $fieldAttributes('end_time') ?>>
                 <option value="">-- vyberte --</option>
-                <?php foreach ($slots as $timeOption): ?>
+                <?php foreach ($endSlots as $timeOption): ?>
                   <option value="<?= h($timeOption) ?>"<?= $formData['end_time'] === $timeOption ? ' selected' : '' ?>><?= h($timeOption) ?></option>
                 <?php endforeach; ?>
               </select>

@@ -625,6 +625,8 @@ Z přehledu lístků i z editoru konkrétního lístku vede odkaz `Položky lís
 
 Správa položek nabízí i rychlé bezpečné akce: sekce a položky lze posouvat nahoru/dolů, položku lze duplikovat a vybrané položky lze hromadně označit jako dostupné nebo nedostupné.
 
+Obrázek přiřazený položce je v knihovně médií evidovaný jako použitý, včetně neveřejného nebo archivovaného lístku. Před smazáním či převedením média na soukromé je nejprve odpojte nebo nahraďte v položce; akce „smazat nepoužitá“ jej sama neodstraní.
+
 ### Cenové a porční varianty
 
 Z řádku konkrétní položky otevřete odkaz `Varianty`. Každá varianta má vlastní název, volitelnou porci nebo objem, cenu, měnu, poznámku, dostupnost a pořadí. Pokud položka nemá žádnou variantu, používá svoji základní cenu a porci. Jakmile varianty přidáte, veřejný lístek, JSON-LD i objednávková poptávka používají jejich údaje místo základní ceny položky.
@@ -1031,6 +1033,8 @@ Veřejná adresa kategorie má tvar `/board/kategorie/slug-kategorie`. Zobrazuje
 
 Odběr vývěsky je oddělený od běžného newsletteru. Návštěvník se přihlásí přes samostatnou stránku `/board/subscribe.php`, vyplní e-mail, volitelně vybere konkrétní kategorie, opíše captcha kód a odběr potvrdí odkazem z e-mailu. Teprve potvrzený odběratel může dostávat upozornění.
 
+Opakování přihlášení zachová původní potvrzovací odkaz, datum i vybraný rozsah odběru. Již potvrzeného odběratele nevrací do čekajícího stavu. Pro změnu kategorií se návštěvník nejprve odhlásí původním odkazem a znovu přihlásí. Zápis odběru i jeho kategorií je atomický; při databázové chybě se ukáže chyba se zachovanými údaji. U matematické otázky zadávejte jen celé číslo, nikoli desetinnou hodnotu nebo číslo s připojeným textem.
+
 Upozornění se posílá jen při první veřejné publikaci položky nebo při přechodu položky z neveřejného stavu do veřejného. Běžná editace už veřejné položky e-maily znovu neposílá, aby vývěska odběratele nespamovala.
 
 ### Přílohy a přístupová práva
@@ -1264,6 +1268,8 @@ V editoru zdroje rezervací je část **Připomínky a kalendář**. Správce zd
 
 Kalendářová pozvánka se přikládá k e-mailu při vytvoření potvrzené rezervace nebo při pozdějším schválení čekající rezervace. Připomínky zpracovává běžný `cron.php`: pošle je jen potvrzeným budoucím rezervacím, jen jednou, a výsledek uloží k rezervaci.
 
+Cron znovu ověří aktuální rezervaci pod zámkem a po dobu odesílání blokuje druhý pokus i souběžné storno stejného termínu. Již dokončené storno připomínku nedostane. Pád mezi přijetím e-mailu SMTP serverem a potvrzením databáze však není atomický: před ručním opakováním ověřte doručení a log. Během pomalého SMTP může administrativa téhož zdroje/rezervace krátce čekat.
+
 ### Administrace rezervací
 
 Přehled rezervací nabízí filtr **Připomínka**, který rozlišuje odeslané, čekající a vypnuté připomínky. U jednotlivých řádků je vidět i případná chyba posledního pokusu, aby správce poznal, proč připomínka neodešla.
@@ -1271,6 +1277,8 @@ Přehled rezervací nabízí filtr **Připomínka**, který rozlišuje odeslané
 Detail rezervace obsahuje sekci **Historie rezervace**. Zapisuje vytvoření, schválení, zamítnutí, zrušení, dokončení, no-show, automatické dokončení a odeslání nebo chybu připomínky. Historie je provozní audit pro administraci; není to veřejná časová osa.
 
 Změny stavů v detailu rezervace mají ochranu před nechtěným dopadem na zákazníka. Schválení, zamítnutí, zrušení, dokončení i označení no-show zobrazují review text, vyžadují potvrzovací checkbox a server nepotvrzený požadavek odmítne dřív, než změní stav, zapíše historii nebo odešle e-mailovou notifikaci.
+
+U čekajícího řádku přehledu použijte `Zkontrolovat a rozhodnout`, které otevře tuto rekapitulaci. No-show je možné pouze pro termín před dnešním dnem, stejně v rozhraní i při přímém POSTu. Ruční rezervace dovoluje volitelné prázdné kontakty a blokovaný den nevyžaduje vyplněný důvod. Interval lze ukončit přesně tam, kde začíná sousední obsazená rezervace; překryv dál ověřuje server.
 
 ### Veřejný kalendářový soubor
 

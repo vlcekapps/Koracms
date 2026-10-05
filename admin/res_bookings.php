@@ -258,23 +258,7 @@ adminHeader('Rezervace');
         </td>
         <td><?= h($reminderLabel) ?></td>
         <td class="actions">
-          <a href="<?= h($detailHref) ?>" class="btn">Zobrazit detail</a>
-          <?php if ($booking['status'] === 'pending'): ?>
-            <form action="res_booking_save.php" method="post" class="admin-inline-form">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-              <input type="hidden" name="action" value="approve">
-              <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-              <button type="submit" class="btn btn-success">Schválit</button>
-            </form>
-            <form action="res_booking_save.php" method="post" class="admin-inline-form" data-confirm="Zamítnout rezervaci?">
-              <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
-              <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-              <input type="hidden" name="action" value="reject">
-              <input type="hidden" name="redirect" value="<?= h($currentRedirect) ?>">
-              <button type="submit" class="btn btn-danger">Zamítnout</button>
-            </form>
-          <?php endif; ?>
+          <a href="<?= h($detailHref) ?>" class="btn"><span class="sr-only">Rezervace #<?= (int)$booking['id'] ?>: </span><?= $booking['status'] === 'pending' ? 'Zkontrolovat a rozhodnout' : 'Zobrazit detail' ?></a>
         </td>
       </tr>
     <?php endforeach; ?>

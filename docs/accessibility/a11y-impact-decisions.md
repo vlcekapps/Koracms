@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-05: navazující RC audit Rezervací, médií Food a odběru Vývěsky
+
+- Datum a rozsah: veřejné ověřovací otázky, odběr/odhlášení Vývěsky, ruční rezervace, blokované dny, intervalové rezervace, schválení a no-show, cron připomínek a kontrola použití obrázků Food. Nálezy RC2-20 až RC2-29 v `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.1.1`, `1.3.1`, `2.1.1`, `3.3.1`, `3.3.2`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: matematické ověření dál používá existující textovou otázku a field-level chybu; opravuje se pouze nepravdivé přijetí nečíselné odpovědi. Tento blok neprohlašuje matematickou captchu za univerzálně přístupnou náhradu bez bariér. Vývěska při selhání zápisu zachová e-mail a kategorie a ukáže stávající atomický alert; starý potvrzovací odkaz nezneplatní opakovaná žádost. Odhlášení při provozní chybě doporučí použít tentýž odkaz později. Rezervační přehled nesmí předstírat souhlas za uživatele, vede na existující review formulář. Volitelná pole zůstávají volitelná; interval nabízí platný koncový čas a no-show respektuje stejnou časovou podmínku na serveru i v rozhraní. Obrázek položky Food je použitý obsah a zůstává chráněný před odstraněním nebo skrytím. Hlavní ACR se tím nezvyšuje na Supports.
+- Automatizovaný důkaz: `build/unit_tests.php` ověřuje striktní jednorázovou captchu; `build/rc_board_subscription_selftest.php` ověřuje atomické zápisy/mazání na dočasných MySQL tabulkách v obou PDO režimech. HTTP odběr testuje správné číslo s připojeným textem, opakovanou registraci, původní token, kategorie a vyvolané selhání kategoriového zápisu se zachovaným přístupným formulářem. Navazující rezervační a media testy jsou uvedené s výsledky v modulovém auditním dokumentu; runtime audit hlídá jejich produkční napojení.
+- Ruční ověření nebo zbývající riziko: s NVDA/Firefox projít chybu odběru, změnu rozsahu odhlášením a novým přihlášením, interval končící začátkem sousední rezervace a schvalovací odkaz v přehledu. Automatická kontrola není ruční průchod, skutečné doručení SMTP ani potvrzení úplné WCAG shody. Zámky serializují běžný souběh připomínek; po pádu procesu mezi přijetím e-mailu SMTP serverem a potvrzením databáze nelze garantovat přesně jedno doručení.
+
 ### 2026-10-02: bezpečné souborové reference a ZIP export Galerie
 
 - Datum a rozsah: veřejný obrázkový endpoint Galerie, JSON import fotografií, ZIP export alb a hromadné mazání alb/fotografií; nálezy RC2-14 a RC2-15 v `docs/rc2-module-audit-2026-09.md`.

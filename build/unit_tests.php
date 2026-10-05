@@ -91,6 +91,11 @@ function test_session_string(string $key): string
     return isset($_SESSION[$key]) && is_string($_SESSION[$key]) ? $_SESSION[$key] : '';
 }
 
+function test_session_has(string $key): bool
+{
+    return array_key_exists($key, $_SESSION);
+}
+
 function test_failure_count(): int
 {
     global $_TEST_FAIL;
@@ -119,6 +124,18 @@ test_section('publicCaptchaErrorMessage()');
 $publicCaptchaErrorMessage = publicCaptchaErrorMessage();
 assert_contains('Chybná odpověď na ověřovací otázku.', $publicCaptchaErrorMessage, 'captcha error identifies invalid answer');
 assert_contains('Zkuste výpočet znovu a zadejte jen číslo.', $publicCaptchaErrorMessage, 'captcha error suggests how to fix the answer');
+
+test_section('captchaVerify() strict one-time answer');
+foreach (['42' => true, ' 42 ' => true, '042' => true, '42spam' => false,
+    '42.5' => false, '4.2e1' => false, '+42' => false, '-42' => false,
+    '' => false, '999999999999999999999999999999' => false] as $answer => $valid) {
+    $_SESSION['captcha_answer'] = 42;
+    assert_equals($valid, captchaVerify((string)$answer), 'captcha answer ' . var_export($answer, true));
+    assert_false(test_session_has('captcha_answer'), 'captcha is consumed even after a rejected answer');
+    assert_false(captchaVerify('42'), 'captcha cannot be replayed');
+}
+unset($_SESSION['captcha_answer']);
+assert_false(captchaVerify('0'), 'missing captcha does not accept zero');
 
 // ─── 2. inputInt() ──────────────────────────────────────────────────────────
 

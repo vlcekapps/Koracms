@@ -285,9 +285,9 @@ try {
         }
 
         if ($blockedId > 0) {
-            $updateBlocked->execute([$blockedDate, $blockedReason !== '' ? $blockedReason : null, $blockedId, $id]);
+            $updateBlocked->execute([$blockedDate, $blockedReason, $blockedId, $id]);
         } else {
-            $insertBlocked->execute([$id, $blockedDate, $blockedReason !== '' ? $blockedReason : null]);
+            $insertBlocked->execute([$id, $blockedDate, $blockedReason]);
         }
     }
 

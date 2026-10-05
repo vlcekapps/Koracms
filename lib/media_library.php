@@ -914,6 +914,7 @@ function mediaDisplayKind(array $media): string
  *   id_column:string,
  *   title_sql:string,
  *   columns:list<string>,
+ *   admin_columns?:list<'card_id'>,
  *   reference_column?:string,
  *   label:string,
  *   admin_path:callable(array<string,mixed>):string
@@ -1011,6 +1012,16 @@ function mediaUsageSearchDefinitions(): array
             'columns' => ['description', 'content'],
             'label' => 'Jídelní lístek',
             'admin_path' => static fn (array $row): string => BASE_URL . '/admin/food_form.php?id=' . (int)$row['id'],
+        ],
+        [
+            'table' => 'cms_food_items',
+            'id_column' => 'id',
+            'title_sql' => "COALESCE(NULLIF(title,''), CONCAT('Položka lístku #', id))",
+            'columns' => [],
+            'admin_columns' => ['card_id'],
+            'reference_column' => 'media_id',
+            'label' => 'Položka jídelního lístku',
+            'admin_path' => static fn (array $row): string => BASE_URL . '/admin/food_items.php?card=' . (int)$row['card_id'] . '&edit_item=' . (int)$row['id'],
         ],
         [
             'table' => 'cms_forms',
@@ -1204,6 +1215,11 @@ function mediaFindUsages(array $media, int $limit = 25): array
         if ($columns === [] && $referenceColumn === '') {
             continue;
         }
+        $adminColumns = array_intersect($definition['admin_columns'] ?? [], ['card_id']);
+        $selectedColumns = array_values(array_unique(array_merge($columns, array_filter(
+            $adminColumns,
+            static fn (string $column): bool => mediaColumnExists($tableName, $column)
+        ))));
 
         $whereParts = [];
         $params = [];
@@ -1228,7 +1244,7 @@ function mediaFindUsages(array $media, int $limit = 25): array
              WHERE %s",
             $definition['id_column'],
             $definition['title_sql'],
-            $columns !== [] ? ', ' . implode(', ', $columns) : '',
+            $selectedColumns !== [] ? ', ' . implode(', ', $selectedColumns) : '',
             $tableName,
             implode(' OR ', $whereParts)
         );

@@ -14,21 +14,15 @@ if (!isModuleEnabled('board')) {
 $siteName = getSetting('site_name', 'Kora CMS');
 $boardLabel = boardModulePublicLabel();
 $ok = false;
+$failed = false;
 $token = trim((string)($_GET['token'] ?? ''));
 
 if ($token !== '') {
     rateLimit('board_unsubscribe', 5, 300);
     try {
-        $pdo = db_connect();
-        $stmt = $pdo->prepare("SELECT id FROM cms_board_subscribers WHERE token = ? LIMIT 1");
-        $stmt->execute([$token]);
-        $subscriberId = (int)($stmt->fetchColumn() ?: 0);
-        if ($subscriberId > 0) {
-            $pdo->prepare("DELETE FROM cms_board_subscriber_categories WHERE subscriber_id = ?")->execute([$subscriberId]);
-            $pdo->prepare("DELETE FROM cms_board_subscribers WHERE id = ?")->execute([$subscriberId]);
-            $ok = true;
-        }
-    } catch (\PDOException $e) {
+        $ok = removeBoardSubscription(db_connect(), $token);
+    } catch (\Throwable $e) {
+        $failed = true;
         koraLog('warning', 'board unsubscribe failed', ['exception' => $e]);
     }
 }
@@ -43,10 +37,12 @@ renderPublicPage([
         'kicker' => $boardLabel,
         'title' => 'Odhlášení odběru vývěsky',
         'variant' => $ok ? 'success' : 'warning',
-        'announceRole' => $ok ? 'status' : '',
-        'messages' => $ok
+        'announceRole' => $failed ? 'alert' : ($ok ? 'status' : ''),
+        'messages' => $failed
+            ? ['Odhlášení se nepodařilo dokončit. Zkuste stejný odkaz prosím později.']
+            : ($ok
             ? ['Váš e-mail byl úspěšně odhlášen z odběru vývěsky.']
-            : ['Odkaz pro odhlášení je neplatný nebo odběr již neexistuje.'],
+            : ['Odkaz pro odhlášení je neplatný nebo odběr již neexistuje.']),
         'actions' => [
             ['href' => BASE_URL . '/board/index.php', 'label' => 'Zpět na vývěsku', 'class' => 'button-secondary'],
         ],

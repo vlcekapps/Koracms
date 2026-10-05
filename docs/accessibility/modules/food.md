@@ -9,6 +9,10 @@
 
 ## Testované rozhraní
 
+### Ochrana přiřazených obrázků, 2026-10-05
+
+Strukturální reference `cms_food_items.media_id` se započítává do použití médií také u neveřejného nebo smazaného lístku. Knihovna nesmí jako „nepoužitý“ smazat obrázek, který položka stále potřebuje, ani jej převést na soukromý. Odkaz z kontroly použití vede přímo do editoru příslušné položky. Dotčená kritéria jsou `1.1.1`, `3.3.4` a `4.1.3`; alt fallback a veřejné zobrazení se nemění. Vykonávané testy scanneru a HTTP odmítnutí jednotlivého/hromadného mazání i skrytí média jsou v `build/rc_food_media_usage_selftest.php` a `build/rc_food_media_usage_http.php`. Ruční NVDA/klávesnice se tím neprohlašují za provedené; plný přehled důkazů a nález RC2-23 je v modulovém RC auditu.
+
 ### Veřejná část
 
 - aktuální lístky na `/food/`,
