@@ -249,7 +249,7 @@ try {
             static fn (string $path): bool => str_contains($path, 'food-' . $mediaId . '.')
         )));
         runMediaAction($pdo, $delete);
-        same($pdo->query('SELECT COUNT(*) FROM cms_media WHERE id = ' . $mediaId)->fetchColumn(), getenv('KORA_RC_STRINGIFY_FETCHES') === '1' ? '0' : 0, 'Detached media metadata is deleted');
+        same(filter_var($pdo->query('SELECT COUNT(*) FROM cms_media WHERE id = ' . $mediaId)->fetchColumn(), FILTER_VALIDATE_INT), 0, 'Detached media metadata is deleted');
         same(fileSnapshot(), $remainingFiles, 'Detached deletion removes only its own complete file set');
         same(isset($_SESSION['media_library_flash']['success']), true, 'Detached deletion reports success');
         same(isset($_SESSION['media_library_flash']['error']), false, 'Detached deletion has no false usage error');
