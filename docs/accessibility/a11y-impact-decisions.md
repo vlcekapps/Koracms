@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-18: Vyhledávání veřejného obsahu v editoru
+
+- Datum a rozsah: 2026-10-18; `admin/content_reference_search.php`, skutečné výsledky všech stávajících zdrojů pickeru, jejich veřejná viditelnost a společné řazení; RC2-56 až RC2-59 v `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.3.1`, `2.4.4`, `2.4.6`, `3.2.2`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: oprava dat musí zachovat stávající názvy, cíle odkazů, strukturu JSON a vkládací akce, nikoli znovu navrhovat dialog nebo přidávat rušivé hlášení každého znaku. Soukromý obsah se nesmí nabízet jako veřejný cíl ani správci. Aktivní archivované cíle se nesmí zaměnit za neveřejný obsah. Nevzniká nový souhlas, datově měnící endpoint, focus model ani CSS; žádné kritérium se automaticky nezvyšuje na Supports.
+- Automatizovaný důkaz: `build/rc_content_picker_http.php` používá skutečný endpoint pod vlastním běžným autorským účtem a označené MySQL fixtures napříč všemi stávajícími typy zdrojů. Ověřuje konkrétní výsledky a canonical URL, obě varianty filtru, Koš/stavy/časy, rodiče, vypnuté moduly, globální vs. blogovou stránku, veřejný archiv, limit a JSON whitelist. Skutečný formulář novinky kontroluje pojmenovaný dialog, labely, fieldset/legend, atomický stav a existující jedinečné ARIA reference. `build/rc_content_picker_selftest.php` vykonává produkční řadicí blok, časový helper i přípravu kompaktního kandidáta s izolovaným zachycením projekce; skutečnou projekci ověřuje HTTP, nikoli tento izolovaný stub. Regrese jsou součástí `composer ci:module-ready` a doplňuje je runtime kontrakt.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox, pořadí/nezakrytí fokusu, návrat do textarea a custom themes zůstávají v ručním protokolu. DOM/JSON test není důkazem průchodu čtečkou ani certifikace WCAG. Picker nevytváří veřejnou URL pro soukromý koncept a neslibuje editorská oprávnění k nalezenému veřejnému obsahu. Pozdější skrytí nebo smazání cíle může už vložený odkaz zneplatnit; nejde o trvalé zveřejnění snapshotu obsahu.
+
 ### 2026-10-18: RC audit editoru a obrázků Míst
 
 - Datum a rozsah: 2026-10-18; `admin/place_save.php`, `admin/place_form.php`, sdílená obnova formuláře, úklid obrázků v Koši a `places/image.php`. Registr nálezů: `docs/rc2-module-audit-2026-09.md`, RC2-51 až RC2-55.

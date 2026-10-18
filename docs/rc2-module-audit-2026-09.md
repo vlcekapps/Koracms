@@ -1,5 +1,24 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit vyhledávače obsahu v editoru, 2026-10-18
+
+Výchozí revize `10f204e6`, čistá synchronizovaná `main`. Cílený průchod uzavírá RC2-56 a kontroluje všechny stávající zdroje `admin/content_reference_search.php`, jejich veřejnou viditelnost, canonical cesty, řazení a JSON kontrakt. Nejde o nový řádkový audit celého CMS nebo jiných hledání. Schéma, `install.php`, `migrate.php` ani `VERSION` se nemění; nové tabulky ani release nejsou pro tyto opravy potřebné.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-56 | P2 | Zastaralý alias Podcastů, sloupce Vývěsky a neexistující publikační pole Anket vedly k prázdným výsledkům přes odpověď 200. | Opravené dotazy používají aktuální schéma a společné visibility helpery. HTTP vyžaduje konkrétní veřejný pořad, epizodu, dokument i anketu, včetně veřejného archivu; samotný stav 200 nestačí. |
+| RC2-57 | P1 | Některé zdroje nabízely Koš, koncepty stránek, fotografie mimo publikaci nebo obsah po ukončení zveřejnění jako veřejné výsledky, bez rozlišení práv k těmto neveřejným položkám. | Blog, stránky, FAQ, alba, fotografie a Ke stažení respektují odpovídající veřejná pravidla; rodičovská viditelnost je povinná. HTTP pod běžným autorem ověřuje přesnou absenci konkrétní položky v daném zdroji i `all`, nikoli jen prázdnost celého hledání. |
+| RC2-58 | P2 | Blogové stránky zůstávaly v pickeru i při vypnutém blogu. | Blogový scope je explicitní v SQL; globální stránky zůstávají dostupné. Obě stránky se stejným slugem jsou kontrolované proti vlastní správné URL. Původní chybějící metadata běžně dohledal `pageBlogContext()`; tento audit je proto neoznačuje za dokázanou záměnu URL. |
+| RC2-59 | P2 | Projekce výsledku zahodila `created_at` ještě před řazením. Všechny porovnávací časy byly nulové a limit odřízl pozdější zdroje podle pořadí kódu. | Úsporný připravený výsledek si uchová interní datum do seřazení a závěrečného limitu; poté se datum odstraní. Plné zdrojové texty se nehromadí v mezivýsledcích. Izolované produkční helpery a blok a HTTP s nadbytkem starších článků ověřují novější zdroje, limit, nepřenášení raw polí a nezměněný JSON whitelist. |
+
+### Ověření a omezení
+
+Předopravová HTTP matice reprodukovala chybějící veřejné výsledky, únik neveřejných výsledků a chybu řazení. Opravený scénář používá vlastní účet, relaci a označené řádky, bez uploadů, e-mailů nebo změny cizího obsahu. Běžně dostupné jiné výsledky se nepovažují za únik: negativní test hledá přesně ověřovanou položku. U nadcházející veřejné Události zůstává datum akce platným řadicím datem; nejde o zakázanou budoucí publikaci. Izolovaný test nenahrazuje skutečné SQL ani projekci, ty vykonává HTTP matice.
+
+Úplný lokální `composer ci:module-ready` dokončený 2026-10-19 prošel: lint, statická analýza, formátování, schema/module/ACR audity, 1 629 unit testů bez chyby, RC regrese včetně 14 nových kontrol pipeline, skutečné MySQL testy, runtime audit a celá HTTP integrace včetně `rc2_content_picker_http`. Jediná provozní výjimka je `smtp_connectivity = SKIP` (nedostupný SMTP server z lokálního prostředí). Izolovaných 14 kontrol prošlo také samostatně na PHP 8.1; úplná lokální sada používá PHP 8.4. GitHub CI se ověřuje samostatně nad výsledným commitem, není nahrazené předchozím zeleným během.
+
+ACR rozhodnutí je v `docs/accessibility/a11y-impact-decisions.md`. Ruční NVDA, klávesnice, zoom/reflow a vlastní šablony zůstávají otevřené. Výsledek tohoto čtení neprohlašuje ostatní vyhledávače nebo všechny modulové integrace za kompletně auditované. Počet 20 je limit společných kandidátů při zachování dosavadních limitů zdrojů, nikoli příslib globálního dotazu nad všemi řádky databáze bez dalších limitů.
+
 ## Audit editoru a obrázků Míst, 2026-10-18
 
 Výchozí revize `84b48389`, čistá synchronizovaná `main`. Tento cílený blok pokrývá editor Míst, jeho validační návraty, upload, revize, redirecty, sdílené obrázky a úklid při trvalém smazání. Nejde o nový řádkový audit celého CMS. Schéma, `install.php`, `migrate.php` ani `VERSION` se nemění: oprava existujícího transakčního a souborového chování nepotřebuje nový perzistentní stav ani release.
@@ -20,9 +39,9 @@ Testy používají vlastní označené řádky, dočasné soubory a triggery ome
 
 ACR rozhodnutí a zbývající ruční ověření jsou v `docs/accessibility/a11y-impact-decisions.md`. NVDA, zoom/reflow, vlastní šablony a hostingový smoke zůstávají otevřené; žádné kritérium se nezvyšuje na Supports jen na základě automatických testů. Nová souborová ochrana neodvolá dříve stažené kopie; případný historický úklid osiřelých souborů vyžaduje samostatnou inventuru. Pád procesu mezi DB a soubory nebo souběžný externí import nejsou tímto krokem prohlášeny za vyřešené.
 
-### Otevřený navazující nález mimo Místa
+### Navazující nález mimo Místa, uzavřený v dalším bloku
 
-**RC2-56, P2, otevřeno:** úplná HTTP integrace zanechala v PHP logu chyby zdrojů `podcast`, `board` a `poll` v `admin/content_reference_search.php`. Čtení příslušných větví potvrzuje neexistující alias `m.created_at`, zastaralé sloupce Vývěsky `posted_at`/`removed_at`/`pinned` a neexistující `cms_polls.is_published`. Výjimky jsou zachycené: endpoint může odpovědět 200 s neúplnými výsledky, takže samotný úspěšný HTTP status chybu neodhalí. Nejde o důkaz úniku soukromého obsahu. Závěrečný commit Míst tuto nesouvisející oblast nemění. Před dalším RC opravit zdrojové dotazy podle aktuálního schématu a společných pravidel veřejné viditelnosti; doplnit HTTP regrese s vlastní veřejnou i neveřejnou položkou každého zdroje a ověřovat konkrétní výsledky, nikoli jen stav 200.
+**RC2-56, P2, původně otevřeno v commitu Míst:** úplná HTTP integrace zanechala v PHP logu chyby zdrojů `podcast`, `board` a `poll` v `admin/content_reference_search.php`. Samotný stav 200 neodhalil neúplné výsledky. Následující blok výše dotazy opravuje a přidává skutečné pozitivní i negativní SQL/HTTP regrese. Samotný tento původní SQL nález nebyl důkazem úniku soukromého obsahu; další samostatné mezery veřejné viditelnosti nově dokládá RC2-57.
 
 ## Audit souborových hranic Vývěsky, 2026-10-18
 

@@ -18,6 +18,12 @@ Redakční kvalitu ručně vloženého obsahu pokrývá [redakční checklist p�
 
 ---
 
+## Vkládání veřejného obsahu z webu
+
+V HTML editoru otevřete **Vložit odkaz nebo HTML z webu**. Vyhledávač nabízí veřejné položky zapnutých modulů, včetně podcastových pořadů a epizod, Vývěsky a Anket. Koncept, Koš, plánovaná budoucí publikace ani ukončené zveřejnění do výsledků nepatří, a to ani při použití účtu správce. Fotografie musí být veřejná spolu se svým albem, epizoda spolu s pořadem a recept patřit do aktivní kategorie. Veřejný archiv Vývěsky a uzavřené Ankety jsou dál platnými cíli odkazů.
+
+Blogové stránky se vkládají pod adresou příslušného blogu; stejné slugy v různých blozích se nezaměňují. Vypnutí blogu skryje jeho články i blogové stránky, nikoli globální stránky. Společné výsledky jsou řazené podle data před závěrečným omezením na 20 položek; jednotlivé zdroje mají i vlastní menší limity. Pro hledání soukromého konceptu použijte správu příslušného modulu, nikoli tento veřejný picker. Dialog, popisky polí a klávesové ovládání se touto opravou nemění.
+
 ## Nápověda a podpora v administraci
 
 Ve spodní části administrační navigace je stálý odkaz **Nápověda a podpora**. Stránka slouží jako jednotné místo pro rychlou orientaci v administraci, profil a zabezpečení účtu, redakční accessibility checklist, kontaktní/chat/Form Builder workflow, provozní nastavení a odkazy na dokumentaci v repozitáři.

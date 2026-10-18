@@ -24341,4 +24341,40 @@ if ($placeIntegrityIssues === []) {
     }
 }
 
+echo "=== rc2_content_picker_visibility_contract ===\n";
+$pickerVisibilityIssues = [];
+foreach ([
+    'admin/content_reference_search.php' => ['requireLogin(', 'requireReadOnlyHttpMethod()', 'sendAdminJsonHeaders()',
+        'a.deleted_at IS NULL', 'a.unpublish_at > NOW()', 'p.deleted_at IS NULL', "p.status = 'published'", 'p.unpublish_at > NOW()',
+        '$pageBlogScopeSql', 'faqPublicVisibilitySql()', 'galleryAlbumPublicVisibilitySql()', "galleryPhotoPublicVisibilitySql('p', 'a')",
+        'podcastEpisodePublicVisibilitySql(', 'boardPublicVisibilitySql()', 'pollPublicVisibilitySql()',
+        "WHERE deleted_at IS NULL AND status = 'published'", 'function contentReferenceSearchResult(', "unset(\$result['created_at'])", 'array_slice($results, 0, 20)'],
+    'build/http_integration.php' => ['rcContentPickerHttpChecks('],
+    'build/rc_content_picker_http.php' => ["'role' => 'author'", 'Nonpublic picker result:', 'Hidden parent exposed picker child:',
+        'Disabled module exposed picker result:', 'Picker ranks source order instead of raw dates', 'Picker leaked raw/private fields', 'Picker ARIA target is missing/duplicate'],
+    'build/rc_content_picker_selftest.php' => ['Date survives projection', 'Later source survives truncation', 'Candidates do not retain full bodies/private fields'],
+    'composer.json' => ['rc_content_picker_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $pickerVisibilityIssues[] = $file . ' missing picker protection: ' . $fragment;
+        }
+    }
+}
+$pickerSearchSource = (string)file_get_contents(__DIR__ . '/../admin/content_reference_search.php');
+foreach (['posted_at', 'removed_at', 'ORDER BY pinned', '$results[] = contentReferenceResult($row);', '$results[] = $row;'] as $forbidden) {
+    if (str_contains($pickerSearchSource, $forbidden)) {
+        $pickerVisibilityIssues[] = 'Picker has an obsolete query or discards dates before sorting: ' . $forbidden;
+    }
+}
+if ($pickerVisibilityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($pickerVisibilityIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

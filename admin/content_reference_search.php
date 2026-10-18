@@ -276,6 +276,16 @@ function contentReferenceResult(array $row): array
     ];
 }
 
+/**
+ * @param array<string, mixed> $row
+ * @return array<string, mixed>
+ */
+function contentReferenceSearchResult(array $row): array
+{
+    // Keep only the compact projection and its sort date, not full source bodies.
+    return contentReferenceResult($row) + ['created_at' => (string)($row['created_at'] ?? '')];
+}
+
 function contentReferenceShortcodeAttribute(string $name, string $value): string
 {
     return $name . '="' . addcslashes(trim($value), "\\\"") . '"';
@@ -764,8 +774,10 @@ function contentReferenceInsertActions(array $row): array
 
     return $actions;
 }
-$query = trim((string)($_GET['q'] ?? ''));
-$requestedType = strtolower(trim((string)($_GET['type'] ?? 'all')));
+$queryInput = $_GET['q'] ?? '';
+$typeInput = $_GET['type'] ?? 'all';
+$query = is_string($queryInput) ? trim($queryInput) : '';
+$requestedType = is_string($typeInput) ? strtolower(trim($typeInput)) : 'all';
 
 if (!in_array($requestedType, contentReferenceAllowedTypes(), true)) {
     $requestedType = 'all';
@@ -787,18 +799,19 @@ $results = [];
 if (($requestedType === 'all' || $requestedType === 'blog') && isModuleEnabled('blog')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT a.id, a.title, a.slug, a.perex, a.content, a.created_at, 'blog' AS type, b.slug AS blog_slug
+            "SELECT a.id, a.blog_id, a.title, a.slug, a.perex, a.content, a.created_at, 'blog' AS type, b.slug AS blog_slug
              FROM cms_articles a
-             LEFT JOIN cms_blogs b ON b.id = a.blog_id
-             WHERE a.status = 'published'
+             INNER JOIN cms_blogs b ON b.id = a.blog_id
+             WHERE a.deleted_at IS NULL AND a.status = 'published'
                AND (a.publish_at IS NULL OR a.publish_at <= NOW())
+               AND (a.unpublish_at IS NULL OR a.unpublish_at > NOW())
                AND (a.title LIKE ? OR a.perex LIKE ? OR a.content LIKE ?)
              ORDER BY a.created_at DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('blog', $e);
@@ -807,17 +820,22 @@ if (($requestedType === 'all' || $requestedType === 'blog') && isModuleEnabled('
 
 if ($requestedType === 'all' || $requestedType === 'page') {
     try {
+        $pageBlogScopeSql = isModuleEnabled('blog') ? '(p.blog_id IS NULL OR b.id IS NOT NULL)' : 'p.blog_id IS NULL';
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, content, created_at, 'page' AS type
-             FROM cms_pages
-             WHERE is_published = 1
-               AND (title LIKE ? OR content LIKE ? OR slug LIKE ?)
-             ORDER BY title
+            "SELECT p.id, p.blog_id, p.title, p.slug, p.content, p.created_at, b.slug AS blog_slug, 'page' AS type
+             FROM cms_pages p
+             LEFT JOIN cms_blogs b ON b.id = p.blog_id
+             WHERE p.deleted_at IS NULL AND p.status = 'published' AND p.is_published = 1
+               AND (p.publish_at IS NULL OR p.publish_at <= NOW())
+               AND (p.unpublish_at IS NULL OR p.unpublish_at > NOW())
+               AND {$pageBlogScopeSql}
+               AND (p.title LIKE ? OR p.content LIKE ? OR p.slug LIKE ?)
+             ORDER BY p.created_at DESC, p.id DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('page', $e);
@@ -836,7 +854,7 @@ if (($requestedType === 'all' || $requestedType === 'news') && isModuleEnabled('
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('news', $e);
@@ -855,7 +873,7 @@ if (($requestedType === 'all' || $requestedType === 'event') && isModuleEnabled(
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('event', $e);
@@ -867,15 +885,14 @@ if (($requestedType === 'all' || $requestedType === 'faq') && isModuleEnabled('f
         $stmt = $pdo->prepare(
             "SELECT id, question AS title, slug, excerpt, answer, COALESCE(updated_at, created_at) AS created_at, 'faq' AS type
              FROM cms_faqs
-             WHERE COALESCE(status, 'published') = 'published'
-               AND is_published = 1
+             WHERE " . faqPublicVisibilitySql() . "
                AND (question LIKE ? OR excerpt LIKE ? OR answer LIKE ? OR slug LIKE ?)
              ORDER BY COALESCE(updated_at, created_at) DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('faq', $e);
@@ -887,15 +904,14 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
         $albumStmt = $pdo->prepare(
             "SELECT id, name AS title, slug, description, COALESCE(updated_at, created_at) AS created_at, 'gallery_album' AS type
              FROM cms_gallery_albums
-             WHERE status = 'published'
-               AND is_published = 1
+             WHERE " . galleryAlbumPublicVisibilitySql() . "
                AND (name LIKE ? OR description LIKE ? OR slug LIKE ?)
              ORDER BY COALESCE(updated_at, created_at) DESC
              LIMIT 6"
         );
         $albumStmt->execute([$like, $like, $like]);
         foreach ($albumStmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
 
         $photoStmt = $pdo->prepare(
@@ -904,15 +920,14 @@ if (($requestedType === 'all' || $requestedType === 'gallery') && isModuleEnable
                     'gallery_photo' AS type
              FROM cms_gallery_photos p
              INNER JOIN cms_gallery_albums a ON a.id = p.album_id
-             WHERE a.status = 'published'
-               AND a.is_published = 1
+             WHERE " . galleryPhotoPublicVisibilitySql('p', 'a') . "
                AND (p.title LIKE ? OR p.slug LIKE ? OR a.name LIKE ?)
              ORDER BY p.created_at DESC
              LIMIT 6"
         );
         $photoStmt->execute([$like, $like, $like]);
         foreach ($photoStmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('gallery', $e);
@@ -926,12 +941,12 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
              FROM cms_podcast_shows
              WHERE " . podcastShowPublicVisibilitySql() . "
                AND (title LIKE ? OR description LIKE ? OR slug LIKE ?)
-             ORDER BY m.created_at DESC
+             ORDER BY created_at DESC, id DESC
              LIMIT 6"
         );
         $showStmt->execute([$like, $like, $like]);
         foreach ($showStmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
 
         $episodeStmt = $pdo->prepare(
@@ -948,7 +963,7 @@ if (($requestedType === 'all' || $requestedType === 'podcast') && isModuleEnable
         );
         $episodeStmt->execute([$like, $like, $like, $like]);
         foreach ($episodeStmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('podcast', $e);
@@ -960,7 +975,7 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
         $stmt = $pdo->prepare(
             "SELECT id, title, slug, excerpt, description, external_url, filename, original_name, image_file, created_at, 'download' AS type
              FROM cms_downloads
-             WHERE status = 'published'
+             WHERE deleted_at IS NULL AND status = 'published'
                AND is_published = 1
                AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR slug LIKE ?)
              ORDER BY created_at DESC
@@ -968,7 +983,7 @@ if (($requestedType === 'all' || $requestedType === 'download') && isModuleEnabl
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('download', $e);
@@ -993,7 +1008,7 @@ if (($requestedType === 'all' || $requestedType === 'recipe') && isModuleEnabled
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('recipes', $e);
@@ -1012,7 +1027,7 @@ if (($requestedType === 'all' || $requestedType === 'forms') && isModuleEnabled(
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('forms', $e);
@@ -1030,14 +1045,14 @@ if ($requestedType === 'all' || $requestedType === 'media') {
              WHERE m.visibility = 'public'
                AND (m.original_name LIKE ? OR m.alt_text LIKE ? OR m.caption LIKE ? OR m.description LIKE ?
                     OR m.credit LIKE ? OR m.license_label LIKE ? OR c.name LIKE ? OR m.mime_type LIKE ?)
-             ORDER BY created_at DESC
+             ORDER BY m.created_at DESC, m.id DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like, $like, $like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
             $row['title'] = trim((string)($row['original_name'] ?? ''));
             $row['type'] = mediaReferenceKind($row);
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('media', $e);
@@ -1056,7 +1071,7 @@ if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled(
         );
         $stmt->execute([$like, $like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('place', $e);
@@ -1066,18 +1081,16 @@ if (($requestedType === 'all' || $requestedType === 'place') && isModuleEnabled(
 if (($requestedType === 'all' || $requestedType === 'board') && isModuleEnabled('board')) {
     try {
         $stmt = $pdo->prepare(
-            "SELECT id, title, slug, excerpt, description, image_file, posted_at AS created_at, 'board' AS type
+            "SELECT id, title, slug, excerpt, description, image_file, posted_date AS created_at, 'board' AS type
              FROM cms_board
-             WHERE status = 'published'
-               AND is_published = 1
-               AND (removed_at IS NULL OR removed_at > NOW())
+             WHERE " . boardPublicVisibilitySql() . "
                AND (title LIKE ? OR excerpt LIKE ? OR description LIKE ? OR slug LIKE ?)
-             ORDER BY pinned DESC, posted_at DESC
+             ORDER BY posted_date DESC, id DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('board', $e);
@@ -1089,15 +1102,14 @@ if (($requestedType === 'all' || $requestedType === 'poll') && isModuleEnabled('
         $stmt = $pdo->prepare(
             "SELECT id, question AS title, slug, description, created_at, 'poll' AS type
              FROM cms_polls
-             WHERE status = 'published'
-               AND is_published = 1
+             WHERE " . pollPublicVisibilitySql() . "
                AND (question LIKE ? OR description LIKE ? OR slug LIKE ?)
              ORDER BY created_at DESC
              LIMIT 10"
         );
         $stmt->execute([$like, $like, $like]);
         foreach ($stmt->fetchAll() as $row) {
-            $results[] = contentReferenceResult($row);
+            $results[] = contentReferenceSearchResult($row);
         }
     } catch (\PDOException $e) {
         contentReferenceLogSourceError('poll', $e);
@@ -1109,7 +1121,10 @@ usort(
     static fn (array $left, array $right): int => contentReferenceTimestamp($right) <=> contentReferenceTimestamp($left)
 );
 
-$results = array_slice($results, 0, 20);
+$results = array_map(static function (array $result): array {
+    unset($result['created_at']);
+    return $result;
+}, array_slice($results, 0, 20));
 
 contentReferenceJsonResponse([
     'ok' => true,

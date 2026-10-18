@@ -439,6 +439,8 @@ Kora CMS podporuje dva editory:
 
 Pro HTML obsah je k dispozici content picker – přístupný dialog pro vložení interních odkazů, galerií, médií, formulářů, anket, PDF náhledu z knihovny médií a hotových HTML bloků. Vedle něj je v čistém HTML režimu nástroj `Jazyk části textu`, který obalí vybraný cizojazyčný úsek do `<span lang="…">`. Stejný helper je dostupný i u veřejně renderovaných taxonomických popisů, například u kategorií/štítků/sérií blogu, kategorií vývěsky, typů akcí a kategorií/sérií Ke stažení.
 
+Vyhledávání pickeru nabízí pouze veřejný obsah zapnutých modulů, ne koncepty, Koš, budoucí publikace ani obsah po ukončení zveřejnění. Respektuje také viditelnost rodičovského alba a podcastového pořadu. Veřejně archivovaná Vývěska a uzavřené Ankety zůstávají použitelné. Blogové stránky zachovávají adresu vlastního blogu a nejsou nabízené při jeho vypnutí; globální stránky tím nejsou ovlivněné. Společné výsledky se řadí podle data ještě před závěrečným limitem 20, s dosavadními limity jednotlivých zdrojů. Picker není nástrojem pro hledání soukromých konceptů.
+
 ### Podporované snippety
 
 | Snippet | Výstup |
