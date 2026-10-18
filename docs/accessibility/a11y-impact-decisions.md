@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-18: RC audit editoru a obrázků Míst
+
+- Datum a rozsah: 2026-10-18; `admin/place_save.php`, `admin/place_form.php`, sdílená obnova formuláře, úklid obrázků v Koši a `places/image.php`. Registr nálezů: `docs/rc2-module-audit-2026-09.md`, RC2-51 až RC2-55.
+- Dotčená kritéria: `1.1.1`, `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: chyba zachovává běžné hodnoty a checkbox zveřejnění jen pro konkrétní editor, nikoli souhlas s odebráním obrázku, cestu souboru či starý CSRF token. Odebrání má vlastní label, nápovědu a skutečný ARIA cíl chyby; souhrn chyby je textový alert. Po odstranění nebo přesunu místa do Koše zůstávají zadané texty dostupné k záchraně, ale uložení je nedostupné s odkazem na vysvětlení. Obrázek se nesmí ztratit při rollbacku ani při smazání jiné sdílející položky. Nevzniká nový focus model, vzhled ani změna veřejných URL; hlavní ACR stav se nezvyšuje na Supports.
+- Automatizovaný důkaz: `build/rc_place_integrity_selftest.php` vykonává produkční flash a souborové helpery nad vlastními soubory a SQLite, včetně jednorázovosti, ID scope, whitelistu, variant a referencí v Koši; opakuje se s číselnými PDO řetězci. `build/rc_place_integrity_http.php` vykonává skutečný multipart upload, řízené MySQL chyby revize/redirectu/založení, obnovu zadaných hodnot, odmítnutí starého souhlasu, existenci a jedinečnost ARIA cílů, sdílený obrázek a poslední purge, chybné cesty a CSRF. `build/runtime_audit.php` hlídá bootstrap a propojení ochrany s testy. Vše je součástí `composer ci:module-ready`.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox, klávesnice, zoom/reflow a vlastní šablony vyžadují ruční ověření; test DOM není certifikace WCAG. File input uživatel vybírá znovu. Nativní symlinky ověřuje Linux CI; Windows bez příslušných oprávnění je netvrdí jako otestované. DB a filesystem nejsou distribuovaná transakce, pád procesu a souběžný externí import zůstávají provozním rizikem. Tento blok neslibuje ověření všech souběhů ani doručování oznámení e-mailem.
+
 ### 2026-10-18: Vývěska, kontrolované přílohy a neplatné souborové reference
 
 - Datum a rozsah: download přílohy, checksum evidence, cílené mazání a JSON import Vývěsky; serverová pravidla Apache, testovací router a Nginx dokumentace.

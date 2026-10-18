@@ -8,6 +8,7 @@ function adminEditorFormFields(): array
     return [
         'news' => ['title', 'slug', 'content', 'publish_at', 'unpublish_at', 'admin_note', 'meta_title', 'meta_description', 'article_status'],
         'event' => ['title', 'slug', 'event_kind', 'event_type_id', 'place_id', 'excerpt', 'description', 'program_note', 'location', 'organizer_name', 'organizer_email', 'registration_url', 'price_note', 'accessibility_note', 'event_date', 'event_time', 'event_end_date', 'event_end_time', 'recurrence_frequency', 'recurrence_interval', 'recurrence_count', 'publish_at', 'unpublish_at', 'admin_note', 'article_status'],
+        'place' => ['name', 'slug', 'place_kind', 'category', 'locality', 'address', 'excerpt', 'description', 'url', 'latitude', 'longitude', 'opening_hours', 'contact_phone', 'contact_email', 'meta_title', 'meta_description', 'article_status'],
         'board' => ['title', 'slug', 'board_type', 'category_id', 'excerpt', 'description', 'posted_date', 'removal_date', 'contact_name', 'contact_phone', 'contact_email', 'publish_at', 'unpublish_at', 'article_status'],
         'faq' => ['question', 'slug', 'excerpt', 'answer', 'category_id', 'meta_title', 'meta_description', 'article_status'],
         'gallery_photo' => ['title', 'slug', 'alt_text', 'caption', 'description', 'credit', 'license_label', 'license_url', 'taken_at', 'location_label', 'sort_order'],
@@ -29,6 +30,7 @@ function adminEditorFormFlashStore(string $editor, ?int $id, array $input, ?int 
     $checkboxes = match ($editor) {
         'event' => ['is_published', 'event_image_delete'],
         'board' => ['is_pinned', 'is_published'],
+        'place' => ['is_published'],
         'faq' => ['is_published'],
         'gallery_photo' => ['is_published'],
         'podcast' => ['block_from_feed', 'audio_file_delete', 'image_file_delete'],

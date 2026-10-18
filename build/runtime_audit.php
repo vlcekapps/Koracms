@@ -22184,7 +22184,7 @@ foreach ([
     'UPDATE cms_events SET place_id = NULL WHERE place_id = ?',
     "DELETE FROM cms_revisions WHERE entity_type = 'place' AND entity_id = ?",
     'DELETE FROM cms_places WHERE id = ? AND deleted_at IS NOT NULL',
-    'deletePlaceImageFile($placeImageFile)',
+    'deleteUnusedPlaceImageFile($pdo, $placeImageFile)',
     "logAction('trash_purge', \"module={\$module} id={\$itemId}\")",
 ] as $placeTrashLifecycleFragment) {
     if (!str_contains($trashGuardSource, $placeTrashLifecycleFragment)) {
@@ -24305,6 +24305,38 @@ if ($boardFileBoundaryIssues === []) {
 } else {
     $failures++;
     foreach ($boardFileBoundaryIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_place_write_integrity_contract ===\n";
+$placeIntegrityIssues = [];
+foreach ([
+    'admin/place_save.php' => ["require_once __DIR__ . '/layout.php'", "adminEditorFormFlashStore('place'", '$pdo->beginTransaction()',
+        'FOR UPDATE', '$pdo->rollBack()', "uploadPlaceImage(\$_FILES['place_image'] ?? [])", 'confirm_place_image_delete',
+        'deleteUnusedPlaceImageFile($pdo, $oldImageFilename)', 'upsertPathRedirect($pdo, $oldPath, placePublicPath(', '301, true)'],
+    'admin/place_form.php' => ["adminEditorFormFlashTake('place', \$id)", 'confirm_place_image_delete', 'place-image-delete-help', 'disabled aria-describedby="form-error"'],
+    'admin/trash.php' => ['deleteUnusedPlaceImageFile($pdo, $placeImageFile)'],
+    'lib/presentation.php' => ['function placeStoredImageFilename(', 'function placeStoredImagePath(', 'function deleteUnusedPlaceImageFile(', 'SELECT image_file FROM cms_places WHERE image_file = ? OR image_file LIKE ?'],
+    'places/image.php' => ['placeStoredImagePath($filename)'],
+    'build/rc_place_integrity_selftest.php' => ['Draft preserves ordinary fields, not consent/file paths/CSRF', 'Symlink read rejected', 'Legacy shared stem retains derived WebP'],
+    'build/rc_place_integrity_http.php' => ['Owned Places revision failure', 'Owned Places redirect failure', 'Owned Places create failure', 'Places validation lost draft/unchecked publication', 'Stale Places save modified a trashed row'],
+    'build/http_integration.php' => ['rcPlaceIntegrityHttpChecks('],
+    'composer.json' => ['rc_place_integrity_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_place_integrity_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $placeIntegrityIssues[] = $file . ' missing Places integrity protection: ' . $fragment;
+        }
+    }
+}
+if ($placeIntegrityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($placeIntegrityIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

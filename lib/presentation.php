@@ -5076,18 +5076,66 @@ function placeImageRequestPath(array $place): string
     return '/places/image.php?id=' . $placeId;
 }
 
+function placeStoredImageFilename(string $filename): string
+{
+    if ($filename === '' || strlen($filename) > 255 || $filename[0] === '.'
+        || preg_match('/[\x00-\x1f\x7f<>:"\/\\\\|?*]/', $filename) === 1
+        || trim($filename) !== $filename || rtrim($filename, '.') !== $filename
+        || !in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+        return '';
+    }
+    return $filename;
+}
+
+function placeStoredImagePath(string $filename, ?string $directory = null): string
+{
+    if (placeStoredImageFilename($filename) === '') {
+        return '';
+    }
+    $root = realpath($directory ?? dirname(__DIR__) . '/uploads/places');
+    if ($root === false) {
+        return '';
+    }
+    $candidate = $root . DIRECTORY_SEPARATOR . $filename;
+    $path = realpath($candidate);
+    if (is_link($candidate) || $path === false || !str_starts_with($path, $root . DIRECTORY_SEPARATOR)
+        || !is_file($path) || !is_readable($path)) {
+        return '';
+    }
+    return $path;
+}
+
 function deletePlaceImageFile(string $filename): void
 {
-    $filename = basename($filename);
-    if ($filename === '') {
+    if (placeStoredImageFilename($filename) === '') {
         return;
     }
-
-    $path = dirname(__DIR__) . '/uploads/places/' . $filename;
-    if (is_file($path)) {
-        if (!unlink($path)) {
+    foreach (array_unique([$filename, pathinfo($filename, PATHINFO_FILENAME) . '.webp']) as $variant) {
+        $path = placeStoredImagePath($variant);
+        if ($path !== '' && !unlink($path)) {
             presentationLogFileDeleteFailure('place_image', $path);
         }
+    }
+}
+
+function deleteUnusedPlaceImageFile(PDO $pdo, string $filename): void
+{
+    if (placeStoredImageFilename($filename) === '') {
+        return;
+    }
+    try {
+        // Include trash and legacy images with a shared stem/WebP variant.
+        $stem = pathinfo($filename, PATHINFO_FILENAME);
+        $like = str_replace(['=', '%', '_'], ['==', '=%', '=_'], $stem) . '.%';
+        $stmt = $pdo->prepare("SELECT image_file FROM cms_places WHERE image_file = ? OR image_file LIKE ? ESCAPE '='");
+        $stmt->execute([$filename, $like]);
+        // Keep ambiguous legacy references conservatively, including DB case/accent matches.
+        if ($stmt->fetchColumn() !== false) {
+            return;
+        }
+        deletePlaceImageFile($filename);
+    } catch (PDOException $exception) {
+        koraLog('warning', 'place image cleanup failed', ['exception' => $exception]);
     }
 }
 

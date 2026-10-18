@@ -7,14 +7,19 @@ $pdo = db_connect();
 $id = inputInt('get', 'id');
 $backUrl = internalRedirectTarget((string)($_GET['redirect'] ?? ''), BASE_URL . '/admin/places.php');
 $place = null;
+$formValues = adminEditorFormFlashTake('place', $id);
+$placeMissing = false;
 
 if ($id !== null) {
     $stmt = $pdo->prepare("SELECT * FROM cms_places WHERE id = ? AND deleted_at IS NULL");
     $stmt->execute([$id]);
     $place = $stmt->fetch() ?: null;
     if (!$place) {
-        header('Location: ' . $backUrl);
-        exit;
+        if ($formValues === []) {
+            header('Location: ' . $backUrl);
+            exit;
+        }
+        $placeMissing = true;
     }
 }
 
@@ -40,12 +45,18 @@ $place = $place ?: [
     'status' => 'published',
 ];
 $place = hydratePlacePresentation($place);
+if ($formValues !== []) {
+    $place = array_replace($place, array_intersect_key($formValues, array_flip(array_merge(
+        array_map(static fn (string $field): string => $field === 'article_status' ? 'status' : $field, adminEditorFormFields()['place']),
+        ['is_published']
+    ))));
+}
 
 $categories = $pdo->query(
     "SELECT DISTINCT category FROM cms_places WHERE category <> '' AND deleted_at IS NULL ORDER BY category"
 )->fetchAll(\PDO::FETCH_COLUMN);
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$err = trim((string)($_GET['err'] ?? ''));
+$err = $placeMissing ? 'missing' : trim((string)($_GET['err'] ?? ''));
 $placeUrlErrorMessage = 'Webový odkaz musí být platná http/https adresa. Lze zadat i doménu bez schématu; CMS ji uloží jako https://. Pokud odkaz nechcete vyplnit, nechte pole prázdné.';
 $placeContactEmailErrorMessage = 'Kontaktní e-mail místa musí být úplná adresa ve tvaru jmeno@example.cz, nebo pole nechte prázdné.';
 $placeImageUploadErrorMessage = 'Hlavní obrázek místa se nepodařilo nahrát. Nahrajte JPEG, PNG, GIF nebo WebP; SVG a jiné formáty CMS nepřijímá. Pokud obrázek nechcete měnit, nechte pole prázdné.';
@@ -56,6 +67,9 @@ $formError = match ($err) {
     'email' => $placeContactEmailErrorMessage,
     'coordinates' => 'Souřadnice místa nejsou použitelné. U polí zeměpisné šířky a délky je konkrétní nápověda.',
     'image' => $placeImageUploadErrorMessage,
+    'image_confirm' => 'Odebrání obrázku vyžaduje nové potvrzení. Zkontrolujte aktuální obrázek a potvrďte jeho odebrání znovu.',
+    'save' => 'Místo se nepodařilo uložit. Zadané údaje zůstaly ve formuláři; soubor případně vyberte znovu. Potvrzení odebrání obrázku je nutné zopakovat.',
+    'missing' => 'Místo bylo přesunuto do Koše nebo odstraněno. Zadané údaje zůstaly ve formuláři pro záchranu, ale změny nelze uložit. Zkontrolujte přehled míst nebo požádejte správce o obnovení místa.',
     default => '',
 };
 $fieldErrorMap = [
@@ -65,6 +79,7 @@ $fieldErrorMap = [
     'email' => ['contact_email'],
     'coordinates' => ['latitude', 'longitude'],
     'image' => ['place_image'],
+    'image_confirm' => ['confirm_place_image_delete'],
 ];
 $fieldErrorMessages = [
     'name' => 'Doplňte krátký název místa, například Obecní knihovna.',
@@ -233,10 +248,12 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
     <?php endif; ?>
     <?php if (!empty($place['image_file'])): ?>
       <div class="admin-field-row">
-        <label for="place_image_delete" class="admin-checkbox-label">
-          <input type="checkbox" id="place_image_delete" name="place_image_delete" value="1">
-          Smazat aktuální obrázek
+        <label for="confirm_place_image_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_place_image_delete" name="confirm_place_image_delete" value="1"<?= adminFieldAttributes('confirm_place_image_delete', $err, $fieldErrorMap, ['place-image-delete-help']) ?>>
+          Potvrzuji odebrání aktuálního obrázku
         </label>
+        <small id="place-image-delete-help" class="field-help">Zkontrolujte náhled před odebráním. Po chybě se toto potvrzení neobnovuje. Nově nahraný obrázek má přednost před odebráním.</small>
+        <?php adminRenderFieldError('confirm_place_image_delete', $err, $fieldErrorMap, 'Po kontrole obrázku zaškrtněte nové potvrzení jeho odebrání.'); ?>
       </div>
     <?php endif; ?>
 
@@ -263,7 +280,7 @@ adminHeader($id ? 'Upravit zajímavé místo' : 'Nové zajímavé místo');
   </fieldset>
 
   <div class="button-row admin-fieldset-spaced">
-    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
+    <button type="submit" class="btn"<?= $placeMissing ? ' disabled aria-describedby="form-error"' : '' ?>><?= $id ? 'Uložit změny' : 'Přidat zajímavé místo' ?></button>
     <a href="<?= h($backUrl) ?>">Zrušit</a>
     <?php if (($place['status'] ?? 'published') === 'published' && (int)($place['is_published'] ?? 1) === 1 && !empty($place['slug'])): ?>
       <a href="<?= h(placePublicPath($place)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>

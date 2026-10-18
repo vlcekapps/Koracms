@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 logAction('trash_purge', "module={$module} id={$itemId}");
                                 $pdo->commit();
                                 if ($placeImageFile !== '') {
-                                    deletePlaceImageFile($placeImageFile);
+                                    deleteUnusedPlaceImageFile($pdo, $placeImageFile);
                                 }
                                 $redirectQuery = 'ok=purged';
                             }

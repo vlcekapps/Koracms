@@ -40,8 +40,8 @@ if (!$isPublic && !currentUserHasCapability('content_manage_shared')) {
     sendFileDownloadNotFound();
 }
 
-$filePath = dirname(__DIR__) . '/uploads/places/' . basename($filename);
-if (!is_file($filePath)) {
+$filePath = placeStoredImagePath($filename);
+if ($filePath === '') {
     sendFileDownloadNotFound();
 }
 

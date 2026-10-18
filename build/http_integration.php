@@ -21,6 +21,7 @@ require_once __DIR__ . '/rc_reservations_audit_http.php';
 require_once __DIR__ . '/rc_food_media_usage_http.php';
 require_once __DIR__ . '/rc_chat_integrity_http.php';
 require_once __DIR__ . '/rc_editor_integrity_http.php';
+require_once __DIR__ . '/rc_place_integrity_http.php';
 require_once __DIR__ . '/rc_board_integrity_http.php';
 require_once __DIR__ . '/shop_http.php';
 
@@ -749,6 +750,7 @@ try {
     httpIntegrationPrintResult('rc2_food_media_usage_http', rcFoodMediaUsageHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_chat_integrity_http', rcChatIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_editor_integrity_http', rcEditorIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
+    httpIntegrationPrintResult('rc2_place_integrity_http', rcPlaceIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('rc2_board_newsletter_integrity_http', rcBoardIntegrityHttpChecks($pdo, $baseUrl, $adminSession), $failures);
     httpIntegrationPrintResult('digital_shop_http', shopHttpChecks($pdo, $baseUrl, $adminSession), $failures);
 

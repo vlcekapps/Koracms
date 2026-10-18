@@ -1239,6 +1239,14 @@ Veřejný katalog i administrace používají skutečné nadpisy, pojmenované o
 
 ---
 
+## Zajímavá místa – bezpečná editace a obrázky
+
+Při validační nebo databázové chybě editor zachová rozepsaný název, slug, popis, kontakty, souřadnice, SEO i stav zveřejnění. Návratové hodnoty patří jen konkrétnímu místu a spotřebují se jednou. Souborový vstup nelze automaticky obnovit: nový obrázek případně vyberte znovu. Pokud někdo místo mezitím přesunul do Koše nebo odstranil, editor nabídne zadané texty k záchraně a vysvětlí, proč je uložení nedostupné; položku potichu nezaloží znovu.
+
+Volba **Potvrzuji odebrání aktuálního obrázku** vyžaduje novou kontrolu náhledu. Toto potvrzení se nikdy neobnovuje po chybě ani ze starého autosave konceptu. Nahraný nový obrázek má přednost před odebráním. Uložení místa, jeho revize a redirectu probíhá v jedné databázové transakci; při chybě zůstane původní obrázek i uložená data zachovaná a nový nepřiřazený upload se uklidí.
+
+Obrázek, který sdílí více míst, se nesmaže, dokud jej potřebuje jiná položka včetně Koše. Poslední reference dovolí úklid originálu i generované WebP varianty. Starší importy se společným základem názvu obrázků se posuzují konzervativně, aby se nesmazala sdílená WebP varianta; nejde o hromadný úklid historických osiřelých souborů. Čtení a mazání nepřijímá cestu místo jednoduchého názvu podporovaného obrázku ani symlink mimo úložiště.
+
 ## Události – typy, místa a opakované termíny
 
 Modul **Události** slouží pro veřejný kalendář akcí. Vedle původního výpisu, detailu a ICS exportu umí spravované typy akcí, napojení na modul Místa a jednorázové vytvoření opakovaných termínů.

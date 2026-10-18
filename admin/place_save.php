@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/layout.php';
 requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu míst nemáte potřebné oprávnění.');
 requireModuleEnabled('places');
 verifyCsrf();
@@ -28,6 +28,7 @@ $isPublished = isset($_POST['is_published']) ? 1 : 0;
 
 $redirectBase = BASE_URL . '/admin/place_form.php';
 $redirectToForm = static function (string $errorCode) use ($redirectBase, $id, $redirectTarget) {
+    adminEditorFormFlashStore('place', $id, $_POST);
     $query = ['err' => $errorCode];
     if ($id !== null) {
         $query['id'] = (string)$id;
@@ -40,6 +41,12 @@ $redirectToForm = static function (string $errorCode) use ($redirectBase, $id, $
     exit;
 };
 
+if (array_key_exists('place_image_delete', $_POST)
+    || (array_key_exists('confirm_place_image_delete', $_POST) && $_POST['confirm_place_image_delete'] !== '1')) {
+    $redirectToForm('image_confirm');
+}
+$deleteImage = ($_POST['confirm_place_image_delete'] ?? '') === '1';
+
 if ($name === '') {
     $redirectToForm('required');
 }
@@ -50,8 +57,7 @@ if ($id !== null) {
     $existingStmt->execute([$id]);
     $existingPlace = $existingStmt->fetch() ?: null;
     if (!$existingPlace) {
-        header('Location: ' . $redirectTarget);
-        exit;
+        $redirectToForm('missing');
     }
 }
 
@@ -96,128 +102,155 @@ if ($latitudeInput !== '' || $longitudeInput !== '') {
     }
 }
 
-$placeImageFilename = trim((string)($existingPlace['image_file'] ?? ''));
-$imageUpload = uploadPlaceImage($_FILES['place_image'] ?? [], $placeImageFilename);
-if ($imageUpload['error'] !== '') {
-    $redirectToForm('image');
-}
-$placeImageFilename = $imageUpload['filename'];
-
-if (isset($_POST['place_image_delete']) && empty($_FILES['place_image']['name']) && $placeImageFilename !== '') {
-    deletePlaceImageFile($placeImageFilename);
-    $placeImageFilename = '';
-}
-
-if ($id !== null) {
-    $oldSnapshot = placeRevisionSnapshot($existingPlace);
-    $oldPath = placePublicPath($existingPlace);
-
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = $existingPlace['status'] ?? 'published';
+$imageUpload = ['filename' => '', 'uploaded' => false, 'error' => ''];
+try {
+    $pdo->beginTransaction();
+    if ($id !== null) {
+        $lockedStmt = $pdo->prepare('SELECT * FROM cms_places WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
+        $lockedStmt->execute([$id]);
+        $existingPlace = $lockedStmt->fetch() ?: null;
+        if ($existingPlace === null) {
+            $pdo->rollBack();
+            $redirectToForm('missing');
+        }
     }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = (($existingPlace['status'] ?? '') === 'published') ? 'published' : 'pending';
+    $oldImageFilename = (string)($existingPlace['image_file'] ?? '');
+    // Stage a new upload without giving the upload helper ownership of the old file.
+    $imageUpload = uploadPlaceImage($_FILES['place_image'] ?? []);
+    if ($imageUpload['error'] !== '') {
+        $pdo->rollBack();
+        $redirectToForm('image');
+    }
+    $placeImageFilename = $imageUpload['uploaded'] ? (string)$imageUpload['filename'] : $oldImageFilename;
+    if ($deleteImage && !$imageUpload['uploaded']) {
+        $placeImageFilename = '';
     }
 
-    // Při první publikaci aktualizovat created_at
-    $publishingNow = $requestedStatus === 'published' && ($existingPlace['status'] ?? '') !== 'published';
-    $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+    if ($id !== null) {
+        $oldSnapshot = placeRevisionSnapshot($existingPlace);
+        $oldPath = placePublicPath($existingPlace);
 
-    $pdo->prepare(
-        "UPDATE cms_places
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = $existingPlace['status'] ?? 'published';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = (($existingPlace['status'] ?? '') === 'published') ? 'published' : 'pending';
+        }
+
+        // Při první publikaci aktualizovat created_at
+        $publishingNow = $requestedStatus === 'published' && ($existingPlace['status'] ?? '') !== 'published';
+        $createdAtClause = $publishingNow ? ', created_at = NOW()' : '';
+
+        $pdo->prepare(
+            "UPDATE cms_places
          SET name = ?, slug = ?, place_kind = ?, category = ?, locality = ?, address = ?, excerpt = ?,
              description = ?, url = ?, image_file = ?, latitude = ?, longitude = ?, opening_hours = ?,
              contact_phone = ?, contact_email = ?, meta_title = ?, meta_description = ?, is_published = ?,
              status = ?, updated_at = NOW(){$createdAtClause}
          WHERE id = ?"
-    )->execute([
-        $name,
-        $slug,
-        $placeKind,
-        $category,
-        $locality,
-        $address,
-        $excerpt,
-        $description,
-        $normalizedUrl,
-        $placeImageFilename,
-        $latitude,
-        $longitude,
-        $openingHours,
-        $contactPhone,
-        $contactEmail,
-        $metaTitle,
-        $metaDescription,
-        $isPublished,
-        $requestedStatus,
-        $id,
-    ]);
+        )->execute([
+            $name,
+            $slug,
+            $placeKind,
+            $category,
+            $locality,
+            $address,
+            $excerpt,
+            $description,
+            $normalizedUrl,
+            $placeImageFilename,
+            $latitude,
+            $longitude,
+            $openingHours,
+            $contactPhone,
+            $contactEmail,
+            $metaTitle,
+            $metaDescription,
+            $isPublished,
+            $requestedStatus,
+            $id,
+        ]);
 
-    saveRevision($pdo, 'place', $id, $oldSnapshot, placeRevisionSnapshot([
-        'name' => $name,
-        'slug' => $slug,
-        'place_kind' => $placeKind,
-        'category' => $category,
-        'excerpt' => $excerpt,
-        'description' => $description,
-        'url' => $normalizedUrl,
-        'address' => $address,
-        'locality' => $locality,
-        'latitude' => $latitude,
-        'longitude' => $longitude,
-        'opening_hours' => $openingHours,
-        'contact_phone' => $contactPhone,
-        'contact_email' => $contactEmail,
-        'meta_title' => $metaTitle,
-        'meta_description' => $metaDescription,
-        'is_published' => $isPublished,
-        'status' => $requestedStatus,
-    ]));
-    upsertPathRedirect($pdo, $oldPath, placePublicPath(['id' => $id, 'slug' => $slug]));
-    logAction('place_edit', "id={$id} name={$name} slug={$slug}");
-} else {
-    $requestedStatus = trim($_POST['article_status'] ?? '');
-    if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
-        $requestedStatus = 'draft';
-    }
-    if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
-        $requestedStatus = 'pending';
-    }
-    $status = $requestedStatus;
-    $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
-    $pdo->prepare(
-        "INSERT INTO cms_places (
+        saveRevision($pdo, 'place', $id, $oldSnapshot, placeRevisionSnapshot([
+            'name' => $name,
+            'slug' => $slug,
+            'place_kind' => $placeKind,
+            'category' => $category,
+            'excerpt' => $excerpt,
+            'description' => $description,
+            'url' => $normalizedUrl,
+            'address' => $address,
+            'locality' => $locality,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'opening_hours' => $openingHours,
+            'contact_phone' => $contactPhone,
+            'contact_email' => $contactEmail,
+            'meta_title' => $metaTitle,
+            'meta_description' => $metaDescription,
+            'is_published' => $isPublished,
+            'status' => $requestedStatus,
+        ]), true);
+        upsertPathRedirect($pdo, $oldPath, placePublicPath(['id' => $id, 'slug' => $slug]), 301, true);
+        logAction('place_edit', "id={$id} name={$name} slug={$slug}");
+    } else {
+        $requestedStatus = trim($_POST['article_status'] ?? '');
+        if (!in_array($requestedStatus, ['draft', 'pending', 'published'], true)) {
+            $requestedStatus = 'draft';
+        }
+        if ($requestedStatus === 'published' && !currentUserHasCapability('content_approve_shared')) {
+            $requestedStatus = 'pending';
+        }
+        $status = $requestedStatus;
+        $visible = currentUserHasCapability('content_approve_shared') ? $isPublished : 0;
+        $pdo->prepare(
+            "INSERT INTO cms_places (
             name, slug, place_kind, category, locality, address, excerpt, description, url, image_file,
             latitude, longitude, opening_hours, contact_phone, contact_email, meta_title, meta_description,
             is_published, status
          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    )->execute([
-        $name,
-        $slug,
-        $placeKind,
-        $category,
-        $locality,
-        $address,
-        $excerpt,
-        $description,
-        $normalizedUrl,
-        $placeImageFilename,
-        $latitude,
-        $longitude,
-        $openingHours,
-        $contactPhone,
-        $contactEmail,
-        $metaTitle,
-        $metaDescription,
-        $visible,
-        $status,
-    ]);
-    $id = (int)$pdo->lastInsertId();
-    logAction('place_add', "id={$id} name={$name} slug={$slug} status={$status}");
-    if ($status === 'pending') {
-        notifyPendingContent('Místo', $name, '/admin/places.php');
+        )->execute([
+            $name,
+            $slug,
+            $placeKind,
+            $category,
+            $locality,
+            $address,
+            $excerpt,
+            $description,
+            $normalizedUrl,
+            $placeImageFilename,
+            $latitude,
+            $longitude,
+            $openingHours,
+            $contactPhone,
+            $contactEmail,
+            $metaTitle,
+            $metaDescription,
+            $visible,
+            $status,
+        ]);
+        $id = (int)$pdo->lastInsertId();
+        logAction('place_add', "id={$id} name={$name} slug={$slug} status={$status}");
     }
+    $pdo->commit();
+} catch (Throwable $exception) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    if ($imageUpload['uploaded']) {
+        deletePlaceImageFile((string)$imageUpload['filename']);
+    }
+    koraLog('error', 'place save failed', ['place_id' => $id, 'exception' => $exception]);
+    $redirectToForm('save');
+}
+
+if ($oldImageFilename !== '' && $oldImageFilename !== $placeImageFilename) {
+    deleteUnusedPlaceImageFile($pdo, $oldImageFilename);
+}
+if ($existingPlace === null && $requestedStatus === 'pending') {
+    notifyPendingContent('Místo', $name, '/admin/places.php');
 }
 
 header('Location: ' . $redirectTarget);

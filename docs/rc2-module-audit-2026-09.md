@@ -1,5 +1,29 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit editoru a obrázků Míst, 2026-10-18
+
+Výchozí revize `84b48389`, čistá synchronizovaná `main`. Tento cílený blok pokrývá editor Míst, jeho validační návraty, upload, revize, redirecty, sdílené obrázky a úklid při trvalém smazání. Nejde o nový řádkový audit celého CMS. Schéma, `install.php`, `migrate.php` ani `VERSION` se nemění: oprava existujícího transakčního a souborového chování nepotřebuje nový perzistentní stav ani release.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-51 | P1 | Upload nebo odebrání obrázku mazaly originál před úspěšným zápisem; purge nerozlišoval další reference a neuklízel WebP. | Upload neobdrží původní soubor k odstranění. Rollback uklízí jen nový upload, post-commit cleanup respektuje všechny reference včetně Koše a sdílených legacy základů názvu. Skutečný multipart s chybou revize a založení ověřuje DB i seznam souborů; purge jiné reference zachová obrázek, poslední odstraní obě varianty. |
+| RC2-52 | P2 | Aktualizace, revize a redirect se ukládaly odděleně; chyba revize nebo redirectu mohla zůstat potlačená. | Zamčené aktuální místo a všechny zápisy v jedné transakci, revize a redirect ve striktním režimu. MySQL triggery omezené na vlastní ID/cestu dokazují rollback řádku i revizí a úspěšný opakovaný zápis canonical redirectu. |
+| RC2-53 | P2 | Validační návrat zahazoval rozepsané hodnoty; mezitím smazané místo nemělo cestu k záchraně textu. | Jednorázový whitelistovaný flash omezený ID, zachování i vypnutého zveřejňovacího checkboxu. Nedostupná položka nabídne texty k záchraně s alertem a nedostupným uložením, neobnoví se potichu. Izolované helpery a skutečný HTTP formulář/DOM včetně přesunu do Koše. První předopravový HTTP běh skutečně selhal na ztrátě hodnot. |
+| RC2-54 | P2 | Odebrání obrázku používalo běžný datový checkbox, který mohl obnovit autosave. | Čerstvý `confirm_place_image_delete` s přesnou hodnotou `1`, odmítnutí legacy a neplatných hodnot, bez obnovy souhlasu. HTTP kontroluje nulovou změnu DB, nezaškrtnutý checkbox, field-level chybu a existující ARIA vazby. |
+| RC2-55 | P2 | `basename()` u čtení a mazání převádělo chybnou uloženou cestu na jiný reálný soubor; chyběla kontrola filesystemového odkazu. | Sdílená validace názvu podporovaného obrázku a skutečného umístění, bez převodu cesty na basename; symlink se odmítne. HTTP kontroluje veřejný obraz a 404 pro chybné reference, izolovaná sada zachování sentinelů a nativní Linux symlink. Jde o defense-in-depth při škodlivých uložených metadatech, nikoli o tvrzení, že anonymní uživatel směl metadata nebo symlink vytvářet. |
+
+### Ověření a omezení
+
+Finální úplný `composer ci:module-ready` na PHP 8.4.12 skončil s návratovým kódem 0: lint, 1 629 unit testů bez chyby, statická analýza, schémové/modulové/ACR a release audity, izolované RC regrese v obou PDO režimech, stávající skutečné MySQL souběhy, runtime audit a úplná HTTP integrace. Nová izolovaná sada prošla 46 kontrolami, cíleně také na PHP 8.1.32 v běžném režimu i s číselnými PDO řetězci. `rc2_place_write_integrity_contract` a `rc2_place_integrity_http` oba prošly. `git diff --check` je čistý. Jedinou očekávanou výjimkou runtime auditu je `smtp_connectivity = SKIP`, nikoli potvrzení doručování. Úspěch sady nevylučuje nedostatečné pokrytí jiných funkcí, viz otevřený RC2-56 níže.
+
+Testy používají vlastní označené řádky, dočasné soubory a triggery omezené na jejich ID, slug nebo cestu. Nemažou historické uploady a neposílají skutečné e-maily. Izolovaná SQLite ani sekvenční HTTP scénáře nejsou důkazem všech InnoDB souběhů. Při dokončení byla odstraněna pouze nechtěná formátovací změna nesouvisejících částí HTTP integrace a starší runtime kontrola byla přizpůsobena novému reference-aware cleanupu, nikoli vypnuta. Nativní symlink používá vlastní sentinel mimo dočasný kořen; ani při regresi nemá mazat zdrojový soubor testu. Výsledek Linux GitHub CI je nutné ověřit na přesném pushnutém commitu.
+
+ACR rozhodnutí a zbývající ruční ověření jsou v `docs/accessibility/a11y-impact-decisions.md`. NVDA, zoom/reflow, vlastní šablony a hostingový smoke zůstávají otevřené; žádné kritérium se nezvyšuje na Supports jen na základě automatických testů. Nová souborová ochrana neodvolá dříve stažené kopie; případný historický úklid osiřelých souborů vyžaduje samostatnou inventuru. Pád procesu mezi DB a soubory nebo souběžný externí import nejsou tímto krokem prohlášeny za vyřešené.
+
+### Otevřený navazující nález mimo Místa
+
+**RC2-56, P2, otevřeno:** úplná HTTP integrace zanechala v PHP logu chyby zdrojů `podcast`, `board` a `poll` v `admin/content_reference_search.php`. Čtení příslušných větví potvrzuje neexistující alias `m.created_at`, zastaralé sloupce Vývěsky `posted_at`/`removed_at`/`pinned` a neexistující `cms_polls.is_published`. Výjimky jsou zachycené: endpoint může odpovědět 200 s neúplnými výsledky, takže samotný úspěšný HTTP status chybu neodhalí. Nejde o důkaz úniku soukromého obsahu. Závěrečný commit Míst tuto nesouvisející oblast nemění. Před dalším RC opravit zdrojové dotazy podle aktuálního schématu a společných pravidel veřejné viditelnosti; doplnit HTTP regrese s vlastní veřejnou i neveřejnou položkou každého zdroje a ověřovat konkrétní výsledky, nikoli jen stav 200.
+
 ## Audit souborových hranic Vývěsky, 2026-10-18
 
 Výchozí revize `ccb55dae`, čistá a synchronizovaná `main`. Tento cílený průchod navazuje na předchozí transakční audit a ověřuje souborové hranice: serverový přístup, download, checksum, mazání a JSON import Vývěsky. Nejde o nový řádkový audit celého CMS. Schéma ani `install.php`, `migrate.php` a `VERSION` se nemění: nevzniká nový perzistentní stav ani release.
