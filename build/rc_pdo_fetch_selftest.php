@@ -17,6 +17,7 @@ foreach ([
     'rc_chat_integrity_selftest.php',
     'rc_download_integrity_selftest.php',
     'rc_event_integrity_selftest.php',
+    'rc_board_newsletter_integrity_selftest.php',
     'rc_recipe_integrity_selftest.php',
     'rc_editor_publication_selftest.php',
     'rc_media_security_selftest.php',

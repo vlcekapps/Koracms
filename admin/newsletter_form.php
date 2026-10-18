@@ -11,7 +11,6 @@ $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
 $formState = $_SESSION['newsletter_form_state'] ?? [
     'subject' => '',
     'body' => '',
-    'confirm_newsletter_send' => '',
 ];
 $formError = $_SESSION['newsletter_form_error'] ?? '';
 $formErrorFields = $_SESSION['newsletter_form_error_fields'] ?? [];
@@ -84,7 +83,6 @@ adminHeader('Nová rozesílka');
       </dl>
       <label for="confirm_newsletter_send" class="admin-checkbox-label">
         <input type="checkbox" id="confirm_newsletter_send" name="confirm_newsletter_send" value="1" required
-               <?= !empty($formState['confirm_newsletter_send']) ? 'checked' : '' ?>
                <?= adminFieldAttributes('confirm_newsletter_send', $formErrorFields, [], ['newsletter-review-help'], 'confirm-newsletter-send-error') ?>>
         Potvrzuji, že jsem zkontroloval(a) obsah rozesílky a počet potvrzených příjemců.
       </label>

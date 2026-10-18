@@ -28,7 +28,7 @@ if (!$bulkActionConfirmed) {
 $pdo = db_connect();
 $placeholders = implode(',', array_fill(0, count($ids), '?'));
 $stmt = $pdo->prepare(
-    "SELECT id, email, confirmed
+    "SELECT id, email, confirmed, token
      FROM cms_subscribers
      WHERE id IN ({$placeholders})"
 );
@@ -80,15 +80,8 @@ if ($action === 'resend') {
 
     $sentCount = 0;
     $failedCount = 0;
-    $updateTokenStmt = $pdo->prepare(
-        "UPDATE cms_subscribers
-         SET token = ?
-         WHERE id = ?"
-    );
-
     foreach ($pendingSubscribers as $subscriber) {
-        $token = bin2hex(random_bytes(32));
-        $updateTokenStmt->execute([$token, (int)$subscriber['id']]);
+        $token = (string)$subscriber['token'];
         $mailSent = sendNewsletterSubscriptionConfirmation((string)$subscriber['email'], $token);
         if ($mailSent) {
             $sentCount++;

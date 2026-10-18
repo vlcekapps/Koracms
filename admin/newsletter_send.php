@@ -12,7 +12,6 @@ $confirmNewsletterSend = isset($_POST['confirm_newsletter_send'])
 $_SESSION['newsletter_form_state'] = [
     'subject' => $subject,
     'body' => $body,
-    'confirm_newsletter_send' => $confirmNewsletterSend ? '1' : '',
 ];
 $_SESSION['newsletter_form_error_fields'] = [];
 

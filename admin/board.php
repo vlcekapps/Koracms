@@ -4,6 +4,14 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu úř
 requireModuleEnabled('board');
 
 $pdo = db_connect();
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Položka vývěsky nebyla smazána. Zkontrolujte dopad a potvrďte její přesun do Koše.',
+    'invalid' => 'Položka vývěsky již není dostupná pro přesun do Koše.',
+    'failed' => 'Položku vývěsky se nepodařilo přesunout do Koše. Data i evidence zveřejnění zůstaly zachované.',
+    default => '',
+};
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
 $allowedStatusFilters = ['all', 'pending', 'published', 'scheduled', 'hidden'];
@@ -80,6 +88,9 @@ $publicLabel = boardModulePublicLabel();
 
 adminHeader('Úřední deska');
 ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="board-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
+<?php if (($_GET['clone_error'] ?? '') === 'failed'): ?><p class="error" role="alert" aria-atomic="true">Kopii položky vývěsky se nepodařilo vytvořit. Původní položka i soubory zůstaly zachované.</p><?php endif; ?>
+<?php if (($_GET['deleted'] ?? '') === '1'): ?><p class="success" role="status">Položka vývěsky byla přesunuta do Koše.</p><?php endif; ?>
 <p class="field-help field-help--flush">
   Návštěvníci tuto sekci na webu vidí jako <strong><?= h($publicLabel) ?></strong>.
 </p>
@@ -216,10 +227,24 @@ adminHeader('Úřední deska');
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
             <button type="submit" class="btn" data-confirm="Vytvořit kopii položky?">Duplikovat</button>
           </form>
-          <form action="board_delete.php" method="post">
+          <?php
+            $deleteConfirmField = 'confirm_board_delete_' . (int)$document['id'];
+        $deleteReviewId = 'board-delete-review-' . (int)$document['id'];
+        $deleteErrorFields = $deleteError === 'confirm_required' && $deleteErrorId === (int)$document['id'] ? [$deleteConfirmField] : [];
+        ?>
+          <form action="board_delete.php" method="post" novalidate<?= $deleteErrorFields !== [] ? ' aria-describedby="board-delete-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$document['id'] ?>">
-            <button type="submit" class="btn btn-danger" data-confirm="Smazat položku?">Smazat</button>
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání položky <?= h((string)$document['title']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">Položka <?= h((string)$document['title']) ?> přestane být veřejně dostupná. Příloha i obrázek zůstanou zachované pro obnovení z Koše.</p>
+              <label for="<?= h($deleteConfirmField) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmField) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"<?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId]) ?>>
+                Potvrzuji přesun této položky do Koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním znovu potvrďte přesun této položky do Koše.'); ?>
+              <button type="submit" class="btn btn-danger" data-confirm="Smazat položku?">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

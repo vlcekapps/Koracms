@@ -43,6 +43,8 @@ $document = $document ?: [
     'is_published' => 1,
     'status' => 'published',
 ];
+$storedDocument = $document;
+$document = array_merge($document, adminEditorFormFlashTake('board', $id));
 
 $categories = $pdo->query("SELECT id, name FROM cms_board_categories ORDER BY sort_order, name")->fetchAll();
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
@@ -69,6 +71,11 @@ $formError = match ($err) {
     'contact_email' => $boardContactEmailErrorMessage,
     'image' => $boardImageUploadErrorMessage,
     'file' => $boardAttachmentUploadErrorMessage,
+    'image_confirm' => 'Obrázek nebyl odebrán. Zkontrolujte změnu a znovu potvrďte odebrání obrázku z této položky.',
+    'publish_at' => 'Zadejte platné datum a čas plánovaného publikování, nebo pole nechte prázdné.',
+    'unpublish_at' => 'Zadejte platné datum a čas plánovaného sejmutí, nebo pole nechte prázdné.',
+    'publish_range' => 'Plánované sejmutí musí být později než plánované publikování.',
+    'save' => 'Položku vývěsky se nepodařilo uložit. Zadané údaje zůstaly zachované; zkuste to prosím později.',
     default => '',
 };
 $fieldErrorMap = [
@@ -81,6 +88,10 @@ $fieldErrorMap = [
     'contact_email' => ['contact_email'],
     'image' => ['board_image'],
     'file' => ['file'],
+    'image_confirm' => ['confirm_board_image_delete'],
+    'publish_at' => ['publish_at'],
+    'unpublish_at' => ['unpublish_at'],
+    'publish_range' => ['publish_at', 'unpublish_at'],
 ];
 $fieldErrorMessages = [
     'title' => 'Doplňte krátký nadpis položky, například Zápis ze zastupitelstva.',
@@ -109,6 +120,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
 <?php if ($formError !== ''): ?>
   <p role="alert" class="error" id="form-error" aria-atomic="true"><?= h($formError) ?></p>
+  <p class="field-help">Po chybě vyberte případný nový obrázek nebo přílohu znovu. Původní soubory zůstaly zachované; potvrzení odebrání obrázku je nutné udělit znovu.</p>
 <?php endif; ?>
 
 <?php if ($id): ?>
@@ -215,12 +227,14 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
 
     <label for="publish_at">Plánované publikování (přesný čas)</label>
     <input type="datetime-local" id="publish_at" name="publish_at"
-           class="admin-input-auto" value="<?= h(!empty($document['publish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['publish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(adminEditorDateTimeValue($document['publish_at'] ?? null)) ?>"<?= adminFieldAttributes('publish_at', $err, $fieldErrorMap) ?>>
+    <?php adminRenderFieldError('publish_at', $err, $fieldErrorMap, $formError); ?>
     <small class="field-help">Volitelné. Pokud je vyplněné, položka se na veřejném webu zobrazí až v zadaný čas (přesnější než datum vyvěšení).</small>
 
     <label for="unpublish_at">Plánované sejmutí (přesný čas)</label>
     <input type="datetime-local" id="unpublish_at" name="unpublish_at"
-           class="admin-input-auto" value="<?= h(!empty($document['unpublish_at']) ? date('Y-m-d\TH:i', strtotime((string)$document['unpublish_at'])) : '') ?>">
+           class="admin-input-auto" value="<?= h(adminEditorDateTimeValue($document['unpublish_at'] ?? null)) ?>"<?= adminFieldAttributes('unpublish_at', $err, $fieldErrorMap) ?>>
+    <?php adminRenderFieldError('unpublish_at', $err, $fieldErrorMap, $formError); ?>
     <small class="field-help">Volitelné. Přesnější alternativa k datu sejmutí výše.</small>
 
     <label for="article_status">Stav</label>
@@ -262,10 +276,12 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
     <?php endif; ?>
     <?php if (!empty($document['image_file'])): ?>
       <div class="admin-field-row">
-        <label for="board_image_delete" class="admin-checkbox-label">
-          <input type="checkbox" id="board_image_delete" name="board_image_delete" value="1">
-          Smazat aktuální obrázek
+        <label for="confirm_board_image_delete" class="admin-checkbox-label">
+          <input type="checkbox" id="confirm_board_image_delete" name="confirm_board_image_delete" value="1"<?= adminFieldAttributes('confirm_board_image_delete', $err, $fieldErrorMap, ['board-image-delete-help']) ?>>
+          Odebrat obrázek z této položky
         </label>
+        <small id="board-image-delete-help" class="field-help">Potvrzuji odebrání obrázku při uložení. Pokud jej používá jiná položka nebo kopie včetně Koše, soubor pro ni zůstane zachovaný.</small>
+        <?php adminRenderFieldError('confirm_board_image_delete', $err, $fieldErrorMap, 'Pro odebrání obrázku je nutné nové potvrzení.'); ?>
       </div>
     <?php endif; ?>
 
@@ -311,12 +327,8 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat položku sekce' ?></button>
     <a href="board.php">Zrušit</a>
-    <?php if (($document['status'] ?? 'published') === 'published'
-        && (int)($document['is_published'] ?? 1) === 1
-        && !empty($document['slug'])
-        && (string)($document['posted_date'] ?? '') !== ''
-        && (string)$document['posted_date'] <= date('Y-m-d')): ?>
-      <a href="<?= h(boardPublicPath($document)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
+    <?php if ($id !== null && boardIsPubliclyReachable($storedDocument)): ?>
+      <a href="<?= h(boardPublicPath($storedDocument)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <?php if ($id && !empty($document['preview_token'])): ?>
       <a href="<?= h(boardPreviewPath($document)) ?>" target="_blank" rel="noopener noreferrer">Náhled<?= newWindowLinkSrOnlySuffix() ?></a>

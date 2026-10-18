@@ -10844,6 +10844,9 @@ try {
     }
     if (!themeExists($roundtripThemeKey)) {
         $roundtripIssues[] = 'imported theme directory was not created';
+        if (preg_match('/<small\b[^>]*\bid="theme_package-error"[^>]*>(.*?)<\/small>/is', $importResult['body'], $themeImportErrorMatch) === 1) {
+            $roundtripIssues[] = 'theme package import reported: ' . html_entity_decode(strip_tags($themeImportErrorMatch[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
     }
 
     saveSetting('site_profile', 'personal');
@@ -24225,6 +24228,52 @@ if ($editorIntegrityIssues === []) {
 } else {
     $failures++;
     foreach ($editorIntegrityIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_board_newsletter_write_integrity_contract ===\n";
+$boardNewsletterIssues = [];
+foreach ([
+    'admin/board_save.php' => ["require_once __DIR__ . '/layout.php'", "adminEditorFormFlashStore('board'", '$pdo->beginTransaction()',
+        'FOR UPDATE', '$pdo->rollBack()', "uploadBoardImage(\$_FILES['board_image'] ?? [], '')", 'deleteUnusedBoardFiles($pdo, $oldFiles)',
+        "saveRevision(\$pdo, 'board', \$id, \$oldSnapshot, \$newSnapshot, true)", 'upsertPathRedirect($pdo, $oldPath, $newPath, 301, true)', 'publish_range', 'confirm_board_image_delete'],
+    'admin/board_form.php' => ["adminEditorFormFlashTake('board', \$id)", 'confirm_board_image_delete', 'board-image-delete-help', 'adminEditorDateTimeValue('],
+    'admin/board_delete.php' => ['confirm_board_delete_', 'confirm_required', '$pdo->beginTransaction()', 'FOR UPDATE', "recordBoardPublicationEvent(\$pdo, \$document, 'deleted', currentUserId(), true)"],
+    'admin/board.php' => ['board-delete-review-', '<fieldset', 'board-delete-error'],
+    'admin/board_clone.php' => ['$pdo->beginTransaction()', 'FOR UPDATE', '$pdo->rollBack()'],
+    'admin/trash.php' => ["recordBoardPublicationEvent(\$pdo, \$updatedBoardDocument, 'restored', currentUserId(), true)", 'deleteUnusedBoardFiles($pdo, $purgedBoardFiles)'],
+    'lib/presentation.php' => ['function deleteUnusedBoardFiles(', 'bool $requireSuccess = false', "\$webpFilename = pathinfo(\$filename, PATHINFO_FILENAME) . '.webp'"],
+    'admin/newsletter_subscriber_action.php' => ["\$token = (string)\$subscriber['token']"],
+    'admin/newsletter_bulk.php' => ['SELECT id, email, confirmed, token', "\$token = (string)\$subscriber['token']"],
+    'composer.json' => ['rc_board_newsletter_integrity_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_board_newsletter_integrity_selftest.php'],
+    'build/http_integration.php' => ['rcBoardIntegrityHttpChecks('],
+    'build/rc_board_integrity_http.php' => ['Owned Board evidence failure', 'Owned Board restore evidence failure', 'postMultipartUrl(', 'confirm_newsletter_send', '$snapshot($id) === $before'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $boardNewsletterIssues[] = $file . ' missing Board/newsletter protection: ' . $fragment;
+        }
+    }
+}
+$newsletterSendSource = (string)file_get_contents(__DIR__ . '/../admin/newsletter_send.php');
+$newsletterFormSource = (string)file_get_contents(__DIR__ . '/../admin/newsletter_form.php');
+if (str_contains($newsletterSendSource, "'confirm_newsletter_send' => \$confirmNewsletterSend")
+    || str_contains($newsletterFormSource, "\$formState['confirm_newsletter_send']")) {
+    $boardNewsletterIssues[] = 'Newsletter must never restore mailing consent from its session draft';
+}
+foreach (['newsletter_subscriber_action.php', 'newsletter_bulk.php'] as $endpoint) {
+    if (str_contains((string)file_get_contents(__DIR__ . '/../admin/' . $endpoint), 'SET token = ?')) {
+        $boardNewsletterIssues[] = $endpoint . ' must not invalidate working confirmation links on resend';
+    }
+}
+if ($boardNewsletterIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($boardNewsletterIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

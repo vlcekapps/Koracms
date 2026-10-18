@@ -998,6 +998,10 @@ JSON export/import přenáší konfiguraci témat kontaktu, ale nepřenáší sa
 
 ## Vývěska / Úřední deska
 
+Uložení položky a související evidence zveřejnění je atomické. Chyba uploadu nebo zápisu zachová původní data, přílohu i obrázek; editor obnoví zadané texty a běžné checkboxy pouze pro danou položku. Nový lokální soubor je po chybě potřeba vybrat znovu. Neplatné datum/čas plánovaného publikování nebo sejmutí se odmítne s vysvětlením u konkrétního pole, nikoli tiše změní na okamžitou dostupnost.
+
+Odebrání obrázku i přesun položky do Koše vyžadují čerstvé potvrzení ověřené serverem. Souhlas se nikdy neobnovuje z konceptu ani validačního návratu. Koš zachovává přílohu i obrázek pro obnovu; obrázek používaný další položkou nebo kopií včetně Koše se nemaže. Při úspěšném trvalém smazání poslední reference se nepoužité soubory uklidí. Evidence smazání či obnovy se ukládá ve stejné transakci jako změna položky. E-mailové oznámení se odesílá až po uložení; SMTP a databáze nejsou jednou atomickou operací.
+
 Modul vývěsky je určený pro oznámení, dokumenty a další veřejné položky, které se mají zobrazit od určitého data a případně po čase spadnout do archivu.
 
 ### Co se nastavuje u položky
@@ -1458,6 +1462,8 @@ Mazání celého blogu má samostatný review krok. Správce vidí počet člán
 Odebrání widgetu ve správě widgetů používá stejný review-and-confirm pattern. Správce před odesláním vidí název widgetu, typ, zónu a dopad na veřejné zobrazení; server bez `confirm_widget_delete_<id>` widget nesmaže ani nezapíše audit log.
 
 Newsletter composer před odesláním rozesílky ukazuje počet potvrzených a čekajících odběratelů. Odeslání vyžaduje potvrzovací checkbox; pokud správce odešle formulář bez potvrzení, server rozesílku odmítne a nevytvoří záznam v historii newsletteru.
+
+Po chybě zůstane zachovaný předmět i text rozesílky, ale potvrzení kontroly obsahu a příjemců musíte udělit znovu. Ani starší uložená relace nezaškrtne potvrzení automaticky. Jednotlivé i hromadné znovuodeslání potvrzovacího e-mailu čekajícímu odběrateli používá jeho stávající token; původní potvrzovací odkaz proto zůstane platný i při neúspěšném doručení opakovaného e-mailu.
 
 Hromadné akce nad odběrateli newsletteru používají stejnou serverovou pojistku. Před potvrzením vybraných odběrů, znovuodesláním potvrzovacích e-mailů nebo smazáním vybraných odběratelů musí správce zaškrtnout kontrolní checkbox; bez něj server akci odmítne a data ani tokeny odběratelů nezmění.
 

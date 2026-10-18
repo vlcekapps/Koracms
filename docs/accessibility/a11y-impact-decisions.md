@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-18: Vývěska, zachování editoru a čerstvá potvrzení newsletteru
+
+- Datum a rozsah: administrační editor, kopie a Koš Vývěsky, ukládání evidence zveřejnění a souborů; validační návrat rozesílky a jednotlivé i hromadné znovuodeslání potvrzení newsletteru. Registr nálezů: `docs/rc2-module-audit-2026-09.md`.
+- Dotčená kritéria: `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`.
+- Rozhodnutí: odmítnutý editor musí zachovat texty, data a běžné checkboxy pro konkrétní položku, ale nikdy ne starý souhlas s mazáním nebo rozesíláním. Souhlas s přesunem do Koše má řádkový review, vlastní label, serverové ověření a skutečný ARIA cíl chyby. Chybný publikační čas má field-level vysvětlení. Nový file input nelze za uživatele obnovit; tento limit formulář textově vysvětluje. Při selhání transakce se nesmí předstírat uložená změna ani odstranit původní příloha. Nemění se focus model, CSS, veřejné URL ani globální ACR stav.
+- Automatizovaný důkaz: `build/rc_board_newsletter_integrity_selftest.php` vykonává produkční handlery a helpery nad izolovanou SQLite, kontroluje rollback, původní bajty virtuálních uploadů, ID-scoped jednorázovou obnovu, běžné checkboxy, vyloučení čerstvých/legacy souhlasů, skutečnou šablonu a existující ARIA reference. Test není simulovaným důkazem reálného InnoDB souběhu. `build/rc_board_integrity_http.php` používá skutečné uploady a řízenou chybu MySQL evidence omezenou vlastním ID; ověřuje editaci, mazání, obnovu, sdílený obrázek, purge a validační návrat newsletteru bez rozeslání. Testy jsou součástí `composer ci:module-ready` a izolovaná sada se opakuje s číselnými PDO řetězci.
+- Ruční ověření nebo zbývající riziko: NVDA/Firefox, klávesnice, zoom/reflow, souborové vstupy, konkrétní chybová hlášení a hostingové cron/log/SMTP ověření zůstávají otevřené. Úprava není certifikace ani důvod zvýšit kritéria na Supports. E-mailové doručení a databázový commit nejsou distribuovaná exactly-once transakce; velké rozesílky a jejich fronta nejsou součástí tohoto bloku.
+
 ### 2026-10-05: RC audit ukládání Chatu, Ke stažení a Událostí
 
 - Datum a rozsah: veřejné zprávy a odpovědi Chatu, retenční úklid a administrační uložení/mazání Ke stažení a Událostí. Registr nálezů a konkrétní výsledky: `docs/rc2-module-audit-2026-09.md`.

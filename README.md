@@ -20,6 +20,8 @@ Navazující [modulový audit pro RC.2](docs/rc2-module-audit-2026-09.md) chrán
 
 Audit dále pokrývá atomické zprávy/odpovědi a čerstvou retenční kontrolu Chatu, zachování editoru a čerstvý souhlas s mazáním Ke stažení a Událostí. Opakované akce zachovávají délku a při chybě nevzniká částečná série; sdílené obrázky zůstávají i pro obnovu z koše. Izolované testy vykonávají produkční handlery, skutečné MySQL procesy ověřují zámky Chatu a HTTP testy vyvolávají kontrolované chyby zápisu. Automatické důkazy nenahrazují ruční NVDA, reflow ani hostingový smoke.
 
+Navazující audit Vývěsky chrání původní soubory při chybě uploadu či evidence zveřejnění, zachovává odmítnutý editor a vyžaduje čerstvé potvrzení mazání. Uložení, přesun do Koše a obnova drží související databázové změny v transakci; úklid respektuje sdílené soubory i Koš. Newsletter po chybě neobnovuje souhlas s rozesílkou a administrační resend zachovává funkční potvrzovací odkazy. Důkazy běží v `composer ci:module-ready`, bez změny schématu nebo vydání.
+
 Další průchod chrání souběh hlasování, editace a trvalého mazání Anket; `composer test:rc-runtime` ověřuje sedm skutečných InnoDB souběhů i se starým transakčním snapshotem. Odmítnutý hlas zachová výběr, databázová chyba má vlastní vysvětlení a starý FAQ endpoint nepřesměruje odeslané hodnocení před zpracováním. Bez změny schématu nebo vydání RC.2.
 
 Koš napříč moduly zamyká a ověřuje smazanou položku před úklidem souvisejících dat. HTTP matice všech typů koše prokazuje odmítnutí aktivních ID a zachování jejich vazeb; u Food také úplný rollback databázové chyby a úspěšné potvrzené smazání.

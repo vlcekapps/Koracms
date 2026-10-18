@@ -1,5 +1,32 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit Vývěsky a potvrzení newsletteru, 2026-10-18
+
+Výchozí revize `4e1c6189`, čistá synchronizovaná větev `main`. Tento blok prochází administrační ukládání, uploady, kopie a Koš Vývěsky a dvě konkrétní chyby newsletteru. Není novým řádkovým auditem každého modulu. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění: opravy používají existující tabulky, transakce a relaci, nepotřebují nový perzistentní stav. Nové vydání není součástí kroku.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-40 | P1 | Upload Vývěsky mazal původní přílohu/obrázek před úspěšným zápisem; obrázek mohla sdílet kopie. | Nové uploady nepřebírají mazací callback na původní soubor; chyba vrátí DB zápisy a uklidí jen nové soubory. Úklid po commitu kontroluje všechny reference včetně Koše. Izolovaná chyba druhého uploadu/commitu a skutečný HTTP upload s chybou evidence, sdílený obrázek a purge. |
+| RC2-41 | P2 | Selhání evidence zveřejnění se potlačilo a uložení, smazání či obnova mohly zanechat částečný nebo nepravdivý stav. | Tyto handlery požadují striktní evidenci v téže transakci, u editace i striktní revize a redirect; odmítnutí vrátí změny. Oznámení až po commitu. Izolované triggery a MySQL HTTP chyba při ukládání, mazání i obnově. Ostatním volajícím zůstává kompatibilní výchozí režim helperů. |
+| RC2-42 | P2 | Validační návrat Vývěsky zahazoval rozepsaný obsah. | Sdílený whitelistovaný flash omezený ID, obnova běžných checkboxů a zachování původních souborových metadat. Test jiného editoru, jednorázového spotřebování, produkční DOM a HTTP chybný kontaktní e-mail. |
+| RC2-43 | P2 | Neplatný přesný publikační čas byl tiše převeden na NULL, tedy bez časového omezení. | Neprázdný neplatný čas a opačné pořadí publikace/sejmutí se odmítnou před zápisem, s přístupnou field-level chybou a zachovaným konceptem. Izolované DB snapshoty a DOM. |
+| RC2-44 | P2 | Odebrání obrázku bylo obnovitelným datovým checkboxem a přesun do Koše spoléhal pouze na JS potvrzení. | Čerstvé `confirm_board_*`, odmítnutí legacy/neplatné hodnoty, řádkový review a serverový guard. Izolované negativní/pozitivní handlery a HTTP chybové ARIA vazby; no-op neslibuje nové smazání. |
+| RC2-45 | P2 | Newsletter po validační chybě obnovil z relace souhlas s rozesláním. | Flash obsahuje jen předmět a tělo, šablona ignoruje souhlas i ze staré relace; server dál vyžaduje nové potvrzení. Izolovaný handler/DOM a skutečný HTTP neplatný formulář bez odeslání. |
+| RC2-46 | P2 | Jednotlivé i hromadné administrační znovuodeslání potvrzení měnilo token ještě před doručením a rušilo dříve funkční odkaz. | Obě cesty používají stávající token stejně jako veřejný odběr. Izolované skutečné handlery ověřují totožnost řádků a tokenů při úspěchu i selhání SMTP; potvrzeným a nevybraným odběratelům neposílají. Hromadná regrese před opravou skutečně selhala změnou tokenu. |
+| RC2-47 | P2 | Mazání obrázku neuklízelo generovanou WebP variantu, která zůstala dostupná i po odstranění originálu. | Odstranění obou variant, se zachováním při existující referenci včetně Koše. Skutečný HTTP upload tento problém odhalil; test porovnává soubory při rollbacku i purge. Virtuální upload IO nyní modeluje i generovanou variantu. |
+
+### Ověření a omezení
+
+Nové regrese běží bez skutečného doručování e-mailů a se svými označenými daty; HTTP scénář obnovuje skrytý testovací dokument, aby neoslovil provozní odběratele. Izolovaná sada používá produkční SQL a helpery, ale virtuální upload IO a SQLite nejsou důkazem InnoDB souběhu ani integrační náhradou skutečného uploadu. HTTP vyvolává chybu evidence pouze pro vlastní ID, kontroluje rollback a odstranění nepřiřazených souborů bez globálního mazání. Zamítne také skutečné POSTy s neplatným CSRF na uložení, kopii a smazání, bez změny dokumentu.
+
+Finální úplný `composer ci:module-ready` na PHP 8.4.12 skončil s kódem 0: lint, 1 629 unit testů, statická analýza, modulové/schémové/ACR a release audity, izolované regrese, stávající skutečné MySQL souběhy, runtime audit a celá HTTP integrace. Nová izolovaná sada prošla 211 kontrolami v běžném režimu i s číselnými PDO řetězci; cíleně prošla také na PHP 8.1.32 s rozšířeními načtenými pouze pro daný CLI příkaz. `rc2_board_newsletter_integrity_http` prošel v úplné sadě i samostatně před závěrečným během. `git diff --check` je čistý. Jedinou očekávanou výjimkou runtime auditu je `smtp_connectivity = SKIP`, nikoli důkaz doručování.
+
+Při vývoji skutečný HTTP test zachytil chybějící načtení sdíleného editorového helperu; endpoint nyní explicitně načítá `layout.php` a runtime kontrakt hlídá i tento bootstrap. Reálný upload dále odhalil únik WebP varianty, který původní virtuální model neměl: oprava i model nyní pracují s oběma soubory. Předchozí úplný běh zastavilo také odmítnutí `rename()` při importu šablony na Windows (`Přístup byl odepřen, code 5`, potvrzené PHP logem). Následovaly tři úspěšné izolované roundtripy a úplné opakování celé sady bez přeskočení či oslabení kontrol. Runtime audit při obdobném selhání nově vypíše konkrétní importní chybu, nejen navazující neúspěšnou aktivaci. Produkční import šablon se tímto blokem nemění.
+
+Ručně zůstává NVDA, zoom/reflow, vlastní šablony a hostingový cron/log/SMTP smoke. Databáze a SMTP ani databáze a filesystem nejsou jedna distribuovaná atomická operace; pád procesu mezi jejich kroky zůstává provozním rizikem. Tento krok nezavádí frontu newsletteru, neprohlašuje audit všech ostatních publikačních cest Vývěsky a nemění stav hlavního ACR na Supports.
+
+Starší osiřelé soubory na hostingu se tímto commitem hromadně nemažou. Jejich případný úklid vyžaduje samostatnou inventuru a ověření použití; změna řeší bezpečné nakládání se soubory právě ukládané či mazané položky. GitHub výsledky je nutné ověřit na přesném pushnutém commitu, nikoli odvozovat z místního běhu nebo z dřívější zelené revize.
+
 ## Audit ukládání Chatu, Ke stažení a Událostí, 2026-10-05
 
 Výchozí revize `8f3d631f`, čistá synchronizovaná větev `main`. Cílený průchod pokrývá veřejné podání/odpovědi a retenci Chatu, zdroje a verze Ke stažení, ukládání/opakování a mazání Událostí. Agenti pracovali v oddělených souborech, společné DB/HTTP sady spouští jediný vlastník sekvenčně. Tento blok není nový řádkový audit celého CMS. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění; opravují se hranice existujícího modelu, nevzniká nové vydání.

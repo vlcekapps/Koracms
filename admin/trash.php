@@ -47,30 +47,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($itemId !== null && isset($moduleConfig[$module])) {
         $cfg = $moduleConfig[$module];
-        if ($action === 'restore') {
-            $previousBoardDocument = null;
-            if ($module === 'board') {
-                $previousStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
-                $previousStmt->execute([$itemId]);
-                $previousBoardDocument = $previousStmt->fetch() ?: null;
+        if ($action === 'restore' && $module === 'board') {
+            $restoredBoardNotice = null;
+            try {
+                $pdo->beginTransaction();
+                $restoreBoardStmt = $pdo->prepare('SELECT * FROM cms_board WHERE id = ? AND deleted_at IS NOT NULL FOR UPDATE');
+                $restoreBoardStmt->execute([$itemId]);
+                $previousBoardDocument = $restoreBoardStmt->fetch() ?: null;
+                if ($previousBoardDocument === null) {
+                    throw new RuntimeException('Položka vývěsky již není v Koši.');
+                }
+                $restoreBoardUpdate = $pdo->prepare('UPDATE cms_board SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL');
+                $restoreBoardUpdate->execute([$itemId]);
+                if ($restoreBoardUpdate->rowCount() !== 1) {
+                    throw new RuntimeException('Položku vývěsky se nepodařilo obnovit.');
+                }
+                $updatedBoardDocument = $previousBoardDocument;
+                $updatedBoardDocument['deleted_at'] = null;
+                recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'restored', currentUserId(), true);
+                if (shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
+                    $restoredBoardNotice = $updatedBoardDocument;
+                }
+                logAction('trash_restore', "module={$module} id={$itemId}");
+                $pdo->commit();
+                $redirectQuery = 'ok=restored';
+            } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $redirectQuery = 'err=invalid_action';
+                koraLog('warning', 'board restore failed', ['board_id' => $itemId, 'exception' => $exception]);
             }
+            if ($redirectQuery === 'ok=restored' && $restoredBoardNotice !== null) {
+                try {
+                    $sentNotifications = notifyBoardSubscribers($pdo, $restoredBoardNotice);
+                    if ($sentNotifications > 0) {
+                        logAction('board_notify', "id={$itemId} sent={$sentNotifications}");
+                    }
+                } catch (Throwable $exception) {
+                    koraLog('warning', 'board restore notification failed', ['board_id' => $itemId, 'exception' => $exception]);
+                }
+            }
+        } elseif ($action === 'restore') {
             $restoreStmt = $pdo->prepare("UPDATE {$cfg['table']} SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL");
             $restoreStmt->execute([$itemId]);
             if ($restoreStmt->rowCount() !== 1) {
                 $redirectQuery = 'err=invalid_action';
-            } elseif ($module === 'board' && is_array($previousBoardDocument)) {
-                $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
-                $updatedStmt->execute([$itemId]);
-                $updatedBoardDocument = $updatedStmt->fetch() ?: null;
-                if ($updatedBoardDocument) {
-                    recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'restored', currentUserId());
-                    if (shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
-                        $sentNotifications = notifyBoardSubscribers($pdo, $updatedBoardDocument);
-                        if ($sentNotifications > 0) {
-                            logAction('board_notify', "id={$itemId} sent={$sentNotifications}");
-                        }
-                    }
-                }
             }
             if ($restoreStmt->rowCount() === 1) {
                 logAction('trash_restore', "module={$module} id={$itemId}");
@@ -88,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $genericPurge = !in_array($module, ['places', 'articles', 'polls'], true);
                 $purgedEventImageFile = '';
+                $purgedBoardFiles = [];
                 try {
                     if ($genericPurge) {
                         $pdo->beginTransaction();
@@ -243,7 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'gallery_photo' AND entity_id = ?")->execute([$itemId]);
                     } elseif ($module === 'board') {
                         $boardRedirectStmt = $pdo->prepare(
-                            "SELECT id, slug
+                            "SELECT id, slug, filename, image_file
                          FROM cms_board
                          WHERE id = ?
                          LIMIT 1"
@@ -251,7 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $boardRedirectStmt->execute([$itemId]);
                         $boardForRedirectCleanup = $boardRedirectStmt->fetch() ?: null;
                         if ($boardForRedirectCleanup) {
-                            deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup));
+                            $purgedBoardFiles = $boardForRedirectCleanup;
+                            deleteRedirectsTargetingPath($pdo, boardPublicPath($boardForRedirectCleanup), true);
                         }
                         $pdo->prepare("DELETE FROM cms_board_publication_events WHERE board_id = ?")->execute([$itemId]);
                         $pdo->prepare("DELETE FROM cms_revisions WHERE entity_type = 'board' AND entity_id = ?")->execute([$itemId]);
@@ -266,6 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pdo->commit();
                         if ($module === 'events') {
                             deleteUnusedEventImageFile($pdo, $purgedEventImageFile);
+                        } elseif ($module === 'board') {
+                            deleteUnusedBoardFiles($pdo, $purgedBoardFiles);
                         }
                         $redirectQuery = 'ok=purged';
                     }

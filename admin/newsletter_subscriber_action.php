@@ -46,12 +46,8 @@ if ($action === 'confirm') {
 
 if ($action === 'resend') {
     if ((int)$subscriber['confirmed'] === 0) {
-        $token = bin2hex(random_bytes(32));
-        $pdo->prepare(
-            "UPDATE cms_subscribers
-             SET token = ?
-             WHERE id = ?"
-        )->execute([$token, $subscriberId]);
+        // Reuse the persisted token, including when delivery fails.
+        $token = (string)$subscriber['token'];
         $mailSent = sendNewsletterSubscriptionConfirmation((string)$subscriber['email'], $token);
         logAction('newsletter_subscriber_resend', 'id=' . $subscriberId . ' email=' . (string)$subscriber['email'] . ' ok=' . ($mailSent ? '1' : '0'));
         header('Location: ' . $appendRedirectParam($redirect, $mailSent ? 'ok' : 'error', $mailSent ? 'resent' : 'resend_failed'));

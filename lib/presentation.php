@@ -5250,9 +5250,10 @@ function deleteBoardImageFile(string $filename): void
         return;
     }
 
-    $path = dirname(__DIR__) . '/uploads/board/images/' . $filename;
-    if (is_file($path)) {
-        if (!unlink($path)) {
+    $webpFilename = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
+    foreach (array_unique([$filename, $webpFilename]) as $imageName) {
+        $path = dirname(__DIR__) . '/uploads/board/images/' . $imageName;
+        if (is_file($path) && !unlink($path)) {
             presentationLogFileDeleteFailure('board_image', $path);
         }
     }
@@ -6990,7 +6991,7 @@ function boardPublicationEventLabel(string $eventType): string
 /**
  * @param array<string, mixed> $document
  */
-function recordBoardPublicationEvent(PDO $pdo, array $document, string $eventType, ?int $actorUserId = null): void
+function recordBoardPublicationEvent(PDO $pdo, array $document, string $eventType, ?int $actorUserId = null, bool $requireSuccess = false): void
 {
     if (!array_key_exists($eventType, boardPublicationEventLabels())) {
         $eventType = 'published';
@@ -7022,6 +7023,31 @@ function recordBoardPublicationEvent(PDO $pdo, array $document, string $eventTyp
             'event_type' => $eventType,
             'exception' => $e,
         ]);
+        if ($requireSuccess) {
+            throw $e;
+        }
+    }
+}
+
+/** @param array<string, mixed> $document */
+function deleteUnusedBoardFiles(PDO $pdo, array $document): void
+{
+    foreach (['filename' => 'deleteBoardStoredFile', 'image_file' => 'deleteBoardImageFile'] as $column => $deleteFile) {
+        $filename = (string)($document[$column] ?? '');
+        if ($filename === '' || basename($filename) !== $filename) {
+            continue;
+        }
+        try {
+            // A clone or an item in trash may still own this file.
+            $usage = $pdo->prepare("SELECT COUNT(*) FROM cms_board WHERE {$column} IN (?, ?)");
+            $variant = $column === 'image_file' ? pathinfo($filename, PATHINFO_FILENAME) . '.webp' : $filename;
+            $usage->execute([$filename, $variant]);
+            if ((int)$usage->fetchColumn() === 0) {
+                $deleteFile($filename);
+            }
+        } catch (PDOException $exception) {
+            koraLog('warning', 'board file cleanup failed', ['exception' => $exception]);
+        }
     }
 }
 
@@ -7219,7 +7245,7 @@ function notifyBoardSubscribers(PDO $pdo, array $document): int
     return $sent;
 }
 
-function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $statusCode = 301): void
+function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $statusCode = 301, bool $requireSuccess = false): void
 {
     $oldPath = internalRedirectTarget($oldPath, '');
     $newPath = storedRedirectTarget($newPath, '');
@@ -7241,6 +7267,9 @@ function upsertPathRedirect(PDO $pdo, string $oldPath, string $newPath, int $sta
             'status_code' => in_array($statusCode, [301, 302], true) ? $statusCode : 301,
             'exception' => $e,
         ]);
+        if ($requireSuccess) {
+            throw $e;
+        }
     }
 }
 
