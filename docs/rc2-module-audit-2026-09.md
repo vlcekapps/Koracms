@@ -1,5 +1,25 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit souborových hranic Vývěsky, 2026-10-18
+
+Výchozí revize `ccb55dae`, čistá a synchronizovaná `main`. Tento cílený průchod navazuje na předchozí transakční audit a ověřuje souborové hranice: serverový přístup, download, checksum, mazání a JSON import Vývěsky. Nejde o nový řádkový audit celého CMS. Schéma ani `install.php`, `migrate.php` a `VERSION` se nemění: nevzniká nový perzistentní stav ani release.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-48 | P1 | Přímá URL přílohy v `uploads/board/` obcházela PHP kontrolu viditelnosti. Vlastní sentinelové PDF bylo před opravou na Apache anonymně dostupné s 200. | Root i upload `.htaccess`, testovací PHP router a Nginx ukázka blokují přílohy, ale zachovávají veřejné ilustrace. HTTP kontroluje 403 pro přímou cestu, GET/HEAD endpointu pro veřejný dokument i archiv, koncept, skrytí, plánování, ukončení publikace, Koš, vypnutý modul a oprávněného správce. |
+| RC2-49 | P2 | Pouhé `basename()` v downloadu, checksumu a mazání převádělo neplatnou uloženou cestu na jiný existující soubor; import nekontroloval názvy a cleanup mohl pracovat i s ochrannými nebo nepovolenými soubory. | Sdílená validace podporovaných přípon a celého názvu, bez převodu cesty na basename. Import neplatné reference vynechá a sdělí počet; platné starší české názvy zachová. Izolovaný produkční import a skutečné soubory ověřují sentinel `.htaccess`, nepovolenou příponu, referencované soubory a cílený cleanup. HTTP odmítá chybnou cestu i správci. Nejde o tvrzení, že anonymní návštěvník směl přímo měnit metadata importu. |
+| RC2-50 | P2 | Čtení přílohy a SHA-256 otisku nemělo ochranu proti filesystemovému odkazu mimo úložiště. | Resolver vyžaduje platný název, soubor uvnitř skutečného kořene, čitelnost a nepřijímá symlink; stejnou hranici používá mazání. Nativní symlink scénáře jsou povinné na Linux CI, na Windows se tato privilegovaná operace netvrdí jako otestovaná. Jde o defense-in-depth při škodlivých uložených metadatech a odkazu na disku, nikoli o dokázanou možnost anonymního vytvoření symlinku. |
+
+### Ověření a omezení
+
+Nové regrese používají jen vlastní označené dočasné soubory a databázové řádky; nemažou historické uploady. Izolovaná sada vykonává produkční helpery a importní blok, nikoli druhou implementaci. HTTP kontroluje skutečný download, zachování veřejných ilustrací a stávající DOM/ARIA editoru. Nový test je v `composer test:rc-core` a běží i s číselnými PDO řetězci.
+
+Finální úplný `composer ci:module-ready` na PHP 8.4.12 skončil s kódem 0: lint, 1 629 unit testů, statická analýza, schémové/modulové/ACR a release audity, izolované RC regrese, skutečné MySQL souběhy, runtime audit a celá HTTP integrace. Nová souborová sada prošla 83 kontrolami v běžném režimu i s číselnými PDO řetězci; cíleně také na PHP 8.1.32 s rozšířeními pouze pro CLI příkaz. Skutečný rozšířený Board HTTP scénář prošel samostatně i v úplné integraci. `composer validate --strict` a `git diff --check` jsou čisté. Očekávanou výjimkou runtime auditu zůstává pouze `smtp_connectivity = SKIP`, nikoli důkaz doručitelnosti.
+
+První společný běh zastavil starší izolovaný test modulových stavů: načítal jednotlivé produkční funkce, ale ne nově přidané závislosti checksum helperu. Seznam nyní načítá skutečný resolver i jeho validaci; nevznikl stub, který by novou ochranu obcházel. Celá RC sada poté prošla a následně se celý `ci:module-ready` zopakoval od začátku bez přeskočených či oslabených kontrol. Nativní symlinky nejsou na Windows prohlašované za otestované; jejich povinný scénář běží na Linux GitHub CI. Výsledky GitHubu je nutné vztáhnout k přesnému novému commitu, nikoli k dřívější zelené revizi.
+
+Nasazení musí zahrnovat oba `.htaccess`, případně odpovídající Nginx konfiguraci. Dříve sdílené přímé odkazy na přílohy je nutné nahradit detailem dokumentu nebo `board/file.php?id=...`. Případná CDN/proxy cache starých přímých příloh vyžaduje vyprázdnění; již stažené kopie oprava neodvolá. Ilustrace vývěsky zůstávají veřejné jako dosud. Ruční NVDA, vlastní šablony a hostingová konfigurace zůstávají otevřené; hlavní ACR se nezvyšuje na Supports.
+
 ## Audit Vývěsky a potvrzení newsletteru, 2026-10-18
 
 Výchozí revize `4e1c6189`, čistá synchronizovaná větev `main`. Tento blok prochází administrační ukládání, uploady, kopie a Koš Vývěsky a dvě konkrétní chyby newsletteru. Není novým řádkovým auditem každého modulu. Schéma, `install.php`, `migrate.php` a `VERSION` se nemění: opravy používají existující tabulky, transakce a relaci, nepotřebují nový perzistentní stav. Nové vydání není součástí kroku.

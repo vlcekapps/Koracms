@@ -329,6 +329,8 @@ Individuální odpovědi z detailu Kontaktu, soukromého Chatu a Form Builderu p
 
 Modul **Vývěska** nově podporuje důvěryhodnější veřejný archiv: detail položky ukazuje evidenci zveřejnění včetně změn URL, příloh a SHA-256 otisku souboru, kategorie mají čisté URL `/board/kategorie/{slug}` s popisem a SEO metadata a samostatný odběr vývěsky je oddělený od newsletteru. Přihlášení k odběru probíhá na `/board/subscribe.php`, vyžaduje captcha, rate-limit a potvrzení e-mailem.
 
+Přílohy Vývěsky sdílejte přes `board/file.php?id=...`, nikoli přímou cestou do `uploads/board/`. Server blokuje přímé stažení příloh, endpoint ověřuje stav publikace a oprávnění; archivní veřejné dokumenty zůstávají dostupné. Ilustrace v `uploads/board/images/` zůstávají veřejné a nejsou úložištěm soukromých obrázků. Import přijímá jen platné názvy podporovaných souborů, nikoli cesty; neplatné reference vynechá a oznámí. Soubory samotné JSON export/import nepřenáší. Při aktualizaci nasaďte i root a upload `.htaccess`; pro Nginx použijte odpovídající zákaz uvedený níže.
+
 Opakované přihlášení téže adresy k Vývěsce nepřepisuje token, potvrzený stav ani původní kategorie; už odeslaný odkaz zůstává použitelný. Změnu rozsahu lze provést odhlášením a novým přihlášením. Databázové selhání vrátí formulář se zachovanými údaji, nikoli falešné potvrzení úspěchu. Matematické ověření vyžaduje celé číslo bez dalšího textu.
 
 Modul **Rezervace** kromě zdrojů, kategorií, lokalit, schvalování a storna přes token podporuje kalendářové `.ics` pozvánky a e-mailové připomínky před potvrzeným termínem. Správce je zapíná u konkrétního zdroje, volí počet hodin předem a může doplnit vlastní text. Editor zdroje zobrazuje klientské chyby generátoru slotů a blokovaných dnů jako inline textové alerty místo prohlížečových modálních oken. Administrace u rezervace uchovává provozní historii změn; změny stavů jako schválení, zamítnutí, zrušení, dokončení a no-show vyžadují review text a serverově ověřený potvrzovací checkbox. Veřejná část **Moje rezervace** nabízí u budoucích potvrzených termínů bezpečné tokenové stažení kalendářového souboru. Export/import přenáší konfiguraci rezervačních zdrojů, ale ne osobní rezervace ani jejich historii.
@@ -931,6 +933,7 @@ server {
     location ^~ /uploads/places/ { deny all; }
     location ^~ /uploads/podcasts/ { deny all; }
     location ~* ^/uploads/downloads/(?!images/) { deny all; }
+    location ~* ^/uploads/board/(?!images/) { deny all; }
     location ~* ^/uploads/media/(?!.*\.(jpg|jpeg|png|gif|webp|mp3|m4a|mp4|ogg|wav|aac|flac|webm|ogv|mov|pdf|zip|vtt|csv|doc|docx|xls|xlsx)$) { deny all; }
     location ~* ^/uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp|html?|xhtml|shtml|xml|js|mjs)$ { deny all; }
 

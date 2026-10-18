@@ -24278,4 +24278,35 @@ if ($boardNewsletterIssues === []) {
     }
 }
 
+echo "=== rc2_board_file_boundary_contract ===\n";
+$boardFileBoundaryIssues = [];
+foreach ([
+    '.htaccess' => ['RewriteRule ^uploads/board/(?!images/) - [F,L,NC]'],
+    'uploads/.htaccess' => ['RewriteRule ^board/(?!images/) - [F,L,NC]'],
+    'README.md' => ['location ~* ^/uploads/board/(?!images/) { deny all; }'],
+    'build/http_server_router.php' => ['#^uploads/board/(?!images/)#i'],
+    'board/file.php' => ['boardStoredFilename(', 'boardStoredFilePath(', 'sendStoredFileDownload($storedPath, $downloadName)', 'boardIsPubliclyReachable('],
+    'lib/presentation.php' => ['function boardStoredFilename(', 'function boardStoredFilePath(', 'is_link($candidate)', 'is_readable($resolved)', 'boardStoredFilePath($imageName, true)'],
+    'admin/import.php' => ['boardStoredFilename($importFilename, $isImage)', '$invalidBoardFileReferences++'],
+    'build/rc_board_integrity_http.php' => ['Board direct attachment bypassed the visibility endpoint', 'Board endpoint visibility failed', 'Invalid stored Board reference was treated as a basename'],
+    'build/rc_board_file_boundary_selftest.php' => ['Actual import drops malformed references', 'Native symlink is not a download', 'Cleanup preserves protection file'],
+    'composer.json' => ['rc_board_file_boundary_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_board_file_boundary_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $boardFileBoundaryIssues[] = $file . ' missing Board file boundary protection: ' . $fragment;
+        }
+    }
+}
+if ($boardFileBoundaryIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($boardFileBoundaryIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
 exit($failures > 0 ? 1 : 0);

@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-18: Vývěska, kontrolované přílohy a neplatné souborové reference
+
+- Datum a rozsah: download přílohy, checksum evidence, cílené mazání a JSON import Vývěsky; serverová pravidla Apache, testovací router a Nginx dokumentace.
+- Dotčená kritéria: `1.3.1`, `3.3.1`, `3.3.3`, `3.3.4`, `4.1.2`.
+- Rozhodnutí: nezavádí se nový formulář, focus model ani vizuální ovládání. Existující odkazy na kontrolovaný download zůstávají; neplatná nebo neveřejná příloha vrátí stejnou bezpečnou odpověď jako chybějící soubor. Import sdělí počet vynechaných neplatných referencí ve stávajícím textovém souhrnu, bez vypisování podstrčených názvů. Veřejné ilustrace nejsou privátní média. Oprava nemění stav hlavní WCAG matice ani neprohlašuje Supports.
+- Automatizovaný důkaz: `build/rc_board_file_boundary_selftest.php` vykonává produkční file helpery a importní blok nad vlastním izolovaným filesystemem a SQLite; chrání sentinelové soubory, běžné české názvy a cleanup poslední reference. Linux CI ověřuje skutečné symlinky včetně odkazu adresáře mimo kořen. `build/rc_board_integrity_http.php` ověřuje GET/HEAD, veřejný archiv, koncept, skrytí, začátek/konec publikace, Koš, vypnutí modulu, oprávněného správce, odmítnutí chybných názvů a blokování přímého PDF při zachování ilustrace. Stávající DOM/ARIA testy editoru zůstávají. `build/runtime_audit.php` a router selftest chrání zapojení; izolovaný souborový test se opakuje s číselnými PDO řetězci.
+- Ruční ověření nebo zbývající riziko: NVDA, konkrétní vlastní šablony a serverová konfigurace hostingu zůstávají ručním ověřením. Windows bez oprávnění pro symlinky není důkazem nativního symlink scénáře, ten je povinný na Linux CI. Neprobíhá hromadný úklid historických uploadů ani migrace obsahu a tato změna není certifikace.
+
 ### 2026-10-18: Vývěska, zachování editoru a čerstvá potvrzení newsletteru
 
 - Datum a rozsah: administrační editor, kopie a Koš Vývěsky, ukládání evidence zveřejnění a souborů; validační návrat rozesílky a jednotlivé i hromadné znovuodeslání potvrzení newsletteru. Registr nálezů: `docs/rc2-module-audit-2026-09.md`.

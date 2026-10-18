@@ -287,7 +287,7 @@ try {
         'pollAllowsMultipleChoices', 'pollConfiguredMaxChoices', 'pollResultsAreVisible',
         'pollResultPercentage', 'pollVoteSelectionLabel', 'reservationReminderIsDue',
         'boardIsPubliclyReachable', 'boardPublicationEventLabels', 'recordBoardPublicationEvent',
-        'boardAttachmentChecksum', 'notifyBoardSubscribers',
+        'boardAttachmentMimeMap', 'boardStoredFilename', 'boardStoredFilePath', 'boardAttachmentChecksum', 'notifyBoardSubscribers',
     ]);
     require dirname(__DIR__) . '/lib/recipes.php';
     $pdo = new RcModuleStatePdo();

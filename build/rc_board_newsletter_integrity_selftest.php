@@ -210,6 +210,19 @@ function hash_file(string $algorithm, string $path): string|false
 {
     return isset($GLOBALS['files'][basename($path)]) ? hash($algorithm, $GLOBALS['files'][basename($path)]) : false;
 }
+function realpath(string $path): string|false
+{
+    $path = str_replace('\\', '/', $path);
+    return str_ends_with($path, '/uploads/board') || str_ends_with($path, '/uploads/board/images') || is_file($path) ? $path : false;
+}
+function is_link(string $path): bool
+{
+    return false;
+}
+function is_readable(string $path): bool
+{
+    return is_file($path);
+}
 function presentationLogFileDeleteFailure(string $kind, string $path): void
 {
     throw new RuntimeException('Unexpected virtual file delete failure');
@@ -301,7 +314,7 @@ try {
     foreach (['slugify', 'boardSlug', 'uniqueBoardSlug', 'boardTypeLabel', 'boardPublicRequestPath', 'boardPublicPath',
         'boardPreviewPath', 'appendUrlQuery', 'boardIsPubliclyReachable', 'boardAttachmentChecksum',
         'boardPublicationEventLabels', 'recordBoardPublicationEvent', 'deleteUnusedBoardFiles',
-        'boardAttachmentMimeMap', 'uploadBoardStoredFile', 'uploadBoardImage', 'deleteBoardStoredFile',
+        'boardAttachmentMimeMap', 'boardStoredFilename', 'boardStoredFilePath', 'uploadBoardStoredFile', 'uploadBoardImage', 'deleteBoardStoredFile',
         'deleteBoardImageFile', 'boardImageUrl', 'storePresentationUploadedFile', 'presentationImageMimeMap',
         'deleteRedirectsTargetingPath', 'upsertPathRedirect', 'formatCzechDate'] as $name) {
         loadFunction('lib/presentation.php', $name);

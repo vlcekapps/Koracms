@@ -74,6 +74,7 @@ function isProtectedRequest(string $path): bool
     }
 
     if (preg_match('#^uploads/downloads/(?!images/)#i', $trimmedPath) === 1
+        || preg_match('#^uploads/board/(?!images/)#i', $trimmedPath) === 1
         || preg_match('#^uploads/.+\.(?:php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|jsp|html?|xhtml|shtml|xml|js|mjs)$#i', $trimmedPath) === 1) {
         return true;
     }

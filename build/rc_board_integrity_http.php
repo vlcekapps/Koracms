@@ -82,7 +82,7 @@ function rcBoardIntegrityHttpChecks(PDO $pdo, string $baseUrl, array $adminSessi
         saveSetting('module_newsletter', '1');
         $uploadText = httpIntegrationCreateTempFile('kora-board-', 'New owned attachment bytes', $tempFiles);
         $uploadImage = httpIntegrationCreatePngFixtureFile('kora-board-', $tempFiles);
-        $attachment = $prefix . '.txt';
+        $attachment = $prefix . '.pdf';
         $image = $prefix . '.png';
         foreach (['uploads/board/' . $attachment => 'Original owned attachment', 'uploads/board/images/' . $image => (string)file_get_contents($uploadImage)] as $relative => $contents) {
             $path = dirname(__DIR__) . '/' . $relative;
@@ -99,6 +99,46 @@ function rcBoardIntegrityHttpChecks(PDO $pdo, string $baseUrl, array $adminSessi
             ]);
         $id = (int)$pdo->lastInsertId();
         $createdIds[] = $id;
+        $downloadUrl = $baseUrl . BASE_URL . '/board/file.php?id=' . $id;
+        $directAttachment = fetchUrl($baseUrl . BASE_URL . '/uploads/board/' . rawurlencode($attachment), '', 0);
+        $check(httpIntegrationStatusCode($directAttachment) === 403
+            && !str_contains($directAttachment['body'], 'Original owned attachment'), 'Board direct attachment bypassed the visibility endpoint');
+        $publicImage = fetchUrl($baseUrl . BASE_URL . '/uploads/board/images/' . rawurlencode($image), '', 0);
+        $check(httpIntegrationStatusCode($publicImage) === 200 && $publicImage['body'] === file_get_contents($uploadImage), 'Board illustration compatibility broken');
+        $resetVisibility = $pdo->prepare("UPDATE cms_board SET status='published',is_published=1,deleted_at=NULL,
+            posted_date=CURDATE(),publish_at=NULL,unpublish_at=NULL,removal_date=NULL WHERE id=?");
+        foreach (['public' => ['', 200], 'draft' => ["status='draft'", 404], 'hidden' => ['is_published=0', 404],
+            'future_date' => ["posted_date=DATE_ADD(CURDATE(),INTERVAL 1 DAY)", 404],
+            'scheduled' => ['publish_at=DATE_ADD(NOW(),INTERVAL 1 DAY)', 404],
+            'expired' => ['unpublish_at=DATE_SUB(NOW(),INTERVAL 1 DAY)', 404],
+            'trash' => ['deleted_at=NOW()', 404], 'archive' => ['removal_date=DATE_SUB(CURDATE(),INTERVAL 1 DAY)', 200]] as $state => [$assignment, $status]) {
+            $resetVisibility->execute([$id]);
+            if ($assignment !== '') {
+                $pdo->prepare('UPDATE cms_board SET ' . $assignment . ' WHERE id=?')->execute([$id]);
+            }
+            foreach (['GET', 'HEAD'] as $method) {
+                $response = requestRawUrl($method, $downloadUrl, '', 'text/plain', '', 0);
+                $check(httpIntegrationStatusCode($response) === $status, 'Board endpoint visibility failed for ' . $state . '/' . $method);
+                $check($method === 'HEAD' ? $response['body'] === ''
+                    : ($status === 200 ? $response['body'] === 'Original owned attachment' : !str_contains($response['body'], 'Original owned attachment')), 'Board endpoint leaked/changed bytes for ' . $state . '/' . $method);
+            }
+            $staffResponse = fetchUrl($downloadUrl, $adminSession['cookie'], 0);
+            $check(httpIntegrationStatusCode($staffResponse) === 200 && $staffResponse['body'] === 'Original owned attachment', 'Board staff access broken for ' . $state);
+        }
+        $resetVisibility->execute([$id]);
+        saveSetting('module_board', '0');
+        $check(httpIntegrationStatusCode(fetchUrl($downloadUrl, '', 0)) === 404, 'Disabled Board attachment is public');
+        $check(httpIntegrationStatusCode(fetchUrl($downloadUrl, $adminSession['cookie'], 0)) === 200, 'Disabled Board staff download broken');
+        saveSetting('module_board', '1');
+        foreach (['../' . $attachment, '..\\' . $attachment, '.htaccess', 'invalid.php'] as $invalidFilename) {
+            $pdo->prepare('UPDATE cms_board SET filename=? WHERE id=?')->execute([$invalidFilename, $id]);
+            foreach (['', $adminSession['cookie']] as $cookie) {
+                $response = fetchUrl($downloadUrl, $cookie, 0);
+                $check(httpIntegrationStatusCode($response) === 404 && !str_contains($response['body'], 'Original owned attachment'), 'Invalid stored Board reference was treated as a basename');
+            }
+        }
+        $pdo->prepare('UPDATE cms_board SET filename=? WHERE id=?')->execute([$attachment, $id]);
+        $check(httpIntegrationStatusCode(requestRawUrl('POST', $downloadUrl, '', 'text/plain', '', 0)) === 405, 'Board download accepts a state-changing method');
         $review = '/admin/board_form.php?id=' . $id;
         $fields = ['id' => (string)$id, 'title' => $prefix . '-revised', 'slug' => $prefix . '-document',
             'description' => 'Rozepsaný český popis vývěsky', 'posted_date' => date('Y-m-d'),

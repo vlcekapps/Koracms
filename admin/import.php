@@ -2322,6 +2322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Úřední deska
                 if (!empty($data['board']) && is_array($data['board'])) {
+                    $invalidBoardFileReferences = 0;
                     $ins = $pdo->prepare(
                         "INSERT IGNORE INTO cms_board
                          (id, title, slug, board_type, excerpt, description, category_id, posted_date, removal_date,
@@ -2331,6 +2332,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                     );
                     foreach ($data['board'] as $row) {
+                        foreach (['filename' => false, 'image_file' => true] as $fileColumn => $isImage) {
+                            $importFilename = (string)($row[$fileColumn] ?? '');
+                            $row[$fileColumn] = boardStoredFilename($importFilename, $isImage);
+                            if ($importFilename !== '' && $row[$fileColumn] === '') {
+                                $invalidBoardFileReferences++;
+                            }
+                        }
                         $importTitle = trim((string)($row['title'] ?? ''));
                         if ($importTitle === '') {
                             $importTitle = 'Dokument';
@@ -2370,6 +2378,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ]);
                     }
                     $summary[] = 'Úřední deska importována.';
+                    if ($invalidBoardFileReferences > 0) {
+                        $summary[] = 'Neplatné odkazy na soubory vývěsky byly vynechány: ' . $invalidBoardFileReferences . '. Soubory se JSON importem nepřenášejí.';
+                    }
                 }
 
                 // Evidence zveřejnění vývěsky

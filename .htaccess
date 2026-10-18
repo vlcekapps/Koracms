@@ -77,6 +77,8 @@ Options -Indexes
     RewriteRule ^uploads/gallery/ - [F,L,NC]
     # Download blobs are served only after checking their record visibility.
     RewriteRule ^uploads/downloads/(?!images/) - [F,L,NC]
+    # Board attachments also require a record visibility check; illustrations remain public.
+    RewriteRule ^uploads/board/(?!images/) - [F,L,NC]
     # Obrázky míst se zobrazují jen přes places/image.php
     RewriteRule ^uploads/places/ - [F,L,NC]
     # Podcast audio a artwork se vydávají jen přes podcast/*.php endpointy

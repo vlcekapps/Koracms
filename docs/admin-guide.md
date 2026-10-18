@@ -998,6 +998,10 @@ JSON export/import přenáší konfiguraci témat kontaktu, ale nepřenáší sa
 
 ## Vývěska / Úřední deska
 
+Přílohy se stahují pouze přes `board/file.php?id=...`, který kontroluje viditelnost dokumentu; oprávněný správce může stáhnout i neveřejnou přílohu. Přímý přístup do `uploads/board/` je zablokovaný, proto starý přímý odkaz nahraďte odkazem na detail dokumentu nebo download endpoint. Veřejné archivní přílohy dál fungují. Ilustrační obrázky v `uploads/board/images/` zůstávají veřejné, neukládejte tam soukromý obsah. Při nasazení aktualizujte oba `.htaccess`; na Nginx doplňte pravidlo z README. Bez těchto serverových pravidel samotná PHP kontrola nezabrání přímému přístupu.
+
+Názvy příloh a obrázků se kontrolují i při importu a mazání. Cesty, nepovolené přípony a odkazy na soubory mimo úložiště nejsou platnou referencí; chybná reference se nesmí zkrátit na název jiného souboru. JSON import zachová platné starší názvy včetně diakritiky a vypíše počet vynechaných neplatných referencí. Nepřenáší soubory a nemaže hromadně starší data. Používáte-li CDN nebo proxy cache, vyprázdněte při nasazení také její uložené přímé přílohy; již stažené kopie nelze touto opravou odvolat.
+
 Uložení položky a související evidence zveřejnění je atomické. Chyba uploadu nebo zápisu zachová původní data, přílohu i obrázek; editor obnoví zadané texty a běžné checkboxy pouze pro danou položku. Nový lokální soubor je po chybě potřeba vybrat znovu. Neplatné datum/čas plánovaného publikování nebo sejmutí se odmítne s vysvětlením u konkrétního pole, nikoli tiše změní na okamžitou dostupnost.
 
 Odebrání obrázku i přesun položky do Koše vyžadují čerstvé potvrzení ověřené serverem. Souhlas se nikdy neobnovuje z konceptu ani validačního návratu. Koš zachovává přílohu i obrázek pro obnovu; obrázek používaný další položkou nebo kopií včetně Koše se nemaže. Při úspěšném trvalém smazání poslední reference se nepoužité soubory uklidí. Evidence smazání či obnovy se ukládá ve stejné transakci jako změna položky. E-mailové oznámení se odesílá až po uložení; SMTP a databáze nejsou jednou atomickou operací.

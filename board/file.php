@@ -34,8 +34,9 @@ if (
     sendFileDownloadNotFound();
 }
 
-$storedName = trim((string)$document['filename']);
-if ($storedName === '') {
+$storedName = boardStoredFilename((string)$document['filename']);
+$storedPath = boardStoredFilePath($storedName);
+if ($storedPath === '') {
     sendFileDownloadNotFound();
 }
 
@@ -47,4 +48,4 @@ if ($downloadName === trim((string)$document['title'])) {
     }
 }
 
-sendStoredFileDownload(__DIR__ . '/../uploads/board/' . basename($storedName), $downloadName);
+sendStoredFileDownload($storedPath, $downloadName);

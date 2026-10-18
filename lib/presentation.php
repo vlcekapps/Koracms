@@ -5235,7 +5235,7 @@ function hydratePlacePresentation(array $place): array
  */
 function boardImageUrl(array $document): string
 {
-    $filename = trim((string)($document['image_file'] ?? ''));
+    $filename = boardStoredFilename((string)($document['image_file'] ?? ''), true);
     if ($filename === '') {
         return '';
     }
@@ -5245,15 +5245,15 @@ function boardImageUrl(array $document): string
 
 function deleteBoardImageFile(string $filename): void
 {
-    $filename = basename($filename);
+    $filename = boardStoredFilename($filename, true);
     if ($filename === '') {
         return;
     }
 
     $webpFilename = pathinfo($filename, PATHINFO_FILENAME) . '.webp';
     foreach (array_unique([$filename, $webpFilename]) as $imageName) {
-        $path = dirname(__DIR__) . '/uploads/board/images/' . $imageName;
-        if (is_file($path) && !unlink($path)) {
+        $path = boardStoredFilePath($imageName, true);
+        if ($path !== '' && !unlink($path)) {
             presentationLogFileDeleteFailure('board_image', $path);
         }
     }
@@ -5261,13 +5261,8 @@ function deleteBoardImageFile(string $filename): void
 
 function deleteBoardStoredFile(string $filename): void
 {
-    $filename = basename($filename);
-    if ($filename === '') {
-        return;
-    }
-
-    $path = dirname(__DIR__) . '/uploads/board/' . $filename;
-    if (is_file($path) && !unlink($path)) {
+    $path = boardStoredFilePath($filename);
+    if ($path !== '' && !unlink($path)) {
         presentationLogFileDeleteFailure('board_file', $path);
     }
 }
@@ -5292,6 +5287,54 @@ function boardAttachmentMimeMap(): array
         'application/x-zip-compressed' => 'zip',
         'text/plain' => 'txt',
     ];
+}
+
+function boardStoredFilename(string $filename, bool $image = false): string
+{
+    $extensions = $image ? ['jpg', 'jpeg', 'png', 'gif', 'webp'] : array_values(boardAttachmentMimeMap());
+    if ($filename === '' || strlen($filename) > 255 || $filename[0] === '.'
+        || trim($filename, " .\t\r\n") !== $filename
+        || preg_match('/[\x00-\x1f\x7f<>:"\/\\\\|?*]/', $filename) === 1
+        || preg_match('/\A(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|\z)/i', $filename) === 1
+        || !in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), $extensions, true)
+    ) {
+        return '';
+    }
+
+    return $filename;
+}
+
+function boardStoredFilePath(string $filename, bool $image = false, ?string $boardDirectory = null): string
+{
+    $filename = boardStoredFilename($filename, $image);
+    if ($filename === '') {
+        return '';
+    }
+    $root = realpath($boardDirectory ?? dirname(__DIR__) . '/uploads/board');
+    if ($root === false) {
+        return '';
+    }
+    $directory = $image ? realpath($root . '/images') : $root;
+    if ($directory === false) {
+        return '';
+    }
+    $rootPrefix = rtrim(str_replace('\\', '/', $root), '/') . '/';
+    $directoryPrefix = rtrim(str_replace('\\', '/', $directory), '/') . '/';
+    if ($directoryPrefix !== $rootPrefix && !str_starts_with($directoryPrefix, $rootPrefix)) {
+        return '';
+    }
+    $candidate = $directory . DIRECTORY_SEPARATOR . $filename;
+    // Stored/imported references are filenames, never paths or filesystem links.
+    if (is_link($candidate)) {
+        return '';
+    }
+    $resolved = realpath($candidate);
+    if ($resolved === false || !str_starts_with(str_replace('\\', '/', $resolved), $directoryPrefix)
+        || !is_file($resolved) || !is_readable($resolved)) {
+        return '';
+    }
+
+    return $resolved;
 }
 
 /**
@@ -6952,13 +6995,8 @@ function boardIsPubliclyReachable(array $document): bool
  */
 function boardAttachmentChecksum(array $document): string
 {
-    $storedName = basename(trim((string)($document['filename'] ?? '')));
-    if ($storedName === '') {
-        return '';
-    }
-
-    $path = dirname(__DIR__) . '/uploads/board/' . $storedName;
-    if (!is_file($path)) {
+    $path = boardStoredFilePath((string)($document['filename'] ?? ''));
+    if ($path === '') {
         return '';
     }
 
@@ -7033,8 +7071,8 @@ function recordBoardPublicationEvent(PDO $pdo, array $document, string $eventTyp
 function deleteUnusedBoardFiles(PDO $pdo, array $document): void
 {
     foreach (['filename' => 'deleteBoardStoredFile', 'image_file' => 'deleteBoardImageFile'] as $column => $deleteFile) {
-        $filename = (string)($document[$column] ?? '');
-        if ($filename === '' || basename($filename) !== $filename) {
+        $filename = boardStoredFilename((string)($document[$column] ?? ''), $column === 'image_file');
+        if ($filename === '') {
             continue;
         }
         try {
