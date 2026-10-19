@@ -9,6 +9,14 @@
 
 ## Testované rozhraní
 
+### Bezpečné ukládání a Koš lístků, 2026-10-19
+
+Průchod pokrývá editor samotného lístku, přehled a jednotlivý přesun do Koše, ne nový audit všech strukturálních editorů nebo celého modulu. Uložení aktuální nabídky, řádku, revize a canonical redirectu tvoří jednu transakci. Validační i provozní chyba mají textový alert a zachovají whitelistovaná data ve správném editoru, včetně nezaškrtnutých běžných checkboxů a více způsobů převzetí. Chybné datum včetně řetězce `0` se nezmění na prázdné platné pole. Neaktuální editor neprovede změnu lístku v Koši; nabídne zadané texty k záchraně a vypnuté uložení navázané na existující vysvětlení.
+
+Jednotlivé mazání má popis dopadu, `fieldset`/`legend`, nativní potvrzovací checkbox `confirm_food_delete_ID` a přesnou serverovou kontrolu hodnoty `1`. Chybějící či neplatné potvrzení vrací alert, `aria-invalid` a platné `aria-describedby`; souhlas se neobnovuje. Úspěch se oznamuje jen při skutečném přesunu dosud dostupného lístku. Nevzniká nová barva, focus model ani databázové schéma.
+
+Dotčená kritéria: `1.3.1`, `2.1.1`, `2.4.6`, `3.3.1`, `3.3.2`, `3.3.3`, `3.3.4`, `3.3.7`, `4.1.2`, `4.1.3`. Důkaz: `build/rc_food_card_flash_selftest.php` vykonává skutečné flash helpery bez aplikace/DB a kontroluje jejich whitelist, checkboxy, jednorázovost a oddělení editorů; `build/rc_food_card_integrity_http.php` vykonává skutečný endpoint, MySQL rollback hlavního zápisu/revize/redirectu a produkční DOM/ARIA, CSRF, metody, vypnutý modul a nedostupný lístek. Oba jsou zapojené do `composer ci:module-ready` a runtime kontraktu `rc2_food_card_write_contract`. Toto nezvyšuje stav žádného kritéria pouze na základě automatizace: NVDA/Firefox, klávesnice, zoom/reflow a vlastní šablony zůstávají otevřené. SQLite ani sekvenční HTTP nejsou důkazem všech InnoDB souběhů; nezavádíme obecné slučování současných editací.
+
 ### Ochrana přiřazených obrázků, 2026-10-05
 
 Strukturální reference `cms_food_items.media_id` se započítává do použití médií také u neveřejného nebo smazaného lístku. Knihovna nesmí jako „nepoužitý“ smazat obrázek, který položka stále potřebuje, ani jej převést na soukromý. Odkaz z kontroly použití vede přímo do editoru příslušné položky. Dotčená kritéria jsou `1.1.1`, `3.3.4` a `4.1.3`; alt fallback a veřejné zobrazení se nemění. Vykonávané testy scanneru a HTTP odmítnutí jednotlivého/hromadného mazání i skrytí média jsou v `build/rc_food_media_usage_selftest.php` a `build/rc_food_media_usage_http.php`. Ruční NVDA/klávesnice se tím neprohlašují za provedené; plný přehled důkazů a nález RC2-23 je v modulovém RC auditu.

@@ -162,6 +162,7 @@ $noticeDocument = null;
 $saveError = 'save';
 try {
     $pdo->beginTransaction();
+    $visibilityNow = (string)$pdo->query('SELECT NOW()')->fetchColumn();
     if ($id !== null) {
         $lock = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
         $current = $pdo->prepare('SELECT * FROM cms_board WHERE id = ? AND deleted_at IS NULL' . $lock);
@@ -208,7 +209,7 @@ try {
 
     if ($id !== null) {
         $oldPath = boardPublicPath($existingDocument);
-        $oldPublic = boardIsPubliclyReachable($existingDocument);
+        $oldPublic = boardIsPubliclyReachable($existingDocument, $visibilityNow);
         $oldAttachmentChecksum = boardAttachmentChecksum($existingDocument);
         $oldFilename = trim((string)($existingDocument['filename'] ?? ''));
 
@@ -282,7 +283,7 @@ try {
             'unpublish_at' => $unpublishAtSql,
             'deleted_at' => null,
         ];
-        $newPublic = boardIsPubliclyReachable($updatedDocument);
+        $newPublic = boardIsPubliclyReachable($updatedDocument, $visibilityNow);
         $newSnapshot = $boardRevisionSnapshot([
             'title' => $title,
             'slug' => $slug,
@@ -382,7 +383,7 @@ try {
             'unpublish_at' => $unpublishAtSql,
             'deleted_at' => null,
         ];
-        if (boardIsPubliclyReachable($createdDocument)) {
+        if (boardIsPubliclyReachable($createdDocument, $visibilityNow)) {
             recordBoardPublicationEvent($pdo, $createdDocument, 'published', currentUserId(), true);
             $noticeDocument = $createdDocument;
         }

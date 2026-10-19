@@ -7004,8 +7004,9 @@ function boardScopeVisibilitySql(string $scope, string $alias = ''): string
 /**
  * @param array<string, mixed> $document
  */
-function boardIsPubliclyReachable(array $document): bool
+function boardIsPubliclyReachable(array $document, ?string $now = null): bool
 {
+    // DB-backed callers pass SQL NOW(); the fallback preserves standalone use.
     if ((int)($document['is_published'] ?? 0) !== 1) {
         return false;
     }
@@ -7019,8 +7020,8 @@ function boardIsPubliclyReachable(array $document): bool
         return false;
     }
 
-    $today = date('Y-m-d');
-    $now = date('Y-m-d H:i:s');
+    $now ??= date('Y-m-d H:i:s');
+    $today = substr($now, 0, 10);
     $postedDate = trim((string)($document['posted_date'] ?? ''));
     $publishAt = trim((string)($document['publish_at'] ?? ''));
     $unpublishAt = trim((string)($document['unpublish_at'] ?? ''));
@@ -7269,9 +7270,9 @@ function removeBoardSubscription(PDO $pdo, string $token): bool
  * @param array<string, mixed> $oldDocument
  * @param array<string, mixed> $newDocument
  */
-function shouldSendBoardPublicationNotice(array $oldDocument, array $newDocument): bool
+function shouldSendBoardPublicationNotice(array $oldDocument, array $newDocument, ?string $now = null): bool
 {
-    return !boardIsPubliclyReachable($oldDocument) && boardIsPubliclyReachable($newDocument);
+    return !boardIsPubliclyReachable($oldDocument, $now) && boardIsPubliclyReachable($newDocument, $now);
 }
 
 /**
@@ -7279,7 +7280,7 @@ function shouldSendBoardPublicationNotice(array $oldDocument, array $newDocument
  */
 function notifyBoardSubscribers(PDO $pdo, array $document): int
 {
-    if (!boardIsPubliclyReachable($document)) {
+    if (!boardIsPubliclyReachable($document, (string)$pdo->query('SELECT NOW()')->fetchColumn())) {
         return 0;
     }
 

@@ -101,6 +101,8 @@
       "php build/rc_board_file_boundary_selftest.php",
       "php build/rc_place_integrity_selftest.php",
       "php build/rc_content_picker_selftest.php",
+      "php build/rc_food_card_flash_selftest.php",
+      "php build/rc_board_clock_selftest.php",
       "php build/rc_recipe_integrity_selftest.php",
       "php build/rc_editor_publication_selftest.php",
       "php build/rc_media_security_selftest.php",

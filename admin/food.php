@@ -4,6 +4,14 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jíd
 requireModuleEnabled('food');
 
 $pdo = db_connect();
+$deleteError = trim((string)($_GET['delete_error'] ?? ''));
+$deleteErrorId = inputInt('get', 'delete_error_id');
+$deleteErrorMessage = match ($deleteError) {
+    'confirm_required' => 'Lístek nebyl smazán. Potvrďte přesun vybraného lístku do Koše.',
+    'invalid' => 'Lístek už není dostupný. Nebyla provedena nová změna.',
+    'save' => 'Lístek se nepodařilo přesunout do Koše. Zkontrolujte jeho stav a případně akci zopakujte.',
+    default => '',
+};
 $q = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? 'all');
 $typeFilter = trim($_GET['type'] ?? 'all');
@@ -78,6 +86,8 @@ $canApprove = currentUserHasCapability('content_approve_shared');
 
 adminHeader('Jídelní a nápojový lístek');
 ?>
+<?php if ($deleteErrorMessage !== ''): ?><p id="food-delete-error" class="error" role="alert" aria-atomic="true"><?= h($deleteErrorMessage) ?></p><?php endif; ?>
+<?php if (($_GET['msg'] ?? '') === 'deleted'): ?><p class="success" role="status">Lístek byl přesunut do Koše.</p><?php endif; ?>
 <p class="button-row button-row--start admin-stack-sm">
   <a href="food_form.php?type=food" class="btn">+ Nový jídelní lístek</a>
   <a href="food_form.php?type=beverage" class="btn">+ Nový nápojový lístek</a>
@@ -162,6 +172,12 @@ adminHeader('Jídelní a nápojový lístek');
     </thead>
     <tbody>
     <?php foreach ($rows as $card): ?>
+      <?php
+        $deleteConfirmField = 'confirm_food_delete_' . (int)$card['id'];
+        $deleteReviewId = 'food-delete-review-' . (int)$card['id'];
+        $deleteHasError = $deleteError === 'confirm_required' && $deleteErrorId === (int)$card['id'];
+        $deleteErrorFields = $deleteHasError ? [$deleteConfirmField] : [];
+        ?>
       <tr<?= $card['status'] === 'pending' ? ' class="table-row--pending"' : '' ?>>
         <td><label for="food-card-select-<?= h($type) ?>-<?= (int)$card['id'] ?>" class="sr-only">Vybrat <?= h((string)$card['title']) ?></label><input type="checkbox" id="food-card-select-<?= h($type) ?>-<?= (int)$card['id'] ?>" name="ids[]" value="<?= (int)$card['id'] ?>" form="bulk-form"></td>
         <td>
@@ -205,11 +221,21 @@ adminHeader('Jídelní a nápojový lístek');
               <button type="submit" class="btn btn-success">Schválit</button>
             </form>
           <?php endif; ?>
-          <form action="food_delete.php" method="post">
+          <form action="food_delete.php" method="post" novalidate<?= $deleteHasError ? ' aria-describedby="food-delete-error"' : '' ?>>
             <input type="hidden" name="csrf_token" value="<?= h(csrfToken()) ?>">
             <input type="hidden" name="id" value="<?= (int)$card['id'] ?>">
+            <fieldset class="admin-inline-fieldset">
+              <legend class="sr-only">Smazání lístku <?= h((string)$card['title']) ?></legend>
+              <p id="<?= h($deleteReviewId) ?>" class="field-help field-help--flush">Lístek přestane být veřejně dostupný. Položky a objednávkové poptávky zůstanou zachované pro obnovení z Koše.</p>
+              <label for="<?= h($deleteConfirmField) ?>" class="admin-checkbox-label">
+                <input type="checkbox" id="<?= h($deleteConfirmField) ?>" name="<?= h($deleteConfirmField) ?>" value="1" required aria-required="true"
+                       <?= adminFieldAttributes($deleteConfirmField, $deleteErrorFields, [], [$deleteReviewId]) ?>>
+                Potvrzuji přesun tohoto lístku do Koše.
+              </label>
+              <?php adminRenderFieldError($deleteConfirmField, $deleteErrorFields, [], 'Před smazáním znovu potvrďte přesun tohoto lístku do Koše.'); ?>
             <button type="submit" class="btn btn-danger"
                     data-confirm="Smazat lístek &quot;<?= h(addslashes((string)$card['title'])) ?>&quot;?">Smazat</button>
+            </fieldset>
           </form>
         </td>
       </tr>

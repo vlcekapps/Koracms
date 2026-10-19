@@ -566,7 +566,8 @@ function shopMysqlSelftest(PDO $pdo): int
 
         $fioOrder = $fixture->createOrder();
         $fioId = (int)$fioOrder['id'];
-        $movement = ['column0' => ['value' => date('Y-m-d') . '+0200'], 'column1' => ['value' => '121.00'],
+        // Match the synthetic bank day to the order, not the unrelated PHP timezone.
+        $movement = ['column0' => ['value' => substr((string)$fioOrder['created_at'], 0, 10) . '+0200'], 'column1' => ['value' => '121.00'],
             'column5' => ['value' => $fioOrder['order_number']], 'column14' => ['value' => 'CZK'],
             'column22' => ['value' => (string)random_int(100000000, 999999999)]];
         $statement = ['accountStatement' => ['info' => ['iban' => 'CZ6508000000192000145399', 'currency' => 'CZK'],
@@ -617,6 +618,7 @@ function shopMysqlSelftest(PDO $pdo): int
         $pdo->prepare('UPDATE cms_shop_payment_methods SET fio_last_polled_at=DATE_SUB(NOW(),INTERVAL 6 MINUTE) WHERE id=?')->execute([$retiredMethodId]);
         $check(in_array($retiredMethodId, $selectedFioIds(), true), 'Retired bank becomes eligible after the polling interval');
         $retiredStatement = $statement;
+        $retiredStatement['accountStatement']['transactionList']['transaction'][0]['column0']['value'] = substr((string)$retiredOrder['created_at'], 0, 10) . '+0200';
         $retiredStatement['accountStatement']['transactionList']['transaction'][0]['column5']['value'] = $retiredOrder['order_number'];
         $retiredStatement['accountStatement']['transactionList']['transaction'][0]['column22']['value'] = (string)random_int(1000000000, 2000000000);
         $check(shopApplyFioStatement($pdo, $retiredMethodId, $retiredStatement) === 1

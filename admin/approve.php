@@ -51,7 +51,7 @@ if ($id !== null && isset($moduleConfig[$module])) {
         $updatedStmt = $pdo->prepare("SELECT * FROM cms_board WHERE id = ?");
         $updatedStmt->execute([$id]);
         $updatedBoardDocument = $updatedStmt->fetch() ?: null;
-        if ($updatedBoardDocument && shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
+        if ($updatedBoardDocument && shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument, (string)$pdo->query('SELECT NOW()')->fetchColumn())) {
             recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'published', currentUserId());
             $sentNotifications = notifyBoardSubscribers($pdo, $updatedBoardDocument);
             if ($sentNotifications > 0) {

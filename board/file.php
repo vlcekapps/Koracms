@@ -16,7 +16,7 @@ if (!$allowPrivateAccess && !isModuleEnabled('board')) {
 
 $stmt = db_connect()->prepare(
     "SELECT id, title, slug, filename, original_name, posted_date, publish_at, unpublish_at, deleted_at,
-            is_published, COALESCE(status, 'published') AS status
+            is_published, COALESCE(status, 'published') AS status, NOW() AS visibility_now
      FROM cms_board
      WHERE id = ?"
 );
@@ -29,7 +29,7 @@ if (!$document) {
 
 if (
     !$allowPrivateAccess
-    && !boardIsPubliclyReachable($document)
+    && !boardIsPubliclyReachable($document, (string)$document['visibility_now'])
 ) {
     sendFileDownloadNotFound();
 }

@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $updatedBoardDocument = $previousBoardDocument;
                 $updatedBoardDocument['deleted_at'] = null;
                 recordBoardPublicationEvent($pdo, $updatedBoardDocument, 'restored', currentUserId(), true);
-                if (shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument)) {
+                if (shouldSendBoardPublicationNotice($previousBoardDocument, $updatedBoardDocument, (string)$pdo->query('SELECT NOW()')->fetchColumn())) {
                     $restoredBoardNotice = $updatedBoardDocument;
                 }
                 logAction('trash_restore', "module={$module} id={$itemId}");

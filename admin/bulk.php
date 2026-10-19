@@ -315,7 +315,7 @@ if ($action === 'delete') {
             foreach ($updatedStmt->fetchAll() as $updatedDocument) {
                 $documentId = (int)($updatedDocument['id'] ?? 0);
                 $previousDocument = $previousBoardDocuments[$documentId] ?? [];
-                if ($previousDocument !== [] && shouldSendBoardPublicationNotice($previousDocument, $updatedDocument)) {
+                if ($previousDocument !== [] && shouldSendBoardPublicationNotice($previousDocument, $updatedDocument, (string)$pdo->query('SELECT NOW()')->fetchColumn())) {
                     recordBoardPublicationEvent($pdo, $updatedDocument, 'published', currentUserId());
                     $sentNotifications = notifyBoardSubscribers($pdo, $updatedDocument);
                     if ($sentNotifications > 0) {
@@ -353,7 +353,7 @@ if ($action === 'delete') {
             $updatedStmt->execute($ids);
             foreach ($updatedStmt->fetchAll() as $updatedDocument) {
                 $documentId = (int)($updatedDocument['id'] ?? 0);
-                if (isset($previousBoardDocuments[$documentId]) && boardIsPubliclyReachable($previousBoardDocuments[$documentId])) {
+                if (isset($previousBoardDocuments[$documentId]) && boardIsPubliclyReachable($previousBoardDocuments[$documentId], (string)$pdo->query('SELECT NOW()')->fetchColumn())) {
                     recordBoardPublicationEvent($pdo, $updatedDocument, 'hidden', currentUserId());
                 }
             }

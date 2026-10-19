@@ -14,6 +14,14 @@ Záznam je povinný u nového nebo podstatně změněného formuláře, dialogu,
 
 ## Rozhodnutí
 
+### 2026-10-19: Jednotný čas viditelnosti Vývěsky
+
+- Rozsah: kontrola přílohy `board/file.php`, administrační náhled/evidence zveřejnění, schválení/obnova/hromadné změny a odběratelská notifikace. RC2-66 v modulovém RC auditu.
+- Dotčená kritéria: `1.3.1`, `2.4.4`, `3.3.1`, `4.1.2`, `4.1.3`; souborové a publikační chování musí odpovídat odkazům a stavu ve výpisu. Vzhled, názvy ovládacích prvků, focus ani souhlas se nemění.
+- Rozhodnutí: PHP kontrola obdrží aktuální čas ze stejné databáze, která řídí zveřejnění ve výpisu. Pure helper nadále umožňuje explicitní hodiny a kompatibilní výchozí použití; skutečné DB workflow předávají SQL čas. Ochrana neveřejných souborů, oprávnění, canonical URL a veřejný archiv zůstávají zachované. Nejde o změnu globálního pásma instalace.
+- Automatizovaný důkaz: `build/rc_board_clock_selftest.php` vykonává produkční PHP visibility a transition helpery proti skutečnému SQL predikátu v izolované SQLite, při třech PHP pásmech a pevném DB čase přes půlnoc. Běží i v numeric-string PDO režimu. `build/rc_board_integrity_http.php` ověřuje skutečný download GET/HEAD pro veřejný dokument, plánování, ukončení, Koš, archiv a správce. Lokální úplná integrace před opravou skutečně selhala na veřejném downloadu při PHP UTC a MySQL pražském čase; nejde pouze o hypotetický rozdíl hodin. Runtime audit hlídá i předávání DB času v call sites.
+- Omezení: testy nemění pásmo serveru ani neposílají reálné e-maily. Ruční NVDA, klávesnice, zoom a hostingový cron/SMTP zůstávají otevřené; žádný stav hlavního ACR se nezvyšuje na Supports jen kvůli automatickému průchodu.
+
 ### 2026-10-18: Vyhledávání veřejného obsahu v editoru
 
 - Datum a rozsah: 2026-10-18; `admin/content_reference_search.php`, skutečné výsledky všech stávajících zdrojů pickeru, jejich veřejná viditelnost a společné řazení; RC2-56 až RC2-59 v `docs/rc2-module-audit-2026-09.md`.

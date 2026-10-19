@@ -1,5 +1,29 @@
 # Modulový audit pro RC.2, 2026-09-05
 
+## Audit Food lístků a navazujících časových kontrol, 2026-10-19
+
+Výchozí revize `d8f573bb`, čistá synchronizovaná `main`. Tento blok pokrývá ukládání samotného lístku, jeho přehled a jednotlivý přesun do Koše. Následná úplná sada odhalila také rozdílné časové zdroje v testovacích Fio datech a skutečné viditelnosti Vývěsky; průchod je rozšířen jen o tyto doložené chyby a navazující publikační call sites. Nejde o nový audit všech strukturálních editorů, poptávek nebo celého CMS. `install.php`, `migrate.php`, schéma ani `VERSION` se nemění: oprava používá existující transakce, revize, redirecty, hodiny a session flash; nevzniká release.
+
+| ID | Priorita | Nález | Oprava a regresní důkaz |
+|---|---|---|---|
+| RC2-60 | P2 | Označení nové aktuální nabídky odznačilo ostatní lístky před vlastním zápisem. Selhání INSERT/UPDATE tak odstranilo původní volbu. | Odznačení i zápis jsou ve stejné transakci. Skutečný HTTP handler s chybovým MySQL triggerem omezeným vlastní položkou/názvem ověřuje nezměněný snapshot všech aktuálních příznaků i vlastních řádků. |
+| RC2-61 | P2 | Řádek, revize a redirect se zapisovaly odděleně; potlačená chyba historie/redirectu ponechala částečný stav. | Aktuální řádek pod zámkem, striktní revize a redirect v transakci, rollback a pravdivý návrat do editoru. HTTP vyvolává zvlášť selhání revize a redirectu, porovnává historii a DB a ověřuje následné úspěšné uložení. |
+| RC2-62 | P2 | Validační návrat zahodil rozepsané hodnoty. Datum `0` se považovalo za prázdné. | ID-scoped jednorázový whitelistovaný flash, zachování běžných checkboxů i způsobů převzetí, bez souhlasu/CSRF/chráněných metadat. Produkční helpery a skutečné DOM s chybou názvu/slugu/data/rozsahu/e-mailu, vložené otevření jiného editoru. Neprázdné datum musí projít striktní kontrolou. |
+| RC2-63 | P2 | Formulář i save přijímaly lístek v Koši a dovolovaly jeho tichou úpravu. | Locking read a UPDATE jen nad nesmazaným řádkem. Stará stránka odmítnuta bez změny, texty pro záchranu a nedostupné uložení s vysvětlením; skutečný HTTP snapshot a DOM. |
+| RC2-64 | P2 | Samostatné mazání spoléhalo na JavaScript, nepotvrzený platný POST smazal lístek a no-op se vydával za úspěch. | Čerstvý `confirm_food_delete_ID`, serverová kontrola, rowCount, field-level chyba/alert a úspěch jen při přechodu do Koše. HTTP odmítá absentující, neplatný i cizí souhlas, neplatné CSRF, GET a vypnutý modul. |
+| RC2-65 | P3 | Úplnou sadu po půlnoci zastavila nesouvisející syntetická Fio platba: její den vycházel z PHP UTC, objednávka z MySQL v pražském čase. | Datum obou syntetických výpisů vychází z konkrétní testované objednávky. Produkční bankovní parsování, kontrola stáří, účtu, částky, VS a deduplikace se neoslabují ani nemění. Nejde o doloženou chybu zpracování skutečného bankovního výpisu. |
+| RC2-66 | P2 | Úplná HTTP integrace následně reprodukovala skutečnou chybu Vývěsky: příloha s dnešním databázovým datem vracela 404, protože PHP ještě mělo včerejší datum. Stejný časový helper se používal i pro evidenci a upozornění. | Pure helper přijímá explicitní hodiny; download, administrační rozhodnutí a notifikace používají čas stejné DB jako SQL veřejný výpis. Izolovaný test porovnává produkční PHP a SQL pravidla ve třech pásmech a obou PDO režimech; skutečná HTTP matice zachovává hranice neveřejných příloh. |
+
+### Ověření a omezení
+
+Finální úplný `composer ci:module-ready` na PHP 8.4.12 skončil s kódem 0: lint, statická analýza, formátování, schema/module/ACR a release audity, 1 629 unit testů bez chyby, RC regrese, 15 flash kontrol, 45 kontrol časové parity Vývěsky v obou PDO režimech, 428 MySQL kontrol obchodu, ostatní MySQL souběhy, runtime audit a celá HTTP integrace. `rc2_food_card_integrity_http`, `rc2_board_newsletter_integrity_http` i oba nové runtime kontrakty prošly. Jedinou provozní výjimkou zůstává `smtp_connectivity = SKIP`, nikoli důkaz doručování. Samostatně prošlo 15 flash kontrol také na PHP 8.1.32 a cílený PHPStan level 6 nad Food a rozšířenými Board call sites. GitHub CI se ověřuje zvlášť na pushnutém commitu, nikoli podle dřívější zelené revize.
+
+První společný běh zastavila syntetická Fio platba s datem z odlišného PHP pásma (RC2-65); po opravě dat prošlo všech 428 kontrol bez oslabení produkčního párování. Další plná HTTP sada pak skutečně odhalila odlišný čas v kontrole přílohy Vývěsky (RC2-66). Oprava zahrnuje produkční call sites i novou regresi, nikoli jen posunutí testovacího data nebo vypnutí kontroly viditelnosti. Poté se celá sada zopakovala od začátku a prošla.
+
+Food testy používají vlastní označené řádky a triggery, bez uploadů a skutečných e-mailů. Chybové scénáře kontrolují aktuální příznaky všech lístků, úspěšné scénáře žádné cizí příznaky nemění. Triggery a vlastní řádky se v `finally` uklízejí; pro případ regrese úklid vrací odznačenou původní aktuální nabídku jen u mezitím neupravených řádků. Reálný obsah se nemaže. Stávající rozšířený Board HTTP scénář používá vlastní uploady a řádky a skrytou obnovu, aby neoslovil provozní odběratele.
+
+ACR důkazy a zbývající ruční kroky jsou v `docs/accessibility/modules/food.md`. Průchod neprohlašuje obecné slučování současných editací, všechny souběhy ani úplnou WCAG shodu. Ochrana proti běžným validačním/provozním chybám není ochrana před každým pádem procesu nebo chybnou externí změnou databáze.
+
 ## Audit vyhledávače obsahu v editoru, 2026-10-18
 
 Výchozí revize `10f204e6`, čistá synchronizovaná `main`. Cílený průchod uzavírá RC2-56 a kontroluje všechny stávající zdroje `admin/content_reference_search.php`, jejich veřejnou viditelnost, canonical cesty, řazení a JSON kontrakt. Nejde o nový řádkový audit celého CMS nebo jiných hledání. Schéma, `install.php`, `migrate.php` ani `VERSION` se nemění; nové tabulky ani release nejsou pro tyto opravy potřebné.

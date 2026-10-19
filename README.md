@@ -26,6 +26,10 @@ Další průchod chrání souběh hlasování, editace a trvalého mazání Anke
 
 Koš napříč moduly zamyká a ověřuje smazanou položku před úklidem souvisejících dat. HTTP matice všech typů koše prokazuje odmítnutí aktivních ID a zachování jejich vazeb; u Food také úplný rollback databázové chyby a úspěšné potvrzené smazání.
 
+Uložení Food lístku zahrnuje změnu aktuální nabídky, revize a canonical redirect v jedné transakci. Po chybě zůstanou rozepsané hodnoty v konkrétním editoru; lístek v Koši nelze měnit a jeho texty lze při odmítnutém uložení zachránit. Samostatný přesun do Koše vyžaduje nové potvrzení, které se neobnovuje z konceptu. HTTP regrese a [Food ACR](docs/accessibility/modules/food.md) ověřují rollback a přístupnost chyb, nikoli ruční průchod čtečkou.
+
+Vývěska používá pro souborový přístup, evidenci a rozhodování o upozornění stejné databázové hodiny jako veřejný výpis. Odlišné pásmo PHP neodloží právě zveřejněnou přílohu přes půlnoc; neveřejné a plánované dokumenty zůstávají chráněné. Regrese porovnává PHP a SQL pravidla ve třech časových pásmech bez změny nastavení serveru.
+
 - [Proč Kora CMS?](#proč-kora-cms)
 - [Požadavky](#požadavky)
 - [Instalace](#instalace)

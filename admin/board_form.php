@@ -327,7 +327,7 @@ adminHeader($id ? 'Upravit položku sekce ' . $publicLabel : 'Nová položka sek
   <div class="button-row admin-fieldset-spaced">
     <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat položku sekce' ?></button>
     <a href="board.php">Zrušit</a>
-    <?php if ($id !== null && boardIsPubliclyReachable($storedDocument)): ?>
+    <?php if ($id !== null && boardIsPubliclyReachable($storedDocument, (string)$pdo->query('SELECT NOW()')->fetchColumn())): ?>
       <a href="<?= h(boardPublicPath($storedDocument)) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
     <?php if ($id && !empty($document['preview_token'])): ?>

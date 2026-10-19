@@ -13219,7 +13219,8 @@ if (!str_contains($boardIndexViewSource, 'Odebírat nové položky vývěsky')
 if (!str_contains($boardFileSource, 'currentUserHasCapability(\'content_manage_shared\')')) {
     $boardSourceIssues[] = 'board file endpoint is missing tightened private access rule';
 }
-if (!str_contains($boardFileSource, 'boardIsPubliclyReachable($document)')) {
+if (!str_contains($boardFileSource, "boardIsPubliclyReachable(\$document, (string)\$document['visibility_now'])")
+    || !str_contains($boardFileSource, 'NOW() AS visibility_now')) {
     $boardSourceIssues[] = 'board file endpoint is missing shared public visibility guard';
 }
 if (!str_contains($boardDocumentSource, 'boardPublicVisibilitySql(\'b\')')) {
@@ -14922,7 +14923,7 @@ if (!str_contains($pageFormSource, "\$err === 'unpublish_at'")) {
 if (!str_contains($foodSaveSource, "DateTime::createFromFormat('Y-m-d'")) {
     $editorialValidationIssues[] = 'food save is missing strict date parsing for validity fields';
 }
-foreach (["'err' => 'valid_from'", "'err' => 'valid_to'", "'err' => 'valid_range'"] as $foodErrorFragment) {
+foreach (["\$redirectToForm('valid_from')", "\$redirectToForm('valid_to')", "\$redirectToForm('valid_range')"] as $foodErrorFragment) {
     if (!str_contains($foodSaveSource, $foodErrorFragment)) {
         $editorialValidationIssues[] = 'food save is missing validation redirect: ' . $foodErrorFragment;
     }
@@ -24373,6 +24374,71 @@ if ($pickerVisibilityIssues === []) {
 } else {
     $failures++;
     foreach ($pickerVisibilityIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_food_card_write_contract ===\n";
+$foodCardIntegrityIssues = [];
+foreach ([
+    'admin/food_save.php' => ["require_once __DIR__ . '/layout.php'", "requireHttpMethods(['POST'])", 'verifyCsrf()',
+        "adminEditorFormFlashStore('food'", '$pdo->beginTransaction()', 'deleted_at IS NULL FOR UPDATE', '$pdo->rollBack()',
+        'foodRevisionSnapshot($savedCard), true)', 'foodCardPublicPath($savedCard), 301, true)', '$pdo->commit()'],
+    'admin/food_form.php' => ["adminEditorFormFlashTake('food', \$id)", 'deleted_at IS NULL', 'disabled aria-describedby="form-error"'],
+    'admin/food_delete.php' => ["requireHttpMethods(['POST'])", 'verifyCsrf()', "'confirm_food_delete_' . \$id", "!== '1'", 'rowCount() !== 1'],
+    'admin/food.php' => ['confirm_food_delete_', 'food-delete-review-', 'food-delete-error', '<fieldset class="admin-inline-fieldset">'],
+    'build/rc_food_card_integrity_http.php' => ['Owned Food card insert failure', 'Owned Food card update failure',
+        'Owned Food revision failure', 'Owned Food redirect failure', 'Food stale save modified a trashed card',
+        'Food validation lost accessible draft', 'Food accepted invalid CSRF', 'Missing/duplicate Food ARIA target'],
+    'build/http_integration.php' => ['rcFoodCardIntegrityHttpChecks('],
+    'build/rc_food_card_flash_selftest.php' => ['Draft restored consent or protected metadata', 'Ordinary unchecked field lost'],
+    'composer.json' => ['rc_food_card_flash_selftest.php'],
+    'docs/accessibility/modules/food.md' => ['2026-10-19', 'rc_food_card_integrity_http.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $foodCardIntegrityIssues[] = $file . ' missing Food card protection: ' . $fragment;
+        }
+    }
+}
+if ($foodCardIntegrityIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($foodCardIntegrityIssues as $issue) {
+        echo '- ' . $issue . "\n";
+    }
+}
+
+echo "=== rc2_board_visibility_clock_contract ===\n";
+$boardClockIssues = [];
+foreach ([
+    'lib/presentation.php' => ['function boardIsPubliclyReachable(array $document, ?string $now = null)',
+        'function shouldSendBoardPublicationNotice(array $oldDocument, array $newDocument, ?string $now = null)',
+        "boardIsPubliclyReachable(\$document, (string)\$pdo->query('SELECT NOW()')->fetchColumn())"],
+    'board/file.php' => ['NOW() AS visibility_now', "boardIsPubliclyReachable(\$document, (string)\$document['visibility_now'])"],
+    'admin/board_save.php' => ['boardIsPubliclyReachable($existingDocument, $visibilityNow)', 'boardIsPubliclyReachable($updatedDocument, $visibilityNow)', "\$visibilityNow = (string)\$pdo->query('SELECT NOW()')->fetchColumn()"],
+    'admin/board_form.php' => ["boardIsPubliclyReachable(\$storedDocument, (string)\$pdo->query('SELECT NOW()')->fetchColumn())"],
+    'admin/approve.php' => ["shouldSendBoardPublicationNotice(\$previousBoardDocument, \$updatedBoardDocument, (string)\$pdo->query('SELECT NOW()')->fetchColumn())"],
+    'admin/trash.php' => ["shouldSendBoardPublicationNotice(\$previousBoardDocument, \$updatedBoardDocument, (string)\$pdo->query('SELECT NOW()')->fetchColumn())"],
+    'admin/bulk.php' => ["shouldSendBoardPublicationNotice(\$previousDocument, \$updatedDocument, (string)\$pdo->query('SELECT NOW()')->fetchColumn())", "boardIsPubliclyReachable(\$previousBoardDocuments[\$documentId], (string)\$pdo->query('SELECT NOW()')->fetchColumn())"],
+    'build/rc_board_clock_selftest.php' => ['Database midnight ignores PHP timezone', 'First publication uses database clock', 'Edit cannot resend a publication notice', 'Pacific/Kiritimati'],
+    'composer.json' => ['rc_board_clock_selftest.php'],
+    'build/rc_pdo_fetch_selftest.php' => ['rc_board_clock_selftest.php'],
+] as $file => $fragments) {
+    $source = (string)file_get_contents(__DIR__ . '/../' . $file);
+    foreach ($fragments as $fragment) {
+        if (!str_contains($source, $fragment)) {
+            $boardClockIssues[] = $file . ' missing Board clock protection: ' . $fragment;
+        }
+    }
+}
+if ($boardClockIssues === []) {
+    echo "OK\n";
+} else {
+    $failures++;
+    foreach ($boardClockIssues as $issue) {
         echo '- ' . $issue . "\n";
     }
 }

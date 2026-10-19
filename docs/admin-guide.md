@@ -598,6 +598,10 @@ Kora CMS poskytuje globální RSS feed i samostatné feedy jednotlivých blogů.
 
 Modul jídelních a nápojových lístků je vhodný pro restaurace, kavárny, spolkové klubovny i provozy, které potřebují rozlišovat aktuální, připravované a archivní menu.
 
+Při chybě uložení se vrátíte do stejného editoru se zadaným názvem, obsahem, daty, objednávkovými pokyny, způsoby převzetí a stavem běžných checkboxů. Jiný otevřený lístek tento koncept nepřevezme. Neúspěšné označení nového aktuálního lístku nezmění původní aktuální nabídku; změna lístku, historie revizí a případný redirect se ukládají společně.
+
+Přesun do Koše v přehledu vyžaduje checkbox `Potvrzuji přesun tohoto lístku do Koše`. Bez něj server akci odmítne a vysvětlí chybu u konkrétního lístku. Potvrzení je nutné provést znovu, neobnovuje se z konceptu ani po předchozí chybě. Položky a poptávky zůstávají v Koši zachované. Pokud někdo během editace lístek přesune do Koše, uložení se odmítne; formulář ponechá texty k záchraně, ale tlačítko uložení je nedostupné. Obnovu řešte přes Koš, nikoli opakovaným ukládáním staré stránky.
+
 ### Co se nastavuje u lístku
 
 Každý lístek může mít:
@@ -1003,6 +1007,8 @@ JSON export/import přenáší konfiguraci témat kontaktu, ale nepřenáší sa
 ---
 
 ## Vývěska / Úřední deska
+
+Vývěska při kontrole příloh, evidence zveřejnění a upozornění používá čas databáze stejně jako její veřejný výpis. Hosting s odlišným pásmem PHP proto nemá kolem půlnoci odmítat právě zveřejněný dokument. Toto sjednocení nemění globální časové pásmo instalace ani publikační data uložená správcem.
 
 Přílohy se stahují pouze přes `board/file.php?id=...`, který kontroluje viditelnost dokumentu; oprávněný správce může stáhnout i neveřejnou přílohu. Přímý přístup do `uploads/board/` je zablokovaný, proto starý přímý odkaz nahraďte odkazem na detail dokumentu nebo download endpoint. Veřejné archivní přílohy dál fungují. Ilustrační obrázky v `uploads/board/images/` zůstávají veřejné, neukládejte tam soukromý obsah. Při nasazení aktualizujte oba `.htaccess`; na Nginx doplňte pravidlo z README. Bez těchto serverových pravidel samotná PHP kontrola nezabrání přímému přístupu.
 

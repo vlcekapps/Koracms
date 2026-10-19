@@ -6,14 +6,19 @@ requireCapability('content_manage_shared', 'Přístup odepřen. Pro správu jíd
 $pdo = db_connect();
 $id = inputInt('get', 'id');
 $card = null;
+$formValues = adminEditorFormFlashTake('food', $id);
+$cardMissing = false;
 
 if ($id !== null) {
-    $stmt = $pdo->prepare("SELECT * FROM cms_food_cards WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM cms_food_cards WHERE id = ? AND deleted_at IS NULL");
     $stmt->execute([$id]);
     $card = $stmt->fetch() ?: null;
     if (!$card) {
-        header('Location: ' . BASE_URL . '/admin/food.php');
-        exit;
+        if ($formValues === []) {
+            header('Location: ' . BASE_URL . '/admin/food.php');
+            exit;
+        }
+        $cardMissing = true;
     }
 }
 
@@ -36,8 +41,12 @@ $card = $card ?: [
     'status' => 'published',
 ];
 
+$card = array_replace($card, array_intersect_key($formValues, array_flip(array_merge(
+    adminEditorFormFields()['food'],
+    ['is_current', 'is_published', 'orders_enabled', 'order_requested_at_enabled', 'order_fulfillment_modes']
+))));
 $useWysiwyg = getSetting('content_editor', 'html') === 'wysiwyg';
-$err = trim($_GET['err'] ?? '');
+$err = $cardMissing ? 'missing' : trim((string)($_GET['err'] ?? ''));
 $foodValidFromErrorMessage = 'Datum „Platí od“ musí být platné kalendářní datum. Vyberte datum v poli Platí od nebo pole nechte prázdné.';
 $foodValidToErrorMessage = 'Datum „Platí do“ musí být platné kalendářní datum. Vyberte datum v poli Platí do nebo pole nechte prázdné.';
 $foodValidRangeErrorMessage = 'Datum „Platí do“ nesmí být dříve než datum „Platí od“. Upravte jedno z dat nebo datum „Platí do“ nechte prázdné.';
@@ -49,6 +58,8 @@ $formError = match ($err) {
     'valid_to' => $foodValidToErrorMessage,
     'valid_range' => $foodValidRangeErrorMessage,
     'order_email' => $foodOrderEmailErrorMessage,
+    'save' => 'Lístek se nepodařilo uložit. Zadané údaje zůstaly ve formuláři; původní lístek a nastavení aktuální nabídky se nezměnily.',
+    'missing' => 'Lístek byl přesunut do Koše nebo odstraněn. Zadané údaje zůstaly pro záchranu, ale změny nelze uložit. Zkontrolujte přehled lístků nebo požádejte správce o obnovení.',
     default => '',
 };
 $fieldErrorMap = [
@@ -74,7 +85,7 @@ $foodTypeLabel = $card['type'] === 'beverage' ? 'nápojový lístek' : 'jídeln�
 adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
 ?>
 
-<?php if ($id !== null): ?>
+<?php if ($id !== null && !$cardMissing): ?>
   <p class="button-row button-row--start">
     <a href="food_items.php?card=<?= (int)$id ?>" class="btn">Položky lístku</a>
     <a href="revisions.php?type=food&amp;id=<?= (int)$id ?>">Historie revizí</a>
@@ -225,9 +236,9 @@ adminHeader($id ? 'Upravit ' . $foodTypeLabel : 'Nový ' . $foodTypeLabel);
   <?php endif; ?>
 
   <div class="button-row admin-fieldset-spaced">
-    <button type="submit" class="btn"><?= $id ? 'Uložit změny' : 'Přidat ' . $foodTypeLabel ?></button>
+    <button type="submit" class="btn"<?= $cardMissing ? ' disabled aria-describedby="form-error"' : '' ?>><?= $id ? 'Uložit změny' : 'Přidat ' . $foodTypeLabel ?></button>
     <a href="food.php">Zrušit</a>
-    <?php if ($card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
+    <?php if (!$cardMissing && $card['is_publicly_visible'] && (string)$card['slug'] !== ''): ?>
       <a href="<?= h((string)$card['public_path']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit na webu<?= newWindowLinkSrOnlySuffix() ?></a>
     <?php endif; ?>
   </div>
